@@ -1,0 +1,48 @@
+/* src\styles\index.css */
+
+@import "tailwindcss";
+
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+/* Give the page a little reserved space for the scrollbar */
+html {
+  scrollbar-gutter: stable; /* avoids content right up against the scrollbar */
+}
+
+/* Make scrollbars thicker + visible for Chromium (Edge/Chrome) */
+body::-webkit-scrollbar {
+  width: 12px;              /* thicker than the default overlay */
+}
+
+body::-webkit-scrollbar-track {
+  background: #e2e8f0;      /* light grey track */
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #cbd5f5;      /* thumb color */
+  border-radius: 999px;
+  border: 3px solid #e2e8f0; /* creates a “pill” thumb */
+}
+
+/* Firefox scrollbar styling */
+body {
+  scrollbar-width: auto;                      /* not ultra-thin */
+  scrollbar-color: #cbd5f5 #e2e8f0;           /* thumb / track */
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+/* Global MailTrace page background */
+body {
+  background-color: #f4f5f7;
+}
