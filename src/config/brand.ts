@@ -59,6 +59,11 @@ export const BRAND = {
     },
   },
 
+  /** External links */
+  links: {
+    demo: "https://calendly.com/dustin-postcanary",
+  },
+
   /** Legal footer text template */
   legal: {
     copyright: (year: number) => `© ${year} Postcanary LLC. All rights reserved`,

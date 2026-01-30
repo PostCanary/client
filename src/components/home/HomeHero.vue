@@ -12,8 +12,6 @@ import { BRAND } from "@/config/brand";
 const router = useRouter();
 const auth = useAuthStore();
 
-const APOLLO_DEMO_URL = `https://app.apollo.io/#/meet/${BRAND.name}.Demo`;
-
 /**
  * Top-right "Sign Up / Login" button in the navbar.
  * - If not authenticated → open modal (default to signup view)
@@ -73,9 +71,9 @@ const onHeroGetStarted = () => {
           Sign Up / Login
         </button>
 
-        <!-- Book a Demo -> Apollo link -->
+        <!-- Book a Demo -> Calendly link -->
         <a
-          :href="APOLLO_DEMO_URL"
+          :href="BRAND.links.demo"
           target="_blank"
           rel="noopener noreferrer"
           class="hidden rounded-lg bg-[#0b2d50] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-white shadow-sm hover:bg-[#123b6a] md:inline-flex"
