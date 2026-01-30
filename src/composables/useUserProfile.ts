@@ -9,6 +9,7 @@ import {
   type UserProfile,
   type UpdateUserProfilePayload,
 } from "@/api/users";
+import { normalizeWebsiteUrl } from "@/utils/url-normalize";
 
 export interface ProfileForm {
   full_name: string;
@@ -105,7 +106,7 @@ export function useUserProfile(): UseUserProfile {
 
     const payload: UpdateUserProfilePayload = {
       full_name: form.value.full_name,
-      website_url: form.value.website_url,
+      website_url: normalizeWebsiteUrl(form.value.website_url),
       industry: form.value.industry,
       crm: form.value.crm,
       mail_provider: form.value.mail_provider,

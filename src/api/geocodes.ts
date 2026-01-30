@@ -20,7 +20,7 @@ export type HeatmapResponse = {
 };
 
 export type HeatmapParams = {
-  kind?: HeatmapKind; // optional (backend allows omitted => all kinds)
+  kind?: HeatmapKind | HeatmapKind[]; // optional (backend allows omitted => all kinds), supports single or multiple kinds
   start?: string;     // YYYY-MM-DD
   end?: string;       // YYYY-MM-DD
   limit?: number;     // 1..200000 (backend enforces)
@@ -29,7 +29,14 @@ export type HeatmapParams = {
 export async function getHeatmapPoints(params: HeatmapParams): Promise<HeatmapResponse> {
   const q = new URLSearchParams();
 
-  if (params.kind) q.set("kind", params.kind);
+  if (params.kind) {
+    // Support single kind or array of kinds (comma-separated)
+    if (Array.isArray(params.kind)) {
+      q.set("kind", params.kind.join(","));
+    } else {
+      q.set("kind", params.kind);
+    }
+  }
   if (params.start) q.set("start", params.start);
   if (params.end) q.set("end", params.end);
 

@@ -7,11 +7,12 @@ import curve from "@/assets/home/curve.svg?url";
 import rightDown from "@/assets/home/right-down.svg?url";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
+import { BRAND } from "@/config/brand";
 
 const router = useRouter();
 const auth = useAuthStore();
 
-const APOLLO_DEMO_URL = "https://app.apollo.io/#/meet/Mailtrace.Demo";
+const APOLLO_DEMO_URL = `https://app.apollo.io/#/meet/${BRAND.name}.Demo`;
 
 /**
  * Top-right "Sign Up / Login" button in the navbar.
@@ -48,17 +49,17 @@ const onHeroGetStarted = () => {
 </script>
 
 <template>
-  <section class="bg-[#f6f5f9] min-h-[980px] flex flex-col">
+  <section class="bg-[#f6f5f9] min-h-[980px] flex flex-col pt-0">
     <!-- NAVBAR -->
     <header
-      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] items-center justify-between px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pt-4 sm:pt-8 pb-4 sm:pb-10"
+      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] items-center justify-between px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pt-1.5 sm:pt-2 md:pt-2.5 pb-3 sm:pb-4"
     >
       <!-- logo -->
       <div class="flex items-center gap-2">
         <img
           :src="landingLogo"
-          alt="MailTrace"
-          class="h-[42px] sm:h-[46px] md:h-14 w-auto"
+          :alt="BRAND.name"
+          class="h-28 sm:h-32 md:h-40 lg:h-48 xl:h-56 w-auto"
         />
       </div>
 
@@ -86,7 +87,7 @@ const onHeroGetStarted = () => {
 
     <!-- HERO ROW -->
     <div
-      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col md:flex-row md:items-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pb-16 sm:pb-24 pt-2 flex-1"
+      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col md:flex-row md:items-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pb-16 sm:pb-24 pt-0 flex-1"
     >
       <!-- LEFT COLUMN -->
       <div class="w-full md:w-[52%] max-w-[780px] text-center">
@@ -110,7 +111,7 @@ const onHeroGetStarted = () => {
           >
             <img
               :src="heroMockup"
-              alt="MailTrace dashboard preview"
+              :alt="`${BRAND.name} dashboard preview`"
               class="block h-auto w-full"
             />
           </div>
@@ -251,7 +252,7 @@ const onHeroGetStarted = () => {
         >
           <img
             :src="heroMockup"
-            alt="MailTrace dashboard preview"
+            :alt="`${BRAND.name} dashboard preview`"
             class="block h-auto w-full"
           />
         </div>

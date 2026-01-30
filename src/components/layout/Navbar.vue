@@ -1,9 +1,10 @@
 <!-- src/components/layout/Navbar.vue -->
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
-import profileIcon from "@/assets/profile-icon.svg?url";
+import { ref, watch, onMounted, onUnmounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import LogoUrl from "@/assets/source-logo-02.png";
-import { hashUsernameToGradient } from "@/utils/avatar-gradient";
+import { BRAND } from "@/config/brand";
 
 const props = withDefaults(
   defineProps<{
@@ -31,7 +32,14 @@ const emit = defineEmits<{
   (e: "settings-click"): void;
 }>();
 
+const router = useRouter();
+const route = useRoute();
+const auth = useAuthStore();
+
 const q = ref(props.modelValue ?? "");
+const dropdownOpen = ref(false);
+const dropdownRef = ref<HTMLElement | null>(null);
+const buttonRef = ref<HTMLElement | null>(null);
 
 watch(
   () => props.modelValue,
@@ -40,30 +48,66 @@ watch(
   }
 );
 
+const navItems = [
+  { label: "Dashboard", path: "/dashboard" },
+  { label: "Heatmap", path: "/map" },
+  { label: "History", path: "/history" },
+];
+
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(path + "/");
+}
+
+function navigate(path: string) {
+  router.push(path);
+}
+
+function toggleDropdown() {
+  dropdownOpen.value = !dropdownOpen.value;
+}
+
+function closeDropdown() {
+  dropdownOpen.value = false;
+}
+
+function handleSettingsClick() {
+  router.push("/app/settings");
+  closeDropdown();
+}
+
+async function handleLogoutClick() {
+  await auth.logout();
+  closeDropdown();
+  // Hard redirect to clear any in-memory state and reload
+  window.location.href = "/";
+}
+
+// Close dropdown when clicking outside
+function handleClickOutside(event: MouseEvent) {
+  if (
+    dropdownRef.value &&
+    buttonRef.value &&
+    !dropdownRef.value.contains(event.target as Node) &&
+    !buttonRef.value.contains(event.target as Node)
+  ) {
+    closeDropdown();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+});
+
 /*
 function doSearch() {
   emit("update:modelValue", q.value);
   emit("search", q.value);
 }
 */
-
-// initials fallback (still only for avatar circle)
-const initials = computed(() => {
-  const name = (props.userName ?? "").trim();
-  if (!name) return "U";
-  const parts = name.split(/\s+/).filter(Boolean);
-  const a = parts[0]?.charAt(0) ?? "";
-  const b = parts[1]?.charAt(0) ?? "";
-  return (a + b || a || "U").toUpperCase();
-});
-
-// gradient avatar background
-const avatarGradientStyle = computed(() => {
-  const [from, to] = hashUsernameToGradient(props.userName ?? "");
-  return {
-    background: `linear-gradient(135deg, ${from}, ${to})`,
-  };
-});
 </script>
 
 <template>
@@ -71,20 +115,31 @@ const avatarGradientStyle = computed(() => {
   <div
     class="mt-nav-root w-full rounded-xl bg-white shadow-[0_1px_3px_rgba(12,45,80,.08),0_10px_24px_rgba(12,45,80,.06)] px-5 py-3 flex items-center gap-4"
   >
-    <!-- Left: logo + title -->
+    <!-- Left: logo -->
     <div class="flex items-center gap-3 whitespace-nowrap">
       <img
         :src="LogoUrl"
-        alt="MailTrace"
-        class="h-7 w-auto object-contain"
+        :alt="BRAND.name"
+        class="h-10 sm:h-12 w-auto object-contain cursor-pointer"
         draggable="false"
+        @click="navigate('/dashboard')"
       />
-      <h1
-        class="text-[20px] sm:text-[21px] lg:text-[21px] leading-tight font-medium tracking-[-0.02em] text-[#0c2d50]"
-      >
-        {{ props.title }}
-      </h1>
     </div>
+
+    <!-- Navigation links -->
+    <nav class="flex items-center gap-6 ml-8">
+      <button
+        v-for="item in navItems"
+        :key="item.path"
+        @click="navigate(item.path)"
+        :class="[
+          'nav-link',
+          { 'nav-link-active': isActive(item.path) }
+        ]"
+      >
+        {{ item.label }}
+      </button>
+    </nav>
 
     <!-- Spacer -->
     <div class="grow"></div>
@@ -123,62 +178,130 @@ const avatarGradientStyle = computed(() => {
     -->
 
     <!-- Right: user area -->
-    <div class="mt-nav-user hidden sm:flex items-center gap-3 pl-2">
-      <button
-        class="w-[42px] h-[42px] rounded-full overflow-hidden ring-1 ring-black/5 flex items-center justify-center cursor-pointer"
-        :style="avatarGradientStyle"
-        @click="$emit('profile-click')"
-        :aria-label="`Profile: ${props.userName || initials}`"
-      >
-        <img
-          v-if="props.avatarUrl"
-          :src="props.avatarUrl"
-          alt=""
-          class="w-full h-full object-cover"
-        />
-        <img
-          v-else
-          :src="profileIcon"
-          alt=""
-          class="w-2/3 h-2/3 object-contain"
-        />
-      </button>
-
+    <div class="mt-nav-user hidden sm:flex items-center gap-3 pl-2 relative">
       <div class="leading-tight" v-if="props.userName || props.userRole">
-        <!-- 👇 full name, no truncation / ellipsis rules anymore -->
-        <div
+        <!-- 👇 full name with button style like Edit Mapping -->
+        <button
           v-if="props.userName"
-          class="mt-user-name text-[16px] font-semibold tracking-[0.01em] text-black"
+          ref="buttonRef"
+          @click.stop="toggleDropdown"
+          class="mt-user-name-btn"
         >
           {{ props.userName }}
-        </div>
+        </button>
         <div v-if="props.userRole" class="text-[14px] text-[#47bfa9]">
           {{ props.userRole }}
         </div>
       </div>
-
-      <div class="w-2"></div>
-
-      <button
-        class="w-[42px] h-[42px] rounded-full bg-[#f4f5f7] grid place-items-center hover:bg-[#e9ecef] transition"
-        aria-label="Notifications"
+      
+      <!-- Dropdown menu -->
+      <div
+        v-if="dropdownOpen"
+        ref="dropdownRef"
+        class="user-dropdown"
+        @click.stop
       >
-        <svg viewBox="0 0 24 24" class="w-5 h-5">
-          <path
-            d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7M13.73 21a2 2 0 0 1-3.46 0"
-            fill="none"
-            stroke="#47bfa9"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
+        <button
+          class="dropdown-item"
+          @click="handleSettingsClick"
+        >
+          Settings
+        </button>
+        <button
+          class="dropdown-item"
+          @click="handleLogoutClick"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Navigation links */
+.nav-link {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0c2d50;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: #47bfa9;
+}
+
+.nav-link-active {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0c2d50;
+}
+
+.nav-link-active:hover {
+  color: #0c2d50;
+}
+
+/* User name button styled like Edit Mapping */
+.mt-user-name-btn {
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  background: #e4e7eb;
+  color: #243b53;
+  transition: background 0.15s ease;
+}
+
+.mt-user-name-btn:hover {
+  background: #d1d5db;
+}
+
+/* User dropdown menu */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(12, 45, 80, 0.12),
+    0 4px 16px rgba(12, 45, 80, 0.08);
+  border: 1px solid #e2e8f0;
+  min-width: 160px;
+  padding: 6px;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0c2d50;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: #f4f5f7;
+}
+
+.dropdown-item:active {
+  background: #e4e7eb;
+}
+
 /* Search-specific sizing left here in case we re-enable it later.
    It's harmless while the block is commented out, but you can delete it if you want. */
 .mt-nav-search {

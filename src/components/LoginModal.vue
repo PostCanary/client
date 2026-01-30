@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import landingLogo from "@/assets/source-logo-02.png";
 import { AUTH_BASE } from "@/config/auth";
 import { useAuthStore } from "@/stores/auth";
+import { BRAND } from "@/config/brand";
 
 // Brand icons
 import appleIcon from "@/assets/auth/apple-brands-solid-full.svg?url";
@@ -132,7 +133,7 @@ const startSso = (connection: string) => {
       >
         <!-- Header: centered logo -->
         <div class="relative flex items-center justify-center">
-          <img :src="landingLogo" alt="MailTrace logo" class="h-12 w-auto" />
+          <img :src="landingLogo" :alt="`${BRAND.name} logo`" class="h-20 sm:h-24 md:h-28 w-auto" />
         </div>
 
         <!-- Title -->
@@ -238,7 +239,7 @@ const startSso = (connection: string) => {
               </button>
             </span>
             <span v-else>
-              New to MailTrace?
+              New to {{ BRAND.name }}?
               <button
                 type="button"
                 class="ml-1 font-semibold text-[#24b39b] hover:text-[#1a8b78] underline cursor-pointer"
@@ -250,7 +251,7 @@ const startSso = (connection: string) => {
           </p>
 
           <p class="mt-2 text-[11px] text-slate-400">
-            By continuing, you agree to the MailTrace
+            By continuing, you agree to the {{ BRAND.name }}
             <span class="underline">Terms</span> and
             <span class="underline">Privacy Policy</span>.
           </p>

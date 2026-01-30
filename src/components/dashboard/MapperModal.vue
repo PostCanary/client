@@ -14,7 +14,7 @@
         <div class="titles">
           <h3 id="mapper-title">Map Columns</h3>
           <p class="subtitle">
-            Map your CSV headers to MailTrace fields used for matching.
+            Map your CSV headers to {{ BRAND.name }} fields used for matching.
           </p>
         </div>
       </header>
@@ -166,6 +166,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
+import { BRAND } from "@/config/brand";
 
 type MappingSide = Record<string, string>;
 type HeaderType =

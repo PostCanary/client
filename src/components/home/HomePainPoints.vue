@@ -3,31 +3,32 @@ import qrIcon from "@/assets/home/qr-code-icon.svg?url";
 import wastedAdIcon from "@/assets/home/cash-burn-icon.svg?url";
 import spreadsheetsIcon from "@/assets/home/spreadsheet-icon.svg?url";
 import noAttributionIcon from "@/assets/home/network-icon.svg?url";
+import { BRAND } from "@/config/brand";
 
 const painCards = [
   {
     icon: qrIcon,
     alt: "QR code pain point",
     title: "Relying On QR Codes & Call-Tracking Alone",
-    body: "Only a fraction of conversions get tracked — MailTrace connects the rest.",
+    body: `Only a fraction of conversions get tracked — ${BRAND.name} connects the rest.`,
   },
   {
     icon: wastedAdIcon,
     alt: "Wasted ad spend icon",
     title: "Wasted Ad Spend",
-    body: "Thousands of mailers go out — but there’s no proof that they work. MailTrace shows real ROI and CPA.",
+    body: `Thousands of mailers go out — but there's no proof that they work. ${BRAND.name} shows real ROI and CPA.`,
   },
   {
     icon: spreadsheetsIcon,
     alt: "Data stuck in spreadsheets icon",
     title: "Data Stuck In Spreadsheets",
-    body: "Manual reports kill momentum and accuracy — MailTrace makes measurement effortless.",
+    body: `Manual reports kill momentum and accuracy — ${BRAND.name} makes measurement effortless.`,
   },
   {
     icon: noAttributionIcon,
     alt: "No attribution icon",
     title: "No Attribution For Web Or Walk-In Customers",
-    body: "MailTrace links offline and online conversions automatically.",
+    body: `${BRAND.name} links offline and online conversions automatically.`,
   },
 ];
 </script>
@@ -49,7 +50,7 @@ const painCards = [
         class="mx-auto mt-6 max-w-[640px] text-center text-[16px] leading-[26px] md:text-[20px] md:leading-28px text-black"
       >
         You’re not the only one wondering where your mail marketing data
-        disappears to. See how MailTrace brings it all back in view.
+        disappears to. See how {{ BRAND.name }} brings it all back in view.
       </p>
 
       <!-- Cards -->

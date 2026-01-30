@@ -1,6 +1,6 @@
 <!-- src/components/OnboardingModal.vue -->
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useUserProfile } from "@/composables/useUserProfile";
 import { useAuthStore } from "@/stores/auth";
 import profileIcon from "@/assets/profile-icon.svg?url";
@@ -11,6 +11,7 @@ const emit = defineEmits<{
 }>();
 
 const auth = useAuthStore();
+const acceptedTerms = ref(false);
 const {
   profile,
   form,
@@ -48,10 +49,17 @@ const avatarGradientStyle = computed(() => {
 });
 
 async function onSubmit() {
+  if (!acceptedTerms.value) {
+    return;
+  }
   const updated = await saveProfile();
   if (updated?.profile_complete) {
     emit("completed");
   }
+}
+
+function openTerms() {
+  window.open("/terms", "_blank");
 }
 
 async function onAvatarChanged(e: Event) {
@@ -120,8 +128,8 @@ async function onAvatarChanged(e: Event) {
             <label>Website</label>
             <input
               v-model="form.website_url"
-              type="url"
-              placeholder="https://joesplumbing.com"
+              type="text"
+              placeholder="joesplumbing.com"
               required
             />
           </div>
@@ -159,11 +167,33 @@ async function onAvatarChanged(e: Event) {
             />
           </div>
 
+          <!-- Terms of Service Checkbox -->
+          <div class="terms-checkbox">
+            <label class="terms-label">
+              <input
+                v-model="acceptedTerms"
+                type="checkbox"
+                class="terms-input"
+                required
+              />
+              <span class="terms-text">
+                I agree to the
+                <button
+                  type="button"
+                  @click="openTerms"
+                  class="terms-link"
+                >
+                  Terms of Service
+                </button>
+              </span>
+            </label>
+          </div>
+
           <div class="actions">
             <button
               type="submit"
               class="btn-primary"
-              :disabled="submitting || loading"
+              :disabled="submitting || loading || !acceptedTerms"
             >
               {{ isProfileComplete ? "Save" : "Save & continue" }}
             </button>
@@ -346,5 +376,48 @@ async function onAvatarChanged(e: Event) {
   gap: 8px;
   margin-top: 8px;
   justify-content: flex-end;
+}
+
+.terms-checkbox {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.terms-input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #47bfa9;
+  flex-shrink: 0;
+}
+
+.terms-text {
+  color: #475569;
+  user-select: none;
+}
+
+.terms-link {
+  color: #47bfa9;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.terms-link:hover {
+  color: #3aa893;
 }
 </style>

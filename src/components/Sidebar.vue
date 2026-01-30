@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { BRAND } from "@/config/brand";
 
 /* Assets */
 import LogoUrl from "@/assets/source-logo-02.png";
@@ -10,8 +11,8 @@ import MatchIcon from "@/assets/sidebar/match-performance-icon.svg?url";
 import CampaignIcon from "@/assets/sidebar/campaign-insights-icon.svg?url";*/
 import HeatmapIcon from "@/assets/sidebar/heatmap-icon.svg?url";
 /*import UploadsIcon from "@/assets/sidebar/uploads-mapping-icon.svg?url";
-import ReportsIcon from "@/assets/sidebar/reports-exports-icon.svg?url";
-import HistoryIcon from "@/assets/sidebar/history-icon.svg?url";*/
+import ReportsIcon from "@/assets/sidebar/reports-exports-icon.svg?url";*/
+import HistoryIcon from "@/assets/sidebar/history-icon.svg?url";
 import SettingsIcon from "@/assets/sidebar/settings-icon.svg?url";
 import LogoutIcon from "@/assets/sidebar/logout-icon.svg?url";
 
@@ -30,9 +31,9 @@ const items = [
   { to: "/", label: "Match Performance", icon: MatchIcon },
   { to: "/", label: "Campaign Insights", icon: CampaignIcon },*/
   { to: "/map", label: "Address Heatmap", icon: HeatmapIcon },
+  { to: "/history", label: "History", icon: HistoryIcon },
   /*{ to: "/", label: "Uploads & Mapping", icon: UploadsIcon },
-  { to: "/", label: "Reports & Exports", icon: ReportsIcon },
-  { to: "/", label: "History & Comparisons", icon: HistoryIcon },*/
+  { to: "/", label: "Reports & Exports", icon: ReportsIcon },*/
 ];
 
 // ✅ make active state resilient (queries, future nested subroutes)
@@ -45,9 +46,9 @@ function go(path: string) {
   emit("navigate", path); // lets the drawer know to close
 }
 
-// Tooltip helper: allow Overview + Heatmap, keep roadmap items "Coming Soon"
+// Tooltip helper: allow Overview + Heatmap + History, keep roadmap items "Coming Soon"
 function getTooltip(label: string) {
-  return label === "Overview" || label === "Address Heatmap"
+  return label === "Overview" || label === "Address Heatmap" || label === "History"
     ? ""
     : "Coming Soon";
 }
@@ -64,7 +65,7 @@ async function onLogoutClick() {
     <nav class="sidebar-card">
       <div class="logo-row">
         <button class="logo-btn" @click="go('/')" type="button">
-          <img :src="LogoUrl" alt="MailTrace" class="logo" draggable="false" />
+          <img :src="LogoUrl" :alt="BRAND.name" class="logo" draggable="false" />
         </button>
       </div>
 
@@ -121,13 +122,13 @@ async function onLogoutClick() {
   background: #ffffff;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(12, 45, 80, 0.08);
-  padding: 18px 16px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
 }
 
 .logo-row {
-  padding: 6px 8px 10px;
+  padding: 2px 8px 4px;
 }
 
 /* Clickable logo */
@@ -140,7 +141,7 @@ async function onLogoutClick() {
   align-items: center;
 }
 .logo {
-  height: 43px;
+  height: 64px;
   width: auto;
   object-fit: contain;
 }
@@ -149,11 +150,11 @@ async function onLogoutClick() {
   border: none;
   height: 1px;
   background: #47bfa9;
-  margin: 10px 8px 12px;
+  margin: 6px 8px 8px;
   border-radius: 1px;
 }
 .sep-bottom {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .nav-list {
@@ -206,8 +207,8 @@ async function onLogoutClick() {
 .bottom {
   margin-top: auto;
   display: grid;
-  row-gap: 10px;
-  padding: 6px 0 4px;
+  row-gap: 6px;
+  padding: 2px 0 2px;
 }
 .ghost .label {
   color: #47bfa9;

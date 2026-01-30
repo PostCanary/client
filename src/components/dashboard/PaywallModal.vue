@@ -4,7 +4,8 @@
     <Transition name="fade">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-9999 flex items-center justify-center"
+        class="fixed inset-0 flex items-center justify-center"
+        style="z-index: 2147483647;"
       >
         <!-- Backdrop -->
         <div

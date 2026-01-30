@@ -120,11 +120,15 @@ export const useAuthStore = defineStore("auth", {
           let message = "Login failed. Please check your credentials.";
           try {
             const payload = (await res.json()) as any;
-            if (payload?.error === "invalid_credentials") {
+            // Prioritize the message field from API if it exists (human-readable)
+            if (payload?.message && typeof payload.message === "string") {
+              message = payload.message;
+            } else if (payload?.error === "invalid_credentials") {
               message = "Incorrect email or password.";
             } else if (payload?.error === "missing_credentials") {
               message = "Please enter both email and password.";
             } else if (typeof payload?.error === "string") {
+              // Fallback: show error code only if no message is available
               message = payload.error;
             }
           } catch {
@@ -185,13 +189,23 @@ export const useAuthStore = defineStore("auth", {
           let message = "Sign up failed. Please check your details and try again.";
           try {
             const payload = (await res.json()) as any;
-            if (payload?.error === "email_exists" || res.status === 409) {
+            // Prioritize the message field from API if it exists (human-readable)
+            if (payload?.message && typeof payload.message === "string") {
+              message = payload.message;
+            } else if (payload?.error === "email_exists" || res.status === 409) {
               this.loginMode = "login";
               message =
                 "An account with that email already exists. Please sign in instead.";
+            } else if (payload?.error === "password_policy_violation" || payload?.error === "password_too_weak") {
+              message =
+                "Password does not meet requirements. Please use at least 8 characters with a mix of letters, numbers, and special characters.";
             } else if (payload?.error === "missing_credentials") {
               message = "Please enter both email and password.";
+            } else if (payload?.error === "invalid_signup") {
+              // Use the message from API if available, otherwise show generic message
+              message = payload?.message || "Invalid signup information. Please check your email and password.";
             } else if (typeof payload?.error === "string") {
+              // Fallback: show error code only if no message is available
               message = payload.error;
             }
           } catch {

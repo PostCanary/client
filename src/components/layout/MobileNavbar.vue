@@ -1,9 +1,10 @@
 <!-- src/components/layout/MobileNavbar.vue -->
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import LogoUrl from "@/assets/source-logo-02.png";
-import profileIcon from "@/assets/profile-icon.svg?url";
-import { hashUsernameToGradient } from "@/utils/avatar-gradient";
+import { BRAND } from "@/config/brand";
 
 const props = withDefaults(
   defineProps<{
@@ -11,78 +12,141 @@ const props = withDefaults(
     userName?: string;
     userRole?: string;
     avatarUrl?: string;
-    sidebarOpen?: boolean;
   }>(),
   {
     title: "Dashboard",
     userName: "",
     userRole: "",
     avatarUrl: "",
-    sidebarOpen: false,
   }
 );
 
 const emit = defineEmits<{
-  (e: "toggle-sidebar"): void;
   (e: "profile-click"): void;
+  (e: "settings-click"): void;
 }>();
 
-const avatarGradientStyle = computed(() => {
-  const [from, to] = hashUsernameToGradient(props.userName ?? "");
-  return {
-    background: `linear-gradient(135deg, ${from}, ${to})`,
-  };
+const router = useRouter();
+const route = useRoute();
+const auth = useAuthStore();
+
+const dropdownOpen = ref(false);
+const dropdownRef = ref<HTMLElement | null>(null);
+const buttonRef = ref<HTMLElement | null>(null);
+
+const navItems = [
+  { label: "Dashboard", path: "/dashboard" },
+  { label: "Heatmap", path: "/map" },
+  { label: "History", path: "/history" },
+];
+
+function isActive(path: string) {
+  return route.path === path || route.path.startsWith(path + "/");
+}
+
+function navigate(path: string) {
+  router.push(path);
+}
+
+function toggleDropdown() {
+  dropdownOpen.value = !dropdownOpen.value;
+}
+
+function closeDropdown() {
+  dropdownOpen.value = false;
+}
+
+function handleSettingsClick() {
+  router.push("/app/settings");
+  closeDropdown();
+}
+
+async function handleLogoutClick() {
+  await auth.logout();
+  closeDropdown();
+  // Hard redirect to clear any in-memory state and reload
+  window.location.href = "/";
+}
+
+// Close dropdown when clicking outside
+function handleClickOutside(event: MouseEvent) {
+  if (
+    dropdownRef.value &&
+    buttonRef.value &&
+    !dropdownRef.value.contains(event.target as Node) &&
+    !buttonRef.value.contains(event.target as Node)
+  ) {
+    closeDropdown();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
 });
 </script>
 
 <template>
   <div class="mt-mnav-root">
     <div class="mt-mnav-left">
-      <button
-        type="button"
-        class="mt-hamburger"
-        @click="emit('toggle-sidebar')"
-        :aria-label="props.sidebarOpen ? 'Close navigation' : 'Open navigation'"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <img :src="LogoUrl" alt="MailTrace" class="mt-logo" draggable="false" />
-      <span class="mt-title" title="Dashboard">
-        {{ props.title }}
-      </span>
+      <img 
+        :src="LogoUrl" 
+        :alt="BRAND.name" 
+        class="mt-logo" 
+        draggable="false"
+        @click="navigate('/dashboard')"
+        style="cursor: pointer;"
+      />
+      
+      <!-- Navigation links -->
+      <nav class="mt-nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item.path"
+          @click="navigate(item.path)"
+          :class="[
+            'nav-link-mobile',
+            { 'nav-link-mobile-active': isActive(item.path) }
+          ]"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
     </div>
 
-    <div class="mt-mnav-right">
+    <div class="mt-mnav-right relative">
       <button
-        class="mt-avatar"
-        :style="avatarGradientStyle"
-        @click="emit('profile-click')"
-        aria-label="Open profile"
+        v-if="props.userName"
+        ref="buttonRef"
+        @click.stop="toggleDropdown"
+        class="mt-user-name-btn"
       >
-        <img
-          v-if="props.avatarUrl"
-          :src="props.avatarUrl"
-          alt=""
-          class="mt-avatar-img"
-        />
-        <img v-else :src="profileIcon" alt="" class="mt-avatar-icon" />
+        {{ props.userName }}
       </button>
-
-      <button class="mt-bell" aria-label="Notifications">
-        <svg viewBox="0 0 24 24" class="w-5 h-5">
-          <path
-            d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7M13.73 21a2 2 0 0 1-3.46 0"
-            fill="none"
-            stroke="#47bfa9"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
+      
+      <!-- Dropdown menu -->
+      <div
+        v-if="dropdownOpen"
+        ref="dropdownRef"
+        class="user-dropdown"
+        @click.stop
+      >
+        <button
+          class="dropdown-item"
+          @click="handleSettingsClick"
+        >
+          Settings
+        </button>
+        <button
+          class="dropdown-item"
+          @click="handleLogoutClick"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -105,89 +169,113 @@ const avatarGradientStyle = computed(() => {
 .mt-mnav-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
+  flex: 1;
 }
 
 .mt-logo {
-  height: 28px;
+  height: 40px;
   width: auto;
   object-fit: contain;
   flex-shrink: 0;
 }
 
-.mt-title {
-  font-size: 18px;
-  line-height: 1.3;
+.mt-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: 16px;
+}
+
+.nav-link-mobile {
+  font-size: 14px;
   font-weight: 500;
   color: #0c2d50;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s ease;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.nav-link-mobile:hover {
+  color: #47bfa9;
+}
+
+.nav-link-mobile-active {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0c2d50;
+}
+
+.nav-link-mobile-active:hover {
+  color: #0c2d50;
 }
 
 .mt-mnav-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
-/* Hamburger */
-.mt-hamburger {
-  width: 36px;
-  height: 36px;
+/* User name button styled like Edit Mapping */
+.mt-user-name-btn {
   border-radius: 999px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-}
-.mt-hamburger span {
-  display: block;
-  width: 16px;
-  height: 2px;
-  border-radius: 999px;
-  background: #0f172a;
+  background: #e4e7eb;
+  color: #243b53;
+  transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
-/* Avatar */
-.mt-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: none;
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+.mt-user-name-btn:hover {
+  background: #d1d5db;
 }
 
-.mt-avatar-img {
+/* User dropdown menu */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(12, 45, 80, 0.12),
+    0 4px 16px rgba(12, 45, 80, 0.08);
+  border: 1px solid #e2e8f0;
+  min-width: 160px;
+  padding: 6px;
+  z-index: 1000;
+}
+
+.dropdown-item {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.mt-avatar-icon {
-  width: 65%;
-  height: 65%;
-  object-fit: contain;
-}
-
-/* Bell */
-.mt-bell {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
+  padding: 10px 14px;
+  text-align: left;
+  background: transparent;
   border: none;
-  background: #f4f5f7;
-  display: grid;
-  place-items: center;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0c2d50;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: #f4f5f7;
+}
+
+.dropdown-item:active {
+  background: #e4e7eb;
 }
 </style>

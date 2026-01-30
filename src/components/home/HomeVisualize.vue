@@ -9,10 +9,10 @@ import ellipseActive from "@/assets/home/ellipse-2-active.svg?url";
 import ellipseInactive from "@/assets/home/ellipse-2-inactive.svg?url";
 
 const slides = [
-  { image: image1, alt: "MailTrace dashboard – KPIs view" },
-  { image: image2, alt: "MailTrace dashboard – slide 2" },
-  { image: image3, alt: "MailTrace dashboard – slide 3" },
-  { image: image1, alt: "MailTrace dashboard – slide 4" },
+  { image: image1, alt: "Postcanary dashboard – KPIs view" },
+  { image: image2, alt: "Postcanary dashboard – slide 2" },
+  { image: image3, alt: "Postcanary dashboard – slide 3" },
+  { image: image1, alt: "Postcanary dashboard – slide 4" },
 ] as const;
 
 const inactiveDots = [

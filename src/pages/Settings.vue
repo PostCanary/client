@@ -11,6 +11,7 @@ import {
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
+import { BRAND } from "@/config/brand";
 
 const {
   profile,
@@ -111,7 +112,7 @@ async function onDeleteAccount() {
   if (deleteBusy.value) return;
 
   const confirmed = window.confirm(
-    "Deleting your account will permanently remove your MailTrace data. This cannot be undone. Are you sure?"
+    `Deleting your account will permanently remove your ${BRAND.name} data. This cannot be undone. Are you sure?`
   );
   if (!confirmed) return;
 
@@ -207,8 +208,8 @@ async function onDeleteAccount() {
             </label>
             <input
               v-model="form.website_url"
-              type="url"
-              placeholder="https://example.com"
+              type="text"
+              placeholder="example.com"
               class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               autocomplete="url"
             />
@@ -277,7 +278,7 @@ async function onDeleteAccount() {
               Billing &amp; subscription
             </h2>
             <p class="mt-1 text-xs text-slate-500">
-              Manage your MailTrace subscription, update your payment method, or
+              Manage your {{ BRAND.name }} subscription, update your payment method, or
               change plans via Stripe.
             </p>
           </div>
@@ -303,7 +304,7 @@ async function onDeleteAccount() {
           <div>
             <h2 class="text-sm font-semibold text-red-700">Danger zone</h2>
             <p class="mt-1 text-xs text-red-700/80">
-              Deleting your account will permanently remove your MailTrace data.
+              Deleting your account will permanently remove your {{ BRAND.name }} data.
               This action cannot be undone.
             </p>
             <p v-if="deleteError" class="mt-1 text-xs text-red-800">

@@ -6,6 +6,7 @@ import rightDown from "@/assets/home/right-down.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
+import { BRAND } from "@/config/brand";
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -277,7 +278,7 @@ const onGetStartedClick = async (tierId: PlanCode) => {
               </p>
 
               <a
-                href="mailto:support@mailtrace.ai"
+                :href="`mailto:${BRAND.email.support}`"
                 class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[#0b2d50] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-white hover:bg-[#123b6a]"
               >
                 Contact Sales

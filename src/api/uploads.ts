@@ -1,5 +1,5 @@
 // src/api/uploads.ts
-import { post } from "@/api/http";
+import { post, get, del_ } from "@/api/http";
 
 export type Source = "mail" | "crm";
 
@@ -155,4 +155,47 @@ export async function normalizeBatch(batchId: string): Promise<NormalizeBatchRes
     const data = err?.data ?? {};
     return { status, data };
   }
+}
+
+export type Batch = {
+  id: string;
+  source: Source;
+  filename: string;
+  created_at: string;
+  status: string;
+  raw_count: number | null;
+  normalized_count: number | null;
+  deduped_count: number | null;
+};
+
+export type ListBatchesResponse = {
+  ok: true;
+  batches: Batch[];
+};
+
+export type DeleteBatchResponse = {
+  ok: true;
+  batch_id: string;
+  source: Source;
+  deleted_matches: number;
+  deleted_mappings: number;
+};
+
+export type DeleteBatchError = {
+  ok: false;
+  error: string;
+  message?: string;
+  batch_id: string;
+};
+
+export async function getBatches(): Promise<Batch[]> {
+  const data = await get<ListBatchesResponse>("/api/batches");
+  return data.batches || [];
+}
+
+export async function deleteBatch(batchId: string): Promise<DeleteBatchResponse> {
+  const data = await del_<DeleteBatchResponse>(
+    `/api/batches/${encodeURIComponent(batchId)}`
+  );
+  return data;
 }

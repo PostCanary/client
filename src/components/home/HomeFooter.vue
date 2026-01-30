@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { BRAND, getCopyrightText, getSupportEmailLink } from "@/config/brand";
 import landingLogo from "@/assets/source-logo-02.png";
 import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 </script>
@@ -13,7 +14,7 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       <div
         class="shrink-0 w-full md:w-auto flex justify-center md:justify-start md:pr-10 lg:pr-16"
       >
-        <img :src="landingLogo" alt="MailTrace" class="h-12 w-auto md:h-12" />
+        <img :src="landingLogo" :alt="BRAND.name" class="h-20 w-auto md:h-28 lg:h-32 xl:h-36" />
       </div>
 
       <!-- middle nav columns -->
@@ -95,17 +96,17 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
         class="flex flex-col items-center md:items-end gap-4 md:gap-6 shrink-0 mt-2 md:mt-0"
       >
         <a
-          href="mailto:support@mailtrace.ai"
+          :href="getSupportEmailLink()"
           class="text-[16px] md:text-[18px] text-black"
         >
-          support@mailtrace.ai
+          {{ BRAND.email.support }}
         </a>
 
         <a
-          href="https://www.linkedin.com/company/mailtrace/"
+          :href="BRAND.social.linkedin.url"
           target="_blank"
           rel="noreferrer noopener"
-          aria-label="MailTrace on LinkedIn"
+          :aria-label="`${BRAND.name} on LinkedIn`"
         >
           <img :src="linkedinIcon" alt="" class="h-[26px] w-[26px]" />
         </a>
@@ -117,7 +118,7 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       <p
         class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 text-center text-[14px] sm:text-[16px] md:text-[18px] text-black"
       >
-        © 2025 MailTrace LLC. All rights reserved
+        {{ getCopyrightText() }}
       </p>
     </div>
 

@@ -4,12 +4,6 @@
     <!-- Toolbar -->
     <div class="flex items-center gap-4 px-4 py-3 border-b">
       <label class="font-semibold flex items-center gap-2">
-        <input type="checkbox" v-model="kinds.mail" /> Mail addresses
-      </label>
-      <label class="font-semibold flex items-center gap-2">
-        <input type="checkbox" v-model="kinds.crm" /> CRM addresses
-      </label>
-      <label class="font-semibold flex items-center gap-2">
         <input type="checkbox" v-model="kinds.matched" /> Matched
       </label>
 
@@ -27,8 +21,6 @@
       >
         {{ loading ? "Loading…" : "Apply" }}
       </button>
-
-      <span class="ml-auto opacity-70 text-xs">{{ enginePill }}</span>
     </div>
 
     <div v-if="error" class="px-4 py-2 text-sm border-b text-red-600">
@@ -69,6 +61,14 @@ type ClusterLike = L.LayerGroup & {
   addLayer(layer: L.Layer): L.LayerGroup;
 };
 
+type FilterState = {
+  kinds: { matched: boolean };
+  from: string;
+  to: string;
+};
+
+const STORAGE_KEY = "mt:heatmap-filters:v1";
+
 const mapEl = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
 let cluster: ClusterLike | null = null;
@@ -76,17 +76,55 @@ let cluster: ClusterLike | null = null;
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-const enginePill = ref("Engine: Leaflet (clustered markers)");
+// Load filter state from localStorage or use defaults
+function loadFilterState(): FilterState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<FilterState>;
+      return {
+        kinds: {
+          matched: parsed.kinds?.matched ?? true,
+        },
+        from: parsed.from ?? "",
+        to: parsed.to ?? "",
+      };
+    }
+  } catch (e) {
+    console.warn("[Heatmap] Failed to load filter state from localStorage", e);
+  }
+  // Default state
+  return {
+    kinds: { matched: true },
+    from: "",
+    to: "",
+  };
+}
 
-// UI toggles (mail + crm + matched)
-const kinds = reactive<{ mail: boolean; crm: boolean; matched: boolean }>({
-  mail: true,
-  crm: true,
-  matched: false,
+// Save filter state to localStorage
+function saveFilterState() {
+  try {
+    const state: FilterState = {
+      kinds: { ...kinds },
+      from: from.value,
+      to: to.value,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn("[Heatmap] Failed to save filter state to localStorage", e);
+  }
+}
+
+// Initialize filter state from localStorage
+const initialState = loadFilterState();
+
+// UI toggles (matched only)
+const kinds = reactive<{ matched: boolean }>({
+  matched: initialState.kinds.matched,
 });
 
-const from = ref<string>("");
-const to = ref<string>("");
+const from = ref<string>(initialState.from);
+const to = ref<string>(initialState.to);
 
 // ✅ Explicit icon fixes “broken marker” icons in prod builds
 const defaultIcon = L.icon({
@@ -101,8 +139,6 @@ const defaultIcon = L.icon({
 
 function selectedKinds(): HeatmapKind[] {
   const out: HeatmapKind[] = [];
-  if (kinds.mail) out.push("mail");
-  if (kinds.crm) out.push("crm");
   if (kinds.matched) out.push("matched");
   return out;
 }
@@ -134,14 +170,8 @@ function createCluster(): ClusterLike {
 
 /**
  * Backend-driven selection rules:
- * - If user selects ONE kind, send kind=<that>
- * - If user selects ALL kinds, OMIT kind (backend returns all)
- * - If user selects MULTIPLE but not all, we issue multiple requests and merge client-side
+ * - If user selects matched, send kind=matched
  * - If user selects NONE, return []
- *
- * NOTE:
- * Your HeatmapParams currently only supports a single `kind`, not an array,
- * so “two out of three” needs fan-out requests.
  */
 async function loadPoints(): Promise<Point[]> {
   const sel = selectedKinds();
@@ -153,64 +183,20 @@ async function loadPoints(): Promise<Point[]> {
     limit: 20000,
   } as const;
 
-  // If all 3 are selected, omit kind to let backend return “all kinds”
-  if (sel.length === 3) {
-    const res = await getHeatmapPoints({ ...base, kind: undefined });
-    return (res.points ?? [])
-      .filter((p): p is NonNullable<typeof p> => !!p)
-      .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
-      .map((p) => ({
-        lat: p.lat as number,
-        lon: p.lon as number,
-        kind: p.kind,
-        label: p.label ?? null,
-        address: p.address ?? null,
-        event_date: p.event_date ?? null,
-        event_count: p.event_count ?? null,
-      }));
-  }
-
-  // If exactly 1 selected, request that kind
-  if (sel.length === 1) {
-    const res = await getHeatmapPoints({ ...base, kind: sel[0] });
-    return (res.points ?? [])
-      .filter((p): p is NonNullable<typeof p> => !!p)
-      .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
-      .map((p) => ({
-        lat: p.lat as number,
-        lon: p.lon as number,
-        kind: p.kind,
-        label: p.label ?? null,
-        address: p.address ?? null,
-        event_date: p.event_date ?? null,
-        event_count: p.event_count ?? null,
-      }));
-  }
-
-  // If 2 of 3 selected, fan-out 2 requests and merge results
-  const responses = await Promise.all(
-    sel.map((k) => getHeatmapPoints({ ...base, kind: k }))
-  );
-
-  const out: Point[] = [];
-  for (const res of responses) {
-    for (const p of res.points ?? []) {
-      if (!p) continue;
-      if (typeof p.lat === "number" && typeof p.lon === "number") {
-        out.push({
-          lat: p.lat,
-          lon: p.lon,
-          kind: p.kind,
-          label: p.label ?? null,
-          address: p.address ?? null,
-          event_date: p.event_date ?? null,
-          event_count: p.event_count ?? null,
-        });
-      }
-    }
-  }
-
-  return out;
+  // Send request with matched kind
+  const res = await getHeatmapPoints({ ...base, kind: sel });
+  return (res.points ?? [])
+    .filter((p): p is NonNullable<typeof p> => !!p)
+    .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
+    .map((p) => ({
+      lat: p.lat as number,
+      lon: p.lon as number,
+      kind: p.kind,
+      label: p.label ?? null,
+      address: p.address ?? null,
+      event_date: p.event_date ?? null,
+      event_count: p.event_count ?? null,
+    }));
 }
 
 async function draw() {
@@ -246,6 +232,9 @@ async function draw() {
 
     await nextTick();
     requestAnimationFrame(() => map?.invalidateSize(false));
+    
+    // Save filter state after successful load
+    saveFilterState();
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
