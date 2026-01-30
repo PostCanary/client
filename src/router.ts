@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/pages/Home.vue"),
-    meta: { title: "Home • MailTrace", marketing: true },
+    meta: { title: "Home • Postcanary", marketing: true },
   },
   { path: "/home", redirect: "/" },
 
@@ -57,6 +57,13 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, _from, next) => {
+  // If coming soon mode is enabled, block all navigation
+  const isComingSoon = import.meta.env.VITE_COMING_SOON !== "false";
+  if (isComingSoon) {
+    // Prevent navigation - App.vue will show Coming Soon page
+    return next(false);
+  }
+
   const auth = useAuthStore();
 
   if (to.meta?.marketing) return next();
