@@ -2,7 +2,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
-import router from "./router";
+// import router from "./router"; // Commented out for Coming Soon mode
 
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -11,32 +11,42 @@ import {
   type HttpGateEventDetail,
 } from "@/api/http";
 
+// Coming Soon is the default. Set VITE_COMING_SOON=false to show full app
+const isComingSoon = import.meta.env.VITE_COMING_SOON !== "false";
+
 const app = createApp(App);
 
 const pinia = createPinia();
 app.use(pinia);
-app.use(router);
+// app.use(router); // Commented out for Coming Soon mode
 
 // Initialize auth once at boot (so billing flags are available)
 const auth = useAuthStore(pinia);
-auth.fetchMe();
+if (!isComingSoon) {
+  auth.fetchMe();
+}
 
 // 401 => prompt login
-window.addEventListener(HTTP_EVENT_AUTH_REQUIRED, () => {
-  const next = router.currentRoute.value.fullPath || "/dashboard";
-  auth.openLoginModal(next, "login");
-});
+if (!isComingSoon) {
+  window.addEventListener(HTTP_EVENT_AUTH_REQUIRED, () => {
+    // const next = router.currentRoute.value.fullPath || "/dashboard"; // Commented out for Coming Soon mode
+    const next = "/dashboard";
+    auth.openLoginModal(next, "login");
+  });
+}
 
 // 402 => open paywall (or route to pricing if you prefer)
-window.addEventListener(
-  HTTP_EVENT_SUBSCRIPTION_REQUIRED,
-  async (ev: Event) => {
-    const detail = (ev as CustomEvent<HttpGateEventDetail>).detail;
+if (!isComingSoon) {
+  window.addEventListener(
+    HTTP_EVENT_SUBSCRIPTION_REQUIRED,
+    async (ev: Event) => {
+      const detail = (ev as CustomEvent<HttpGateEventDetail>).detail;
 
-    // Refresh /auth/me so auth.me.billing gets updated (needs_paywall, etc.)
-    await auth.fetchMe();
-    console.log("subscription required", detail);
-  }
-);
+      // Refresh /auth/me so auth.me.billing gets updated (needs_paywall, etc.)
+      await auth.fetchMe();
+      console.log("subscription required", detail);
+    }
+  );
+}
 
 app.mount("#app");
