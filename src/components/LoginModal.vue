@@ -43,7 +43,7 @@ const socialProviders = [
   {
     id: "microsoft",
     label: "Microsoft",
-    connection: "windowslive",
+    connection: "Microsoft",
     icon: microsoftIcon,
   },
   { id: "twitter", label: "Twitter", connection: "Twitter", icon: twitterIcon },
