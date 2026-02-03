@@ -9,8 +9,11 @@ import type {
 import { log, getReq } from "@/utils/logger";
 
 // ---- Base URL
-// Production Railway backend (fallback when VITE_API_BASE not set in prod)
-const PROD_API_BASE = "https://server-production-4105.up.railway.app/api";
+// Production backend - using subdomain for cookie sharing
+// After setting up api.postcanary.com, update this:
+const PROD_API_BASE = "https://api.postcanary.com/api";
+// Fallback to Railway URL if subdomain not set up yet:
+// const PROD_API_BASE = "https://postcanary-api.up.railway.app/api";
 
 const rawBase = import.meta.env.VITE_API_BASE as string | undefined;
 const base = (rawBase ?? "").trim();
