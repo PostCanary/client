@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { BRAND, getCopyrightText, getSupportEmailLink } from "@/config/brand";
-import landingLogo from "@/assets/source-logo-02.png";
+import landingLogo from "@/assets/postcanary-white.png";
 import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 </script>
 
 <template>
-  <footer class="bg-white">
+  <footer class="bg-[var(--pc-navy)]">
     <!-- top content row -->
     <div
       class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col md:flex-row items-center md:items-start justify-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pt-10 pb-8 md:pt-14 md:pb-10"
@@ -14,43 +14,43 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       <div
         class="shrink-0 w-full md:w-auto flex justify-center md:justify-start md:pr-10 lg:pr-16"
       >
-        <img :src="landingLogo" :alt="BRAND.name" class="h-20 w-auto md:h-28 lg:h-32 xl:h-36" />
+        <img :src="landingLogo" :alt="BRAND.name" class="h-[clamp(72px,10vw,144px)] w-auto" />
       </div>
 
       <!-- middle nav columns -->
       <!-- 
       <div
-        class="flex flex-col md:flex-row flex-1 items-center md:items-start justify-center md:justify-start gap-6 md:gap-24 text-[16px] md:text-[18px] leading-8 md:leading-10 tracking-[-0.04em] text-black mt-2 md:mt-0"
+        class="flex flex-col md:flex-row flex-1 items-center md:items-start justify-center md:justify-start gap-6 md:gap-24 text-[16px] md:text-[18px] leading-8 md:leading-10 tracking-[-0.04em] text-[var(--pc-text-muted)] mt-2 md:mt-0"
       > -->
       <!-- left column -->
       <!-- <div class="flex flex-col space-y-1 text-center md:text-left">
           <a
             href="#about"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             About
           </a>
           <a
             href="#pricing"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Pricing
           </a>
           <a
             href="#faq"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             FAQ
           </a>
           <a
             href="#demo"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Get a Demo
           </a>
           <a
             href="#contact"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Contact
           </a>
@@ -60,31 +60,31 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       <!-- <div class="flex flex-col space-y-1 text-center md:text-left">
           <a
             href="#careers"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Careers
           </a>
           <a
             href="#products"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Products
           </a>
           <a
             href="#blog"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Blog
           </a>
           <a
             href="#testimonials"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Testimonials
           </a>
           <a
             href="#support"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[#47bfa9] transition-colors"
+            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
             Support
           </a>
@@ -97,7 +97,7 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       >
         <a
           :href="getSupportEmailLink()"
-          class="text-[16px] md:text-[18px] text-black"
+          class="text-[16px] md:text-[18px] text-[var(--pc-text-muted)] hover:text-[var(--pc-cyan)]"
         >
           {{ BRAND.email.support }}
         </a>
@@ -116,13 +116,13 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
     <!-- copyright -->
     <div class="pb-6">
       <p
-        class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 text-center text-[14px] sm:text-[16px] md:text-[18px] text-black"
+        class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 text-center text-[14px] sm:text-[16px] md:text-[18px] text-[var(--pc-text-muted)]"
       >
         {{ getCopyrightText() }}
       </p>
     </div>
 
     <!-- bottom dark bar -->
-    <div class="h-20 w-full bg-[#0b2d50]" />
+    <div class="h-20 w-full bg-[var(--pc-navy-2)]" />
   </footer>
 </template>

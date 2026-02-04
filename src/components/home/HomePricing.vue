@@ -116,20 +116,20 @@ const onGetStartedClick = async (tierId: PlanCode) => {
 </script>
 
 <template>
-  <section id="pricing" class="bg-white py-16 sm:py-24 lg:py-28">
+  <section id="pricing" class="bg-[var(--pc-navy)] py-16 sm:py-24 lg:py-28">
     <div
       class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col items-center gap-10 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20"
     >
       <!-- Heading / copy (centered) -->
       <div class="max-w-3xl text-center">
         <span
-          class="inline-flex items-center rounded-full bg-[#d6f4ec] px-4 py-1 text-[12px] sm:text-[13px] font-semibold text-[#0b2d4f]"
+          class="inline-flex items-center rounded-full bg-[var(--pc-cyan)] px-4 py-1 text-[12px] sm:text-[13px] font-semibold text-[var(--pc-navy)]"
         >
           PLANS &amp; PRICING
         </span>
 
         <h2
-          class="mt-6 sm:mt-8 font-normal text-[#0b2d4f] tracking-[-0.04em] text-[34px] leading-10 sm:text-[48px] sm:leading-[54px] md:text-[64px] md:leading-[72px] xl:text-[70px] xl:leading-20"
+          class="mt-6 sm:mt-8 font-normal text-[var(--pc-text)] tracking-[-0.04em] text-[34px] leading-10 sm:text-[48px] sm:leading-[54px] md:text-[64px] md:leading-[72px] xl:text-[70px] xl:leading-20"
         >
           Flexible Plans for
           <br />
@@ -137,7 +137,7 @@ const onGetStartedClick = async (tierId: PlanCode) => {
         </h2>
 
         <p
-          class="mt-6 sm:mt-8 mx-auto max-w-[520px] text-[16px] sm:text-[20px] leading-[22px] sm:leading-[24.4px] text-black"
+          class="mt-6 sm:mt-8 mx-auto max-w-[520px] text-[16px] sm:text-[20px] leading-[22px] sm:leading-[24.4px] text-[var(--pc-text-muted)]"
         >
           Simple, transparent pricing. Scale only when you need to.
         </p>
@@ -152,35 +152,35 @@ const onGetStartedClick = async (tierId: PlanCode) => {
           <article
             v-for="tier in tiers"
             :key="tier.id"
-            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[#24b39b] bg-white px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(11,45,80,0.10)]"
+            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
           >
             <div>
               <h3
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[#0b2d4f] uppercase"
+                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--pc-text)] uppercase"
               >
                 {{ tier.name }}
               </h3>
 
-              <div class="mt-4 h-px w-full bg-black/10" />
+              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
 
               <div class="mt-6 flex items-baseline gap-3">
                 <span
-                  class="text-[40px] leading-[46px] sm:text-[52px] sm:leading-[60px] xl:text-[60px] xl:leading-[68px] font-medium tracking-[-0.04em] text-[#0b2d4f]"
+                  class="text-[40px] leading-[46px] sm:text-[52px] sm:leading-[60px] xl:text-[60px] xl:leading-[68px] font-medium tracking-[-0.04em] text-[var(--pc-text)]"
                 >
                   {{ tier.price }}
                 </span>
                 <span
-                  class="text-[16px] sm:text-[18px] font-bold text-[#24b39b]"
+                  class="text-[16px] sm:text-[18px] font-bold text-[var(--pc-cyan)]"
                 >
                   {{ tier.perMonthLabel }}
                 </span>
               </div>
 
-              <div class="mt-4 h-px w-full bg-black/10" />
+              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
             </div>
 
             <ul
-              class="mt-6 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-black"
+              class="mt-6 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-[var(--pc-text-muted)]"
             >
               <li
                 v-for="feature in tier.features"
@@ -197,16 +197,16 @@ const onGetStartedClick = async (tierId: PlanCode) => {
             </ul>
 
             <div class="mt-auto">
-              <div class="mt-6 h-px w-full bg-black/10" />
+              <div class="mt-6 h-px w-full bg-[var(--pc-border)]" />
               <p
                 v-if="tier.includedLabel"
-                class="mt-3 text-[14px] sm:text-[16px] text-black/80"
+                class="mt-3 text-[14px] sm:text-[16px] text-[var(--pc-text-soft)]"
               >
                 {{ tier.includedLabel }}
               </p>
               <p
                 v-if="tier.perMailerLabel"
-                class="mt-1 text-[14px] sm:text-[16px] text-black/80"
+                class="mt-1 text-[14px] sm:text-[16px] text-[var(--pc-text-soft)]"
               >
                 {{ tier.perMailerLabel }}
               </p>
@@ -215,7 +215,7 @@ const onGetStartedClick = async (tierId: PlanCode) => {
                 type="button"
                 @click="onGetStartedClick(tier.id)"
                 :disabled="starterBusy"
-                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[#24b39b] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-white hover:bg-[#1f9e86] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[var(--pc-yellow)] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-navy)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 <span v-if="!starterBusy || activeTierId !== tier.id">
                   Get Started
@@ -232,30 +232,30 @@ const onGetStartedClick = async (tierId: PlanCode) => {
 
           <!-- Enterprise / Tailored -->
           <article
-            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[#24b39b] bg-white px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(11,45,80,0.10)]"
+            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
           >
             <div>
               <h3
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[#0b2d4f] uppercase"
+                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--pc-text)] uppercase"
               >
                 Enterprise
               </h3>
 
-              <div class="mt-4 h-px w-full bg-black/10" />
+              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
 
               <div class="mt-6 flex items-baseline gap-3">
                 <span
-                  class="text-[26px] sm:text-[26px] leading-7 sm:leading-8 font-semibold tracking-[-0.02em] text-[#0b2d4f]"
+                  class="text-[26px] sm:text-[26px] leading-7 sm:leading-8 font-semibold tracking-[-0.02em] text-[var(--pc-text)]"
                 >
                   Tailored
                 </span>
               </div>
 
-              <div class="mt-4 h-px w-full bg-black/10" />
+              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
             </div>
 
             <ul
-              class="mt-8 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-black"
+              class="mt-8 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-[var(--pc-text-muted)]"
             >
               <li
                 v-for="feature in enterpriseFeatures"
@@ -272,14 +272,14 @@ const onGetStartedClick = async (tierId: PlanCode) => {
             </ul>
 
             <div class="mt-auto">
-              <div class="mt-6 h-px w-full bg-black/10" />
-              <p class="mt-3 text-[16px] sm:text-[18px] text-black/80">
+              <div class="mt-6 h-px w-full bg-[var(--pc-border)]" />
+              <p class="mt-3 text-[16px] sm:text-[18px] text-[var(--pc-text-soft)]">
                 Custom pricing
               </p>
 
               <a
                 :href="`mailto:${BRAND.email.support}`"
-                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[#0b2d50] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-white hover:bg-[#123b6a]"
+                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[var(--pc-yellow)] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-navy)] hover:opacity-90"
               >
                 Contact Sales
                 <img
@@ -294,7 +294,7 @@ const onGetStartedClick = async (tierId: PlanCode) => {
 
         <!-- bottom note -->
         <p
-          class="mt-8 sm:mt-10 text-center text-[14px] sm:text-[18px] leading-5 sm:leading-[22px] text-[#24b39b]"
+          class="mt-8 sm:mt-10 text-center text-[14px] sm:text-[18px] leading-5 sm:leading-[22px] text-[var(--pc-cyan)]"
         >
           No hidden fees. Upgrade anytime.
         </p>
