@@ -111,35 +111,37 @@ import { BRAND } from "@/config/brand";
 <style scoped>
 .terms-page {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: var(--pc-navy);
   padding: 40px 20px;
+  color: var(--pc-text);
 }
 
 .terms-container {
   max-width: 800px;
   margin: 0 auto;
-  background: #ffffff;
+  background: var(--pc-card);
+  border: 1px solid var(--pc-border);
   border-radius: 12px;
   padding: 48px;
-  box-shadow: 0 2px 8px rgba(12, 45, 80, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
 }
 
 .terms-title {
   font-size: 36px;
   font-weight: 700;
-  color: #0b2d4f;
+  color: var(--pc-text);
   margin-bottom: 8px;
 }
 
 .terms-updated {
   font-size: 14px;
-  color: #64748b;
+  color: var(--pc-text-soft);
   margin-bottom: 32px;
 }
 
 .terms-content {
   line-height: 1.7;
-  color: #334155;
+  color: var(--pc-text-muted);
 }
 
 .terms-section {
@@ -149,7 +151,7 @@ import { BRAND } from "@/config/brand";
 .terms-section h2 {
   font-size: 24px;
   font-weight: 600;
-  color: #0b2d4f;
+  color: var(--pc-text);
   margin-bottom: 12px;
   margin-top: 0;
 }
@@ -157,7 +159,7 @@ import { BRAND } from "@/config/brand";
 .terms-section p {
   font-size: 16px;
   margin-bottom: 12px;
-  color: #475569;
+  color: var(--pc-text-muted);
 }
 
 .terms-section ul {
@@ -168,7 +170,7 @@ import { BRAND } from "@/config/brand";
 
 .terms-section li {
   font-size: 16px;
-  color: #475569;
+  color: var(--pc-text-muted);
   margin-bottom: 8px;
 }
 

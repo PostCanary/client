@@ -39,7 +39,7 @@ const dotIconFor = (index: number) =>
 </script>
 
 <template>
-  <section class="bg-white py-24">
+  <section class="bg-[var(--pc-navy-2)] py-24">
     <div
       class="mx-auto flex max-w-[1660px] 2xl:max-w-[1760px] flex-col items-center gap-16 px-6 md:flex-row md:px-10 xl:px-16"
     >
@@ -47,7 +47,7 @@ const dotIconFor = (index: number) =>
       <div class="relative flex-1">
         <!-- Card / screenshot -->
         <div
-          class="relative z-10 w-full max-w-[802px] rounded-2xl bg-white shadow-[0_24px_70px_rgba(11,45,80,0.18)]"
+          class="relative z-10 w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
         >
           <img
             :src="activeSlide.image"
@@ -65,7 +65,7 @@ const dotIconFor = (index: number) =>
             v-for="(_, index) in slides"
             :key="index"
             type="button"
-            class="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            class="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pc-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--pc-navy-2)]"
             :aria-label="`Go to slide ${index + 1}`"
             :aria-current="currentSlide === index"
             @click="goToSlide(index)"
@@ -78,14 +78,14 @@ const dotIconFor = (index: number) =>
       <!-- RIGHT: text column -->
       <div class="flex-1 max-w-[652px]">
         <h2
-          class="text-[#0b2d4f] text-[36px] leading-11 md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-20 font-normal tracking-[-0.04em]"
+          class="text-[var(--pc-text)] text-[36px] leading-11 md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-20 font-normal tracking-[-0.04em]"
         >
           Visualize Your Entire<br />
           Mail Flow in Real Time
         </h2>
 
         <p
-          class="mt-6 text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-black"
+          class="mt-6 text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-[var(--pc-text-muted)]"
         >
           Open rates, delivery speed, and spam detection displayed on a live
           dashboard built for clarity. Everything you send. Every insight you
