@@ -482,12 +482,14 @@ async function onUploadCommit(payload: {
       processedBatchIds.push(id);
     }
 
-    const shouldPoll = batchIds.length >= 2;
+    // Poll if a run was started (backend handles single-file scenarios)
+    const shouldPoll = !!startedRunId;
 
     if (startedRunId) setActiveRunId(startedRunId);
 
-    // Show first upload modal if this is the first upload and both files are uploaded
-    if (isFirstUpload.value && shouldPoll) {
+    // Show first upload modal only if this is the first upload AND both files are uploaded
+    // (Single-file uploads don't need the modal since matching can proceed immediately)
+    if (isFirstUpload.value && batchIds.length >= 2) {
       loaderCloseForModal();
       showFirstUploadModal.value = true;
       return; // Don't auto-start polling, wait for user to click "Run Matching"

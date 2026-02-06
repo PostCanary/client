@@ -16,10 +16,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (
-    e: "need-both-files",
-    payload: { mailMissing: boolean; crmMissing: boolean }
-  ): void;
   (e: "edit-mapping"): void;
   (
     e: "batch-ids",
@@ -258,15 +254,14 @@ function onUpload(ev?: Event) {
   const hasMail = !!mailBatchId.value;
   const hasCrm = !!crmBatchId.value;
 
-  // IMPORTANT: emit correct missing flags even when only one is missing
-  if (!hasMail || !hasCrm) {
-    emit("need-both-files", {
-      mailMissing: !hasMail,
-      crmMissing: !hasCrm,
-    });
+  // Allow upload with at least one file (single-file uploads are now supported)
+  if (!hasMail && !hasCrm) {
+    // This shouldn't happen since button would be disabled, but handle gracefully
+    log.warn("UI ▶ upload attempted with no files");
     return;
   }
 
+  // Emit upload-commit even with single file (backend will handle incremental matching)
   emit("upload-commit", {
     mailBatchId: mailBatchId.value,
     crmBatchId: crmBatchId.value,
