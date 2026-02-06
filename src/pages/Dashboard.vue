@@ -514,17 +514,23 @@ async function onUploadCommit(payload: {
         // Refresh dashboard to show results (blurred if preview mode)
         await refreshRunData();
         loaderFinish("Processing complete — results are ready!");
-        // Auto-close the loader after results are populated
-        await nextTick();
-        loader.hide(true);
+        // Ensure loader stays open for auto-close
+        loader.show({ progress: 100, message: "Processing complete — results are ready!" });
+        // Auto-close the loader after 5 seconds when results are populated
+        setTimeout(() => {
+          loader.hide(true);
+        }, 5000);
       }
     } else {
       loaderSet("Refreshing dashboard…", 25);
       await refreshRunData();
       loaderFinish("Upload complete — close this when you're ready.");
-      // Auto-close the loader after results are populated
-      await nextTick();
-      loader.hide(true);
+      // Ensure loader stays open for auto-close
+      loader.show({ progress: 100, message: "Upload complete — close this when you're ready." });
+      // Auto-close the loader after 5 seconds when results are populated
+      setTimeout(() => {
+        loader.hide(true);
+      }, 5000);
     }
 
     uploadResetKey.value++;
@@ -611,17 +617,23 @@ async function handleFirstUploadRunMatching() {
       } else {
         await refreshRunData();
         loaderFinish("Matching complete!");
-        // Auto-close the loader after results are populated
-        await nextTick();
-        loader.hide(true);
+        // Ensure loader stays open for auto-close
+        loader.show({ progress: 100, message: "Matching complete!" });
+        // Auto-close the loader after 5 seconds when results are populated
+        setTimeout(() => {
+          loader.hide(true);
+        }, 5000);
       }
     } else {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await refreshRunData();
       loaderFinish("Matching run started. Results will appear shortly.");
-      // Auto-close the loader after results are populated
-      await nextTick();
-      loader.hide(true);
+      // Ensure loader stays open for auto-close
+      loader.show({ progress: 100, message: "Matching run started. Results will appear shortly." });
+      // Auto-close the loader after 5 seconds when results are populated
+      setTimeout(() => {
+        loader.hide(true);
+      }, 5000);
     }
   } catch (err: any) {
     console.error("[Dashboard] Failed to start matching run:", err);
