@@ -89,7 +89,7 @@ async function onAvatarChanged(e: Event) {
 
           <!-- Avatar -->
           <!-- Hidden for now - avatar upload functionality is broken -->
-          <div v-if="false" class="field-row avatar-row">
+          <!-- <div v-if="false" class="field-row avatar-row">
             <div class="avatar-preview" :style="avatarGradientStyle">
               <img
                 v-if="profile?.avatar_url"
@@ -111,7 +111,7 @@ async function onAvatarChanged(e: Event) {
               </label>
               <p class="hint">JPG or PNG, up to ~2MB.</p>
             </div>
-          </div>
+          </div> -->
 
           <!-- Full name -->
           <div class="field">
