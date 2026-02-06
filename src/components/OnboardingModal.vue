@@ -88,7 +88,8 @@ async function onAvatarChanged(e: Event) {
           </div>
 
           <!-- Avatar -->
-          <div class="field-row avatar-row">
+          <!-- Hidden for now - avatar upload functionality is broken -->
+          <div v-if="false" class="field-row avatar-row">
             <div class="avatar-preview" :style="avatarGradientStyle">
               <img
                 v-if="profile?.avatar_url"

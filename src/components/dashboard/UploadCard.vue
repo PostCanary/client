@@ -379,7 +379,9 @@ function browseCrm() {
 
     <!-- ACTIONS -->
     <div class="row row-actions">
+      <!-- Edit Mapping button hidden - mapping popup opens automatically when required -->
       <button
+        v-if="false"
         type="button"
         class="btn btn-secondary"
         :disabled="isUploading"

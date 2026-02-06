@@ -512,11 +512,17 @@ async function onUploadCommit(payload: {
         // Refresh dashboard to show results (blurred if preview mode)
         await refreshRunData();
         loaderFinish("Processing complete — results are ready!");
+        // Auto-close the loader after results are populated
+        await nextTick();
+        loader.hide(true);
       }
     } else {
       loaderSet("Refreshing dashboard…", 25);
       await refreshRunData();
       loaderFinish("Upload complete — close this when you're ready.");
+      // Auto-close the loader after results are populated
+      await nextTick();
+      loader.hide(true);
     }
 
     uploadResetKey.value++;
@@ -601,12 +607,19 @@ async function handleFirstUploadRunMatching() {
           "Run finished, but status is unavailable — close this and refresh."
         );
       } else {
+        await refreshRunData();
         loaderFinish("Matching complete!");
+        // Auto-close the loader after results are populated
+        await nextTick();
+        loader.hide(true);
       }
     } else {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await refreshRunData();
       loaderFinish("Matching run started. Results will appear shortly.");
+      // Auto-close the loader after results are populated
+      await nextTick();
+      loader.hide(true);
     }
   } catch (err: any) {
     console.error("[Dashboard] Failed to start matching run:", err);
