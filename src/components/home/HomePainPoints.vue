@@ -34,20 +34,20 @@ const painCards = [
 </script>
 
 <template>
-  <section class="bg-white py-24">
+  <section class="bg-[var(--pc-navy)] py-24">
     <div
       class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-6 md:px-10 xl:px-16"
     >
       <!-- Heading -->
       <h2
-        class="text-center font-normal text-[#0b2d4f] text-[36px] leading-44px md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-80px tracking-[-0.04em]"
+        class="text-center font-normal text-[var(--pc-text)] text-[36px] leading-44px md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-80px tracking-[-0.04em]"
       >
         Do These Pain Points Sound Familiar?
       </h2>
 
       <!-- Subheading -->
       <p
-        class="mx-auto mt-6 max-w-[640px] text-center text-[16px] leading-[26px] md:text-[20px] md:leading-28px text-black"
+        class="mx-auto mt-6 max-w-[640px] text-center text-[16px] leading-[26px] md:text-[20px] md:leading-28px text-[var(--pc-text-muted)]"
       >
         You’re not the only one wondering where your mail marketing data
         disappears to. See how {{ BRAND.name }} brings it all back in view.
@@ -58,11 +58,11 @@ const painCards = [
         <article
           v-for="card in painCards"
           :key="card.title"
-          class="flex flex-col items-center rounded-[14px] border border-[#47bfa9] bg-white px-8 pt-12 pb-10 shadow-[0_18px_45px_rgba(11,45,80,0.08)]"
+          class="flex flex-col items-center rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-8 pt-12 pb-10 shadow-[0_18px_45px_rgba(0,0,0,0.35)]"
         >
           <!-- Icon circle -->
           <div
-            class="mb-8 flex h-[139px] w-[139px] items-center justify-center rounded-full bg-[#47bfa9]"
+            class="mb-8 flex h-[139px] w-[139px] items-center justify-center rounded-full bg-[var(--pc-cyan)]"
           >
             <img
               :src="card.icon"
@@ -73,13 +73,15 @@ const painCards = [
 
           <!-- Title -->
           <h3
-            class="text-center text-[22px] leading-[30px] md:text-[24px] md:leading-32px lg:text-[30px] lg:leading-36px font-semibold text-[#0b2d4f]"
+            class="text-center text-[22px] leading-[30px] md:text-[24px] md:leading-32px lg:text-[30px] lg:leading-36px font-semibold text-[var(--pc-text)]"
           >
             {{ card.title }}
           </h3>
 
           <!-- Body -->
-          <p class="mt-4 text-center text-[16px] leading-[26px] text-black">
+          <p
+            class="mt-4 text-center text-[16px] leading-[26px] text-[var(--pc-text-muted)]"
+          >
             {{ card.body }}
           </p>
         </article>
