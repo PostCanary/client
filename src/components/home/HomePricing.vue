@@ -6,7 +6,7 @@ import rightDown from "@/assets/home/right-down.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
-import { BRAND } from "@/config/brand";
+
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -30,15 +30,6 @@ const commonFeatures: Feature[] = [
   { icon: check, label: "Top performing cities and zip codes" },
 ];
 
-const enterpriseFeatures: Feature[] = [
-  { icon: check, label: "Full Access to KPIs" },
-  { icon: check, label: "ROI calculation" },
-  { icon: check, label: "Job conversion rate" },
-  { icon: check, label: "Top performing cities and zip codes" },
-  { icon: check, label: "Dedicated account manager" },
-  { icon: check, label: "Priority support" },
-  { icon: check, label: "And much more..." },
-];
 
 // Public tiers – keep these in sync with Pricing.xlsx/backend limits
 const tiers: Tier[] = [
