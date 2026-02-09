@@ -105,6 +105,10 @@ export type RunResult = {
   run_id: string;
   user_id?: string;
 
+  // Backend returns preview_mode=true if run requires payment but user is not subscribed
+  // Frontend should blur results when preview_mode=true
+  preview_mode?: boolean;
+
   kpis: KPIs;
   graph: RunGraph;
   top_cities: TopCity[];

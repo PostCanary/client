@@ -673,6 +673,33 @@ watch(
   { immediate: false }
 );
 
+// Watch runResult for preview_mode flag from backend
+// This ensures we respect the backend's payment check even after logout/login
+// The backend sets preview_mode=true when run requires payment but user is not subscribed
+watch(
+  () => runResult.value,
+  (result) => {
+    if (result) {
+      const previewMode = result.preview_mode === true;
+      if (previewMode !== isPreviewMode.value) {
+        console.log("[Dashboard] 🔄 Backend preview_mode flag changed:", {
+          from: isPreviewMode.value,
+          to: previewMode,
+          run_id: result.run_id,
+        });
+        isPreviewMode.value = previewMode;
+        
+        // If backend says preview mode is required, show paywall
+        if (previewMode && !showPaywall.value) {
+          console.log("[Dashboard] ⚠️ Backend requires payment - showing paywall");
+          onRequireSubscription();
+        }
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
 // Watch preview mode state changes
 watch(
   () => isPreviewMode.value,
@@ -710,7 +737,30 @@ onMounted(() => {
   const init = async () => {
     console.log("[Dashboard] Component mounted");
     await maybeStartCheckoutFromQuery();
+    
+    // Refresh auth state first to get current subscription status
+    await auth.fetchMe();
+    
+    // Then refresh run data - the backend will check payment status and return preview_mode flag
     await refreshRunData();
+    
+    // Check if backend returned preview_mode flag and set it accordingly
+    // This handles the case where user logs out/in - backend will check payment status
+    const result = runResult.value;
+    if (result) {
+      const backendPreviewMode = result.preview_mode === true;
+      if (backendPreviewMode) {
+        console.log("[Dashboard] ⚠️ Backend indicates preview mode required - enabling blur");
+        isPreviewMode.value = true;
+        // Show paywall if not already shown
+        if (!showPaywall.value) {
+          onRequireSubscription();
+        }
+      } else {
+        console.log("[Dashboard] ✅ Backend indicates no preview mode required");
+        isPreviewMode.value = false;
+      }
+    }
     
     // If we have billing=success in query, unblur results and refresh
     if (route.query.billing === "success") {
