@@ -95,6 +95,9 @@ router.beforeEach(async (to, _from, next) => {
 
 router.afterEach((to) => {
   document.title = (to.meta?.title as string) || BRAND.name;
+  if (typeof window.vgo === 'function') {
+    window.vgo('process');
+  }
 });
 
 export default router;
