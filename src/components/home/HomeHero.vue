@@ -1,6 +1,6 @@
 <!-- src/components/home/HomeHero.vue -->
 <script setup lang="ts">
-import heroMockup from "@/assets/home/dashboard_sample_image.png";
+import HeroDemoAnimation from "@/components/home/HeroDemoAnimation.vue";
 import landingLogo from "@/assets/postcanary-white.png";
 
 import curve from "@/assets/home/curve.svg?url";
@@ -103,16 +103,12 @@ const onHeroGetStarted = () => {
           QR codes, promo codes and other tracking gimmicks miss 70-90% of direct mail attribution - our software solves this
         </p>
 
-        <!-- Mobile-only hero image -->
+        <!-- Mobile-only hero animation -->
         <div class="mt-6 flex justify-center md:hidden">
           <div
-            class="relative w-full max-w-[802px] overflow-hidden rounded-[18px] bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.35)]"
+            class="relative w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
           >
-            <img
-              :src="heroMockup"
-              :alt="`${BRAND.name} dashboard preview`"
-              class="block h-auto w-full"
-            />
+            <HeroDemoAnimation />
           </div>
         </div>
 
@@ -242,18 +238,14 @@ const onHeroGetStarted = () => {
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: hero image card (desktop/tablet only) -->
+      <!-- RIGHT COLUMN: hero animation card (desktop/tablet only) -->
       <div
         class="hidden md:flex w-full md:w-[48%] justify-center md:justify-end mb-4 md:mb-0"
       >
         <div
-          class="relative w-full max-w-[802px] overflow-hidden rounded-[18px] bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.35)]"
+          class="relative w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
         >
-          <img
-            :src="heroMockup"
-            :alt="`${BRAND.name} dashboard preview`"
-            class="block h-auto w-full"
-          />
+          <HeroDemoAnimation />
         </div>
       </div>
     </div>
