@@ -100,7 +100,7 @@ const onHeroGetStarted = () => {
         <p
           class="mt-6 text-[15px] sm:text-[18px] leading-6 sm:leading-7 font-semibold text-[var(--pc-cyan)]"
         >
-          QR codes, promo codes and other tracking gimmicks miss 70-90% of direct mail attribution - our software solves this
+          QR codes and promo codes only track the people who use them. That's 10-30% of your direct mail conversions, at best. PostCanary tracks the rest.
         </p>
 
         <!-- Mobile-only hero animation -->

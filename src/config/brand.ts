@@ -61,7 +61,7 @@ export const BRAND = {
 
   /** External links */
   links: {
-    demo: "https://calendly.com/dustin-postcanary",
+    demo: "https://calendly.com/postcanary-sales",
   },
 
   /** Legal footer text template */
