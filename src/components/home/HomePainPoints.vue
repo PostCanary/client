@@ -16,19 +16,19 @@ const painCards = [
     icon: wastedAdIcon,
     alt: "Wasted ad spend icon",
     title: "Wasted Ad Spend",
-    body: `Thousands of mailers go out — but there's no proof that they work. ${BRAND.name} shows real ROI and CPA.`,
-  },
-  {
-    icon: spreadsheetsIcon,
-    alt: "Data stuck in spreadsheets icon",
-    title: "Data Stuck In Spreadsheets",
-    body: `Manual reports kill momentum and accuracy — ${BRAND.name} makes measurement effortless.`,
+    body: `Thousands of mailers go out — but there's no insight on how they performed. ${BRAND.name} shows real ROI and CPA.`,
   },
   {
     icon: noAttributionIcon,
     alt: "No attribution icon",
     title: "No Attribution For Web Or Walk-In Customers",
     body: `${BRAND.name} links offline and online conversions automatically.`,
+  },
+  {
+    icon: spreadsheetsIcon,
+    alt: "Data stuck in spreadsheets icon",
+    title: "Data Stuck In Spreadsheets",
+    body: `Manual reports kill momentum and accuracy — ${BRAND.name} makes measurement effortless.`,
   },
 ];
 </script>
@@ -42,7 +42,7 @@ const painCards = [
       <h2
         class="text-center font-normal text-[var(--pc-text)] text-[36px] leading-44px md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-80px tracking-[-0.04em]"
       >
-        Do These Pain Points Sound Familiar?
+        Recognize These Challenges?
       </h2>
 
       <!-- Subheading -->

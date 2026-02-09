@@ -13,7 +13,7 @@ const router = useRouter();
 const auth = useAuthStore();
 
 /**
- * Top-right "Sign Up / Login" button in the navbar.
+ * Top-right "Sign Up" button in the navbar.
  * - If not authenticated → open modal (default to signup view)
  * - If authenticated      → send them to the dashboard
  */
@@ -70,7 +70,7 @@ const onHeroGetStarted = () => {
           class="rounded-lg bg-[var(--pc-yellow)] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-[var(--pc-navy)] shadow-sm hover:opacity-90 cursor-pointer"
           @click="onNavSignUpLoginClick"
         >
-          Sign Up / Login
+          Sign Up
         </button>
 
         <!-- Book a Demo -> Calendly link -->
@@ -94,14 +94,13 @@ const onHeroGetStarted = () => {
         <h1
           class="font-normal text-[var(--pc-text)] tracking-[-0.04em] text-[34px] sm:text-[56px] xl:text-[78px] leading-10 sm:leading-16 xl:leading-[90px]"
         >
-          QR Codes &amp; Promo Codes Miss 70–90% of Conversions
+          Finally you can see how your direct mail performs
         </h1>
 
         <p
           class="mt-6 text-[15px] sm:text-[18px] leading-6 sm:leading-7 font-semibold text-[var(--pc-cyan)]"
         >
-          Our AI matches every job to the exact mailed address for 100% accurate
-          ROI and rich analytical insight
+          QR codes, promo codes and other tracking gimmicks miss 70-90% of direct mail attribution - our software solves this
         </p>
 
         <!-- Mobile-only hero image -->
@@ -163,7 +162,7 @@ const onHeroGetStarted = () => {
             class="grid w-full max-w-[640px] grid-cols-3 gap-2 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-text)]"
           >
             <div class="relative group text-center md:text-left cursor-pointer">
-              <span>Sign Up / Login</span>
+              <span>Sign Up</span>
             </div>
 
             <p class="text-center md:text-left">Upload Your CSV</p>
@@ -186,7 +185,7 @@ const onHeroGetStarted = () => {
             </div>
             <div class="relative group text-left">
               <span class="text-[16px] font-semibold text-[var(--pc-text)]">
-                Sign Up / Login
+                Sign Up
               </span>
             </div>
           </div>

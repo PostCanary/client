@@ -44,7 +44,7 @@ const enterpriseFeatures: Feature[] = [
 const tiers: Tier[] = [
   {
     id: "INSIGHT",
-    name: "Insight",
+    name: "Tier 1",
     price: "$99",
     perMonthLabel: "/ Month",
     includedLabel: "Up to 1,000 mailers / month",
@@ -52,7 +52,7 @@ const tiers: Tier[] = [
   },
   {
     id: "PERFORMANCE",
-    name: "Performance",
+    name: "Tier 2",
     price: "$249",
     perMonthLabel: "/ Month",
     includedLabel: "Up to 5,000 mailers / month",
@@ -60,18 +60,18 @@ const tiers: Tier[] = [
   },
   {
     id: "PRECISION",
-    name: "Precision",
+    name: "Tier 3",
     price: "$499",
     perMonthLabel: "/ Month",
-    includedLabel: "Up to 10,000 mailers / month",
+    includedLabel: "Up to 25,000 mailers / month",
     features: commonFeatures,
   },
   {
     id: "ELITE",
-    name: "Elite",
+    name: "Tier 4",
     price: "$999",
     perMonthLabel: "/ Month",
-    includedLabel: "Up to 25,000 mailers / month",
+    includedLabel: "Unlimited mailers",
     features: commonFeatures,
   },
 ];
@@ -230,66 +230,6 @@ const onGetStartedClick = async (tierId: PlanCode) => {
             </div>
           </article>
 
-          <!-- Enterprise / Tailored -->
-          <article
-            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
-          >
-            <div>
-              <h3
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--pc-text)] uppercase"
-              >
-                Enterprise
-              </h3>
-
-              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
-
-              <div class="mt-6 flex items-baseline gap-3">
-                <span
-                  class="text-[26px] sm:text-[26px] leading-7 sm:leading-8 font-semibold tracking-[-0.02em] text-[var(--pc-text)]"
-                >
-                  Tailored
-                </span>
-              </div>
-
-              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
-            </div>
-
-            <ul
-              class="mt-8 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-[var(--pc-text-muted)]"
-            >
-              <li
-                v-for="feature in enterpriseFeatures"
-                :key="feature.label"
-                class="flex items-start gap-3"
-              >
-                <img
-                  :src="feature.icon"
-                  alt=""
-                  class="mt-2 h-[15px] w-[15px] shrink-0"
-                />
-                <span>{{ feature.label }}</span>
-              </li>
-            </ul>
-
-            <div class="mt-auto">
-              <div class="mt-6 h-px w-full bg-[var(--pc-border)]" />
-              <p class="mt-3 text-[16px] sm:text-[18px] text-[var(--pc-text-soft)]">
-                Custom pricing
-              </p>
-
-              <a
-                :href="`mailto:${BRAND.email.support}`"
-                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[var(--pc-yellow)] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-navy)] hover:opacity-90"
-              >
-                Contact Sales
-                <img
-                  :src="rightDown"
-                  alt=""
-                  class="h-6 sm:h-[30px] w-6 sm:w-[30px]"
-                />
-              </a>
-            </div>
-          </article>
         </div>
 
         <!-- bottom note -->
