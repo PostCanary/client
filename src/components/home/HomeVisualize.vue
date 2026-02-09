@@ -9,9 +9,21 @@ import ellipseActive from "@/assets/home/ellipse-2-active.svg?url";
 import ellipseInactive from "@/assets/home/ellipse-2-inactive.svg?url";
 
 const slides = [
-  { image: image1, alt: "PostCanary KPI dashboard" },
-  { image: image2, alt: "PostCanary performance metrics" },
-  { image: image3, alt: "PostCanary geographic heatmap" },
+  {
+    image: image1,
+    alt: "PostCanary KPI dashboard",
+    text: "Regain control of your direct mail campaigns with complete insight into performance.",
+  },
+  {
+    image: image2,
+    alt: "PostCanary performance metrics",
+    text: "Chart your month over month and year over year trends to optimize your direct mail spend and timing.",
+  },
+  {
+    image: image3,
+    alt: "PostCanary geographic heatmap",
+    text: "See which areas convert highest, areas to avoid, and areas missed to guide future campaigns.",
+  },
 ] as const;
 
 const currentSlide = ref(0);
@@ -104,13 +116,14 @@ onUnmounted(() => stopAutoPlay());
           Mail Flow in Real Time
         </h2>
 
-        <p
-          class="mt-6 text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-[var(--pc-text-muted)]"
-        >
-          Open rates, delivery speed, and spam detection displayed on a live
-          dashboard built for clarity. Everything you send. Every insight you
-          need.
-        </p>
+        <Transition name="fade" mode="out-in">
+          <p
+            :key="currentSlide"
+            class="mt-6 text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-[var(--pc-text-muted)]"
+          >
+            {{ activeSlide.text }}
+          </p>
+        </Transition>
       </div>
     </div>
   </section>
