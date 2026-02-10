@@ -2,20 +2,20 @@
 <template>
   <section class="min-h-dvh flex flex-col">
     <!-- Toolbar -->
-    <div class="flex items-center gap-4 px-4 py-3 border-b">
-      <label class="font-semibold flex items-center gap-2">
+    <div class="flex items-center gap-4 px-4 py-3 border-b border-slate-200 bg-white">
+      <label class="font-semibold flex items-center gap-2 text-slate-900">
         <input type="checkbox" v-model="kinds.matched" /> Matched
       </label>
 
-      <span class="ml-4 flex items-center gap-2">
+      <span class="ml-4 flex items-center gap-2 text-slate-700">
         From
-        <input type="date" v-model="from" class="border rounded px-2 py-1" />
+        <input type="date" v-model="from" class="border border-slate-300 rounded px-2 py-1 text-slate-900 bg-white" />
         To
-        <input type="date" v-model="to" class="border rounded px-2 py-1" />
+        <input type="date" v-model="to" class="border border-slate-300 rounded px-2 py-1 text-slate-900 bg-white" />
       </span>
 
       <button
-        class="ml-2 px-3 py-1.5 rounded-lg border hover:bg-black/5 dark:hover:bg-white/5 transition"
+        class="ml-2 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 transition"
         :disabled="loading"
         @click="draw"
       >
@@ -23,7 +23,7 @@
       </button>
     </div>
 
-    <div v-if="error" class="px-4 py-2 text-sm border-b text-red-600">
+    <div v-if="error" class="px-4 py-2 text-sm border-b border-slate-200 bg-red-50 text-red-600">
       {{ error }}
     </div>
 

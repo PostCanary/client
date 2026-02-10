@@ -133,6 +133,7 @@ async function onAvatarFileChanged(e: Event) {
   flex-direction: column;
   gap: 16px;
   padding: 0;
+  color: #0c2d50; /* Ensure text is visible on light background */
 }
 
 /* ---- nav breakpoint: desktop vs mobile ---- */
