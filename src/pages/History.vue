@@ -1,19 +1,47 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { useMessage } from "naive-ui";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { getBatches, deleteBatch, type Batch } from "@/api/uploads";
 import { useRunData } from "@/composables/useRunData";
+import { useBilling } from "@/composables/useBilling";
 
 const batches = ref<Batch[]>([]);
 const loading = ref(false);
 const deletingIds = ref<Set<string>>(new Set());
 const refreshingDashboard = ref(false);
 const message = useMessage();
+const route = useRoute();
 const router = useRouter();
-const { refreshOnce: refreshRunData, pollUntilTerminal } = useRunData();
 
-onMounted(() => {
+const {
+  isBillingOverlayActive,
+  showBillingSuccess,
+} = useBilling(route, router);
+
+const { runResult, refreshOnce: refreshRunData, pollUntilTerminal } = useRunData();
+
+const isPreviewMode = ref(false);
+
+watch(
+  () => runResult.value,
+  (result) => {
+    if (result) {
+      const previewMode = result.preview_mode === true;
+      if (previewMode !== isPreviewMode.value) {
+        isPreviewMode.value = previewMode;
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+const shouldBlur = computed(() => {
+  return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
+});
+
+onMounted(async () => {
+  await refreshRunData();
   loadBatches();
 });
 
@@ -106,7 +134,10 @@ async function handleRefreshDashboard() {
 </script>
 
 <template>
-  <div class="min-h-dvh px-4 py-6 sm:px-6">
+  <div 
+    class="min-h-dvh px-4 py-6 sm:px-6"
+    :class="{ 'history-blurred': shouldBlur }"
+  >
     <div class="mx-auto w-full max-w-3xl space-y-4">
       <header
         class="mb-2 flex items-center justify-between gap-4 border-b border-slate-200 pb-3"
@@ -230,4 +261,12 @@ async function handleRefreshDashboard() {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.history-blurred {
+  filter: blur(3px);
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+</style>

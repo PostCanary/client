@@ -1,6 +1,9 @@
 <!-- src/pages/Heatmap.vue -->
 <template>
-  <section class="min-h-dvh flex flex-col">
+  <section 
+    class="min-h-dvh flex flex-col"
+    :class="{ 'heatmap-blurred': shouldBlur }"
+  >
     <!-- Toolbar -->
     <div class="flex items-center gap-4 px-4 py-3 border-b border-slate-200 bg-white">
       <label class="font-semibold flex items-center gap-2 text-slate-900">
@@ -32,7 +35,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, reactive, nextTick } from "vue";
+import { onMounted, onBeforeUnmount, ref, reactive, nextTick, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -45,6 +49,8 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
 import { getHeatmapPoints, type HeatmapKind } from "@/api/geocodes";
+import { useBilling } from "@/composables/useBilling";
+import { useRunData } from "@/composables/useRunData";
 
 type Point = {
   lat: number;
@@ -68,6 +74,35 @@ type FilterState = {
 };
 
 const STORAGE_KEY = "mt:heatmap-filters:v1";
+
+const route = useRoute();
+const router = useRouter();
+
+const {
+  isBillingOverlayActive,
+  showBillingSuccess,
+} = useBilling(route, router);
+
+const { runResult, refreshOnce: refreshRunData } = useRunData();
+
+const isPreviewMode = ref(false);
+
+watch(
+  () => runResult.value,
+  (result) => {
+    if (result) {
+      const previewMode = result.preview_mode === true;
+      if (previewMode !== isPreviewMode.value) {
+        isPreviewMode.value = previewMode;
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+const shouldBlur = computed(() => {
+  return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
+});
 
 const mapEl = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
@@ -262,6 +297,7 @@ async function initMap() {
 }
 
 onMounted(async () => {
+  await refreshRunData();
   await initMap();
   await draw();
 });
@@ -278,5 +314,13 @@ onBeforeUnmount(() => {
 :deep(.leaflet-container) {
   width: 100%;
   height: 100%;
+}
+
+.heatmap-blurred {
+  filter: blur(3px);
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.18s ease, opacity 0.18s ease;
 }
 </style>
