@@ -244,6 +244,7 @@ async function onAvatarChanged(e: Event) {
   font-size: 20px;
   font-weight: 600;
   margin: 0;
+  color: #0f172a;
 }
 
 .onboarding-header p {
@@ -287,6 +288,11 @@ async function onAvatarChanged(e: Event) {
   border: 1px solid #e2e8f0;
   padding: 8px 10px;
   font-size: 14px;
+  color: #1e293b;
+}
+
+.field input::placeholder {
+  color: #94a3b8;
 }
 
 .field input:focus {
