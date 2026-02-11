@@ -157,7 +157,14 @@ function formatJobValue(v: number | null): string {
 
   max-height: 520px;
   overflow-y: auto;
+
+  scrollbar-color: #cbd5f5 #e2e8f0;
+  scrollbar-width: thin;
 }
+
+.srows::-webkit-scrollbar { width: 8px; }
+.srows::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
+.srows::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
 
 /* Body row */
 .srow {
@@ -217,7 +224,14 @@ function formatJobValue(v: number | null): string {
   max-height: 60px;
   overflow-y: auto;
   white-space: pre-line;
+
+  scrollbar-color: #cbd5f5 #e2e8f0;
+  scrollbar-width: thin;
 }
+
+.mail-dates::-webkit-scrollbar { width: 6px; }
+.mail-dates::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
+.mail-dates::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
 
 .col-job-value {
   flex: 1 0 120px;

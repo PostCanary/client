@@ -96,7 +96,14 @@ const rowsToShow = computed<Row[]>(() => props.rows ?? []);
 
   max-height: 260px; /* ≈ 5 rows visible, rest scroll */
   overflow-y: auto;
+
+  scrollbar-color: #cbd5f5 #e2e8f0;
+  scrollbar-width: thin;
 }
+
+.rows::-webkit-scrollbar { width: 8px; }
+.rows::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
+.rows::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
 
 .row {
   display: grid;
