@@ -108,6 +108,35 @@ const mapEl = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
 let cluster: ClusterLike | null = null;
 
+// Disable/enable map interactions based on blur state
+watch(shouldBlur, (blurred) => {
+  if (!map) return;
+  
+  if (blurred) {
+    // Disable all map interactions
+    map.dragging.disable();
+    map.touchZoom.disable();
+    map.doubleClickZoom.disable();
+    map.scrollWheelZoom.disable();
+    map.boxZoom.disable();
+    map.keyboard.disable();
+    // Tap handler may not exist in all Leaflet versions
+    const mapWithTap = map as any;
+    if (mapWithTap.tap) mapWithTap.tap.disable();
+  } else {
+    // Re-enable all map interactions
+    map.dragging.enable();
+    map.touchZoom.enable();
+    map.doubleClickZoom.enable();
+    map.scrollWheelZoom.enable();
+    map.boxZoom.enable();
+    map.keyboard.enable();
+    // Tap handler may not exist in all Leaflet versions
+    const mapWithTap = map as any;
+    if (mapWithTap.tap) mapWithTap.tap.enable();
+  }
+}, { immediate: true });
+
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -322,5 +351,11 @@ onBeforeUnmount(() => {
   pointer-events: none;
   user-select: none;
   transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.heatmap-blurred :deep(.leaflet-container),
+.heatmap-blurred :deep(.leaflet-container *) {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
 }
 </style>
