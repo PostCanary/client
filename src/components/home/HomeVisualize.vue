@@ -1,128 +1,160 @@
+<!-- src/components/home/HomeVisualize.vue -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { useInView } from "@/composables/useInView";
+import VisualizeDashboardMockup from "./visualize/VisualizeDashboardMockup.vue";
+import VisualizeTrendMockup from "./visualize/VisualizeTrendMockup.vue";
+import VisualizeGeoMockup from "./visualize/VisualizeGeoMockup.vue";
 
-import image1 from "@/assets/home/dashboard_sample_image.png";
-import image2 from "@/assets/home/dashboard_sample_image_2.png";
-import image3 from "@/assets/home/map_leaf_sample.png";
-
-import ellipseActive from "@/assets/home/ellipse-2-active.svg?url";
-import ellipseInactive from "@/assets/home/ellipse-2-inactive.svg?url";
-
-const slides = [
+/* ── Tab config ─────────────────────────────────────────── */
+const tabs = [
   {
-    image: image1,
-    alt: "PostCanary KPI dashboard",
-    text: "Regain control of your direct mail campaigns with complete insight into performance.",
+    id: 0,
+    label: "Performance Dashboard",
+    description:
+      "Instantly see total mail sent, conversions matched, revenue generated, and cost-per-acquisition. Every metric updates automatically when you upload new data.",
   },
   {
-    image: image2,
-    alt: "PostCanary performance metrics",
-    text: "Chart your month over month and year over year trends to optimize your direct mail spend and timing.",
+    id: 1,
+    label: "Trend Analytics",
+    description:
+      "Track mail volume, CRM conversions, and match rates month over month. Spot seasonal patterns and measure the impact of campaign changes over time.",
   },
   {
-    image: image3,
-    alt: "PostCanary geographic heatmap",
-    text: "See which areas convert highest, areas to avoid, and areas missed to guide future campaigns.",
+    id: 2,
+    label: "Geographic Insights",
+    description:
+      "Discover which cities and ZIP codes convert highest, identify underperforming areas to cut, and find untapped markets for your next campaign.",
   },
 ] as const;
 
-const currentSlide = ref(0);
+const activeTab = ref(0);
+const activeDescription = ref(tabs[0]!.description);
 
-const activeSlide = computed(() => {
-  const slide = slides[currentSlide.value];
-  return slide ?? slides[0];
-});
+function setTab(index: number) {
+  activeTab.value = index;
+  activeDescription.value = tabs[index]!.description;
+}
 
-const goToSlide = (index: number) => {
-  if (index >= 0 && index < slides.length) currentSlide.value = index;
-};
+/* ── Scroll entrance ────────────────────────────────────── */
+const sectionRef = ref<HTMLElement | null>(null);
+const { isInView } = useInView(sectionRef);
 
-const dotIconFor = (index: number) =>
-  index === currentSlide.value ? ellipseActive : ellipseInactive;
-
-// Auto-play: advance every 5 seconds, pause on hover/focus
+/* ── Auto-cycle ─────────────────────────────────────────── */
 let autoPlayTimer: ReturnType<typeof setInterval> | null = null;
 
-const startAutoPlay = () => {
+function startAutoPlay() {
   if (autoPlayTimer) return;
   autoPlayTimer = setInterval(() => {
-    currentSlide.value = (currentSlide.value + 1) % slides.length;
-  }, 5000);
-};
+    const next = (activeTab.value + 1) % tabs.length;
+    setTab(next);
+  }, 8000);
+}
 
-const stopAutoPlay = () => {
+function stopAutoPlay() {
   if (autoPlayTimer) {
     clearInterval(autoPlayTimer);
     autoPlayTimer = null;
   }
-};
+}
 
 onMounted(() => startAutoPlay());
 onUnmounted(() => stopAutoPlay());
 </script>
 
 <template>
-  <section class="bg-[var(--pc-navy-2)] py-24">
+  <section
+    ref="sectionRef"
+    class="bg-[var(--pc-navy-2)] py-16 sm:py-24"
+    @mouseenter="stopAutoPlay"
+    @mouseleave="startAutoPlay"
+    @focusin="stopAutoPlay"
+    @focusout="startAutoPlay"
+  >
     <div
-      class="mx-auto flex max-w-[1660px] 2xl:max-w-[1760px] flex-col items-center gap-16 px-6 md:flex-row md:px-10 xl:px-16"
+      class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
     >
-      <!-- LEFT: screenshot + glow + Figma ellipse dots -->
+      <!-- Heading -->
       <div
-        class="relative flex-1"
-        @mouseenter="stopAutoPlay"
-        @mouseleave="startAutoPlay"
-        @focusin="stopAutoPlay"
-        @focusout="startAutoPlay"
+        class="text-center max-w-[900px] mx-auto mb-10 sm:mb-14 transition-all duration-700"
+        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
       >
-        <!-- Card / screenshot -->
-        <div
-          class="relative z-10 w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
+        <h2
+          class="text-[var(--pc-text)] text-[32px] leading-10 sm:text-[44px] sm:leading-[54px] xl:text-[64px] xl:leading-[76px] font-normal tracking-[-0.04em]"
         >
-          <Transition name="fade" mode="out-in">
-            <img
-              :key="currentSlide"
-              :src="activeSlide.image"
-              :alt="activeSlide.alt"
-              class="block h-auto w-full"
-            />
-          </Transition>
-        </div>
-
-        <!-- Figma ellipse dots (clickable) -->
-        <div
-          class="mt-10 flex items-center justify-center gap-4"
-          aria-label="Visualize dashboard slides"
+          See the Full Picture of<br />
+          Your Direct Mail ROI
+        </h2>
+        <p
+          class="mt-4 sm:mt-6 text-[15px] sm:text-[18px] leading-relaxed text-[var(--pc-text-muted)] max-w-[720px] mx-auto"
         >
-          <button
-            v-for="(_, index) in slides"
-            :key="index"
-            type="button"
-            class="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pc-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--pc-navy-2)]"
-            :aria-label="`Go to slide ${index + 1}`"
-            :aria-current="currentSlide === index"
-            @click="goToSlide(index)"
-          >
-            <img :src="dotIconFor(index)" alt="" class="h-[11px] w-[11px]" />
-          </button>
-        </div>
+          From campaign KPIs to geographic hotspots, PostCanary turns your mail
+          and CRM data into actionable dashboards &mdash; no manual
+          spreadsheets, no guesswork.
+        </p>
       </div>
 
-      <!-- RIGHT: text column -->
-      <div class="flex-1 max-w-[652px]">
-        <h2
-          class="text-[var(--pc-text)] text-[36px] leading-11 md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-20 font-normal tracking-[-0.04em]"
+      <!-- Tab Bar -->
+      <div
+        class="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto transition-all duration-700 delay-100"
+        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+        role="tablist"
+      >
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.id"
+          class="relative whitespace-nowrap px-3 sm:px-5 py-2.5 sm:py-3 text-[13px] sm:text-[15px] font-medium rounded-lg transition-all duration-300"
+          :class="
+            activeTab === tab.id
+              ? 'text-[var(--pc-cyan)] bg-[var(--pc-cyan)]/10'
+              : 'text-[var(--pc-text-soft)] hover:text-[var(--pc-text-muted)] hover:bg-[var(--pc-navy)]/50'
+          "
+          @click="setTab(tab.id)"
         >
-          Visualize Your Entire<br />
-          Mail Flow in Real Time
-        </h2>
+          {{ tab.label }}
+          <!-- Active indicator line -->
+          <span
+            v-if="activeTab === tab.id"
+            class="absolute bottom-0 left-3 right-3 sm:left-5 sm:right-5 h-[2px] bg-[var(--pc-cyan)] rounded-full"
+          />
+        </button>
+      </div>
 
+      <!-- Tab Description -->
+      <Transition name="fade" mode="out-in">
+        <p
+          :key="activeTab"
+          class="text-center text-[14px] sm:text-[16px] text-[var(--pc-text-muted)] max-w-[640px] mx-auto mb-6 sm:mb-8"
+        >
+          {{ activeDescription }}
+        </p>
+      </Transition>
+
+      <!-- Showcase Panel -->
+      <div
+        class="rounded-2xl border border-[var(--pc-border)] bg-[var(--pc-navy)] p-4 sm:p-6 lg:p-8 shadow-[0_24px_70px_rgba(0,0,0,0.45)] transition-all duration-700 delay-200"
+        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+        role="tabpanel"
+      >
         <Transition name="fade" mode="out-in">
-          <p
-            :key="currentSlide"
-            class="mt-6 text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-[var(--pc-text-muted)]"
-          >
-            {{ activeSlide.text }}
-          </p>
+          <VisualizeDashboardMockup
+            v-if="activeTab === 0"
+            :key="0"
+            :active="isInView && activeTab === 0"
+          />
+          <VisualizeTrendMockup
+            v-else-if="activeTab === 1"
+            :key="1"
+            :active="isInView && activeTab === 1"
+          />
+          <VisualizeGeoMockup
+            v-else
+            :key="2"
+            :active="isInView && activeTab === 2"
+          />
         </Transition>
       </div>
     </div>
