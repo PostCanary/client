@@ -36,6 +36,7 @@ const buttonRef = ref<HTMLElement | null>(null);
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
+  { label: "Demographics", path: "/demographics" },
   { label: "Heatmap", path: "/map" },
   { label: "History", path: "/history" },
 ];

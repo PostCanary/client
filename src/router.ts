@@ -43,6 +43,13 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Dashboard • ${BRAND.name}`, navbarTitle: "Dashboard" },
       },
       {
+        path: "demographics",
+        name: "Demographics",
+        alias: "/demographics",
+        component: () => import("@/pages/Demographics.vue"),
+        meta: { title: `Demographics • ${BRAND.name}`, navbarTitle: "Demographics" },
+      },
+      {
         path: "map",
         name: "Heatmap",
         alias: "/map", // ✅ clean URL
