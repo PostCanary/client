@@ -473,6 +473,7 @@ function browseCrm() {
   flex-direction: column;
   gap: 8px;
   padding: 4px 4px 12px;
+  min-width: 0;
 }
 
 .drop-divider {
@@ -542,6 +543,7 @@ function browseCrm() {
   border-radius: 8px;
   padding: 10px 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .file-chip-icon {
