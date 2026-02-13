@@ -30,9 +30,6 @@ const props = withDefaults(
   { variant: "hero" }
 );
 
-// --- UI state ---
-const showAdvanced = ref(true);
-
 // --- data state ---
 const basic = ref<BasicStats>({
   total_mail: 0,
