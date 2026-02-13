@@ -119,8 +119,8 @@ async function onAvatarFileChanged(e: Event) {
 
 /* When onboarding modal is open, blur + dim background */
 .app-shell-inner--blurred {
-  filter: blur(3px);
-  opacity: 0.6;
+  filter: blur(10px);
+  opacity: 0.4;
   pointer-events: none; /* prevent clicks behind the modal */
 }
 

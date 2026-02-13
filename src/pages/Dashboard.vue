@@ -990,8 +990,8 @@ onBeforeUnmount(() => {
 }
 
 .dash-main-inner--blurred {
-  filter: blur(3px);
-  opacity: 0.6;
+  filter: blur(10px);
+  opacity: 0.4;
   pointer-events: none;
   user-select: none;
 }
