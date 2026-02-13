@@ -252,8 +252,8 @@ const startSso = (connection: string) => {
 
           <p class="mt-2 text-[11px] text-slate-400">
             By continuing, you agree to the {{ BRAND.name }}
-            <span class="underline">Terms</span> and
-            <span class="underline">Privacy Policy</span>.
+            <a href="/terms" target="_blank" class="underline hover:text-slate-600">Terms</a> and
+            <a href="/privacy" target="_blank" class="underline hover:text-slate-600">Privacy Policy</a>.
           </p>
         </form>
       </div>

@@ -18,6 +18,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: `Terms of Service • ${BRAND.name}`, marketing: true },
   },
   {
+    path: "/privacy",
+    name: "PrivacyPolicy",
+    component: () => import("@/pages/PrivacyPolicy.vue"),
+    meta: { title: `Privacy Policy • ${BRAND.name}`, marketing: true },
+  },
+  {
     path: "/help",
     name: "Help",
     component: () => import("@/pages/Help.vue"),
