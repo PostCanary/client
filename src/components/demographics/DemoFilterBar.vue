@@ -51,7 +51,7 @@ function selectPreset(preset: Preset) {
     from.setFullYear(from.getFullYear() - 1);
   }
 
-  const fromStr = from.toISOString().split("T")[0];
+  const fromStr = from.toISOString().split("T")[0] as string;
   customFrom.value = fromStr;
   customTo.value = to;
   emit("update:start", fromStr);
