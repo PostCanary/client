@@ -17,6 +17,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/pages/TermsOfService.vue"),
     meta: { title: `Terms of Service • ${BRAND.name}`, marketing: true },
   },
+  {
+    path: "/help",
+    name: "Help",
+    component: () => import("@/pages/Help.vue"),
+    meta: { title: `Help • ${BRAND.name}`, marketing: true },
+  },
 
   // ✅ Layout ONLY for app pages
   {

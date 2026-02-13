@@ -95,6 +95,13 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       <div
         class="flex flex-col items-center md:items-end gap-4 md:gap-6 shrink-0 mt-2 md:mt-0"
       >
+        <router-link
+          to="/help"
+          class="text-[16px] md:text-[18px] text-[var(--pc-text-muted)] hover:text-[var(--pc-cyan)]"
+        >
+          Help Center
+        </router-link>
+
         <a
           :href="getSupportEmailLink()"
           class="text-[16px] md:text-[18px] text-[var(--pc-text-muted)] hover:text-[var(--pc-cyan)]"
