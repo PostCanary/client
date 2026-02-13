@@ -29,7 +29,7 @@ const tabs = [
 ] as const;
 
 const activeTab = ref(0);
-const activeDescription = ref(tabs[0]!.description);
+const activeDescription = ref<string>(tabs[0]!.description);
 
 function setTab(index: number) {
   activeTab.value = index;
