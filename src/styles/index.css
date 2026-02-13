@@ -18,6 +18,22 @@
   --pc-text-soft: #8b96b5;
   --pc-yellow: #f3d129;
   --pc-cyan: #00ffff;
+
+  /* PostCanary app dashboard palette */
+  --app-navy: #0b2d50;
+  --app-navy-light: #163b69;
+  --app-teal: #47bfa9;
+  --app-teal-hover: #3aa893;
+  --app-bg: #f0f2f5;
+  --app-card-bg: #ffffff;
+  --app-text: #0c2d50;
+  --app-text-secondary: #64748b;
+  --app-text-body: #475569;
+  --app-text-muted: #94a3b8;
+  --app-border: #e2e8f0;
+  --app-border-medium: #dde3ea;
+  --app-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
+  --app-card-radius: 12px;
 }
 
 /* Give the page a little reserved space for the scrollbar */

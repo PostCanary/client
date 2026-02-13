@@ -872,9 +872,17 @@ onBeforeUnmount(() => {
       {{ runDataError }}
     </div>
 
-    <div id="cmp-hero">
+    <!-- Row 1: Hero KPI cards -->
+    <KpiSummaryCard
+      id="cmp-kpis"
+      variant="hero"
+      :kpis="runResult?.kpis || null"
+      :loading="runResultLoading"
+    />
+
+    <!-- Row 2: Upload + Advanced Metrics side-by-side -->
+    <div id="cmp-action-row">
       <UploadCard
-        class="card"
         :reset-key="uploadResetKey"
         :mapping-blocked="mappingBlocked"
         @edit-mapping="openMapper"
@@ -884,14 +892,14 @@ onBeforeUnmount(() => {
       />
 
       <KpiSummaryCard
-        id="cmp-kpis"
-        class="card kpi-card"
+        variant="advanced"
         :kpis="runResult?.kpis || null"
         :loading="runResultLoading"
       />
     </div>
 
-    <div class="section card" id="cmp-graph">
+    <!-- Row 3: Trend Chart -->
+    <div id="cmp-graph">
       <YoyChart
         :labels="graphLabels"
         :mail-now="graphMailNow"
@@ -904,18 +912,15 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <div class="section" id="cmp-top">
-      <div class="top-card">
-        <TopCitiesTable :rows="topCityRows" />
-      </div>
-      <div class="top-card">
-        <TopZipsTable :rows="topZipRows" />
-      </div>
+    <!-- Row 4: Top Cities + Top ZIPs -->
+    <div id="cmp-top">
+      <TopCitiesTable :rows="topCityRows" />
+      <TopZipsTable :rows="topZipRows" />
     </div>
 
-    <div class="section card" id="cmp-summary">
+    <!-- Row 5: Summary Table -->
+    <div id="cmp-summary">
       <SummaryTable
-        class="section"
         :rows="summaryRows.length ? summaryRows : undefined"
         :loading="matchesLoading"
       />
@@ -980,7 +985,7 @@ onBeforeUnmount(() => {
 .dash-main-inner {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   transition: filter 0.18s ease, opacity 0.18s ease;
 }
 
@@ -991,40 +996,21 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 
-#cmp-hero {
+#cmp-action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
   align-items: stretch;
-}
-
-#cmp-hero .card {
-  width: 100%;
-  height: 100%;
-}
-
-.kpi-card {
-  display: flex;
-  flex-direction: column;
 }
 
 #cmp-top {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.top-card {
-  width: 100%;
-  height: 100%;
-}
-
-.top-card :deep(.card) {
-  width: 100%;
+  gap: 20px;
 }
 
 @media (max-width: 1024px) {
-  #cmp-hero {
+  #cmp-action-row {
     grid-template-columns: 1fr;
   }
   #cmp-top {
@@ -1033,7 +1019,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
-  #cmp-hero {
+  #cmp-action-row {
     grid-template-columns: 1fr;
   }
   #cmp-top {

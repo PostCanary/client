@@ -25,10 +25,10 @@ const showYoy = ref(true);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let chart: Chart<"line", number[], string> | null = null;
 
-// colors (same as Figma)
-const cMail = "#163b69";
+// colors
+const cMail = "#0b2d50";
 const cCrm = "#47bfa9";
-const cMatch = "#6b6b6b";
+const cMatch = "#94a3b8";
 
 // ---------- helpers ----------
 
@@ -72,10 +72,25 @@ const hasPrevData = computed(() => {
   return allPrev.some((v) => Number(v || 0) !== 0);
 });
 
+// ---------- gradient helpers ----------
+
+function createGradient(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  alpha: number
+): CanvasGradient {
+  const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+  gradient.addColorStop(0, `${color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`);
+  gradient.addColorStop(1, `${color}00`);
+  return gradient;
+}
+
 // ---------- chart build ----------
 
 function buildChart() {
   if (!canvasEl.value) return;
+  const ctx = canvasEl.value.getContext("2d");
+  if (!ctx) return;
 
   // BASE datasets (current year)
   const datasets: LineDS[] = [
@@ -83,31 +98,46 @@ function buildChart() {
       label: "Mail Volume",
       data: props.mailNow,
       borderColor: cMail,
-      backgroundColor: cMail,
-      borderWidth: 3,
+      backgroundColor: createGradient(ctx, cMail, 0.08),
+      borderWidth: 2.5,
       cubicInterpolationMode: "monotone",
       tension: 0.35,
-      pointRadius: 3,
+      pointRadius: 4,
+      pointBackgroundColor: "#fff",
+      pointBorderColor: cMail,
+      pointBorderWidth: 2,
+      pointHoverRadius: 6,
+      fill: true,
     },
     {
       label: "CRM Jobs",
       data: props.crmNow,
       borderColor: cCrm,
-      backgroundColor: cCrm,
-      borderWidth: 3,
+      backgroundColor: createGradient(ctx, cCrm, 0.08),
+      borderWidth: 2.5,
       cubicInterpolationMode: "monotone",
       tension: 0.35,
-      pointRadius: 3,
+      pointRadius: 4,
+      pointBackgroundColor: "#fff",
+      pointBorderColor: cCrm,
+      pointBorderWidth: 2,
+      pointHoverRadius: 6,
+      fill: true,
     },
     {
       label: "Matches",
       data: props.matchNow,
       borderColor: cMatch,
-      backgroundColor: cMatch,
-      borderWidth: 3,
+      backgroundColor: createGradient(ctx, cMatch, 0.06),
+      borderWidth: 2.5,
       cubicInterpolationMode: "monotone",
       tension: 0.35,
-      pointRadius: 3,
+      pointRadius: 4,
+      pointBackgroundColor: "#fff",
+      pointBorderColor: cMatch,
+      pointBorderWidth: 2,
+      pointHoverRadius: 6,
+      fill: true,
     },
   ];
 
@@ -120,9 +150,10 @@ function buildChart() {
         borderColor: cMail,
         backgroundColor: cMail,
         borderDash: [6, 6],
-        borderWidth: 2,
+        borderWidth: 1.5,
         tension: 0.35,
         pointRadius: 0,
+        fill: false,
       },
       {
         label: "CRM Jobs (prev)",
@@ -130,9 +161,10 @@ function buildChart() {
         borderColor: cCrm,
         backgroundColor: cCrm,
         borderDash: [6, 6],
-        borderWidth: 2,
+        borderWidth: 1.5,
         tension: 0.35,
         pointRadius: 0,
+        fill: false,
       },
       {
         label: "Matches (prev)",
@@ -140,9 +172,10 @@ function buildChart() {
         borderColor: cMatch,
         backgroundColor: cMatch,
         borderDash: [6, 6],
-        borderWidth: 2,
+        borderWidth: 1.5,
         tension: 0.35,
         pointRadius: 0,
+        fill: false,
       }
     );
   }
@@ -157,21 +190,46 @@ function buildChart() {
   const options: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: "index",
+      intersect: false,
+    },
     plugins: {
       legend: { display: false },
-      tooltip: { mode: "index", intersect: false },
+      tooltip: {
+        mode: "index",
+        intersect: false,
+        backgroundColor: "#0b2d50",
+        titleColor: "#fff",
+        bodyColor: "rgba(255,255,255,0.85)",
+        borderColor: "#47bfa9",
+        borderWidth: 1,
+        cornerRadius: 8,
+        padding: 12,
+        titleFont: { weight: "bold" as const, size: 13 },
+        bodyFont: { size: 12 },
+        boxPadding: 4,
+      },
     },
     scales: {
       x: {
         grid: { display: false },
+        border: { display: false },
         ticks: {
           callback: (_v, i) => formatTick(i as number),
           maxRotation: 0,
+          color: "#94a3b8",
+          font: { size: 12 },
         },
       },
       y: {
-        grid: { color: "rgba(0,0,0,0.06)" },
-        ticks: { precision: 0 },
+        grid: { color: "rgba(12,45,80,0.04)" },
+        border: { display: false },
+        ticks: {
+          precision: 0,
+          color: "#94a3b8",
+          font: { size: 12 },
+        },
         suggestedMin: 0,
         suggestedMax: maxNow || undefined,
       },
@@ -229,15 +287,10 @@ watch(
 </script>
 
 <template>
-  <section class="card section p-4">
-    <header
-      class="yoy-header flex items-center justify-between gap-4 px-2 pt-1 pb-2"
-      role="toolbar"
-    >
-      <div class="flex items-center gap-3 shrink-0">
-        <span class="text-[#0c2d50] font-semibold text-[15px]">
-          Show YoY Overlay
-        </span>
+  <section class="chart-card">
+    <header class="chart-header">
+      <div class="chart-toggle">
+        <span class="toggle-label">Show YoY Overlay</span>
 
         <button
           type="button"
@@ -258,29 +311,31 @@ watch(
         </button>
       </div>
 
-      <ul
-        class="yoy-legend flex items-center gap-6 flex-wrap text-[14px] text-black/80"
-      >
-        <li class="flex items-center gap-2">
-          <span class="legend-swatch bg-[#163b69]" /> Mail Volume
+      <ul class="chart-legend">
+        <li class="legend-item">
+          <span class="legend-dot" style="background: #0b2d50"></span>
+          <span>Mail Volume</span>
         </li>
-        <li class="flex items-center gap-2">
-          <span class="legend-swatch bg-[#47bfa9]" /> CRM Jobs
+        <li class="legend-item">
+          <span class="legend-dot" style="background: #47bfa9"></span>
+          <span>CRM Jobs</span>
         </li>
-        <li class="flex items-center gap-2">
-          <span class="legend-swatch bg-[#6b6b6b]" /> Matches
+        <li class="legend-item">
+          <span class="legend-dot" style="background: #94a3b8"></span>
+          <span>Matches</span>
         </li>
-        <li v-if="hasPrevData" class="flex items-center gap-2 text-xs">
-          <span class="legend-dash" /> Dashed lines show previous year
+        <li v-if="hasPrevData" class="legend-item legend-item-note">
+          <span class="legend-dash"></span>
+          <span>Prior year</span>
         </li>
-        <li v-else class="text-xs text-black/45">
+        <li v-else class="legend-item legend-item-note">
           YoY overlay will appear once there is prior-year data
         </li>
       </ul>
     </header>
 
-    <div class="mt-2 px-2 pb-3">
-      <div class="relative h-80">
+    <div class="chart-body">
+      <div class="chart-canvas-wrap">
         <canvas ref="canvasEl" class="block w-full h-full"></canvas>
       </div>
     </div>
@@ -288,21 +343,88 @@ watch(
 </template>
 
 <style scoped>
-.card {
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
-    0 10px 24px rgba(12, 45, 80, 0.06);
-  background: #fff;
+.chart-card {
+  background: var(--app-card-bg, #fff);
+  border-radius: var(--app-card-radius, 12px);
+  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  overflow: hidden;
 }
-.section {
-  border: 1px solid rgba(12, 45, 80, 0.06);
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 8px;
+  flex-wrap: wrap;
+}
+
+.chart-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text, #0c2d50);
+}
+
+/* Legend */
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--app-text-body, #475569);
+}
+
+.legend-item-note {
+  font-size: 12px;
+  color: var(--app-text-muted, #94a3b8);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dash {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--app-text-muted, #94a3b8);
+}
+
+/* Chart body */
+.chart-body {
+  padding: 4px 16px 16px;
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 320px;
 }
 
 /* YoY switch */
 .switch {
   position: relative;
-  width: 42px;
-  height: 24px;
+  width: 40px;
+  height: 22px;
   border: 0;
   background: transparent;
   padding: 0;
@@ -312,53 +434,31 @@ watch(
 .switch__track {
   position: absolute;
   inset: 0;
-  background: #e9eef3;
+  background: #e2e8f0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgba(12, 45, 80, 0.08);
   transition: background 160ms ease;
 }
 .switch__thumb {
   position: absolute;
   top: 50%;
   left: 2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   transform: translateY(-50%);
-  background: linear-gradient(135deg, #163b69, #47bfa9);
+  background: #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(12, 45, 80, 0.25);
-  transition: left 160ms ease, transform 160ms ease;
+  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.2);
+  transition: left 160ms ease;
   pointer-events: none;
 }
 .switch.is-on .switch__track {
-  background: #47bfa9;
+  background: var(--app-teal, #47bfa9);
 }
 .switch.is-on .switch__thumb {
-  left: calc(100% - 22px);
+  left: calc(100% - 20px);
 }
 .switch.is-disabled {
   cursor: not-allowed;
-}
-.switch.is-disabled .switch__track {
-  background: #e2e8f0;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
-}
-.switch.is-disabled .switch__thumb {
-  background: #cbd5f5;
-  box-shadow: none;
-}
-
-/* legend chips */
-.legend-swatch {
-  display: inline-block;
-  width: 24px;
-  height: 6px;
-  border-radius: 9999px;
-}
-.legend-dash {
-  display: inline-block;
-  width: 24px;
-  height: 0;
-  border-top: 2px dashed #111;
+  opacity: 0.5;
 }
 </style>

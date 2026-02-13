@@ -106,7 +106,7 @@ async function onAvatarFileChanged(e: Event) {
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: #f4f5f7;
+  background: var(--app-bg, #f0f2f5);
   padding: 16px 16px 20px;
   position: relative;
   z-index: 1;

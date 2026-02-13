@@ -21,10 +21,14 @@ type AdvancedStats = {
   convert_90: number; // %
 };
 
-const props = defineProps<{
-  kpis: KPIs | null;
-  loading?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    kpis: KPIs | null;
+    loading?: boolean;
+    variant?: "hero" | "advanced";
+  }>(),
+  { variant: "hero" }
+);
 
 // --- UI state ---
 const showAdvanced = ref(true);
@@ -67,6 +71,19 @@ const fmtPct = (n: number) => {
 
 const matchRateText = computed(() => fmtPct(basic.value.match_rate));
 
+/** Match rate as 0–100 for the progress ring */
+const matchRateValue = computed(() => {
+  const raw = basic.value.match_rate;
+  if (!Number.isFinite(raw) || raw === 0) return 0;
+  return raw <= 1 ? raw * 100 : raw;
+});
+
+/** SVG circle dash offset for the progress ring */
+const ringCircumference = 2 * Math.PI * 36; // r=36
+const ringOffset = computed(
+  () => ringCircumference - (matchRateValue.value / 100) * ringCircumference
+);
+
 // --- react to incoming KPIs ---
 watch(
   () => props.kpis,
@@ -96,144 +113,278 @@ watch(
 </script>
 
 <template>
-  <section class="card border border-[#0c2d50]/10 rounded-xl bg-white">
-    <!-- Header row -->
-    <div class="flex items-center bg-[#f4f5f7] rounded-t-xl px-4 py-3">
-      <div class="flex items-center gap-4 flex-1">
-        <span class="text-[18px] font-semibold text-[#0c2d50]">Results:</span>
-        <span v-if="loading" class="text-xs text-slate-500">Loading…</span>
-      </div>
-
-      <span class="h-6 w-px bg-[#47bfa9]"></span>
-
-      <div class="flex items-center gap-3 flex-1 justify-end">
-        <span class="text-[18px] font-semibold text-[#0c2d50]">
-          Hide Advanced KPIs
-        </span>
-
-        <!-- pill switch -->
-        <button
-          class="relative h-4 w-12 rounded-full border border-black/20 bg-white shadow-inner"
-          role="switch"
-          :aria-checked="!showAdvanced"
-          @click="showAdvanced = !showAdvanced"
-          title="Hide/Show Advanced KPIs"
-          :disabled="!!loading"
-        >
-          <span
-            class="absolute -top-1.5 left-0 h-6 w-6 rounded-full bg-[#47bfa9] transition-all"
-            :style="{
-              transform: showAdvanced ? 'translateX(24px)' : 'translateX(2px)',
-              opacity: loading ? 0.6 : 1,
-            }"
-          />
-        </button>
+  <!-- ===== HERO VARIANT: 4 prominent stat cards ===== -->
+  <div v-if="variant === 'hero'" class="hero-grid" :class="{ 'is-loading': loading }">
+    <!-- Match Rate with ring -->
+    <div class="hero-card">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <div class="hero-card-ring-row">
+          <svg class="ring-svg" viewBox="0 0 80 80">
+            <circle
+              cx="40" cy="40" r="36"
+              fill="none"
+              stroke="#e2e8f0"
+              stroke-width="5"
+            />
+            <circle
+              cx="40" cy="40" r="36"
+              fill="none"
+              stroke="#47bfa9"
+              stroke-width="5"
+              stroke-linecap="round"
+              :stroke-dasharray="ringCircumference"
+              :stroke-dashoffset="ringOffset"
+              class="ring-progress"
+            />
+          </svg>
+          <span class="hero-value ring-value">{{ matchRateText }}</span>
+        </div>
+        <span class="hero-label">Match Rate</span>
       </div>
     </div>
 
-    <!-- Two columns -->
-    <div class="grid md:grid-cols-2 gap-0" :class="{ 'opacity-70': loading }">
-      <!-- Left: Basic KPIs -->
-      <div class="px-4 divide-y divide-[#6d8196]/30">
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Total Mail</span>
-          <span class="text-[18px] font-semibold">
-            {{ fmtInt(basic.total_mail) }}
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Unique Mail Addresses</span>
-          <span class="text-[18px] font-semibold">
-            {{ fmtInt(basic.unique_mail_addresses) }}
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Total Jobs</span>
-          <span class="text-[18px] font-semibold">
-            {{ fmtInt(basic.total_jobs) }}
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Matches</span>
-          <span class="text-[18px] font-semibold">
-            {{ fmtInt(basic.matches) }}
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Match Rate</span>
-          <span class="text-[18px] font-semibold">
-            {{ matchRateText }}
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between py-3">
-          <span class="text-[20px] text-[#0c2d50]">Match Revenue</span>
-          <span class="text-[18px] font-semibold">
-            {{ fmtMoney(basic.match_revenue) }}
-          </span>
-        </div>
+    <!-- Match Revenue -->
+    <div class="hero-card">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <span class="hero-value">{{ fmtMoney(basic.match_revenue) }}</span>
+        <span class="hero-label">Match Revenue</span>
       </div>
+    </div>
 
-      <!-- Right: Advanced KPIs -->
-      <div class="relative px-4 border-l border-[#6d8196]/30">
-        <transition name="fade">
-          <div v-show="showAdvanced" class="divide-y divide-[#6d8196]/30">
-            <div class="flex items-center justify-between py-3">
-              <span class="text-[20px] text-[#0c2d50]">
-                Revenue Per Mailer
-              </span>
-              <span class="text-[18px] font-semibold">
-                {{ fmtMoney(adv.revenue_per_mailer) }}
-              </span>
-            </div>
+    <!-- Total Matches -->
+    <div class="hero-card">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <span class="hero-value">{{ fmtInt(basic.matches) }}</span>
+        <span class="hero-label">Total Matches</span>
+      </div>
+    </div>
 
-            <div class="flex items-center justify-between py-3">
-              <span class="text-[20px] text-[#0c2d50]">
-                Avg Ticket (Per Match)
-              </span>
-              <span class="text-[18px] font-semibold">
-                {{ fmtMoney(adv.avg_ticket_per_match) }}
-              </span>
-            </div>
+    <!-- Median Days to Convert -->
+    <div class="hero-card">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <span class="hero-value">{{ fmtInt(adv.median_days_to_convert) }}</span>
+        <span class="hero-label">Days to Convert</span>
+      </div>
+    </div>
+  </div>
 
-            <div class="flex items-center justify-between py-3">
-              <span class="text-[20px] text-[#0c2d50]">
-                Median Days To Convert
-              </span>
-              <span class="text-[18px] font-semibold">
-                {{ fmtInt(adv.median_days_to_convert) }}
-              </span>
-            </div>
+  <!-- ===== ADVANCED VARIANT: secondary metrics panel ===== -->
+  <section v-else class="adv-panel" :class="{ 'is-loading': loading }">
+    <div class="adv-header">
+      <span class="adv-title">Detailed Metrics</span>
+      <span v-if="loading" class="adv-loading">Loading...</span>
+    </div>
 
-            <!-- If you re-enable these later, format them with fmtPct(...) -->
-            <!--
-            <div class="flex items-center justify-between py-3">
-              <span class="text-[20px] text-[#0c2d50]">Convert ≤ 30 Days</span>
-              <span class="text-[18px] font-semibold">{{ fmtPct(adv.convert_30) }}</span>
-            </div>
-            -->
-          </div>
-        </transition>
+    <div class="adv-grid">
+      <div class="adv-stat">
+        <span class="adv-stat-label">Total Mail</span>
+        <span class="adv-stat-value">{{ fmtInt(basic.total_mail) }}</span>
+      </div>
+      <div class="adv-stat">
+        <span class="adv-stat-label">Unique Addresses</span>
+        <span class="adv-stat-value">{{ fmtInt(basic.unique_mail_addresses) }}</span>
+      </div>
+      <div class="adv-stat">
+        <span class="adv-stat-label">Total Jobs</span>
+        <span class="adv-stat-value">{{ fmtInt(basic.total_jobs) }}</span>
+      </div>
+      <div class="adv-stat">
+        <span class="adv-stat-label">Revenue / Mailer</span>
+        <span class="adv-stat-value">{{ fmtMoney(adv.revenue_per_mailer) }}</span>
+      </div>
+      <div class="adv-stat">
+        <span class="adv-stat-label">Avg Ticket / Match</span>
+        <span class="adv-stat-value">{{ fmtMoney(adv.avg_ticket_per_match) }}</span>
+      </div>
+      <div class="adv-stat">
+        <span class="adv-stat-label">Match Rate</span>
+        <span class="adv-stat-value">{{ matchRateText }}</span>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.card {
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
-    0 10px 24px rgba(12, 45, 80, 0.06);
-}
-.fade-enter-active,
-.fade-leave-active {
+/* =========================================
+   HERO VARIANT
+   ========================================= */
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
   transition: opacity 0.18s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+
+.hero-grid.is-loading {
+  opacity: 0.6;
+}
+
+.hero-card {
+  background: var(--app-card-bg, #fff);
+  border-radius: var(--app-card-radius, 12px);
+  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-card-accent {
+  height: 4px;
+  background: linear-gradient(90deg, var(--app-navy, #0b2d50), var(--app-navy-light, #163b69));
+}
+
+.hero-card-body {
+  padding: 20px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hero-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--app-text, #0c2d50);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.hero-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text-secondary, #64748b);
+  letter-spacing: 0.01em;
+}
+
+/* Match Rate ring */
+.hero-card-ring-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+}
+
+.ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg);
+}
+
+.ring-progress {
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.ring-value {
+  position: relative;
+  font-size: 20px;
+  z-index: 1;
+}
+
+/* =========================================
+   ADVANCED VARIANT
+   ========================================= */
+
+.adv-panel {
+  background: var(--app-card-bg, #fff);
+  border-radius: var(--app-card-radius, 12px);
+  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  border-left: 4px solid var(--app-navy, #0b2d50);
+  overflow: hidden;
+  transition: opacity 0.18s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.adv-panel.is-loading {
+  opacity: 0.6;
+}
+
+.adv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+
+.adv-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text, #0c2d50);
+}
+
+.adv-loading {
+  font-size: 12px;
+  color: var(--app-text-muted, #94a3b8);
+}
+
+.adv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  flex: 1;
+}
+
+.adv-stat {
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--app-border, #e2e8f0);
+}
+
+.adv-stat:nth-child(odd) {
+  border-right: 1px solid var(--app-border, #e2e8f0);
+}
+
+.adv-stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.adv-stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--app-text, #0c2d50);
+  font-variant-numeric: tabular-nums;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 1024px) {
+  .hero-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero-value {
+    font-size: 24px;
+  }
+
+  .adv-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .adv-stat:nth-child(odd) {
+    border-right: none;
+  }
 }
 </style>

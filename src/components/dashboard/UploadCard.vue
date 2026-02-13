@@ -108,7 +108,7 @@ async function handleFile(source: Source, file: File) {
   uploadProgress.value = 30;
 
   try {
-    log.info("UI ▶ upload start", {
+    log.info("UI > upload start", {
       source,
       name: file.name,
       size: file.size,
@@ -117,13 +117,13 @@ async function handleFile(source: Source, file: File) {
     // uploadBatch returns { status, data }
     const { status, data } = await uploadBatch(source, file);
 
-    log.info("UI ▶ upload done", { source, status, data });
+    log.info("UI > upload done", { source, status, data });
 
     const batchId = (data as any)?.batch_id as string | undefined;
     const filename = (data as any)?.filename as string | undefined;
 
     if (!batchId) {
-      log.warn("UI ▶ upload response missing batch_id", {
+      log.warn("UI > upload response missing batch_id", {
         source,
         status,
         data,
@@ -132,7 +132,7 @@ async function handleFile(source: Source, file: File) {
 
     // 409 mapping_required
     if (status === 409 && (data as any)?.error === "mapping_required") {
-      log.info("UI ▶ upload mapping_required", { source, status, data });
+      log.info("UI > upload mapping_required", { source, status, data });
 
       if (source === "mail") {
         mailBatchId.value = batchId ?? null;
@@ -161,7 +161,7 @@ async function handleFile(source: Source, file: File) {
           (data as any)?.sample_rows || (data as any)?.sampleRows || [],
       });
 
-      // keep “uploading” UX from sticking at 100%
+      // keep "uploading" UX from sticking at 100%
       uploadProgress.value = null;
       return;
     }
@@ -182,7 +182,7 @@ async function handleFile(source: Source, file: File) {
 
     uploadProgress.value = 100;
   } catch (e: any) {
-    log.error("UI ▶ upload failed", e);
+    log.error("UI > upload failed", e);
     alert(`Upload failed: ${e?.message || "unknown error"}`);
     clearFileInput(source);
   } finally {
@@ -227,9 +227,30 @@ function onDropCrm(e: DragEvent) {
   if (f) void handleFile("crm", f);
 }
 
+/* ---- clear file ------------------------------------------- */
+function clearMail() {
+  mailBatchId.value = null;
+  lastMailFile.value = null;
+  if (mailInput.value) mailInput.value.value = "";
+  emit("batch-ids", {
+    mailBatchId: null,
+    crmBatchId: crmBatchId.value,
+  });
+}
+
+function clearCrm() {
+  crmBatchId.value = null;
+  lastCrmFile.value = null;
+  if (crmInput.value) crmInput.value.value = "";
+  emit("batch-ids", {
+    mailBatchId: mailBatchId.value,
+    crmBatchId: null,
+  });
+}
+
 /* ---- mapper ------------------------------- */
 function openMapper() {
-  log.info("UI ▶ open mapper clicked", {
+  log.info("UI > open mapper clicked", {
     mailBatchId: mailBatchId.value,
     crmBatchId: crmBatchId.value,
   });
@@ -247,7 +268,7 @@ function onUpload(ev?: Event) {
   ev?.preventDefault?.();
 
   if (props.mappingBlocked) {
-    log.info("UI ▶ upload blocked due to mapping issues");
+    log.info("UI > upload blocked due to mapping issues");
     return;
   }
 
@@ -257,7 +278,7 @@ function onUpload(ev?: Event) {
   // Allow upload with at least one file (single-file uploads are now supported)
   if (!hasMail && !hasCrm) {
     // This shouldn't happen since button would be disabled, but handle gracefully
-    log.warn("UI ▶ upload attempted with no files");
+    log.warn("UI > upload attempted with no files");
     return;
   }
 
@@ -278,102 +299,115 @@ function browseCrm() {
 </script>
 
 <template>
-  <section class="upload-card card">
-    <!-- MAIL -->
-    <div class="row">
-      <h3 class="row-title">Mail CSV</h3>
-
-      <div
-        class="drop-zone"
-        :class="{ 'is-drag': mailDrag }"
-        role="button"
-        tabindex="0"
-        @click="browseMail"
-        @dragover="onDragOverMail"
-        @dragleave="onDragLeaveMail"
-        @drop="onDropMail"
-      >
-        <div class="drop-zone-inner">
-          <img :src="UploadIconUrl" alt="" class="icon" />
-
-          <p class="drop-zone-text">
-            Drag &amp; drop your mail CSV here<br />
-            <span class="drop-zone-text-muted">or click to browse</span>
-          </p>
-
-          <p v-if="lastMailFile" class="last-file">
-            Selected: <strong>{{ lastMailFile }}</strong>
-          </p>
-        </div>
-      </div>
-
-      <input
-        id="mailCsv"
-        ref="mailInput"
-        class="sr-only"
-        type="file"
-        accept=".csv,text/csv"
-        @change="onPick('mail')"
-      />
+  <section class="upload-card">
+    <div class="upload-header">
+      <span class="upload-title">Upload Files</span>
     </div>
 
-    <!-- CRM -->
-    <div class="row">
-      <h3 class="row-title">CRM CSV</h3>
+    <div class="drop-zones">
+      <!-- MAIL zone -->
+      <div class="drop-col">
+        <span class="drop-label">Mail CSV</span>
 
-      <div
-        class="drop-zone"
-        :class="{ 'is-drag': crmDrag }"
-        role="button"
-        tabindex="0"
-        @click="browseCrm"
-        @dragover="onDragOverCrm"
-        @dragleave="onDragLeaveCrm"
-        @drop="onDropCrm"
-      >
-        <div class="drop-zone-inner">
-          <img :src="UploadIconUrl" alt="" class="icon" />
-
-          <p class="drop-zone-text">
-            Drag &amp; drop your CRM CSV here<br />
-            <span class="drop-zone-text-muted">or click to browse</span>
-          </p>
-
-          <p v-if="lastCrmFile" class="last-file">
-            Selected: <strong>{{ lastCrmFile }}</strong>
-          </p>
+        <div
+          v-if="!lastMailFile"
+          class="drop-zone"
+          :class="{ 'is-drag': mailDrag }"
+          role="button"
+          tabindex="0"
+          @click="browseMail"
+          @dragover="onDragOverMail"
+          @dragleave="onDragLeaveMail"
+          @drop="onDropMail"
+        >
+          <img :src="UploadIconUrl" alt="" class="drop-icon" />
+          <span class="drop-text">
+            Drop CSV here or <span class="drop-link">browse</span>
+          </span>
         </div>
+
+        <!-- File selected chip -->
+        <div v-else class="file-chip">
+          <svg class="file-chip-icon" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8l3 3 5-6" stroke="#47bfa9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="file-chip-name">{{ lastMailFile }}</span>
+          <button class="file-chip-x" @click.stop="clearMail" title="Remove file">&times;</button>
+        </div>
+
+        <input
+          id="mailCsv"
+          ref="mailInput"
+          class="sr-only"
+          type="file"
+          accept=".csv,text/csv"
+          @change="onPick('mail')"
+        />
       </div>
 
-      <input
-        id="crmCsv"
-        ref="crmInput"
-        class="sr-only"
-        type="file"
-        accept=".csv,text/csv"
-        @change="onPick('crm')"
-      />
+      <!-- Divider -->
+      <div class="drop-divider"></div>
+
+      <!-- CRM zone -->
+      <div class="drop-col">
+        <span class="drop-label">CRM CSV</span>
+
+        <div
+          v-if="!lastCrmFile"
+          class="drop-zone"
+          :class="{ 'is-drag': crmDrag }"
+          role="button"
+          tabindex="0"
+          @click="browseCrm"
+          @dragover="onDragOverCrm"
+          @dragleave="onDragLeaveCrm"
+          @drop="onDropCrm"
+        >
+          <img :src="UploadIconUrl" alt="" class="drop-icon" />
+          <span class="drop-text">
+            Drop CSV here or <span class="drop-link">browse</span>
+          </span>
+        </div>
+
+        <!-- File selected chip -->
+        <div v-else class="file-chip">
+          <svg class="file-chip-icon" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8l3 3 5-6" stroke="#47bfa9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="file-chip-name">{{ lastCrmFile }}</span>
+          <button class="file-chip-x" @click.stop="clearCrm" title="Remove file">&times;</button>
+        </div>
+
+        <input
+          id="crmCsv"
+          ref="crmInput"
+          class="sr-only"
+          type="file"
+          accept=".csv,text/csv"
+          @change="onPick('crm')"
+        />
+      </div>
     </div>
 
     <!-- PROGRESS -->
-    <div class="mt-2 text-sm text-slate-300" v-if="isUploading">
-      <div class="h-2 bg-slate-800 rounded">
+    <div class="upload-progress" v-if="isUploading">
+      <div class="progress-track">
         <div
-          class="h-2 bg-emerald-500 rounded transition-all"
+          class="progress-fill"
           :style="{ width: (uploadProgress ?? 30) + '%' }"
         ></div>
       </div>
-      <p class="mt-1">
+      <p class="progress-text">
         Uploading
         <span v-if="uploadingSource === 'mail'">Mail CSV</span>
         <span v-else-if="uploadingSource === 'crm'">CRM CSV</span>
         <span v-else>CSV</span>
-        … this may take a moment for large files.
+        ...
       </p>
     </div>
 
     <!-- ACTIONS -->
-    <div class="row row-actions">
+    <div class="upload-actions">
       <!-- Edit Mapping button hidden - mapping popup opens automatically when required -->
       <button
         v-if="false"
@@ -396,7 +430,7 @@ function browseCrm() {
         "
         @click="onUpload"
       >
-        Upload
+        Upload &amp; Match
       </button>
     </div>
   </section>
@@ -404,107 +438,201 @@ function browseCrm() {
 
 <style scoped>
 .upload-card {
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
-    0 10px 24px rgba(12, 45, 80, 0.06);
-  background: #fff;
-  padding: 16px 16px 14px;
+  background: var(--app-card-bg, #fff);
+  border-radius: var(--app-card-radius, 12px);
+  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 4px;
-}
-.row + .row {
-  margin-top: 10px;
+.upload-header {
+  padding: 14px 20px 10px;
 }
 
-.row-title {
-  color: #0c2d50;
+.upload-title {
+  font-size: 15px;
   font-weight: 600;
-  font-size: 18px;
-  justify-self: center;
+  color: var(--app-text, #0c2d50);
+}
+
+/* Drop zones container */
+.drop-zones {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  padding: 0 16px;
+  flex: 1;
+  align-items: stretch;
+}
+
+.drop-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 4px 12px;
+}
+
+.drop-divider {
+  width: 1px;
+  background: var(--app-border, #e2e8f0);
+  margin: 8px 12px;
+}
+
+.drop-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .drop-zone {
-  position: relative;
-  background: #f4f5f7;
+  border: 2px dashed rgba(12, 45, 80, 0.15);
   border-radius: 10px;
-  box-shadow: inset 0 1px 0 rgba(12, 45, 80, 0.06);
-  min-height: 128px;
-  padding: 18px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  cursor: pointer;
-}
-
-.drop-zone.is-drag {
-  outline: 2px dashed #47bfa9;
-  background: #eef7f5;
-}
-
-.drop-zone-inner {
+  min-height: 72px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  flex: 1;
 }
 
-.icon {
-  width: 32px;
-  height: 32px;
-  opacity: 0.9;
+.drop-zone:hover {
+  border-color: rgba(12, 45, 80, 0.25);
+  background: rgba(12, 45, 80, 0.02);
 }
 
-.drop-zone-text {
-  font-size: 13px;
-  color: #243b53;
+.drop-zone.is-drag {
+  border-color: var(--app-teal, #47bfa9);
+  background: rgba(71, 191, 169, 0.06);
+}
+
+.drop-icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.5;
+}
+
+.drop-text {
+  font-size: 12px;
+  color: var(--app-text-body, #475569);
+  text-align: center;
   line-height: 1.3;
 }
 
-.drop-zone-text-muted {
-  color: #829ab1;
-  font-size: 12px;
+.drop-link {
+  color: var(--app-teal, #47bfa9);
+  font-weight: 500;
 }
 
-.last-file {
+/* File selected chip */
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(71, 191, 169, 0.08);
+  border: 1px solid rgba(71, 191, 169, 0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  flex: 1;
+}
+
+.file-chip-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.file-chip-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-text, #0c2d50);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.file-chip-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--app-text-muted, #94a3b8);
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.file-chip-x:hover {
+  color: var(--app-text, #0c2d50);
+}
+
+/* Progress */
+.upload-progress {
+  padding: 8px 20px;
+}
+
+.progress-track {
+  height: 4px;
+  background: var(--app-border, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--app-teal, #47bfa9);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--app-text-muted, #94a3b8);
   margin-top: 4px;
-  font-size: 12px;
-  color: #52606d;
 }
 
-.row-actions {
+/* Actions */
+.upload-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  align-items: center;
-  margin-top: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--app-border, #e2e8f0);
 }
 
 .btn {
-  border-radius: 999px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
-  padding: 8px 16px;
+  font-weight: 600;
+  padding: 8px 20px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
 .btn-primary {
-  background: #47bfa9;
+  background: var(--app-teal, #47bfa9);
   color: #fff;
 }
 
+.btn-primary:hover:not(:disabled) {
+  background: var(--app-teal-hover, #3aa893);
+}
+
 .btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -529,5 +657,17 @@ function browseCrm() {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+@media (max-width: 640px) {
+  .drop-zones {
+    grid-template-columns: 1fr;
+  }
+
+  .drop-divider {
+    width: auto;
+    height: 1px;
+    margin: 4px 0;
+  }
 }
 </style>

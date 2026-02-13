@@ -1,20 +1,20 @@
 <template>
   <section class="summary-card">
-    <h3 class="title">Summary</h3>
+    <header class="summary-head">
+      <h3 class="summary-title">Summary</h3>
+    </header>
 
     <!-- Header row -->
     <div class="cols head">
-      <span class="col-mail-addr">MAIL STREET ADDRESS</span>
-      <span class="col-crm-addr">CRM STREET ADDRESS</span>
-      <span class="col-city">CITY</span>
-      <span class="col-state">STATE</span>
-      <span class="col-zip">ZIP</span>
-      <span class="col-mail-dates">MAIL DATES</span>
-      <span class="col-crm-date">CRM DATE</span>
-      <span class="col-job-value">JOB VALUE</span>
+      <span class="col col-mail-addr">Mail Address</span>
+      <span class="col col-crm-addr">CRM Address</span>
+      <span class="col col-city">City</span>
+      <span class="col col-state">State</span>
+      <span class="col col-zip">ZIP</span>
+      <span class="col col-mail-dates">Mail Dates</span>
+      <span class="col col-crm-date">CRM Date</span>
+      <span class="col col-job-value">Job Value</span>
     </div>
-
-    <div class="rule"></div>
 
     <!-- Body rows -->
     <ul class="srows">
@@ -22,7 +22,6 @@
         v-for="(r, i) in rowsToShow"
         :key="i"
         class="srow"
-        :class="{ shaded: i % 2 === 0 }"
       >
         <span class="t col-mail-addr">
           {{ r.mail_address1 }}
@@ -53,7 +52,7 @@
           {{ r.crm_date }}
         </span>
 
-        <span class="t mono col-job-value">
+        <span class="t mono col-job-value" :class="{ 'has-value': r.job_value != null && r.job_value > 0 }">
           {{ formatJobValue(r.job_value) }}
         </span>
       </li>
@@ -75,7 +74,7 @@ export type Row = {
   job_value: number | null;
 };
 
-const props = defineProps<{ rows?: Row[] }>();
+const props = defineProps<{ rows?: Row[]; loading?: boolean }>();
 
 const rowsToShow = computed<Row[]>(() => props.rows ?? []);
 
@@ -94,30 +93,24 @@ function formatJobValue(v: number | null): string {
 
 <style scoped>
 .summary-card {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-  padding: 16px 16px 12px;
-  box-sizing: border-box;
-  width: 100%;
-  color: #0c2d50;
-  font-family: var(
-    --font-sans,
-    "Instrument Sans",
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif
-  );
+  background: var(--app-card-bg, #fff);
+  border-radius: var(--app-card-radius, 12px);
+  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  overflow: hidden;
+  color: var(--app-text, #0c2d50);
 }
 
-.title {
-  margin: 0 0 12px;
+.summary-head {
+  background: var(--app-navy, #0b2d50);
+  padding: 12px 20px;
+}
+
+.summary-title {
+  margin: 0;
   font-weight: 600;
-  font-size: 18px;
-  line-height: 22px;
-  letter-spacing: -0.36px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #fff;
 }
 
 /* Header row */
@@ -127,23 +120,22 @@ function formatJobValue(v: number | null): string {
   align-items: center;
 }
 
-/* give header same side padding as body rows so columns line up */
 .cols.head {
-  padding: 0 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  position: sticky;
+  top: 0;
+  background: var(--app-card-bg, #fff);
+  z-index: 1;
 }
 
-.head span {
-  color: #47bfa9;
+.head .col {
   font-weight: 600;
-  font-size: 14px;
-  line-height: 17px;
-  letter-spacing: -0.28px;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--app-text-muted, #94a3b8);
   text-transform: uppercase;
-}
-
-.rule {
-  margin: 10px 0 6px;
-  border-top: 1px solid rgba(109, 129, 150, 0.3);
 }
 
 /* Body list */
@@ -153,7 +145,6 @@ function formatJobValue(v: number | null): string {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 
   max-height: 520px;
   overflow-y: auto;
@@ -162,7 +153,7 @@ function formatJobValue(v: number | null): string {
   scrollbar-width: thin;
 }
 
-.srows::-webkit-scrollbar { width: 8px; }
+.srows::-webkit-scrollbar { width: 6px; }
 .srows::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
 .srows::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
 
@@ -171,57 +162,66 @@ function formatJobValue(v: number | null): string {
   display: flex;
   gap: 12px;
   align-items: center;
-  min-height: 67px;
-  padding: 0 12px;
-  border-radius: 10px;
-  color: #6b6b6b;
-  font-size: 14px;
-  line-height: 17px;
-  letter-spacing: -0.28px;
-  font-weight: 400;
+  min-height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  color: var(--app-text-body, #475569);
+  font-size: 13px;
+  line-height: 1.3;
+  transition: background 0.1s ease;
 }
 
-.srow.shaded {
-  background: #f4f5f7;
+.srow:last-child {
+  border-bottom: none;
+}
+
+.srow:hover {
+  background: rgba(71, 191, 169, 0.04);
 }
 
 .t.mono {
   font-variant-numeric: tabular-nums;
 }
 
+/* Job value highlight */
+.col-job-value.has-value {
+  color: var(--app-teal, #47bfa9);
+  font-weight: 600;
+}
+
 /* --- Column flex weights (header + body share these classes) --- */
 
 .col-mail-addr {
-  flex: 2.4 1 220px;
+  flex: 2.4 1 200px;
 }
 
 .col-crm-addr {
-  flex: 2.4 1 220px;
+  flex: 2.4 1 200px;
 }
 
 .col-city {
-  flex: 1.1 1 120px;
+  flex: 1.1 1 100px;
 }
 
 .col-state {
-  flex: 0 0 60px;
+  flex: 0 0 50px;
 }
 
 .col-zip {
-  flex: 0 0 90px;
+  flex: 0 0 70px;
 }
 
 .col-mail-dates {
-  flex: 1.6 1 160px;
+  flex: 1.6 1 140px;
 }
 
 .col-crm-date {
-  flex: 1 0 110px;
+  flex: 1 0 100px;
 }
 
 /* MAIL DATES column scrolls independently if super long */
 .mail-dates {
-  max-height: 60px;
+  max-height: 48px;
   overflow-y: auto;
   white-space: pre-line;
 
@@ -229,12 +229,12 @@ function formatJobValue(v: number | null): string {
   scrollbar-width: thin;
 }
 
-.mail-dates::-webkit-scrollbar { width: 6px; }
+.mail-dates::-webkit-scrollbar { width: 4px; }
 .mail-dates::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 999px; }
 .mail-dates::-webkit-scrollbar-thumb { background: #cbd5f5; border-radius: 999px; }
 
 .col-job-value {
-  flex: 1 0 120px;
-  text-align: left;
+  flex: 1 0 100px;
+  text-align: right;
 }
 </style>
