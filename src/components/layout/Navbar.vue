@@ -120,7 +120,7 @@ function doSearch() {
       <img
         :src="LogoUrl"
         :alt="BRAND.name"
-        class="h-10 sm:h-12 w-auto object-contain cursor-pointer"
+        class="h-14 sm:h-16 w-auto object-contain cursor-pointer"
         draggable="false"
         @click="navigate('/dashboard')"
       />

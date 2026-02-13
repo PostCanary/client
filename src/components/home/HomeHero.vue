@@ -59,7 +59,7 @@ const onHeroGetStarted = () => {
         <img
           :src="landingLogo"
           :alt="BRAND.name"
-          class="h-[clamp(180px,20vw,260px)] w-auto"
+          class="h-[clamp(220px,24vw,320px)] w-auto -my-[clamp(60px,6.5vw,90px)]"
         />
       </div>
 
