@@ -6,11 +6,13 @@ import landingLogo from "@/assets/postcanary-white.png";
 import curve from "@/assets/home/curve.svg?url";
 import rightDown from "@/assets/home/right-down.svg?url";
 import { useAuthStore } from "@/stores/auth";
+import { useDemoStore } from "@/stores/demo";
 import { useRouter } from "vue-router";
 import { BRAND } from "@/config/brand";
 
 const router = useRouter();
 const auth = useAuthStore();
+const demo = useDemoStore();
 
 /**
  * Top-right "Sign Up" button in the navbar.
@@ -73,15 +75,14 @@ const onHeroGetStarted = () => {
           Sign Up
         </button>
 
-        <!-- Book a Demo -> Calendly link -->
-        <a
-          :href="BRAND.links.demo"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hidden rounded-lg border border-[var(--pc-cyan)] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-[var(--pc-cyan)] shadow-sm hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] md:inline-flex"
+        <!-- Book a Demo -> Calendly modal -->
+        <button
+          type="button"
+          class="hidden rounded-lg border border-[var(--pc-cyan)] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-[var(--pc-cyan)] shadow-sm hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] md:inline-flex cursor-pointer"
+          @click="demo.open()"
         >
           Book a Demo
-        </a>
+        </button>
       </div>
     </header>
 

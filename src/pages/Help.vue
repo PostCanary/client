@@ -56,9 +56,11 @@
           Our team is happy to help. Reach out to us at
           <a :href="getSupportEmailLink()">{{ BRAND.email.support }}</a>
           or
-          <a :href="BRAND.links.demo" target="_blank" rel="noreferrer noopener"
-            >book a demo</a
-          >
+          <button
+            type="button"
+            class="text-[var(--pc-cyan)] hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit"
+            @click="demo.open()"
+          >book a demo</button>
           for a personalized walkthrough.
         </p>
       </div>
@@ -69,6 +71,9 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { BRAND, getSupportEmailLink } from "@/config/brand";
+import { useDemoStore } from "@/stores/demo";
+
+const demo = useDemoStore();
 
 interface FaqItem {
   q: string;
