@@ -203,27 +203,27 @@ const showTierPicker = computed(() => cfg.value.tierPicker);
 const plans = [
   {
     code: "INSIGHT" as const,
-    name: "Insight",
+    name: "Tier 1",
     price: "$99/mo",
-    limit: "1,000 mailers / month",
+    limit: "Up to 1,000 mailers / month",
   },
   {
     code: "PERFORMANCE" as const,
-    name: "Performance",
+    name: "Tier 2",
     price: "$249/mo",
-    limit: "5,000 mailers / month",
+    limit: "Up to 5,000 mailers / month",
   },
   {
     code: "PRECISION" as const,
-    name: "Precision",
+    name: "Tier 3",
     price: "$499/mo",
-    limit: "10,000 mailers / month",
+    limit: "Up to 25,000 mailers / month",
   },
   {
     code: "ELITE" as const,
-    name: "Elite",
+    name: "Tier 4",
     price: "$999/mo",
-    limit: "25,000 mailers / month",
+    limit: "Unlimited mailers",
   },
 ];
 
