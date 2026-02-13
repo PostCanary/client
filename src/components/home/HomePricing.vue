@@ -168,6 +168,13 @@ const onGetStartedClick = async (tierId: PlanCode) => {
               </div>
 
               <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
+
+              <p
+                v-if="tier.includedLabel"
+                class="mt-5 rounded-lg bg-[var(--pc-cyan)]/10 px-4 py-3 text-center text-[18px] sm:text-[22px] font-semibold tracking-[-0.02em] text-[var(--pc-cyan)]"
+              >
+                {{ tier.includedLabel }}
+              </p>
             </div>
 
             <ul
@@ -189,12 +196,6 @@ const onGetStartedClick = async (tierId: PlanCode) => {
 
             <div class="mt-auto">
               <div class="mt-6 h-px w-full bg-[var(--pc-border)]" />
-              <p
-                v-if="tier.includedLabel"
-                class="mt-3 text-[14px] sm:text-[16px] text-[var(--pc-text-soft)]"
-              >
-                {{ tier.includedLabel }}
-              </p>
               <p
                 v-if="tier.perMailerLabel"
                 class="mt-1 text-[14px] sm:text-[16px] text-[var(--pc-text-soft)]"
