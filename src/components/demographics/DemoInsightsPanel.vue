@@ -1,31 +1,21 @@
 <script setup lang="ts">
-import type { DemoInsight } from "@/api/demographics";
+import type { DemoInsightMessage, ConfidenceTier } from "@/api/demographics";
 
 defineProps<{
-  insights: DemoInsight[];
+  message: DemoInsightMessage;
+  tier: ConfidenceTier;
 }>();
-
-function isNegative(type: string): boolean {
-  return type === "low_return" || type === "consider_cutting";
-}
 </script>
 
 <template>
-  <div class="insights-panel" v-if="insights.length > 0">
+  <div class="insights-panel" v-if="message && tier !== 'insufficient'">
     <div class="insights-header">
       <h3>What Your Data Is Telling You</h3>
-      <span class="insights-subtitle">Based on all your uploads</span>
     </div>
-    <div class="insights-grid">
-      <div
-        v-for="(insight, i) in insights"
-        :key="i"
-        class="insight-item"
-        :class="{ negative: isNegative(insight.type) }"
-      >
-        <div class="insight-label">{{ insight.title }}</div>
-        <div class="insight-text" v-html="insight.description"></div>
-        <div class="insight-stat">{{ insight.stat }}</div>
+    <div class="insight-body">
+      <div class="insight-text" v-html="message.text"></div>
+      <div class="insight-qualifier" v-if="message.qualifier">
+        {{ message.qualifier }}
       </div>
     </div>
   </div>
@@ -41,10 +31,7 @@ function isNegative(type: string): boolean {
 }
 
 .insights-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .insights-header h3 {
@@ -52,57 +39,34 @@ function isNegative(type: string): boolean {
   font-weight: 600;
 }
 
-.insights-subtitle {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 400;
-}
-
-.insights-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.insight-item {
+.insight-body {
   background: rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   padding: 18px;
   border-left: 3px solid var(--app-teal, #47bfa9);
 }
 
-.insight-item.negative {
-  border-left-color: #f59e0b;
-}
-
-.insight-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
 .insight-text {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.9);
 }
 
-.insight-stat {
-  font-size: 22px;
+.insight-text :deep(strong) {
   font-weight: 700;
   color: var(--app-teal, #47bfa9);
+}
+
+.insight-qualifier {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
   margin-top: 8px;
+  font-style: italic;
 }
 
-.insight-item.negative .insight-stat {
-  color: #f59e0b;
-}
-
-@media (max-width: 1024px) {
-  .insights-grid { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .insights-panel { padding: 18px; }
+  .insight-text { font-size: 14px; }
 }
 </style>

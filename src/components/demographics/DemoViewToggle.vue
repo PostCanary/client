@@ -10,9 +10,8 @@ const emit = defineEmits<{
 }>();
 
 const options: { label: string; value: DemographicView }[] = [
-  { label: "Who Responded", value: "responded" },
-  { label: "Everyone Mailed", value: "mailed" },
-  { label: "Side by Side", value: "comparison" },
+  { label: "Matches", value: "matches" },
+  { label: "All Customers", value: "all_customers" },
 ];
 </script>
 

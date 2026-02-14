@@ -1,7 +1,7 @@
 // src/api/demographics.ts
 import { get } from "@/api/http";
 
-export type DemographicView = "responded" | "mailed" | "comparison";
+export type DemographicView = "matches" | "all_customers";
 
 export type DemoDistribution = {
   labels: string[];
@@ -9,12 +9,20 @@ export type DemoDistribution = {
 };
 
 export type DemoHeroKPIs = {
-  best_audience: {
+  // Matches tab only
+  best_audience?: {
     label: string;
     multiplier: number;
     multiplier_text: string;
+  } | null;
+  // All Customers tab only
+  total_customers?: number;
+  // Both tabs
+  top_home_value: {
+    label: string;
+    pct: number;
+    pct_text: string;
   };
-  typical_home_value: number;
   top_income_range: {
     label: string;
     pct: number;
@@ -22,8 +30,8 @@ export type DemoHeroKPIs = {
   };
   homeowner_rate: {
     value: number;
-    diff: number;
-    diff_text: string;
+    diff?: number;
+    diff_text?: string;
   };
 };
 
@@ -35,24 +43,25 @@ export type DemoCharts = {
   comparison?: {
     labels: string[];
     mailed: number[];
-    responded: number[];
+    matched: number[];
   };
 };
 
-export type DemoInsight = {
-  type: "sweet_spot" | "untapped" | "low_return" | "consider_cutting";
-  title: string;
-  description: string;
-  stat: string;
-};
+export type DemoInsightMessage = {
+  text: string;
+  qualifier?: string | null;
+} | null;
 
 export type DemoRecommendation = {
   segment: string;
   pct_mailers: number;
-  pct_responses: number;
-  response_strength: number;
-  strength_label: string;
-  recommendation: "send_more" | "keep" | "send_less" | "stop";
+  pct_matches: number;
+  segment_match_rate: number | null;
+  lift: number | null;
+  lift_text: string;
+  response_strength: string;
+  recommendation: string;
+  insufficient: boolean;
 };
 
 export type DemoCoverage = {
@@ -61,11 +70,15 @@ export type DemoCoverage = {
   pct: number;
 };
 
+export type ConfidenceTier = "insufficient" | "low" | "sufficient";
+
 export type DemographicsPayload = {
   view: DemographicView;
+  match_count: number;
+  confidence_tier: ConfidenceTier;
   hero: DemoHeroKPIs | null;
   charts: DemoCharts | null;
-  insights: DemoInsight[];
+  insight_message: DemoInsightMessage;
   recommendations: DemoRecommendation[];
   coverage: DemoCoverage;
   data_note: string;

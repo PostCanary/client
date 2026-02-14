@@ -2,6 +2,7 @@
 import { useDemographics } from "@/composables/useDemographics";
 import DemoViewToggle from "@/components/demographics/DemoViewToggle.vue";
 import DemoFilterBar from "@/components/demographics/DemoFilterBar.vue";
+import DemoConfidenceBanner from "@/components/demographics/DemoConfidenceBanner.vue";
 import DemoHeroCards from "@/components/demographics/DemoHeroCards.vue";
 import DemoInsightsPanel from "@/components/demographics/DemoInsightsPanel.vue";
 import DemoBarChart from "@/components/demographics/DemoBarChart.vue";
@@ -17,9 +18,11 @@ const {
   error,
   hero,
   charts,
-  insights,
+  insightMessage,
   recommendations,
   dataNote,
+  matchCount,
+  confidenceTier,
   hasData,
 } = useDemographics();
 </script>
@@ -30,7 +33,7 @@ const {
     <div class="page-header">
       <div>
         <h1>Demographic Insights</h1>
-        <p>See who's responding to your mailers and where to focus your budget</p>
+        <p>See who's converting from your mailers and where to focus your budget</p>
       </div>
       <DemoViewToggle v-model="view" />
     </div>
@@ -52,65 +55,93 @@ const {
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
       <p>{{ error }}</p>
-      <p class="error-hint">Make sure you have uploaded mailer data with ZIP codes.</p>
+      <p class="error-hint">Make sure you have uploaded mailer and CRM data with ZIP codes.</p>
+    </div>
+
+    <!-- Zero Matches (Matches tab only) -->
+    <div v-else-if="view === 'matches' && hasData && matchCount === 0" class="empty-state">
+      <h2>No matching addresses found</h2>
+      <p>No matching addresses found between your mail and CRM files. Make sure both files contain the same address format.</p>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!hasData && !loading" class="empty-state">
       <h2>No demographic data available</h2>
-      <p>Upload your mailer and CRM data to see demographic insights about who's responding.</p>
+      <p>Upload your mailer and CRM data to see demographic insights about who's converting.</p>
     </div>
 
     <!-- Content -->
     <template v-else>
+      <!-- Confidence Banner (Matches tab only) -->
+      <DemoConfidenceBanner
+        v-if="view === 'matches'"
+        :tier="confidenceTier"
+        :match-count="matchCount"
+      />
+
       <!-- Hero KPI Cards -->
-      <DemoHeroCards :hero="hero" />
+      <DemoHeroCards :hero="hero" :view="view" :confidence-tier="confidenceTier" />
 
-      <!-- Insights Panel -->
-      <DemoInsightsPanel :insights="insights" />
+      <!-- Insights Panel (Matches tab only) -->
+      <DemoInsightsPanel
+        v-if="view === 'matches'"
+        :message="insightMessage"
+        :tier="confidenceTier"
+      />
 
-      <!-- Charts Row 1 -->
-      <div class="chart-grid" v-if="charts">
+      <!-- Charts -->
+      <div
+        class="chart-grid"
+        :class="{ 'charts-greyed': view === 'matches' && confidenceTier === 'insufficient' }"
+        v-if="charts"
+      >
         <DemoBarChart
           title="Home Value"
-          subtitle="Estimated value of homes that responded"
+          :subtitle="view === 'matches' ? 'Estimated value of homes that converted' : 'Estimated value of customer homes'"
           :labels="charts.home_value?.labels ?? []"
           :values="charts.home_value?.values ?? []"
         />
         <DemoBarChart
           title="Age Range"
-          subtitle="Estimated age of homeowners who responded"
+          :subtitle="view === 'matches' ? 'Estimated age of homeowners who converted' : 'Estimated age of customer homeowners'"
           :labels="charts.age_range?.labels ?? []"
           :values="charts.age_range?.values ?? []"
         />
       </div>
 
-      <!-- Charts Row 2 -->
-      <div class="chart-grid" v-if="charts">
+      <div
+        class="chart-grid"
+        :class="{ 'charts-greyed': view === 'matches' && confidenceTier === 'insufficient' }"
+        v-if="charts"
+      >
         <DemoBarChart
           title="Household Income"
-          subtitle="Estimated income of households that responded"
+          :subtitle="view === 'matches' ? 'Estimated income of households that converted' : 'Estimated income of customer households'"
           :labels="charts.income?.labels ?? []"
           :values="charts.income?.values ?? []"
         />
         <DemoDoughnutChart
           title="Property Type"
-          subtitle="Type of property that responded"
+          :subtitle="view === 'matches' ? 'Type of property that converted' : 'Type of customer property'"
           :labels="charts.property_type?.labels ?? []"
           :values="charts.property_type?.values ?? []"
         />
       </div>
 
-      <!-- Comparison Chart -->
+      <!-- Comparison Chart (Matches tab only) -->
       <DemoComparisonChart
-        v-if="charts?.comparison"
+        v-if="view === 'matches' && charts?.comparison"
         :labels="charts.comparison.labels"
         :mailed="charts.comparison.mailed"
-        :responded="charts.comparison.responded"
+        :matched="charts.comparison.matched"
       />
 
-      <!-- Recommendations Table -->
-      <DemoRecommendationsTable :recommendations="recommendations" />
+      <!-- Recommendations Table (Matches tab only) -->
+      <DemoRecommendationsTable
+        v-if="view === 'matches'"
+        :recommendations="recommendations"
+        :confidence-tier="confidenceTier"
+      />
 
       <!-- Data Source Note -->
       <div class="data-note" v-if="dataNote">
@@ -161,6 +192,12 @@ const {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  transition: opacity 0.3s ease;
+}
+
+.charts-greyed {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* Data Note */

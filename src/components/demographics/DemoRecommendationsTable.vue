@@ -1,54 +1,52 @@
 <script setup lang="ts">
-import type { DemoRecommendation } from "@/api/demographics";
+import type { DemoRecommendation, ConfidenceTier } from "@/api/demographics";
 
 defineProps<{
   recommendations: DemoRecommendation[];
+  confidenceTier: ConfidenceTier;
 }>();
 
-function barClass(strength: number): string {
-  if (strength >= 70) return "high";
-  if (strength >= 40) return "mid";
-  if (strength >= 20) return "low";
-  return "very-low";
-}
-
-function badgeClass(rec: string): string {
-  switch (rec) {
-    case "send_more": return "send-more";
-    case "keep": return "keep";
-    case "send_less": return "send-less";
-    case "stop": return "stop";
-    default: return "keep";
+function strengthColor(label: string): string {
+  switch (label) {
+    case "Strong": return "strong";
+    case "Above Average": return "above-avg";
+    case "Average": return "average";
+    case "Below Average": return "below-avg";
+    case "Weak": return "weak";
+    case "Low Confidence": return "low-conf";
+    default: return "average";
   }
 }
 
-function badgeLabel(rec: string): string {
+function recClass(rec: string): string {
   switch (rec) {
-    case "send_more": return "Send More";
-    case "keep": return "Keep As-Is";
-    case "send_less": return "Send Less";
-    case "stop": return "Stop Sending";
-    default: return rec;
+    case "Increase Volume": return "increase";
+    case "Keep As-Is": return "keep";
+    case "Decrease Volume": return "decrease";
+    default: return "keep";
   }
 }
 </script>
 
 <template>
-  <div class="table-card" v-if="recommendations.length > 0">
+  <div class="table-card" v-if="recommendations.length > 0 && confidenceTier !== 'insufficient'">
     <div class="table-navy-header">
       <div>
         <h3>Who Should You Be Mailing?</h3>
-        <div class="table-sub">Audiences ranked by how well they respond to your mailers</div>
+        <div class="table-sub">Audiences ranked by how well they convert from your mailers</div>
       </div>
     </div>
-    <table class="resp-table">
+
+    <!-- Desktop Table -->
+    <table class="resp-table desktop-table">
       <thead>
         <tr>
           <th>Audience</th>
           <th>% of Your Mailers</th>
-          <th>% of Responses</th>
+          <th>% of Matches</th>
+          <th>Segment Match Rate</th>
           <th>Response Strength</th>
-          <th style="width: 160px"></th>
+          <th>Lift</th>
           <th>Recommendation</th>
         </tr>
       </thead>
@@ -56,25 +54,67 @@ function badgeLabel(rec: string): string {
         <tr v-for="(row, i) in recommendations" :key="i">
           <td><strong>{{ row.segment }}</strong></td>
           <td>{{ row.pct_mailers }}%</td>
-          <td>{{ row.pct_responses }}%</td>
-          <td><strong>{{ row.strength_label }}</strong></td>
+          <td>{{ row.pct_matches }}%</td>
+          <td>{{ row.segment_match_rate != null ? `${row.segment_match_rate}%` : '—' }}</td>
           <td>
-            <div class="rate-bar-track">
-              <div
-                class="rate-bar-fill"
-                :class="barClass(row.response_strength)"
-                :style="{ width: `${row.response_strength}%` }"
-              ></div>
-            </div>
-          </td>
-          <td>
-            <span class="badge" :class="badgeClass(row.recommendation)">
-              {{ badgeLabel(row.recommendation) }}
+            <span class="strength-badge" :class="strengthColor(row.response_strength)">
+              {{ row.response_strength }}
             </span>
+          </td>
+          <td><strong>{{ row.lift_text }}</strong></td>
+          <td>
+            <span
+              v-if="row.recommendation !== '—'"
+              class="badge"
+              :class="recClass(row.recommendation)"
+            >
+              {{ row.recommendation }}
+            </span>
+            <span v-else class="muted">—</span>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <!-- Mobile Cards -->
+    <div class="mobile-cards">
+      <div v-for="(row, i) in recommendations" :key="i" class="mobile-card">
+        <div class="mobile-card-header">
+          <strong>{{ row.segment }}</strong>
+          <span
+            v-if="row.recommendation !== '—'"
+            class="badge"
+            :class="recClass(row.recommendation)"
+          >
+            {{ row.recommendation }}
+          </span>
+        </div>
+        <div class="mobile-card-stats">
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">% of Mailers</span>
+            <span class="mobile-stat-value">{{ row.pct_mailers }}%</span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">% of Matches</span>
+            <span class="mobile-stat-value">{{ row.pct_matches }}%</span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Match Rate</span>
+            <span class="mobile-stat-value">{{ row.segment_match_rate != null ? `${row.segment_match_rate}%` : '—' }}</span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Lift</span>
+            <span class="mobile-stat-value"><strong>{{ row.lift_text }}</strong></span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Strength</span>
+            <span class="strength-badge" :class="strengthColor(row.response_strength)">
+              {{ row.response_strength }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -107,6 +147,7 @@ function badgeLabel(rec: string): string {
   margin-top: 2px;
 }
 
+/* Desktop Table */
 .resp-table { width: 100%; border-collapse: collapse; }
 
 .resp-table thead th {
@@ -115,14 +156,14 @@ function badgeLabel(rec: string): string {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--app-text-muted, #94a3b8);
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-bottom: 2px solid var(--app-bg, #f0f2f5);
   font-weight: 600;
   background: var(--app-card-bg, #fff);
 }
 
 .resp-table tbody td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
   font-size: 13px;
   color: var(--app-text-body, #475569);
@@ -135,25 +176,24 @@ function badgeLabel(rec: string): string {
 .resp-table tbody tr:hover { background: rgba(71, 191, 169, 0.04); }
 .resp-table td strong { color: var(--app-text, #0c2d50); font-weight: 600; }
 
-.rate-bar-track {
-  width: 100%;
-  height: 4px;
-  background: var(--app-border, #e2e8f0);
-  border-radius: 2px;
-  overflow: hidden;
+/* Strength badges */
+.strength-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.rate-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
+.strength-badge.strong { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.strength-badge.above-avg { background: rgba(16, 185, 129, 0.06); color: #34d399; }
+.strength-badge.average { background: rgba(148, 163, 184, 0.1); color: var(--app-text-muted, #94a3b8); }
+.strength-badge.below-avg { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+.strength-badge.weak { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+.strength-badge.low-conf { background: rgba(148, 163, 184, 0.08); color: var(--app-text-muted, #94a3b8); font-style: italic; }
 
-.rate-bar-fill.high { background: var(--app-teal, #47bfa9); }
-.rate-bar-fill.mid { background: var(--app-text-muted, #94a3b8); }
-.rate-bar-fill.low { background: #f59e0b; }
-.rate-bar-fill.very-low { background: #ef4444; }
-
+/* Recommendation badges */
 .badge {
   display: inline-block;
   padding: 3px 10px;
@@ -163,12 +203,62 @@ function badgeLabel(rec: string): string {
   letter-spacing: 0.02em;
 }
 
-.badge.send-more { background: rgba(71, 191, 169, 0.1); color: var(--app-teal, #47bfa9); }
+.badge.increase { background: rgba(71, 191, 169, 0.1); color: var(--app-teal, #47bfa9); }
 .badge.keep { background: rgba(148, 163, 184, 0.1); color: var(--app-text-muted, #94a3b8); }
-.badge.send-less { background: rgba(245, 158, 11, 0.1); color: #d97706; }
-.badge.stop { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+.badge.decrease { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
 
-@media (max-width: 640px) {
-  .resp-table { font-size: 12px; }
+.muted { color: var(--app-text-muted, #94a3b8); }
+
+/* Mobile Cards */
+.mobile-cards { display: none; }
+
+.mobile-card {
+  padding: 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.mobile-card:last-child { border-bottom: none; }
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mobile-card-header strong {
+  font-size: 14px;
+  color: var(--app-text, #0c2d50);
+}
+
+.mobile-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mobile-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-muted, #94a3b8);
+  font-weight: 600;
+}
+
+.mobile-stat-value {
+  font-size: 13px;
+  color: var(--app-text-body, #475569);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 768px) {
+  .desktop-table { display: none; }
+  .mobile-cards { display: block; }
 }
 </style>

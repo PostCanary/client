@@ -1,42 +1,69 @@
 <script setup lang="ts">
-import type { DemoHeroKPIs } from "@/api/demographics";
+import type { DemoHeroKPIs, DemographicView, ConfidenceTier } from "@/api/demographics";
 
 const props = defineProps<{
   hero: DemoHeroKPIs | null;
+  view: DemographicView;
+  confidenceTier: ConfidenceTier;
 }>();
 
-function formatCurrency(val: number): string {
-  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
-  if (val >= 1_000) return `$${Math.round(val / 1_000)}K`;
-  return `$${val.toLocaleString()}`;
+function formatNumber(val: number): string {
+  return val.toLocaleString();
 }
 </script>
 
 <template>
   <div class="hero-grid">
-    <!-- Best Audience -->
-    <div class="hero-card">
+    <!-- Matches tab: Best Audience -->
+    <div class="hero-card" v-if="view === 'matches'">
       <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Your Best Audience</div>
-        <div class="hero-value small">{{ hero?.best_audience?.label || "—" }}</div>
-        <div class="hero-change up" v-if="hero?.best_audience?.multiplier">
-          {{ hero.best_audience.multiplier_text }}
+        <template v-if="confidenceTier === 'insufficient'">
+          <div class="hero-value small muted">Insufficient data</div>
+        </template>
+        <template v-else-if="hero?.best_audience">
+          <div class="hero-value small">{{ hero.best_audience.label }}</div>
+          <div
+            class="hero-change"
+            :class="hero.best_audience.multiplier > 0 ? 'up' : ''"
+            v-if="hero.best_audience.multiplier > 0"
+          >
+            {{ hero.best_audience.multiplier_text }}
+          </div>
+          <div class="hero-sub" v-else>
+            {{ hero.best_audience.multiplier_text }}
+          </div>
+        </template>
+        <template v-else>
+          <div class="hero-value small muted">—</div>
+        </template>
+      </div>
+    </div>
+
+    <!-- All Customers tab: Total Customers -->
+    <div class="hero-card" v-if="view === 'all_customers'">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <div class="hero-label">Total Customers</div>
+        <div class="hero-value">{{ hero?.total_customers ? formatNumber(hero.total_customers) : "—" }}</div>
+        <div class="hero-sub">unique addresses in CRM</div>
+      </div>
+    </div>
+
+    <!-- Top Home Value (both tabs) -->
+    <div class="hero-card">
+      <div class="hero-card-accent"></div>
+      <div class="hero-card-body">
+        <div class="hero-label">Top Home Value</div>
+        <div class="hero-value small">{{ hero?.top_home_value?.label || "—" }}</div>
+        <div class="hero-change up" v-if="hero?.top_home_value?.pct">
+          {{ hero.top_home_value.pct_text }}
         </div>
       </div>
     </div>
 
-    <!-- Typical Home Value -->
-    <div class="hero-card">
-      <div class="hero-card-accent"></div>
-      <div class="hero-card-body">
-        <div class="hero-label">Typical Home Value</div>
-        <div class="hero-value">{{ hero ? formatCurrency(hero.typical_home_value) : "—" }}</div>
-        <div class="hero-sub">among customers who responded</div>
-      </div>
-    </div>
-
-    <!-- Top Income Range -->
+    <!-- Top Income Range (both tabs) -->
     <div class="hero-card">
       <div class="hero-card-accent"></div>
       <div class="hero-card-body">
@@ -48,16 +75,16 @@ function formatCurrency(val: number): string {
       </div>
     </div>
 
-    <!-- Homeowner Rate -->
+    <!-- Homeowner Rate (both tabs, delta only on Matches) -->
     <div class="hero-card">
       <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Homeowner Rate</div>
         <div class="hero-value">{{ hero?.homeowner_rate?.value ?? "—" }}%</div>
         <div
+          v-if="view === 'matches' && hero?.homeowner_rate?.diff_text"
           class="hero-change"
           :class="(hero?.homeowner_rate?.diff ?? 0) >= 0 ? 'up' : 'down'"
-          v-if="hero?.homeowner_rate"
         >
           {{ hero.homeowner_rate.diff_text }}
         </div>
@@ -105,6 +132,11 @@ function formatCurrency(val: number): string {
 
 .hero-value.small { font-size: 20px; letter-spacing: 0; }
 
+.hero-value.muted {
+  color: var(--app-text-muted, #94a3b8);
+  font-weight: 500;
+}
+
 .hero-sub {
   font-size: 12px;
   color: var(--app-text-muted, #94a3b8);
@@ -125,7 +157,7 @@ function formatCurrency(val: number): string {
   .hero-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-@media (max-width: 640px) {
-  .hero-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 768px) {
+  .hero-grid { grid-template-columns: 1fr; }
 }
 </style>

@@ -7,7 +7,7 @@ import {
 } from "@/api/demographics";
 
 export function useDemographics() {
-  const view = ref<DemographicView>("responded");
+  const view = ref<DemographicView>("matches");
   const start = ref<string | undefined>(undefined);
   const end = ref<string | undefined>(undefined);
 
@@ -45,10 +45,12 @@ export function useDemographics() {
 
   const hero = computed(() => data.value?.hero ?? null);
   const charts = computed(() => data.value?.charts ?? null);
-  const insights = computed(() => data.value?.insights ?? []);
+  const insightMessage = computed(() => data.value?.insight_message ?? null);
   const recommendations = computed(() => data.value?.recommendations ?? []);
   const coverage = computed(() => data.value?.coverage ?? null);
   const dataNote = computed(() => data.value?.data_note ?? "");
+  const matchCount = computed(() => data.value?.match_count ?? 0);
+  const confidenceTier = computed(() => data.value?.confidence_tier ?? "sufficient");
   const hasData = computed(() => !!data.value && (coverage.value?.total_zips ?? 0) > 0);
 
   return {
@@ -60,10 +62,12 @@ export function useDemographics() {
     error,
     hero,
     charts,
-    insights,
+    insightMessage,
     recommendations,
     coverage,
     dataNote,
+    matchCount,
+    confidenceTier,
     hasData,
     refresh,
   };

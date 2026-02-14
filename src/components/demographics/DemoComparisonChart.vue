@@ -5,7 +5,7 @@ import Chart from "chart.js/auto";
 const props = defineProps<{
   labels: string[];
   mailed: number[];
-  responded: number[];
+  matched: number[];
 }>();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
@@ -31,8 +31,8 @@ function buildChart() {
           maxBarThickness: 40,
         },
         {
-          label: "Customers Who Responded",
-          data: props.responded,
+          label: "Customers Who Converted",
+          data: props.matched,
           backgroundColor: teal,
           borderRadius: 6,
           borderSkipped: false,
@@ -101,15 +101,15 @@ onBeforeUnmount(() => {
   chart = null;
 });
 
-watch(() => [props.labels, props.mailed, props.responded], rebuild);
+watch(() => [props.labels, props.mailed, props.matched], rebuild);
 </script>
 
 <template>
   <div class="chart-full">
     <div class="chart-card-header">
-      <h3>Where You're Sending vs. Who's Responding</h3>
+      <h3>Where You're Sending vs. Who's Converting</h3>
       <div class="chart-sub">
-        Gray = everyone you mailed, teal = customers who actually responded.
+        Gray = everyone you mailed, teal = customers who actually converted.
         Bigger gaps = bigger opportunities.
       </div>
     </div>
