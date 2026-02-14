@@ -63,8 +63,8 @@ export type DemoCoverage = {
 
 export type DemographicsPayload = {
   view: DemographicView;
-  hero: DemoHeroKPIs;
-  charts: DemoCharts;
+  hero: DemoHeroKPIs | null;
+  charts: DemoCharts | null;
   insights: DemoInsight[];
   recommendations: DemoRecommendation[];
   coverage: DemoCoverage;
