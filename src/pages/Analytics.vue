@@ -47,6 +47,12 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
       <p class="error-hint">Make sure you have completed at least one matching run.</p>
     </div>
 
+    <!-- Generating State (user clicked Generate) -->
+    <div v-else-if="regenerating && !hasData" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Generating AI insights... this may take a moment.</p>
+    </div>
+
     <!-- Empty State -->
     <div v-else-if="!hasData && !loading" class="empty-state">
       <div class="empty-icon">
@@ -58,7 +64,20 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
         </svg>
       </div>
       <h2>No analytics available yet</h2>
-      <p>Upload your mailer and CRM data and run a match to generate AI-powered insights.</p>
+      <p>Generate AI-powered insights from your existing match data.</p>
+      <button
+        class="generate-btn"
+        :disabled="regenerating"
+        @click="regenerate"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" />
+          <path d="M2 17l10 5 10-5" />
+          <path d="M2 12l10 5 10-5" />
+        </svg>
+        Generate Insights
+      </button>
     </div>
 
     <!-- Content -->
@@ -196,6 +215,31 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
 .empty-state p {
   font-size: 14px;
   color: var(--app-text-muted, #94a3b8);
+}
+
+.generate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: none;
+  background: var(--app-teal, #47bfa9);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.generate-btn:hover:not(:disabled) {
+  background: #3da897;
+}
+
+.generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Responsive */
