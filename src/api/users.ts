@@ -40,7 +40,7 @@ export async function uploadUserAvatar(file: File): Promise<string> {
   formData.append("avatar", file);
 
   const res = await postForm<{ ok: boolean; avatar_url: string }>(
-    "/users/me/avatar-upload",
+    "/api/users/me/avatar-upload",
     formData
   );
 

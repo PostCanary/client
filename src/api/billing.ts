@@ -48,7 +48,6 @@ export interface BillingState {
  * Create a Stripe Checkout session (tiered subscription).
  *
  * Backend route: POST /api/billing/create-checkout-session
- * We call it as "/billing/..." because Axios http.ts already has "/api" as base.
  */
 export async function createCheckoutSession(
   planCode: PlanCode,
@@ -119,6 +118,6 @@ export interface UsageSnapshot {
 }
 
 export async function getUsageSnapshot(): Promise<UsageSnapshot> {
-  const data = await api<UsageSnapshot>("/billing/usage", { method: "GET" });
+  const data = await api<UsageSnapshot>("/api/billing/usage", { method: "GET" });
   return data;
 }

@@ -87,6 +87,6 @@ export async function getDemographicsPayload(
 
   const qs = q.toString();
   return get<DemographicsPayload>(
-    `/demographics/payload${qs ? `?${qs}` : ""}`,
+    `/api/demographics/payload${qs ? `?${qs}` : ""}`,
   );
 }
