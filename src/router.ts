@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
         name: "Analytics",
         alias: "/analytics",
         component: () => import("@/pages/Analytics.vue"),
-        meta: { title: `Analytics • ${BRAND.name}`, navbarTitle: "Analytics" },
+        meta: { title: `AI Insights • ${BRAND.name}`, navbarTitle: "AI Insights" },
       },
       {
         path: "map",

@@ -50,8 +50,8 @@ watch(
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
+  { label: "AI Insights", path: "/analytics" },
   { label: "Demographics", path: "/demographics" },
-  { label: "Analytics", path: "/analytics" },
   { label: "Heatmap", path: "/map" },
   { label: "History", path: "/history" },
 ];

@@ -31,7 +31,7 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
     <!-- Page Header -->
     <div class="page-header">
       <div>
-        <h1>Advanced Analytics</h1>
+        <h1>AI Insights</h1>
         <p>AI-powered insights from your mail and CRM data</p>
       </div>
     </div>
