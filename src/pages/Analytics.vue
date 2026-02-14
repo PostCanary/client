@@ -17,6 +17,7 @@ const {
   sections,
   recommendations,
   generatedAt,
+  dataContext,
   regenerate,
 } = useAnalytics();
 
@@ -65,6 +66,9 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
       </div>
       <h2>No analytics available yet</h2>
       <p>Generate AI-powered insights from your existing match data.</p>
+      <div v-if="kpis" class="empty-data-summary">
+        Your data: {{ kpis.total_matches ?? 0 }} matches | {{ kpis.total_mail ?? 0 }} mailers | {{ kpis.median_days_to_convert ?? '–' }} median days to convert
+      </div>
       <button
         class="generate-btn"
         :disabled="regenerating"
@@ -89,6 +93,7 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
       <InsightsSummary
         :summary="executiveSummary"
         :generated-at="generatedAt"
+        :data-context="dataContext"
       />
 
       <!-- Insight Sections -->
@@ -215,6 +220,16 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
 .empty-state p {
   font-size: 14px;
   color: var(--app-text-muted, #94a3b8);
+}
+
+.empty-data-summary {
+  font-size: 13px;
+  color: var(--app-text-secondary, #64748b);
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: rgba(71, 191, 169, 0.06);
+  border-radius: 8px;
+  display: inline-block;
 }
 
 .generate-btn {

@@ -66,6 +66,7 @@ export function useAnalytics() {
   const sections = computed(() => insights.value?.sections ?? []);
   const executiveSummary = computed(() => insights.value?.executive_summary ?? "");
   const recommendations = computed(() => insights.value?.top_recommendations ?? []);
+  const dataContext = computed(() => insights.value?.data_context ?? null);
 
   return {
     insights,
@@ -77,6 +78,7 @@ export function useAnalytics() {
     sections,
     executiveSummary,
     recommendations,
+    dataContext,
     refresh,
     regenerate,
   };

@@ -17,11 +17,23 @@ export type Recommendation = {
   rationale: string;
 };
 
+// --- Data Context (transparency / sufficiency) ---
+export type DataContext = {
+  total_matches: number;
+  total_mail: number;
+  unique_addresses: number;
+  total_jobs: number;
+  date_range: { earliest_mail: string; latest_job: string; months_span: number } | null;
+  sufficiency: "high" | "moderate" | "limited";
+  warnings: string[];
+};
+
 // --- Full Insights ---
 export type AnalyticsInsights = {
   executive_summary: string;
   sections: InsightSection[];
   top_recommendations: Recommendation[];
+  data_context?: DataContext;
 };
 
 // --- API Response ---
