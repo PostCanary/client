@@ -101,11 +101,11 @@ const sections: FaqSection[] = [
     title: "Getting Started",
     items: [
       {
-        q: "What is Postcanary?",
+        q: "What is PostCanary?",
         a: `${BRAND.name} is a direct-mail analytics platform that connects your mailing data with customer conversions so you can measure the real ROI of every campaign.`,
       },
       {
-        q: "How does Postcanary work?",
+        q: "How does PostCanary work?",
         a: "Upload your mail file (who you sent to) and your CRM file (who converted), and we match the two together. You'll see conversion rates, ROI, cost-per-acquisition, geographic heatmaps, and more — all in one dashboard.",
       },
       {
@@ -113,7 +113,7 @@ const sections: FaqSection[] = [
         a: "Sign up for an account, choose a plan, and upload your first pair of CSV files. The three-step process is: <strong>1)</strong> Upload your files, <strong>2)</strong> Map the columns, and <strong>3)</strong> View your results on the dashboard.",
       },
       {
-        q: "Do I need technical knowledge to use Postcanary?",
+        q: "Do I need technical knowledge to use PostCanary?",
         a: "Not at all. If you can export a CSV from your CRM or mailing platform, you have everything you need. The interface walks you through each step.",
       },
     ],
@@ -122,7 +122,7 @@ const sections: FaqSection[] = [
     title: "Uploading Data",
     items: [
       {
-        q: "What file format does Postcanary accept?",
+        q: "What file format does PostCanary accept?",
         a: "We accept <strong>CSV</strong> (comma-separated values) files. Most spreadsheet apps and CRM platforms can export to CSV.",
       },
       {
@@ -164,7 +164,7 @@ const sections: FaqSection[] = [
     title: "Dashboard & Analytics",
     items: [
       {
-        q: "What KPIs does Postcanary track?",
+        q: "What KPIs does PostCanary track?",
         a: "The dashboard displays <strong>conversion rate</strong>, <strong>return on investment (ROI)</strong>, <strong>cost per acquisition (CPA)</strong>, total mailers sent, total conversions, and revenue attributed to direct mail.",
       },
       {
