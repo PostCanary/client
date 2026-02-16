@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: "Postcanary",
+  name: "PostCanary",
   legalEntity: "PostCanary LLC",
   currentYear: new Date().getFullYear(),
   domain: {
@@ -66,7 +66,7 @@ export const BRAND = {
 
   /** Legal footer text template */
   legal: {
-    copyright: (year: number) => `© ${year} Postcanary LLC. All rights reserved`,
+    copyright: (year: number) => `© ${year} PostCanary LLC. All rights reserved`,
   },
 } as const;
 
