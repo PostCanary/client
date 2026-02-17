@@ -69,7 +69,7 @@ const onHeroGetStarted = () => {
       <div class="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
-          class="rounded-lg bg-[var(--pc-yellow)] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-[var(--pc-navy)] shadow-sm hover:opacity-90 cursor-pointer"
+          class="whitespace-nowrap rounded-lg bg-[var(--pc-yellow)] px-3 sm:px-4 md:px-6 py-1 sm:py-1.5 md:py-2 text-[13px] sm:text-[16px] md:text-[20px] font-semibold text-[var(--pc-navy)] shadow-sm hover:opacity-90 cursor-pointer"
           @click="onNavSignUpLoginClick"
         >
           Sign Up
@@ -78,7 +78,7 @@ const onHeroGetStarted = () => {
         <!-- Book a Demo -> Calendly modal -->
         <button
           type="button"
-          class="hidden rounded-lg border border-[var(--pc-cyan)] px-4 sm:px-6 py-1.5 sm:py-2 text-[16px] sm:text-[20px] font-semibold text-[var(--pc-cyan)] shadow-sm hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] md:inline-flex cursor-pointer"
+          class="hidden md:inline-flex whitespace-nowrap rounded-lg border border-[var(--pc-cyan)] px-3 sm:px-4 md:px-6 py-1 sm:py-1.5 md:py-2 text-[13px] sm:text-[16px] md:text-[20px] font-semibold text-[var(--pc-cyan)] shadow-sm hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] cursor-pointer"
           @click="demo.open()"
         >
           Book a Demo
@@ -226,8 +226,18 @@ const onHeroGetStarted = () => {
           </div>
         </div>
 
-        <!-- Get Started CTA -->
-        <div class="mt-8 sm:mt-10 flex justify-center">
+        <!-- CTAs -->
+        <div class="mt-8 sm:mt-10 flex flex-col items-center gap-3">
+          <!-- Book a Demo (mobile only) -->
+          <button
+            type="button"
+            @click="demo.open()"
+            class="md:hidden inline-flex items-center rounded-lg border border-[var(--pc-cyan)] px-6 py-3 text-[18px] font-semibold text-[var(--pc-cyan)] shadow-md hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] cursor-pointer"
+          >
+            Book a Demo
+          </button>
+
+          <!-- Get Started -->
           <button
             type="button"
             @click="onHeroGetStarted"
