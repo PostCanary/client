@@ -8,7 +8,7 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/pages/Home.vue"),
-    meta: { title: `Home • ${BRAND.name}`, marketing: true },
+    meta: { title: `Direct Mail Analytics & Tracking - Direct Mail ROI - ${BRAND.name}`, marketing: true },
   },
   { path: "/home", redirect: "/" },
   {
@@ -107,6 +107,12 @@ router.beforeEach(async (to, _from, next) => {
 
 router.afterEach((to) => {
   document.title = (to.meta?.title as string) || BRAND.name;
+
+  const canonical = document.getElementById('canonical-url') as HTMLLinkElement | null;
+  if (canonical) {
+    canonical.href = `https://${BRAND.domain.www}${to.path}`;
+  }
+
   if (typeof window.vgo === 'function') {
     window.vgo('process');
   }
