@@ -96,7 +96,7 @@ onUnmounted(() => stopAutoPlay());
 
       <!-- Tab Bar -->
       <div
-        class="flex items-center justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto transition-all duration-700 delay-100"
+        class="flex items-center justify-start sm:justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto transition-all duration-700 delay-100"
         :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
         role="tablist"
       >
