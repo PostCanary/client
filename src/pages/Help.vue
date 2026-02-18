@@ -183,6 +183,10 @@ const sections: FaqSection[] = [
         q: "How does the Year-over-Year chart work?",
         a: "The YoY chart compares your current period's conversion metrics against the same period from the prior year, so you can spot trends and measure growth over time.",
       },
+      {
+        q: "How do AI Insights and Demographics relate to the dashboard?",
+        a: "The dashboard shows core KPIs from your match results. <strong>AI Insights</strong> provides AI-generated analysis and prioritized recommendations based on that data. <strong>Demographics</strong> adds Census-based audience profiling so you can see who your best-converting customers are. All three work from the same underlying match data.",
+      },
     ],
   },
   {
@@ -195,6 +199,64 @@ const sections: FaqSection[] = [
       {
         q: "Can I filter the heatmap by date or campaign?",
         a: "Yes. Use the filters at the top of the heatmap page to narrow results by date range or specific upload batch.",
+      },
+    ],
+  },
+  {
+    title: "AI Insights",
+    items: [
+      {
+        q: "What is the AI Insights page?",
+        a: "AI Insights uses artificial intelligence to analyze your campaign performance after each match run. It generates an <strong>executive summary</strong>, detailed analysis sections, and <strong>prioritized recommendations</strong> with specific actions you can take to improve results.",
+      },
+      {
+        q: "How are AI Insights generated?",
+        a: "Insights are generated automatically after each completed match run. The system analyzes your KPIs, geographic performance, mailing frequency patterns, seasonality trends, and revenue data, then produces a structured report. This happens in the background and doesn't delay your results.",
+      },
+      {
+        q: "What kind of insights will I see?",
+        a: "Each report includes an <strong>executive summary</strong> (2–3 sentence overview), <strong>4–6 analysis sections</strong> covering conversion performance, geographic patterns, mailing frequency impact, seasonality, and revenue trends, plus <strong>3–5 prioritized recommendations</strong> with data-backed rationale for each.",
+      },
+      {
+        q: "What does the data sufficiency indicator mean?",
+        a: "The indicator shows whether your dataset is large enough for confident analysis. <strong>High</strong> means plenty of data for reliable conclusions. <strong>Moderate</strong> means insights are directional but should be interpreted carefully. <strong>Limited</strong> means very few matches were found — insights may not reflect broader patterns.",
+      },
+      {
+        q: "Can I regenerate my insights?",
+        a: "Yes. Click the <strong>Regenerate Insights</strong> button to re-analyze your most recent match run. This is useful if you want a fresh perspective or after additional data has been processed.",
+      },
+    ],
+  },
+  {
+    title: "Demographics",
+    items: [
+      {
+        q: "What is the Demographics page?",
+        a: "The Demographics page shows a demographic profile of your campaign audience. It displays distributions for <strong>home value</strong>, <strong>age range</strong>, <strong>household income</strong>, and <strong>property type</strong>, helping you understand who your customers are and which segments convert best.",
+      },
+      {
+        q: "Where does the demographic data come from?",
+        a: "Demographic data comes from the <strong>U.S. Census Bureau American Community Survey (ACS)</strong>. It's matched to your customers' ZIP codes and reflects neighborhood-level trends — not individual-level data. This means the results show general patterns for the areas your customers live in.",
+      },
+      {
+        q: 'What\'s the difference between the "Matches" and "All Customers" tabs?',
+        a: "<strong>Matches</strong> analyzes only converted customers — mail recipients who also appeared in your CRM. <strong>All Customers</strong> analyzes your entire CRM customer base regardless of whether they received a mailer. Comparing the two helps you see how your converting audience differs from your broader customer base.",
+      },
+      {
+        q: "What is the Recommendations table?",
+        a: "The Recommendations table ranks your <strong>top 10 audience segments</strong> by conversion lift. Each segment combines tenure (homeowner or renter), age bracket, and home value bracket. For each segment you'll see its match rate, lift multiplier, response strength, and a recommended action (Increase Volume, Keep As-Is, or Decrease Volume).",
+      },
+      {
+        q: 'What does "lift" mean?',
+        a: "Lift compares a segment's share of conversions to its share of mailers sent. For example, a <strong>2.0× lift</strong> means that segment converts at twice the overall rate — it's pulling more than its weight. Higher lift indicates a stronger-performing audience segment.",
+      },
+      {
+        q: 'Why do I see an "Insufficient Data" message?',
+        a: "Demographics recommendations require a minimum number of matches for statistical reliability. Below <strong>25 matches</strong>, charts are limited and recommendations are hidden. Between 25 and 99 matches, results are shown with a low-confidence qualifier. <strong>100+ matches</strong> gives full confidence in the analysis.",
+      },
+      {
+        q: "Can I filter demographics by date range?",
+        a: "Yes. Use the filter bar at the top of the page to narrow results by <strong>All Time</strong>, <strong>Last 90 Days</strong>, <strong>Last 6 Months</strong>, <strong>Last Year</strong>, or a <strong>custom date range</strong>.",
       },
     ],
   },
