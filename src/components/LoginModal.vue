@@ -25,6 +25,7 @@ const showPassword = ref(false);
 const localError = computed(() => auth.loginError || "");
 const isOpen = computed(() => auth.loginModalOpen);
 const loading = computed(() => auth.loginLoading);
+const resetEmailSent = computed(() => auth.resetEmailSent);
 
 // Mode comes from the store; we both *read* and *update* it
 const mode = computed(() => auth.loginMode || "login");
@@ -87,6 +88,16 @@ const switchToSignup = () => {
 
 const switchToLogin = () => {
   auth.loginMode = "login";
+  auth.loginError = "";
+  auth.resetEmailSent = false;
+};
+
+const forgotPassword = async () => {
+  await auth.requestPasswordReset(email.value);
+};
+
+const backToSignIn = () => {
+  auth.resetEmailSent = false;
   auth.loginError = "";
 };
 
@@ -166,8 +177,28 @@ const startSso = (connection: string) => {
           <div class="h-px flex-1 bg-slate-200" />
         </div>
 
+        <!-- Reset email sent confirmation -->
+        <div v-if="resetEmailSent" class="mt-6 text-center space-y-4">
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#24b39b]/10">
+            <svg class="h-6 w-6 text-[#24b39b]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-[#0b2d4f]">Check your email</p>
+          <p class="text-xs text-slate-500">
+            If an account exists for that email, we've sent a link to reset your password.
+          </p>
+          <button
+            type="button"
+            class="mt-2 text-sm font-semibold text-[#24b39b] hover:text-[#1a8b78] cursor-pointer"
+            @click="backToSignIn"
+          >
+            Back to sign in
+          </button>
+        </div>
+
         <!-- Email/password form -->
-        <form class="mt-4 space-y-4" @submit.prevent="submit">
+        <form v-else class="mt-4 space-y-4" @submit.prevent="submit">
           <div>
             <input
               id="login-email"
@@ -200,6 +231,18 @@ const startSso = (connection: string) => {
                 @click="showPassword = !showPassword"
               >
                 {{ showPassword ? "Hide" : "Show" }}
+              </button>
+            </div>
+
+            <!-- Forgot password link (login mode only) -->
+            <div v-if="!isSignup" class="mt-1.5 flex justify-end">
+              <button
+                type="button"
+                class="text-xs text-[#24b39b] hover:text-[#1a8b78] cursor-pointer"
+                @click="forgotPassword"
+                :disabled="loading"
+              >
+                Forgot password?
               </button>
             </div>
           </div>

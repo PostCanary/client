@@ -12,6 +12,7 @@ import {
   authLoginJson,
   authRegisterJson,
   authCheckEmailExists,
+  authForgotPassword,
   authLogout,
 } from "@/api/auth";
 
@@ -40,6 +41,7 @@ export const useAuthStore = defineStore("auth", {
     loginLoading: false,
     loginError: "" as string,
     loginMode: "login" as LoginMode,
+    resetEmailSent: false,
   }),
 
   getters: {
@@ -85,6 +87,7 @@ export const useAuthStore = defineStore("auth", {
       this.loginModalOpen = false;
       this.loginError = "";
       this.loginMode = "login";
+      this.resetEmailSent = false;
     },
 
     openOnboarding() {
@@ -96,6 +99,38 @@ export const useAuthStore = defineStore("auth", {
     closeOnboarding() {
       if (this.profileComplete) {
         this.onboardingOpen = false;
+      }
+    },
+
+    // ----------------------------
+    // Forgot password
+    // ----------------------------
+    async requestPasswordReset(email: string): Promise<boolean> {
+      this.loginLoading = true;
+      this.loginError = "";
+
+      const trimmed = (email || "").trim().toLowerCase();
+      if (!trimmed) {
+        this.loginError = "Please enter your email address first.";
+        this.loginLoading = false;
+        return false;
+      }
+
+      try {
+        const res = await authForgotPassword(trimmed);
+        if (!res.ok) {
+          this.loginError = "Something went wrong. Please try again.";
+          return false;
+        }
+        this.resetEmailSent = true;
+        return true;
+      } catch (err) {
+        console.error("[auth] requestPasswordReset failed", err);
+        this.loginError =
+          "Unable to reach the server. Please check your connection and try again.";
+        return false;
+      } finally {
+        this.loginLoading = false;
       }
     },
 

@@ -59,6 +59,15 @@ export async function authCheckEmailExists(email: string): Promise<boolean> {
   return !!data.exists;
 }
 
+export async function authForgotPassword(email: string): Promise<Response> {
+  return fetch(join(AUTH_BASE, "/auth/forgot-password"), {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function authLogout(): Promise<void> {
   await fetch(join(AUTH_BASE, "/auth/logout"), { method: "GET", credentials: "include" });
 }
