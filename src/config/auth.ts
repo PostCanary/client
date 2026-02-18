@@ -12,17 +12,15 @@
  */
 
 // Production backend - using subdomain for cookie sharing
-// After setting up api.postcanary.com, update this:
-const PROD_API_BASE = "https://api.postcanary.com/api";
-// Fallback to Railway URL if subdomain not set up yet:
-// const PROD_API_BASE = "https://postcanary-api.up.railway.app/api";
+// NOTE: Do NOT append /api here — API paths already include the /api/ prefix.
+const PROD_API_BASE = "https://api.postcanary.com";
 
 const rawBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
 export const API_BASE = rawBase.trim().length
   ? rawBase.trim()
   : import.meta.env.PROD
     ? PROD_API_BASE
-    : "/api";
+    : "";
 
 /**
  * AUTH_BASE should normally be:

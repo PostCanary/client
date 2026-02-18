@@ -43,6 +43,20 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Dashboard • ${BRAND.name}`, navbarTitle: "Dashboard" },
       },
       {
+        path: "demographics",
+        name: "Demographics",
+        alias: "/demographics",
+        component: () => import("@/pages/Demographics.vue"),
+        meta: { title: `Demographics • ${BRAND.name}`, navbarTitle: "Demographics" },
+      },
+      {
+        path: "analytics",
+        name: "Analytics",
+        alias: "/analytics",
+        component: () => import("@/pages/Analytics.vue"),
+        meta: { title: `AI Insights • ${BRAND.name}`, navbarTitle: "AI Insights" },
+      },
+      {
         path: "map",
         name: "Heatmap",
         alias: "/map", // ✅ clean URL

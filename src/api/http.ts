@@ -10,20 +10,19 @@ import { log, getReq } from "@/utils/logger";
 
 // ---- Base URL
 // Production backend - using subdomain for cookie sharing
-// After setting up api.postcanary.com, update this:
-const PROD_API_BASE = "https://api.postcanary.com/api";
-// Fallback to Railway URL if subdomain not set up yet:
-// const PROD_API_BASE = "https://postcanary-api.up.railway.app/api";
+// NOTE: Do NOT append /api here — API paths already include the /api/ prefix.
+const PROD_API_BASE = "https://api.postcanary.com";
 
 const rawBase = import.meta.env.VITE_API_BASE as string | undefined;
 const base = (rawBase ?? "").trim();
 
-// Use explicit env var if set, else Railway in prod or /api in dev
+// Use explicit env var if set, else backend origin in prod or same-origin in dev.
+// NOTE: API paths already include /api/ prefix, so baseURL should NOT include /api.
 export const API_BASE = base.length
   ? base
   : import.meta.env.PROD
     ? PROD_API_BASE
-    : "/api";
+    : "";
 
 if (import.meta.env.DEV) {
   log.info("API_BASE resolved", { API_BASE });
