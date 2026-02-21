@@ -58,7 +58,7 @@ export async function streamChat(
       if (line.startsWith("data: ")) {
         const data = line.slice(6);
         if (data === "[DONE]") return;
-        onChunk(data);
+        try { onChunk(JSON.parse(data)); } catch { onChunk(data); }
       }
     }
   }
