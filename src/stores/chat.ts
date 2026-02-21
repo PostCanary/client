@@ -60,14 +60,17 @@ export const useChatStore = defineStore("chat", {
       }));
 
       // Create placeholder for assistant response
-      const assistantMsg: DisplayMessage = {
-        id: nextId++,
+      const assistantId = nextId++;
+      this.messages.push({
+        id: assistantId,
         role: "assistant",
         content: "",
         timestamp: Date.now(),
         streaming: true,
-      };
-      this.messages.push(assistantMsg);
+      });
+
+      // Index into the reactive array so Vue detects mutations
+      const msgIndex = this.messages.length - 1;
 
       // Try streaming first, fall back to non-streaming
       const controller = new AbortController();
@@ -77,7 +80,7 @@ export const useChatStore = defineStore("chat", {
         await streamChat(
           { messages: apiMessages, context: this.context },
           (chunk) => {
-            assistantMsg.content += chunk;
+            this.messages[msgIndex].content += chunk;
           },
           controller.signal
         );
@@ -86,16 +89,16 @@ export const useChatStore = defineStore("chat", {
 
         // Fallback to non-streaming if streaming isn't supported
         try {
-          assistantMsg.content = "";
+          this.messages[msgIndex].content = "";
           const res = await sendChat({ messages: apiMessages, context: this.context });
-          assistantMsg.content = res.reply;
+          this.messages[msgIndex].content = res.reply;
         } catch (fallbackErr: any) {
           this.error = "Sorry, I'm having trouble connecting. Please try again.";
           // Remove the empty assistant message
-          this.messages = this.messages.filter((m) => m.id !== assistantMsg.id);
+          this.messages = this.messages.filter((m) => m.id !== assistantId);
         }
       } finally {
-        assistantMsg.streaming = false;
+        this.messages[msgIndex].streaming = false;
         this.loading = false;
         this._abortController = null;
       }
