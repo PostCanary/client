@@ -156,7 +156,7 @@
           @click="confirm"
         >
           <span v-if="saving">Saving…</span>
-          <span v-else>Save mapping</span>
+          <span v-else>{{ confirmLabel || 'Save mapping' }}</span>
         </button>
       </footer>
     </section>
@@ -200,6 +200,7 @@ const props = defineProps<{
     crm: Record<string, string>;
   } | null;
   saving?: boolean;
+  confirmLabel?: string;
 }>();
 
 const emit = defineEmits<{

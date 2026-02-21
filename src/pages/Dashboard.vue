@@ -148,6 +148,7 @@ const firstUploadRunLoading = ref(false);
 
 const mailBatchId = ref<string | null>(null);
 const crmBatchId = ref<string | null>(null);
+const pendingNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | null } | null>(null);
 
 // Track if we're in preview mode (results blurred until payment)
 const isPreviewMode = ref(false); // Tracks if results should be blurred due to paywall
@@ -327,6 +328,13 @@ async function onMappingConfirm(mapping: MapperMapping) {
     showMapper.value = false;
     mapperErrors.value = null;
     missing.value = {};
+
+    // If we opened the mapper for auto-mapping review, continue to normalize
+    if (pendingNormalize.value) {
+      const pending = pendingNormalize.value;
+      pendingNormalize.value = null;
+      await onUploadCommitNormalize(pending);
+    }
   } catch (err: any) {
     const status = err?.status ?? err?.response?.status;
     const data = err?.data ?? err?.response?.data ?? {};
@@ -374,7 +382,51 @@ async function onMappingConfirm(mapping: MapperMapping) {
 
 const foregroundBusy = ref(false);
 
+/**
+ * Called when UploadCard's "Upload" button is clicked.
+ * If auto-mapping was used, shows MapperModal for review first.
+ * Otherwise proceeds directly to normalize + matching.
+ */
 async function onUploadCommit(payload: {
+  mailBatchId: string | null;
+  crmBatchId: string | null;
+}) {
+  const { mailBatchId: mailId, crmBatchId: crmId } = payload;
+
+  if (!mailId && !crmId) {
+    console.info("[Dashboard] Upload commit skipped: no batch IDs");
+    return;
+  }
+
+  // Check if any side has an auto-generated mapping that needs review
+  try {
+    const mappingBundle = await fetchMapperMapping({
+      mailBatchId: mailId || undefined,
+      crmBatchId: crmId || undefined,
+    });
+
+    const hasAutoMapping =
+      (mailId && mappingBundle.mail.from_auto) ||
+      (crmId && mappingBundle.crm.from_auto);
+
+    if (hasAutoMapping) {
+      pendingNormalize.value = { mailBatchId: mailId, crmBatchId: crmId };
+      await openMapper();
+      return; // normalize will be triggered by onMappingConfirm
+    }
+  } catch (err) {
+    console.warn("[Dashboard] Failed to check mapping, proceeding to normalize", err);
+  }
+
+  await onUploadCommitNormalize(payload);
+}
+
+/**
+ * Normalize batches + kick off matching.
+ * Extracted so it can be called from both onUploadCommit (direct path)
+ * and onMappingConfirm (after auto-mapping review).
+ */
+async function onUploadCommitNormalize(payload: {
   mailBatchId: string | null;
   crmBatchId: string | null;
 }) {
@@ -950,6 +1002,7 @@ onBeforeUnmount(() => {
     :required-crm="requiredCrm"
     :errors="mapperErrors || null"
     :saving="mapperSaving"
+    :confirm-label="pendingNormalize ? 'Confirm & Run' : undefined"
     @close="showMapper = false"
     @confirm="onMappingConfirm"
   />
