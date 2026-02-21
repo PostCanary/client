@@ -6,6 +6,7 @@ import Loader from "@/components/Loader.vue";
 import { useAuthStore } from "@/stores/auth";
 import LoginModal from "@/components/LoginModal.vue";
 import DemoModal from "@/components/DemoModal.vue";
+import ChatWidget from "@/components/chat/ChatWidget.vue";
 import { useDemoStore } from "@/stores/demo";
 import "@/styles/index.css";
 
@@ -20,5 +21,6 @@ const demo = useDemoStore();
     <!-- Show modal whenever store says it's open -->
     <LoginModal v-if="auth.loginModalOpen" />
     <DemoModal v-if="demo.modalOpen" />
+    <ChatWidget />
   </n-message-provider>
 </template>
