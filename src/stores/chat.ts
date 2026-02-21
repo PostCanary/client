@@ -71,6 +71,7 @@ export const useChatStore = defineStore("chat", {
 
       // Index into the reactive array so Vue detects mutations
       const msgIndex = this.messages.length - 1;
+      const reactiveMsg = () => this.messages[msgIndex]!;
 
       // Try streaming first, fall back to non-streaming
       const controller = new AbortController();
@@ -80,7 +81,7 @@ export const useChatStore = defineStore("chat", {
         await streamChat(
           { messages: apiMessages, context: this.context },
           (chunk) => {
-            this.messages[msgIndex].content += chunk;
+            reactiveMsg().content += chunk;
           },
           controller.signal
         );
@@ -89,16 +90,16 @@ export const useChatStore = defineStore("chat", {
 
         // Fallback to non-streaming if streaming isn't supported
         try {
-          this.messages[msgIndex].content = "";
+          reactiveMsg().content = "";
           const res = await sendChat({ messages: apiMessages, context: this.context });
-          this.messages[msgIndex].content = res.reply;
+          reactiveMsg().content = res.reply;
         } catch (fallbackErr: any) {
           this.error = "Sorry, I'm having trouble connecting. Please try again.";
           // Remove the empty assistant message
           this.messages = this.messages.filter((m) => m.id !== assistantId);
         }
       } finally {
-        this.messages[msgIndex].streaming = false;
+        reactiveMsg().streaming = false;
         this.loading = false;
         this._abortController = null;
       }
