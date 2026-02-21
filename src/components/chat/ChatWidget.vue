@@ -417,11 +417,17 @@ const greeting = computed(() =>
 /* ---- Mobile responsive ---- */
 @media (max-width: 480px) {
   .chat-panel {
-    width: calc(100vw - 16px);
-    right: 8px;
-    bottom: 88px;
-    max-height: calc(100vh - 110px);
-    border-radius: 12px;
+    inset: 0;
+    width: 100%;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .chat-panel__messages {
+    min-height: 0;
+    max-height: none;
+    flex: 1;
   }
 
   .chat-fab {
