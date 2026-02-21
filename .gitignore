@@ -6,3 +6,7 @@ node_modules
 .env.production.local
 dist
 .vercel
+
+# vue-tsc --build emit artifacts
+*.tsbuildinfo
+src/**/*.js
