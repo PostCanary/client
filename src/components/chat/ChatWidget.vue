@@ -365,6 +365,7 @@ const greeting = computed(() =>
   padding: 10px 14px;
   font-size: 14px;
   font-family: inherit;
+  color: #1e293b;
   resize: none;
   outline: none;
   max-height: 80px;
