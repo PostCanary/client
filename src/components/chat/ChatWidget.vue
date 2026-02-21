@@ -26,7 +26,7 @@ watch(
 
 // Also scroll when streaming content updates
 watch(
-  () => chat.messages.at(-1)?.content,
+  () => chat.messages[chat.messages.length - 1]?.content,
   () => nextTick(() => scrollToBottom())
 );
 
