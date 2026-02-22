@@ -11,8 +11,8 @@ const route = useRoute();
 const input = ref("");
 const messagesEl = ref<HTMLElement | null>(null);
 
-// Auto-detect context from route
-const isAppRoute = computed(() => route.path.startsWith("/app") || route.path.startsWith("/dashboard"));
+// Auto-detect context from route — marketing pages use "sales", everything else uses "service"
+const isAppRoute = computed(() => !route.meta?.marketing);
 
 watch(isAppRoute, (inApp) => {
   chat.setContext(inApp ? "service" : "sales");
