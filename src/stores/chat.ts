@@ -22,6 +22,8 @@ export const useChatStore = defineStore("chat", {
     context: "sales" as "sales" | "service",
     /** Abort controller for in-flight requests */
     _abortController: null as AbortController | null,
+    /** Whether a lead email has been captured this session */
+    leadCaptured: false,
   }),
 
   getters: {
@@ -105,6 +107,25 @@ export const useChatStore = defineStore("chat", {
       }
     },
 
+    /** Capture a lead email after a good sales conversation. */
+    async captureLeadEmail(email: string) {
+      const payload = {
+        email,
+        context: this.context,
+        messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
+      };
+      try {
+        await fetch("/api/chat/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } finally {
+        // Mark captured regardless of server response so the UI clears
+        this.leadCaptured = true;
+      }
+    },
+
     /** Cancel an in-flight request */
     cancelRequest() {
       this._abortController?.abort();
@@ -117,6 +138,7 @@ export const useChatStore = defineStore("chat", {
       this.cancelRequest();
       this.messages = [];
       this.error = null;
+      this.leadCaptured = false;
     },
   },
 });

@@ -64,6 +64,63 @@ const greeting = computed(() =>
     ? `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`
     : `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`
 );
+
+// ── Suggested starter questions ──────────────────────────────────────────────
+const salesQuestions = [
+  "What is PostCanary?",
+  "How does matching work?",
+  "Show me pricing",
+  "How do I get started?",
+];
+
+const serviceQuestions = [
+  "How do I upload my data?",
+  "What do the KPIs mean?",
+  "Why is my match rate low?",
+  "How do I read the heatmap?",
+];
+
+const suggestedQuestions = computed(() =>
+  isAppRoute.value ? serviceQuestions : salesQuestions
+);
+
+function sendSuggestion(question: string) {
+  chat.send(question);
+}
+
+// ── Lead capture ─────────────────────────────────────────────────────────────
+const leadEmail = ref("");
+const leadSubmitting = ref(false);
+const leadError = ref("");
+const requestedHuman = ref(false);
+
+const showLeadCapture = computed(() => {
+  if (isAppRoute.value) return false;
+  if (chat.leadCaptured) return false;
+  if (chat.loading) return false;
+  return chat.messages.length >= 4 || requestedHuman.value;
+});
+
+async function submitLead() {
+  const email = leadEmail.value.trim();
+  if (!email) return;
+  leadSubmitting.value = true;
+  leadError.value = "";
+  try {
+    await chat.captureLeadEmail(email);
+    leadEmail.value = "";
+  } catch {
+    leadError.value = "Couldn't save — please try again.";
+  } finally {
+    leadSubmitting.value = false;
+  }
+}
+
+// ── Human handoff ─────────────────────────────────────────────────────────────
+function requestHuman() {
+  requestedHuman.value = true;
+  chat.send("I'd like to speak with a human");
+}
 </script>
 
 <template>
@@ -102,7 +159,7 @@ const greeting = computed(() =>
 
         <!-- Messages area -->
         <div ref="messagesEl" class="chat-panel__messages">
-          <!-- Welcome message (if no conversation yet) -->
+          <!-- Welcome message + suggested questions (if no conversation yet) -->
           <div v-if="!chat.hasMessages" class="chat-panel__welcome">
             <div class="chat-panel__welcome-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -110,6 +167,17 @@ const greeting = computed(() =>
               </svg>
             </div>
             <p class="chat-panel__welcome-text">{{ greeting }}</p>
+            <!-- Suggested starter questions -->
+            <div class="chat-panel__suggestions">
+              <button
+                v-for="q in suggestedQuestions"
+                :key="q"
+                class="chat-panel__chip"
+                @click="sendSuggestion(q)"
+              >
+                {{ q }}
+              </button>
+            </div>
           </div>
 
           <ChatMessage
@@ -122,6 +190,34 @@ const greeting = computed(() =>
           <div v-if="chat.error" class="chat-panel__error">
             {{ chat.error }}
           </div>
+        </div>
+
+        <!-- Lead capture (sales only, after real conversation or human handoff) -->
+        <div v-if="showLeadCapture" class="chat-panel__lead">
+          <p class="chat-panel__lead-prompt">Want us to follow up with more info?</p>
+          <div class="chat-panel__lead-row">
+            <input
+              v-model="leadEmail"
+              type="email"
+              class="chat-panel__lead-input"
+              placeholder="your@email.com"
+              :disabled="leadSubmitting"
+              @keydown.enter.prevent="submitLead"
+            />
+            <button
+              class="chat-panel__lead-btn"
+              :disabled="!leadEmail.trim() || leadSubmitting"
+              @click="submitLead"
+            >
+              {{ leadSubmitting ? "…" : "Send" }}
+            </button>
+          </div>
+          <p v-if="leadError" class="chat-panel__lead-error">{{ leadError }}</p>
+        </div>
+
+        <!-- Lead captured thank-you -->
+        <div v-if="chat.leadCaptured && !isAppRoute" class="chat-panel__lead chat-panel__lead--thanks">
+          <p class="chat-panel__lead-prompt">✓ Thanks! We'll be in touch soon.</p>
         </div>
 
         <!-- Input area -->
@@ -147,7 +243,14 @@ const greeting = computed(() =>
 
         <!-- Powered by footer -->
         <div class="chat-panel__footer">
-          Powered by {{ BRAND.name }} AI
+          <span>Powered by {{ BRAND.name }} AI</span>
+          <button
+            v-if="!isAppRoute"
+            class="chat-panel__human-link"
+            @click="requestHuman"
+          >
+            Talk to a human →
+          </button>
         </div>
       </div>
     </Transition>
@@ -336,7 +439,34 @@ const greeting = computed(() =>
 .chat-panel__welcome-text {
   font-size: 14px;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 0 16px;
+}
+
+/* ---- Suggested question chips ---- */
+.chat-panel__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.chat-panel__chip {
+  background: transparent;
+  border: 1.5px solid var(--app-teal, #47bfa9);
+  color: var(--app-navy, #0b2d50);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.chat-panel__chip:hover {
+  background: var(--app-teal, #47bfa9);
+  color: #ffffff;
 }
 
 /* ---- Error ---- */
@@ -347,6 +477,79 @@ const greeting = computed(() =>
   padding: 8px 12px;
   border-radius: 8px;
   margin-top: 8px;
+}
+
+/* ---- Lead capture ---- */
+.chat-panel__lead {
+  border-top: 1px solid #e2e8f0;
+  padding: 10px 16px 12px;
+  background: #f8fafc;
+}
+
+.chat-panel__lead--thanks {
+  background: #f0fdf4;
+  border-top-color: #bbf7d0;
+}
+
+.chat-panel__lead-prompt {
+  font-size: 12px;
+  color: #475569;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.chat-panel__lead--thanks .chat-panel__lead-prompt {
+  color: #16a34a;
+  margin: 0;
+}
+
+.chat-panel__lead-row {
+  display: flex;
+  gap: 6px;
+}
+
+.chat-panel__lead-input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.chat-panel__lead-input:focus {
+  border-color: var(--app-teal, #47bfa9);
+}
+
+.chat-panel__lead-btn {
+  background: var(--app-navy, #0b2d50);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.chat-panel__lead-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chat-panel__lead-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.chat-panel__lead-error {
+  font-size: 11px;
+  color: #dc2626;
+  margin: 6px 0 0;
 }
 
 /* ---- Input ---- */
@@ -408,10 +611,30 @@ const greeting = computed(() =>
 
 /* ---- Footer ---- */
 .chat-panel__footer {
-  text-align: center;
-  padding: 6px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px 10px;
   font-size: 11px;
   color: #94a3b8;
+}
+
+.chat-panel__human-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--app-teal, #47bfa9);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.chat-panel__human-link:hover {
+  color: var(--app-navy, #0b2d50);
 }
 
 /* ---- Mobile responsive ---- */
