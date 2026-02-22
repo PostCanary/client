@@ -25,6 +25,8 @@ export const useChatStore = defineStore("chat", {
     _abortController: null as AbortController | null,
     /** Whether a lead email has been captured this session */
     leadCaptured: false,
+    /** Unique ID for this chat session, rotated on clear */
+    sessionId: crypto.randomUUID(),
   }),
 
   getters: {
@@ -105,7 +107,23 @@ export const useChatStore = defineStore("chat", {
         reactiveMsg().streaming = false;
         this.loading = false;
         this._abortController = null;
+        this._saveSession();
       }
+    },
+
+    /** Fire-and-forget save of the current session to the server. */
+    _saveSession() {
+      if (this.messages.length === 0) return;
+      fetch(`${API_BASE}/api/chat/session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: this.sessionId,
+          context: this.context,
+          messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
+          page_url: window.location.pathname,
+        }),
+      }).catch(() => {});
     },
 
     /** Capture a lead email after a good sales conversation. */
@@ -114,6 +132,7 @@ export const useChatStore = defineStore("chat", {
         email,
         context: this.context,
         messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
+        session_id: this.sessionId,
       };
       const res = await fetch(`${API_BASE}/api/chat/lead`, {
         method: "POST",
@@ -139,6 +158,7 @@ export const useChatStore = defineStore("chat", {
       this.messages = [];
       this.error = null;
       this.leadCaptured = false;
+      this.sessionId = crypto.randomUUID();
     },
   },
 });
