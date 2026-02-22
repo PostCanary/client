@@ -114,16 +114,15 @@ export const useChatStore = defineStore("chat", {
         context: this.context,
         messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
       };
-      try {
-        await fetch("/api/chat/lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } finally {
-        // Mark captured regardless of server response so the UI clears
-        this.leadCaptured = true;
+      const res = await fetch("/api/chat/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to save lead");
       }
+      this.leadCaptured = true;
     },
 
     /** Cancel an in-flight request */
