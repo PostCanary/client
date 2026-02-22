@@ -1,6 +1,7 @@
 // src/stores/chat.ts
 import { defineStore } from "pinia";
 import { streamChat, sendChat, type ChatMessage, type ChatRole } from "@/api/chat";
+import { API_BASE } from "@/api/http";
 
 export type DisplayMessage = {
   id: number;
@@ -114,7 +115,7 @@ export const useChatStore = defineStore("chat", {
         context: this.context,
         messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
       };
-      const res = await fetch("/api/chat/lead", {
+      const res = await fetch(`${API_BASE}/api/chat/lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
