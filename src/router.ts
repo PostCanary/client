@@ -191,8 +191,8 @@ router.afterEach((to) => {
   document.title = (to.meta?.title as string) || BRAND.name;
 
   const descriptionTag = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
-  if (descriptionTag && to.meta?.description) {
-    descriptionTag.setAttribute('content', to.meta.description as string);
+  if (descriptionTag) {
+    descriptionTag.setAttribute('content', (to.meta?.description as string) || '');
   }
 
   const canonical = document.getElementById('canonical-url') as HTMLLinkElement | null;
