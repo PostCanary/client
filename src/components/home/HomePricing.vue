@@ -6,10 +6,37 @@ import rightDown from "@/assets/home/right-down.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
-
+import PricingCalculator from "./PricingCalculator.vue";
 
 const router = useRouter();
 const auth = useAuthStore();
+
+/* ── Calculator recommendation state ──────────────────────── */
+const recommendations = ref<{
+  ongoingPlanId: PlanCode | null;
+  fastStartPlanId: PlanCode | null;
+} | null>(null);
+
+function onRecommendations(rec: {
+  ongoingPlanId: PlanCode | null;
+  fastStartPlanId: PlanCode | null;
+}) {
+  recommendations.value = rec;
+}
+
+function badgeFor(
+  tierId: PlanCode,
+): { label: string; color: "cyan" | "yellow" } | null {
+  if (!recommendations.value) return null;
+  const { ongoingPlanId, fastStartPlanId } = recommendations.value;
+  const isOngoing = ongoingPlanId === tierId;
+  const isFastStart = fastStartPlanId === tierId;
+
+  if (isOngoing && isFastStart) return { label: "Recommended", color: "cyan" };
+  if (isOngoing && !isFastStart) return { label: "Best for ongoing", color: "cyan" };
+  if (!isOngoing && isFastStart) return { label: "Best for fast start", color: "yellow" };
+  return null;
+}
 
 type Feature = { icon: string; label: string };
 
@@ -134,6 +161,9 @@ const onGetStartedClick = async (tierId: PlanCode) => {
         </p>
       </div>
 
+      <!-- Calculator -->
+      <PricingCalculator @recommendations="onRecommendations" />
+
       <!-- Cards row -->
       <div class="w-full">
         <div
@@ -143,8 +173,28 @@ const onGetStartedClick = async (tierId: PlanCode) => {
           <article
             v-for="tier in tiers"
             :key="tier.id"
-            class="flex w-full max-w-[360px] flex-col rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+            class="relative flex w-full max-w-[360px] flex-col rounded-[14px] border bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-300"
+            :class="[
+              badgeFor(tier.id)
+                ? 'ring-2 ring-[var(--pc-cyan)] border-transparent'
+                : 'border-[var(--pc-border)]',
+            ]"
           >
+            <!-- Recommendation badge -->
+            <Transition name="badge-pop">
+              <span
+                v-if="badgeFor(tier.id)"
+                :key="badgeFor(tier.id)!.label"
+                class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-[11px] sm:text-[12px] font-semibold"
+                :class="
+                  badgeFor(tier.id)!.color === 'cyan'
+                    ? 'bg-[var(--pc-cyan)] text-[var(--pc-navy)]'
+                    : 'bg-[var(--pc-yellow)] text-[var(--pc-navy)]'
+                "
+              >
+                {{ badgeFor(tier.id)!.label }}
+              </span>
+            </Transition>
             <div>
               <h3
                 class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--pc-text)] uppercase"
@@ -234,3 +284,23 @@ const onGetStartedClick = async (tierId: PlanCode) => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.badge-pop-enter-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.badge-pop-leave-active {
+  transition: all 0.2s ease;
+}
+
+.badge-pop-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 4px) scale(0.85);
+}
+
+.badge-pop-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -4px) scale(0.85);
+}
+</style>
