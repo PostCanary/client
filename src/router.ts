@@ -8,7 +8,11 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "Home",
     component: () => import("@/pages/Home.vue"),
-    meta: { title: `Direct Mail Analytics & Tracking - Direct Mail ROI - ${BRAND.name}`, marketing: true },
+    meta: {
+      title: `Direct Mail Analytics & Tracking - Direct Mail ROI - ${BRAND.name}`,
+      description: "See how your direct mail really performs. PostCanary tracks ROI, conversions & attribution beyond QR codes capturing the 70-90% other tracking tools miss.",
+      marketing: true,
+    },
   },
   { path: "/home", redirect: "/" },
   {
@@ -28,6 +32,70 @@ const routes: RouteRecordRaw[] = [
     name: "Help",
     component: () => import("@/pages/Help.vue"),
     meta: { title: `Help • ${BRAND.name}`, marketing: true },
+  },
+
+  // Calculators
+  {
+    path: "/attribution-gap-calculator",
+    name: "AttributionGapCalculator",
+    component: () => import("@/pages/calculators/AttributionGapCalculator.vue"),
+    meta: {
+      title: "Direct Mail Attribution Gap Calculator | Free Tool",
+      description: "See how much revenue your direct mail is missing. Most QR codes track under 10% of conversions. Calculate your real attribution gap in 60 seconds.",
+      marketing: true,
+    },
+  },
+  {
+    path: "/direct-mail-roi-calculator",
+    name: "DirectMailRoiCalculator",
+    component: () => import("@/pages/calculators/DirectMailRoiCalculator.vue"),
+    meta: {
+      title: "Direct Mail ROI Calculator | Free Tool - PostCanary",
+      description: "Calculate your real direct mail ROI, not just what QR codes track. Input your mail volume and see the gap between tracked and actual campaign performance.",
+      marketing: true,
+    },
+  },
+  {
+    path: "/savings-calculator",
+    name: "SavingsCalculator",
+    component: () => import("@/pages/calculators/SavingsCalculator.vue"),
+    meta: {
+      title: "Direct Mail Tracking Savings Calculator | PostCanary",
+      description: "See how much time and money you waste matching addresses in Excel. Calculate your savings with automated direct mail matchback tracking. Free calculator.",
+      marketing: true,
+    },
+  },
+
+  // Industry pages
+  {
+    path: "/hvac-direct-mail-tracking",
+    name: "HvacMailTracking",
+    component: () => import("@/pages/industries/HvacMailTracking.vue"),
+    meta: {
+      title: "HVAC Direct Mail Tracking | Prove Your Mail ROI",
+      description: "Track which HVAC mailers actually drive service calls. Match mailed addresses to booked jobs automatically, no QR codes needed. See real campaign ROI.",
+      marketing: true,
+    },
+  },
+  {
+    path: "/plumbing-direct-mail-tracking",
+    name: "PlumbingMailTracking",
+    component: () => import("@/pages/industries/PlumbingMailTracking.vue"),
+    meta: {
+      title: "Plumbing Direct Mail Tracking | Prove Your Mail ROI",
+      description: "Track which mailers drive plumbing jobs. Match mailed addresses to service calls automatically without QR codes. See your real direct mail ROI.",
+      marketing: true,
+    },
+  },
+  {
+    path: "/real-estate-direct-mail-tracking",
+    name: "RealtorMailTracking",
+    component: () => import("@/pages/industries/RealtorMailTracking.vue"),
+    meta: {
+      title: "Real Estate Direct Mail Tracking | Prove Farming ROI",
+      description: "Track which Just Listed and farming postcards generate listings and closings. Match mailed addresses to clients automatically. No QR codes needed.",
+      marketing: true,
+    },
   },
 
   // ✅ Layout ONLY for app pages
@@ -121,6 +189,11 @@ router.beforeEach(async (to, _from, next) => {
 
 router.afterEach((to) => {
   document.title = (to.meta?.title as string) || BRAND.name;
+
+  const descriptionTag = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+  if (descriptionTag && to.meta?.description) {
+    descriptionTag.setAttribute('content', to.meta.description as string);
+  }
 
   const canonical = document.getElementById('canonical-url') as HTMLLinkElement | null;
   if (canonical) {

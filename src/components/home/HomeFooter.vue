@@ -18,79 +18,55 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
       </div>
 
       <!-- middle nav columns -->
-      <!-- 
       <div
         class="flex flex-col md:flex-row flex-1 items-center md:items-start justify-center md:justify-start gap-6 md:gap-24 text-[16px] md:text-[18px] leading-8 md:leading-10 tracking-[-0.04em] text-[var(--pc-text-muted)] mt-2 md:mt-0"
-      > -->
-      <!-- left column -->
-      <!-- <div class="flex flex-col space-y-1 text-center md:text-left">
-          <a
-            href="#about"
+      >
+        <!-- Tools column -->
+        <div class="flex flex-col space-y-1 text-center md:text-left">
+          <span class="text-[var(--pc-text)] font-semibold text-[14px] uppercase tracking-wider mb-1">Tools</span>
+          <router-link
+            to="/attribution-gap-calculator"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            About
-          </a>
-          <a
-            href="#pricing"
+            Attribution Gap Calculator
+          </router-link>
+          <router-link
+            to="/direct-mail-roi-calculator"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            Pricing
-          </a>
-          <a
-            href="#faq"
+            ROI Calculator
+          </router-link>
+          <router-link
+            to="/savings-calculator"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            FAQ
-          </a>
-          <a
-            href="#demo"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
-          >
-            Get a Demo
-          </a>
-          <a
-            href="#contact"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
-          >
-            Contact
-          </a>
+            Savings Calculator
+          </router-link>
         </div>
-        -->
-      <!-- right column -->
-      <!-- <div class="flex flex-col space-y-1 text-center md:text-left">
-          <a
-            href="#careers"
+
+        <!-- Industries column -->
+        <div class="flex flex-col space-y-1 text-center md:text-left">
+          <span class="text-[var(--pc-text)] font-semibold text-[14px] uppercase tracking-wider mb-1">Industries</span>
+          <router-link
+            to="/hvac-direct-mail-tracking"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            Careers
-          </a>
-          <a
-            href="#products"
+            HVAC
+          </router-link>
+          <router-link
+            to="/plumbing-direct-mail-tracking"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            Products
-          </a>
-          <a
-            href="#blog"
+            Plumbing
+          </router-link>
+          <router-link
+            to="/real-estate-direct-mail-tracking"
             class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
           >
-            Blog
-          </a>
-          <a
-            href="#testimonials"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
-          >
-            Testimonials
-          </a>
-          <a
-            href="#support"
-            class="inline-block pb-0.5 border-b-2 border-transparent hover:border-[var(--pc-cyan)] transition-colors"
-          >
-            Support
-          </a>
+            Real Estate
+          </router-link>
         </div>
       </div>
-      -->
       <!-- right contact block -->
       <div
         class="flex flex-col items-center md:items-end gap-4 md:gap-6 shrink-0 mt-2 md:mt-0"
