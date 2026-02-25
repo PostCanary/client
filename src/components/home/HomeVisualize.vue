@@ -29,11 +29,9 @@ const tabs = [
 ] as const;
 
 const activeTab = ref(0);
-const activeDescription = ref<string>(tabs[0]!.description);
 
 function setTab(index: number) {
   activeTab.value = index;
-  activeDescription.value = tabs[index]!.description;
 }
 
 /* ── Scroll entrance ────────────────────────────────────── */
@@ -124,14 +122,16 @@ onUnmounted(() => stopAutoPlay());
       </div>
 
       <!-- Tab Description -->
-      <Transition name="fade" mode="out-in">
+      <div class="grid [&>*]:col-start-1 [&>*]:row-start-1 mb-6 sm:mb-8">
         <p
-          :key="activeTab"
-          class="text-center text-[14px] sm:text-[16px] text-[var(--pc-text-muted)] max-w-[640px] mx-auto mb-6 sm:mb-8"
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="text-center text-[14px] sm:text-[16px] text-[var(--pc-text-muted)] max-w-[640px] mx-auto transition-opacity duration-300"
+          :class="activeTab === tab.id ? 'opacity-100' : 'opacity-0 pointer-events-none'"
         >
-          {{ activeDescription }}
+          {{ tab.description }}
         </p>
-      </Transition>
+      </div>
 
       <!-- Showcase Panel -->
       <div
@@ -139,35 +139,25 @@ onUnmounted(() => stopAutoPlay());
         :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
         role="tabpanel"
       >
-        <Transition name="fade" mode="out-in">
+        <div class="grid [&>*]:col-start-1 [&>*]:row-start-1">
           <VisualizeDashboardMockup
-            v-if="activeTab === 0"
-            :key="0"
+            class="transition-opacity duration-300"
+            :class="activeTab === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :active="isInView && activeTab === 0"
           />
           <VisualizeTrendMockup
-            v-else-if="activeTab === 1"
-            :key="1"
+            class="transition-opacity duration-300"
+            :class="activeTab === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :active="isInView && activeTab === 1"
           />
           <VisualizeGeoMockup
-            v-else
-            :key="2"
+            class="transition-opacity duration-300"
+            :class="activeTab === 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :active="isInView && activeTab === 2"
           />
-        </Transition>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 300ms ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

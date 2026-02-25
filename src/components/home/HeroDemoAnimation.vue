@@ -294,24 +294,25 @@ onUnmounted(() => {
     </div>
 
     <!-- Phase 2: Results Banner -->
-    <Transition name="phase-slide">
-      <div
-        v-if="phase >= 2"
-        class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] px-4 sm:px-5 py-3 flex items-center justify-between"
-        style="background: linear-gradient(135deg, var(--pc-navy-2), var(--pc-card))"
-      >
-        <div class="flex items-center gap-2">
-          <svg class="h-5 w-5 text-[var(--pc-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span class="text-sm sm:text-base font-bold text-[var(--pc-text)]">Results</span>
-        </div>
-        <span class="text-xs sm:text-sm text-[var(--pc-yellow)] font-medium">Campaign Analysis Complete</span>
+    <div
+      class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] px-4 sm:px-5 py-3 flex items-center justify-between transition-all duration-500"
+      :class="phase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'"
+      style="background: linear-gradient(135deg, var(--pc-navy-2), var(--pc-card))"
+    >
+      <div class="flex items-center gap-2">
+        <svg class="h-5 w-5 text-[var(--pc-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-sm sm:text-base font-bold text-[var(--pc-text)]">Results</span>
       </div>
-    </Transition>
+      <span class="text-xs sm:text-sm text-[var(--pc-yellow)] font-medium">Campaign Analysis Complete</span>
+    </div>
 
     <!-- Phase 3: KPI Cards -->
-    <div v-if="phase >= 3" class="mt-3 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+    <div
+      class="mt-3 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 transition-opacity duration-500"
+      :class="phase >= 3 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+    >
       <div
         v-for="(kpi, i) in kpis"
         :key="kpi.label"
@@ -336,11 +337,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Phase 4: Trend Chart -->
-    <Transition name="phase-slide">
-      <div
-        v-if="phase >= 4"
-        class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4"
-      >
+    <div
+      class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4 transition-all duration-500"
+      :class="phase >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'"
+    >
         <!-- Legend -->
         <div class="flex items-center justify-end gap-3 sm:gap-4 mb-2">
           <div
@@ -436,7 +436,6 @@ onUnmounted(() => {
           </template>
         </svg>
       </div>
-    </Transition>
   </div>
 </template>
 
@@ -447,21 +446,6 @@ onUnmounted(() => {
 
 .chart-text {
   font-family: "Instrument Sans", system-ui, -apple-system, sans-serif;
-}
-
-/* Phase enter transition (used by <Transition name="phase-slide">) */
-.phase-slide-enter-active {
-  transition: all 0.5s ease;
-}
-.phase-slide-enter-from {
-  opacity: 0;
-  transform: translateY(16px);
-}
-.phase-slide-leave-active {
-  transition: none;
-}
-.phase-slide-leave-to {
-  display: none;
 }
 
 /* Line draw animation */
