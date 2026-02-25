@@ -6,15 +6,12 @@ import landingLogo from "@/assets/postcanary-white.png";
 import HeroDemoAnimation from "@/components/home/HeroDemoAnimation.vue";
 import curve from "@/assets/home/curve.svg?url";
 import { useAuthStore } from "@/stores/auth";
-import { createCheckoutSession } from "@/api/billing";
-import { useRouter } from "vue-router";
 import { computed } from "vue";
 
 const props = defineProps<{
   content: IndustryHeroContent;
 }>();
 
-const router = useRouter();
 const auth = useAuthStore();
 
 const steps = computed(
@@ -34,25 +31,12 @@ const onNavSignUpLoginClick = () => {
   window.location.href = "/dashboard";
 };
 
-const onHeroGetStarted = async () => {
+const onHeroGetStarted = () => {
   if (!auth.isAuthenticated) {
     auth.openLoginModal("/dashboard", "signup");
     return;
   }
-
-  if (auth.isSubscribed) {
-    router.push("/dashboard");
-    return;
-  }
-
-  try {
-    const { url } = await createCheckoutSession("industry_hero");
-    if (url) {
-      window.location.href = url;
-    }
-  } catch (err) {
-    console.error("[IndustryHero] Failed to start checkout", err);
-  }
+  window.location.href = "/dashboard";
 };
 </script>
 
