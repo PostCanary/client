@@ -2,11 +2,12 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import Shepherd from "shepherd.js";
+import type { StepOptions, StepOptionsButton } from "shepherd.js";
 import { tourSteps } from "@/config/tourSteps";
 import { useAuthStore } from "@/stores/auth";
 import { updateUserProfile } from "@/api/users";
 
-let tourInstance: Shepherd.Tour | null = null;
+let tourInstance: InstanceType<typeof Shepherd.Tour> | null = null;
 const isActive = ref(false);
 
 export function useTour() {
@@ -29,14 +30,14 @@ export function useTour() {
     });
   }
 
-  function buildSteps(): Shepherd.Step.StepOptions[] {
+  function buildSteps(): StepOptions[] {
     const total = tourSteps.length;
 
     return tourSteps.map((def, index) => {
       const isFirst = index === 0;
       const isLast = index === total - 1;
 
-      const buttons: Shepherd.Step.StepOptionsButton[] = [];
+      const buttons: StepOptionsButton[] = [];
 
       // Skip tour (text link, left-aligned)
       if (!isLast) {
