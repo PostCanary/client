@@ -92,7 +92,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mt-mnav-root">
+  <div class="mt-mnav-root" data-tour="navbar">
     <div class="mt-mnav-left">
       <img 
         :src="LogoUrl" 

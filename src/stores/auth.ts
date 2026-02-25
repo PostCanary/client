@@ -73,6 +73,8 @@ export const useAuthStore = defineStore("auth", {
     },
 
     profileComplete: (state): boolean => !!state.profile?.profile_complete,
+
+    tourCompleted: (state): boolean => !!state.profile?.tour_completed,
   },
 
   actions: {

@@ -63,6 +63,14 @@
           >book a demo</button>
           for a personalized walkthrough.
         </p>
+        <p style="margin-top: 12px;">
+          You can also
+          <router-link
+            to="/dashboard?tour=1"
+            class="text-[var(--pc-cyan)] hover:underline"
+          >replay the guided tour</router-link>
+          to revisit key features.
+        </p>
       </div>
     </div>
   </div>
