@@ -198,7 +198,7 @@ export const useAuthStore = defineStore("auth", {
     // ----------------------------
     // Signup via /auth/register-json
     // ----------------------------
-    async registerWithPassword(email: string, password: string): Promise<boolean> {
+    async registerWithPassword(email: string, password: string, metaEventId?: string): Promise<boolean> {
       this.loginLoading = true;
       this.loginError = "";
 
@@ -218,7 +218,7 @@ export const useAuthStore = defineStore("auth", {
           return false;
         }
 
-        const res = await authRegisterJson(trimmedEmail, password);
+        const res = await authRegisterJson(trimmedEmail, password, metaEventId);
 
         if (!res.ok) {
           let message = "Sign up failed. Please check your details and try again.";

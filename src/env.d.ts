@@ -2,6 +2,7 @@
 
 interface Window {
   vgo?: (...args: any[]) => void;
+  fbq?: (...args: any[]) => void;
 }
 
 declare module '*.vue' {
