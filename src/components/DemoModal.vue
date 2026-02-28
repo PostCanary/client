@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useDemoStore } from "@/stores/demo";
 import { BRAND } from "@/config/brand";
+import { trackSchedule } from "@/composables/useMetaPixel";
 
 const demo = useDemoStore();
 const isOpen = computed(() => demo.modalOpen);
@@ -22,6 +23,12 @@ function close() {
   demo.close();
   iframeLoaded.value = false;
 }
+
+watch(isOpen, (open) => {
+  if (open) {
+    trackSchedule({ content_name: "Book a Demo" });
+  }
+});
 
 onMounted(() => {
   window.addEventListener("keydown", onKeydown);

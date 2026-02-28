@@ -127,13 +127,14 @@ export const useChatStore = defineStore("chat", {
     },
 
     /** Capture a lead email after a good sales conversation. */
-    async captureLeadEmail(email: string) {
-      const payload = {
+    async captureLeadEmail(email: string, metaEventId?: string) {
+      const payload: Record<string, unknown> = {
         email,
         context: this.context,
         messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
         session_id: this.sessionId,
       };
+      if (metaEventId) payload.meta_event_id = metaEventId;
       const res = await fetch(`${API_BASE}/api/chat/lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

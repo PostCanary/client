@@ -6,6 +6,7 @@ import rightDown from "@/assets/home/right-down.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
+import { generateEventId, trackInitiateCheckout } from "@/composables/useMetaPixel";
 import PricingCalculator from "./PricingCalculator.vue";
 
 const router = useRouter();
@@ -115,8 +116,15 @@ const onGetStartedClick = async (tierId: PlanCode) => {
   activeTierId.value = tierId;
 
   try {
+    const tier = tiers.find((t) => t.id === tierId);
+    const eventId = generateEventId();
+    trackInitiateCheckout(
+      { value: tier?.price?.replace("$", ""), currency: "USD", content_name: tier?.name ?? tierId },
+      eventId,
+    );
+
     const source = `home_pricing_${tierId.toLowerCase()}`;
-    const { url } = await createCheckoutSession(tierId, source); // <-- key change
+    const { url } = await createCheckoutSession(tierId, source, null, eventId);
     if (url) {
       window.location.href = url;
     } else {

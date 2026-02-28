@@ -6,6 +6,7 @@ import landingLogo from "@/assets/source-logo-02.png";
 import { AUTH_BASE } from "@/config/auth";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
+import { generateEventId, trackCompleteRegistration } from "@/composables/useMetaPixel";
 
 // Brand icons
 import appleIcon from "@/assets/auth/apple-brands-solid-full.svg?url";
@@ -108,14 +109,20 @@ const submit = async () => {
   }
 
   let ok = false;
+  let eventId: string | undefined;
 
   if (isSignup.value) {
-    ok = await auth.registerWithPassword(email.value, password.value);
+    eventId = generateEventId();
+    ok = await auth.registerWithPassword(email.value, password.value, eventId);
   } else {
     ok = await auth.loginWithPassword(email.value, password.value);
   }
 
   if (!ok) return;
+
+  if (isSignup.value) {
+    trackCompleteRegistration({ content_name: "Email Signup" }, eventId);
+  }
 
   const target = auth.loginRedirectTo || "/dashboard";
   auth.closeLoginModal();

@@ -5,6 +5,7 @@ import { useRoute } from "vue-router";
 import { useChatStore } from "@/stores/chat";
 import { BRAND } from "@/config/brand";
 import ChatMessage from "./ChatMessage.vue";
+import { generateEventId, trackLead } from "@/composables/useMetaPixel";
 
 const chat = useChatStore();
 const route = useRoute();
@@ -107,7 +108,9 @@ async function submitLead() {
   leadSubmitting.value = true;
   leadError.value = "";
   try {
-    await chat.captureLeadEmail(email);
+    const eventId = generateEventId();
+    await chat.captureLeadEmail(email, eventId);
+    trackLead({ content_name: "Chat Lead Capture" }, eventId);
     leadEmail.value = "";
   } catch {
     leadError.value = "Couldn't save — please try again.";

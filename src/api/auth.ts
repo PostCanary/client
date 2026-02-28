@@ -40,12 +40,19 @@ export async function authLoginJson(email: string, password: string): Promise<Re
   });
 }
 
-export async function authRegisterJson(email: string, password: string): Promise<Response> {
+export async function authRegisterJson(
+  email: string,
+  password: string,
+  metaEventId?: string,
+): Promise<Response> {
+  const body: Record<string, string> = { email, password };
+  if (metaEventId) body.meta_event_id = metaEventId;
+
   return fetch(join(AUTH_BASE, "/auth/register-json"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(body),
   });
 }
 

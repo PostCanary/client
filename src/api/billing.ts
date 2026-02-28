@@ -52,7 +52,8 @@ export interface BillingState {
 export async function createCheckoutSession(
   planCode: PlanCode,
   source: string = "dashboard_paywall",
-  runId?: string | null
+  runId?: string | null,
+  metaEventId?: string,
 ): Promise<CheckoutSessionResult> {
   const body: Record<string, unknown> = {
     plan_code: planCode,
@@ -61,6 +62,9 @@ export async function createCheckoutSession(
 
   if (runId) {
     body.run_id = runId; // optional hint so we can resume on success
+  }
+  if (metaEventId) {
+    body.meta_event_id = metaEventId;
   }
 
   const data = await postJson<CheckoutSessionRaw>(
