@@ -56,6 +56,8 @@ const commonFeatures: Feature[] = [
   { icon: check, label: "ROI calculation" },
   { icon: check, label: "Job conversion rate" },
   { icon: check, label: "Top performing cities and zip codes" },
+  { icon: check, label: "AI Insights" },
+  { icon: check, label: "Demographics" },
 ];
 
 
