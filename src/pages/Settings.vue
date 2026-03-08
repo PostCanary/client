@@ -11,6 +11,7 @@ import {
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
+import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
 
 const {
@@ -30,6 +31,7 @@ const deleteError = ref<string | null>(null);
 
 const router = useRouter();
 const auth = useAuthStore();
+const { startTour } = useTour();
 const message = useMessage();
 
 onMounted(() => {
@@ -103,6 +105,13 @@ async function onManageSubscription() {
   } finally {
     billingBusy.value = false;
   }
+}
+
+function onReplayTour() {
+  router.push("/dashboard");
+  setTimeout(() => {
+    startTour();
+  }, 500);
 }
 
 /**
@@ -290,6 +299,29 @@ async function onDeleteAccount() {
             @click="onManageSubscription"
           >
             Manage subscription
+          </button>
+        </div>
+      </section>
+
+      <!-- Guided tour -->
+      <section
+        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900">Guided tour</h2>
+            <p class="mt-1 text-xs text-slate-500">
+              Walk through the main features of {{ BRAND.name }} with an
+              interactive step-by-step tour.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+            @click="onReplayTour"
+          >
+            Replay tour
           </button>
         </div>
       </section>

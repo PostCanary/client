@@ -115,6 +115,7 @@ function doSearch() {
 <template>
   <!-- Same pill card as before -->
   <div
+    data-tour="navbar"
     class="mt-nav-root w-full rounded-xl bg-white shadow-[0_1px_3px_rgba(12,45,80,.08),0_10px_24px_rgba(12,45,80,.06)] px-5 py-3 flex items-center gap-4"
   >
     <!-- Left: logo -->

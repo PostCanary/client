@@ -5,6 +5,7 @@ import { RouterView, useRoute, useRouter } from "vue-router";
 import Navbar from "@/components/layout/Navbar.vue";
 import MobileNavbar from "@/components/layout/MobileNavbar.vue";
 import OnboardingModal from "@/components/OnboardingModal.vue";
+import TourManager from "@/components/tour/TourManager.vue";
 // import SearchBar from "@/components/layout/SearchBar.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useUserProfile } from "@/composables/useUserProfile";
@@ -94,6 +95,8 @@ async function onAvatarFileChanged(e: Event) {
         @change="onAvatarFileChanged"
       />
     </div>
+
+    <TourManager />
 
     <!-- Hard-gated onboarding modal, lives above blurred content -->
     <OnboardingModal

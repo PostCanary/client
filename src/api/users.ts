@@ -13,11 +13,12 @@ export interface UserProfile {
   avatar_url: string | null;
   role: string | null;
   profile_complete: boolean;
+  tour_completed: boolean;
   created_at: string | null;
 }
 
 export type UpdateUserProfilePayload = Partial<
-  Pick<UserProfile, "full_name" | "website_url" | "industry" | "crm" | "mail_provider">
+  Pick<UserProfile, "full_name" | "website_url" | "industry" | "crm" | "mail_provider" | "tour_completed">
 >;
 
 // GET /api/users/me
