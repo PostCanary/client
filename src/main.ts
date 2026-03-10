@@ -5,6 +5,7 @@ import App from "./App.vue";
 import router from "./router";
 import "@/styles/tour.css";
 
+import { initPostHog } from "@/composables/usePostHog";
 import { useAuthStore } from "@/stores/auth";
 import {
   HTTP_EVENT_AUTH_REQUIRED,
@@ -17,6 +18,8 @@ const app = createApp(App);
 const pinia = createPinia();
 app.use(pinia);
 app.use(router);
+
+initPostHog();
 
 // Initialize auth once at boot (so billing flags are available)
 const auth = useAuthStore(pinia);

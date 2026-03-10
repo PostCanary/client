@@ -15,6 +15,7 @@ import {
   authForgotPassword,
   authLogout,
 } from "@/api/auth";
+import { identifyUser, resetUser } from "@/composables/usePostHog";
 
 type LoginMode = "login" | "signup";
 
@@ -302,6 +303,9 @@ export const useAuthStore = defineStore("auth", {
           this.me = me;
 
           if (me.authenticated) {
+            if (me.email) {
+              identifyUser(me.email, { email: me.email, name: me.full_name });
+            }
             try {
               const profile = await fetchUserProfile();
               this.profile = profile;
@@ -341,6 +345,7 @@ export const useAuthStore = defineStore("auth", {
         console.error("[auth] logout failed", err);
       }
 
+      resetUser();
       this.me = { authenticated: false };
       this.profile = null;
       this.onboardingOpen = false;
