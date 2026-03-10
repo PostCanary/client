@@ -3,6 +3,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 import { initMetaPixel, trackPageView, trackViewContent } from "@/composables/useMetaPixel";
+import { capturePageview } from "@/composables/usePostHog";
 
 const routes: RouteRecordRaw[] = [
   {
@@ -204,6 +205,9 @@ router.afterEach((to) => {
   if (typeof window.vgo === 'function') {
     window.vgo('process');
   }
+
+  // PostHog pageview
+  capturePageview();
 
   // Meta Pixel tracking
   initMetaPixel();
