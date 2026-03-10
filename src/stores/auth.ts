@@ -15,7 +15,7 @@ import {
   authForgotPassword,
   authLogout,
 } from "@/api/auth";
-import { identifyUser, resetUser } from "@/composables/usePostHog";
+import { identifyUser, resetUser, captureEvent } from "@/composables/usePostHog";
 
 type LoginMode = "login" | "signup";
 
@@ -187,6 +187,7 @@ export const useAuthStore = defineStore("auth", {
 
         this.loginError = "";
         this.closeLoginModal();
+        captureEvent("user_logged_in", { email: trimmedEmail });
         return true;
       } catch (err) {
         console.error("[auth] loginWithPassword failed", err);
@@ -265,6 +266,7 @@ export const useAuthStore = defineStore("auth", {
         this.loginError = "";
         this.loginMode = "login";
         this.closeLoginModal();
+        captureEvent("user_signed_up", { email: trimmedEmail });
         return true;
       } catch (err) {
         console.error("[auth] registerWithPassword failed", err);

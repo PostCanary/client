@@ -5,6 +5,7 @@ import type { RouteLocationNormalizedLoaded, Router } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import type { PlanCode } from "@/api/billing";
 import { createCheckoutSession, createBillingPortalSession } from "@/api/billing";
+import { captureEvent } from "@/composables/usePostHog";
 
 interface BackendPaywallConfig {
   title?: string;
@@ -116,6 +117,24 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
       !!billing.value?.is_subscribed
   );
 
+  // Track subscription success when returning from Stripe
+  watch(showBillingSuccess, (isSuccess) => {
+    if (isSuccess) {
+      captureEvent("subscription_completed", {
+        plan: billing.value?.plan_code,
+      });
+    }
+  });
+
+  // Track payment failures
+  watch(showPaymentFailed, (isFailed) => {
+    if (isFailed) {
+      captureEvent("payment_failed", {
+        status: billing.value?.subscription_status,
+      });
+    }
+  });
+
   function dismissBillingSuccess() {
     billingDismissed.value = true;
     const { billing: _billing, ...rest } = route.query;
@@ -152,6 +171,7 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
 
     try {
       const planCode = payload?.planCode ?? defaultPlanCode.value;
+      captureEvent("checkout_started", { plan: planCode, source: "dashboard_paywall" });
       const { url } = await createCheckoutSession(planCode, "dashboard_paywall");
       if (url) window.location.href = url;
       else console.error("[DashboardBilling] No checkout URL received");
@@ -201,6 +221,7 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
     const planCode: PlanCode = planFromQuery ?? defaultPlanCode.value;
 
     try {
+      captureEvent("checkout_started", { plan: planCode, source: src });
       const { url } = await createCheckoutSession(planCode, src);
       if (!url) {
         console.error("[Billing] No checkout URL from createCheckoutSession (startCheckout=%s)", src);
