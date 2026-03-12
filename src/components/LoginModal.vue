@@ -9,10 +9,7 @@ import { BRAND } from "@/config/brand";
 import { generateEventId, trackCompleteRegistration } from "@/composables/useMetaPixel";
 
 // Brand icons
-import appleIcon from "@/assets/auth/apple-brands-solid-full.svg?url";
 import googleIcon from "@/assets/auth/google-brands-solid-full.svg?url";
-import microsoftIcon from "@/assets/auth/microsoft-brands-solid-full.svg?url";
-import twitterIcon from "@/assets/auth/square-x-twitter-brands-solid-full.svg?url";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -35,20 +32,12 @@ const isSignup = computed(() => mode.value === "signup");
 const borderColor = "#0b2d4f";
 
 const socialProviders = [
-  { id: "apple", label: "Apple", connection: "apple", icon: appleIcon },
   {
     id: "google",
     label: "Google",
     connection: "google-oauth2",
     icon: googleIcon,
   },
-  {
-    id: "microsoft",
-    label: "Microsoft",
-    connection: "windowslive",
-    icon: microsoftIcon,
-  },
-  { id: "twitter", label: "Twitter", connection: "twitter", icon: twitterIcon },
 ];
 
 // Close on Escape
