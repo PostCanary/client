@@ -114,7 +114,18 @@ const suggestedQuestions = computed(() =>
   isAppRoute.value ? serviceQuestions : salesQuestions
 );
 
+const trialRequested = ref(false);
+
 function sendSuggestion(question: string) {
+  if (question === "Start my free trial") {
+    // Intercept: add canned messages and show lead capture immediately
+    chat.addUserMessage(question);
+    chat.addAssistantMessage(
+      "Great! I\u2019d love to help you get started with PostCanary.\n\nTo begin your free trial, just enter your email in the form below."
+    );
+    trialRequested.value = true;
+    return;
+  }
   chat.send(question);
 }
 
@@ -128,7 +139,7 @@ const showLeadCapture = computed(() => {
   if (isAppRoute.value) return false;
   if (chat.leadCaptured) return false;
   if (chat.loading) return false;
-  return chat.messages.length >= 4 || requestedHuman.value;
+  return trialRequested.value || chat.messages.length >= 4 || requestedHuman.value;
 });
 
 async function submitLead() {

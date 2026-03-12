@@ -53,6 +53,26 @@ export const useChatStore = defineStore("chat", {
       this.context = ctx;
     },
 
+    /** Add a user message without sending to the API. */
+    addUserMessage(text: string) {
+      this.messages.push({
+        id: nextId++,
+        role: "user",
+        content: text,
+        timestamp: Date.now(),
+      });
+    },
+
+    /** Add a canned assistant message without calling the API. */
+    addAssistantMessage(text: string) {
+      this.messages.push({
+        id: nextId++,
+        role: "assistant",
+        content: text,
+        timestamp: Date.now(),
+      });
+    },
+
     /** Send a user message and get an AI response. */
     async send(text: string) {
       const trimmed = text.trim();
