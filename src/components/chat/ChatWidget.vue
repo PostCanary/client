@@ -3,11 +3,13 @@
 import { ref, nextTick, watch, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { useChatStore } from "@/stores/chat";
+import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 import ChatMessage from "./ChatMessage.vue";
 import { generateEventId, trackLead } from "@/composables/useMetaPixel";
 
 const chat = useChatStore();
+const auth = useAuthStore();
 const route = useRoute();
 const input = ref("");
 const messagesEl = ref<HTMLElement | null>(null);
@@ -57,21 +59,48 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+// Auto-open for unauthenticated visitors on marketing pages
+const autoOpenTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+
+watch(
+  () => route.meta?.marketing,
+  (isMarketing) => {
+    if (autoOpenTimer.value) {
+      clearTimeout(autoOpenTimer.value);
+      autoOpenTimer.value = null;
+    }
+    if (isMarketing && !auth.isAuthenticated && !chat.dismissed && !chat.open) {
+      autoOpenTimer.value = setTimeout(() => {
+        if (!auth.isAuthenticated && !chat.dismissed && !chat.open) {
+          chat.autoOpen();
+        }
+      }, 2000);
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  window.addEventListener("keydown", onGlobalKeydown);
+});
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
-const greeting = computed(() =>
-  isAppRoute.value
-    ? `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`
-    : `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`
-);
+const greeting = computed(() => {
+  if (isAppRoute.value) {
+    return `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`;
+  }
+  if (!auth.isAuthenticated) {
+    return `Welcome to ${BRAND.name}! Want to see how direct mail analytics can boost your ROI? Try us free for 7 days \u2014 no credit card required. Ask me anything!`;
+  }
+  return `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`;
+});
 
 // ── Suggested starter questions ──────────────────────────────────────────────
 const salesQuestions = [
+  "Start my free trial",
   "What is PostCanary?",
   "How does matching work?",
   "Show me pricing",
-  "How do I get started?",
 ];
 
 const serviceQuestions = [
@@ -85,7 +114,18 @@ const suggestedQuestions = computed(() =>
   isAppRoute.value ? serviceQuestions : salesQuestions
 );
 
+const trialRequested = ref(false);
+
 function sendSuggestion(question: string) {
+  if (question === "Start my free trial") {
+    // Intercept: add canned messages and show lead capture immediately
+    chat.addUserMessage(question);
+    chat.addAssistantMessage(
+      "Great! I\u2019d love to help you get started with PostCanary.\n\nTo begin your free trial, just enter your email in the form below."
+    );
+    trialRequested.value = true;
+    return;
+  }
   chat.send(question);
 }
 
@@ -99,7 +139,7 @@ const showLeadCapture = computed(() => {
   if (isAppRoute.value) return false;
   if (chat.leadCaptured) return false;
   if (chat.loading) return false;
-  return chat.messages.length >= 4 || requestedHuman.value;
+  return trialRequested.value || chat.messages.length >= 4 || requestedHuman.value;
 });
 
 async function submitLead() {
