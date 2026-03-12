@@ -61,6 +61,18 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 // Auto-open for unauthenticated visitors on marketing pages
 const autoOpenTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const mobileQuery = window.matchMedia("(max-width: 480px)");
+const isMobile = ref(mobileQuery.matches);
+
+function onMediaChange(e: MediaQueryListEvent) {
+  isMobile.value = e.matches;
+}
+mobileQuery.addEventListener("change", onMediaChange);
+
+function openFromTeaser() {
+  chat.dismissTeaser();
+  chat.toggle();
+}
 
 watch(
   () => route.meta?.marketing,
@@ -72,7 +84,11 @@ watch(
     if (isMarketing && !auth.isAuthenticated && !chat.dismissed && !chat.open) {
       autoOpenTimer.value = setTimeout(() => {
         if (!auth.isAuthenticated && !chat.dismissed && !chat.open) {
-          chat.autoOpen();
+          if (isMobile.value) {
+            chat.showTeaser();
+          } else {
+            chat.autoOpen();
+          }
         }
       }, 2000);
     }
@@ -83,7 +99,10 @@ watch(
 onMounted(() => {
   window.addEventListener("keydown", onGlobalKeydown);
 });
-onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onGlobalKeydown);
+  mobileQuery.removeEventListener("change", onMediaChange);
+});
 
 const greeting = computed(() => {
   if (isAppRoute.value) {
@@ -295,6 +314,20 @@ function requestHuman() {
             Talk to a human →
           </button>
         </div>
+      </div>
+    </Transition>
+
+    <!-- Teaser tooltip (mobile auto-open) -->
+    <Transition name="chat-teaser">
+      <div v-if="chat.teaser && !chat.open" class="chat-teaser" @click="openFromTeaser">
+        <button class="chat-teaser__close" @click.stop="chat.dismissTeaser()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18" /><path d="M6 6l12 12" />
+          </svg>
+        </button>
+        <p class="chat-teaser__text">
+          Try PostCanary free for 7 days — no credit card needed!
+        </p>
       </div>
     </Transition>
 
@@ -680,6 +713,77 @@ function requestHuman() {
   color: var(--app-navy, #0b2d50);
 }
 
+/* ---- Teaser tooltip ---- */
+.chat-teaser {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  z-index: 9999;
+  max-width: 260px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 36px 14px 16px;
+  box-shadow: 0 4px 20px rgba(11, 45, 80, 0.16), 0 0 0 1px rgba(11, 45, 80, 0.06);
+  cursor: pointer;
+  font-family: var(--font-family, "Instrument Sans", system-ui, sans-serif);
+}
+
+.chat-teaser::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  right: 22px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 0 0 4px 0;
+  transform: rotate(45deg);
+  box-shadow: 4px 4px 8px rgba(11, 45, 80, 0.08);
+}
+
+.chat-teaser__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.chat-teaser__close:hover {
+  color: #475569;
+}
+
+.chat-teaser__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1e293b;
+}
+
+/* Teaser transition */
+.chat-teaser-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.chat-teaser-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.chat-teaser-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.chat-teaser-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
 /* ---- Mobile responsive ---- */
 @media (max-width: 480px) {
   .chat-panel {
@@ -701,6 +805,15 @@ function requestHuman() {
     right: 16px;
     width: 52px;
     height: 52px;
+  }
+
+  .chat-teaser {
+    bottom: 76px;
+    right: 16px;
+  }
+
+  .chat-teaser::after {
+    right: 18px;
   }
 }
 </style>
