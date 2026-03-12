@@ -59,15 +59,29 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
+// Auto-open for unauthenticated visitors on marketing pages
+const autoOpenTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+
+watch(
+  () => route.meta?.marketing,
+  (isMarketing) => {
+    if (autoOpenTimer.value) {
+      clearTimeout(autoOpenTimer.value);
+      autoOpenTimer.value = null;
+    }
+    if (isMarketing && !auth.isAuthenticated && !chat.dismissed && !chat.open) {
+      autoOpenTimer.value = setTimeout(() => {
+        if (!auth.isAuthenticated && !chat.dismissed && !chat.open) {
+          chat.autoOpen();
+        }
+      }, 2000);
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   window.addEventListener("keydown", onGlobalKeydown);
-
-  // Auto-open for unauthenticated visitors on marketing pages
-  setTimeout(() => {
-    if (!auth.isAuthenticated && route.meta?.marketing && !chat.dismissed && !chat.open) {
-      chat.autoOpen();
-    }
-  }, 2000);
 });
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
