@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useAnalytics } from "@/composables/useAnalytics";
 import { useRunData } from "@/composables/useRunData";
+import { useBilling } from "@/composables/useBilling";
 import AnalyticsHeroCards from "@/components/analytics/AnalyticsHeroCards.vue";
 import InsightsSummary from "@/components/analytics/InsightsSummary.vue";
 import InsightSectionCard from "@/components/analytics/InsightSection.vue";
 import RecommendationsPanel from "@/components/analytics/RecommendationsPanel.vue";
 import RegenerateButton from "@/components/analytics/RegenerateButton.vue";
+import PaywallModal from "@/components/dashboard/PaywallModal.vue";
+import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
+
+const route = useRoute();
+const router = useRouter();
 
 const {
   loading,
@@ -23,11 +30,48 @@ const {
 
 const { runResult } = useRunData();
 
+const {
+  showPaywall,
+  paywallBusy,
+  showPaymentFailed,
+  paymentFailedBusy,
+  paywallConfig,
+  isBillingOverlayActive,
+  showBillingSuccess,
+  onRequireSubscription,
+  onPaywallPrimary,
+  onPaywallSecondary,
+  onPaymentFixPrimary,
+  onPaymentFailedSecondary,
+} = useBilling(route, router);
+
 const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
+
+const isPreviewMode = ref(false);
+
+watch(
+  () => runResult.value,
+  (result) => {
+    if (result) {
+      const previewMode = result.preview_mode === true;
+      if (previewMode !== isPreviewMode.value) {
+        isPreviewMode.value = previewMode;
+        if (previewMode && !showPaywall.value) {
+          onRequireSubscription();
+        }
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+const shouldBlur = computed(() => {
+  return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
+});
 </script>
 
 <template>
-  <div class="analytics-page">
+  <div class="analytics-page" :class="{ 'analytics-blurred': shouldBlur }">
     <!-- Page Header -->
     <div class="page-header">
       <div>
@@ -112,6 +156,25 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
       />
     </template>
   </div>
+
+  <PaywallModal
+    v-model="showPaywall"
+    :config="paywallConfig"
+    :loading="paywallBusy"
+    @primary="onPaywallPrimary"
+    @secondary="onPaywallSecondary"
+  />
+
+  <PaymentFailedModal
+    v-model="showPaymentFailed"
+    :loading="paymentFailedBusy"
+    title="Payment issue"
+    message="We couldn't charge your card. Update your payment method to continue."
+    primary-label="Fix payment"
+    secondary-label="Not now"
+    @primary="onPaymentFixPrimary"
+    @secondary="onPaymentFailedSecondary"
+  />
 </template>
 
 <style scoped>
@@ -122,6 +185,14 @@ const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 16px 40px;
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.analytics-blurred {
+  filter: blur(10px);
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Page Header */
