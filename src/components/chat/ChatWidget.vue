@@ -3,11 +3,13 @@
 import { ref, nextTick, watch, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { useChatStore } from "@/stores/chat";
+import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 import ChatMessage from "./ChatMessage.vue";
 import { generateEventId, trackLead } from "@/composables/useMetaPixel";
 
 const chat = useChatStore();
+const auth = useAuthStore();
 const route = useRoute();
 const input = ref("");
 const messagesEl = ref<HTMLElement | null>(null);
@@ -57,21 +59,34 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+onMounted(() => {
+  window.addEventListener("keydown", onGlobalKeydown);
+
+  // Auto-open for unauthenticated visitors on marketing pages
+  setTimeout(() => {
+    if (!auth.isAuthenticated && route.meta?.marketing && !chat.dismissed && !chat.open) {
+      chat.autoOpen();
+    }
+  }, 2000);
+});
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
-const greeting = computed(() =>
-  isAppRoute.value
-    ? `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`
-    : `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`
-);
+const greeting = computed(() => {
+  if (isAppRoute.value) {
+    return `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`;
+  }
+  if (!auth.isAuthenticated) {
+    return `Welcome to ${BRAND.name}! Want to see how direct mail analytics can boost your ROI? Try us free for 7 days \u2014 no credit card required. Ask me anything!`;
+  }
+  return `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`;
+});
 
 // ── Suggested starter questions ──────────────────────────────────────────────
 const salesQuestions = [
+  "Start my free trial",
   "What is PostCanary?",
   "How does matching work?",
   "Show me pricing",
-  "How do I get started?",
 ];
 
 const serviceQuestions = [

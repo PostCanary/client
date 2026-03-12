@@ -27,6 +27,8 @@ export const useChatStore = defineStore("chat", {
     leadCaptured: false,
     /** Unique ID for this chat session, rotated on clear */
     sessionId: crypto.randomUUID(),
+    /** Whether the user has dismissed the chat this session */
+    dismissed: sessionStorage.getItem("chat_dismissed") === "1",
   }),
 
   getters: {
@@ -35,7 +37,16 @@ export const useChatStore = defineStore("chat", {
 
   actions: {
     toggle() {
+      if (this.open) {
+        this.dismissed = true;
+        sessionStorage.setItem("chat_dismissed", "1");
+      }
       this.open = !this.open;
+    },
+
+    /** Open the chat without marking it as user-initiated (for auto-open). */
+    autoOpen() {
+      this.open = true;
     },
 
     setContext(ctx: "sales" | "service") {
