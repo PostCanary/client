@@ -152,7 +152,7 @@ const startSso = (connection: string) => {
 
         <!-- Social login section -->
         <div class="mt-6 flex w-full justify-center">
-          <div class="flex w-full max-w-[260px] items-center justify-between">
+          <div class="flex w-full max-w-[260px] items-center justify-center">
             <button
               v-for="p in socialProviders"
               :key="p.id"
