@@ -65,12 +65,21 @@ const autoOpenTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 watch(
   () => route.meta?.marketing,
   (isMarketing) => {
+    console.log("[ChatWidget auto-open]", {
+      isMarketing,
+      isAuthenticated: auth.isAuthenticated,
+      dismissed: chat.dismissed,
+      open: chat.open,
+      routePath: route.path,
+      routeMeta: route.meta,
+    });
     if (autoOpenTimer.value) {
       clearTimeout(autoOpenTimer.value);
       autoOpenTimer.value = null;
     }
     if (isMarketing && !auth.isAuthenticated && !chat.dismissed && !chat.open) {
       autoOpenTimer.value = setTimeout(() => {
+        console.log("[ChatWidget auto-open] timeout fired, opening chat");
         if (!auth.isAuthenticated && !chat.dismissed && !chat.open) {
           chat.autoOpen();
         }
