@@ -29,6 +29,8 @@ export const useChatStore = defineStore("chat", {
     sessionId: crypto.randomUUID(),
     /** Whether the user has dismissed the chat this session */
     dismissed: sessionStorage.getItem("chat_dismissed") === "1",
+    /** Whether the teaser tooltip is showing (mobile auto-open) */
+    teaser: false,
   }),
 
   getters: {
@@ -41,12 +43,25 @@ export const useChatStore = defineStore("chat", {
         this.dismissed = true;
         sessionStorage.setItem("chat_dismissed", "1");
       }
+      this.teaser = false;
       this.open = !this.open;
     },
 
     /** Open the chat without marking it as user-initiated (for auto-open). */
     autoOpen() {
       this.open = true;
+    },
+
+    /** Show the teaser tooltip (mobile auto-open). */
+    showTeaser() {
+      this.teaser = true;
+    },
+
+    /** Dismiss the teaser tooltip without opening the chat. */
+    dismissTeaser() {
+      this.teaser = false;
+      this.dismissed = true;
+      sessionStorage.setItem("chat_dismissed", "1");
     },
 
     setContext(ctx: "sales" | "service") {
