@@ -35,7 +35,7 @@ const isSignup = computed(() => mode.value === "signup");
 const borderColor = "#0b2d4f";
 
 const socialProviders = [
-  { id: "apple", label: "Apple", connection: "Apple", icon: appleIcon },
+  { id: "apple", label: "Apple", connection: "apple", icon: appleIcon },
   {
     id: "google",
     label: "Google",
@@ -45,10 +45,10 @@ const socialProviders = [
   {
     id: "microsoft",
     label: "Microsoft",
-    connection: "Microsoft",
+    connection: "windowslive",
     icon: microsoftIcon,
   },
-  { id: "twitter", label: "Twitter", connection: "Twitter", icon: twitterIcon },
+  { id: "twitter", label: "Twitter", connection: "twitter", icon: twitterIcon },
 ];
 
 // Close on Escape
