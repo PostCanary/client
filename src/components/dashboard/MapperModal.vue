@@ -12,137 +12,195 @@
       <header class="mapper-header">
         <span class="dot" aria-hidden="true" />
         <div class="titles">
-          <h3 id="mapper-title">Map Columns</h3>
-          <p class="subtitle">
-            Map your CSV headers to {{ BRAND.name }} fields used for matching.
-          </p>
+          <h3 id="mapper-title">Map Your Columns</h3>
         </div>
       </header>
 
       <div class="mapper-body">
-        <p id="mapper-desc" class="mapper-hint">
-          Choose which <strong>file headers</strong> correspond to each field.
-          Leave blank if a field doesn’t exist in your data.
+        <p id="mapper-desc" class="mapper-desc">
+          This tool helps us match the correct columns in the event they have
+          different column headers. Match up the correct column header names
+          that are in your CSV files here. Do this once and if your files stay
+          the same we will remember and you won't have to do this again!
         </p>
 
-        <div class="header-type-legend">
-          <span class="legend-label">Header types:</span>
-          <span class="legend-pill">Text</span>
-          <span class="legend-pill">Number</span>
-          <span class="legend-pill">Date</span>
-        </div>
+        <!-- MAIL CSV -->
+        <section v-if="mailHeaders.length" class="csv-section">
+          <h4 class="csv-title">Mail CSV</h4>
 
-        <div class="mapper-grid">
-          <!-- MAIL SIDE -->
-          <article class="side-card">
-            <div class="side-header">
-              <h4>Mail CSV</h4>
-              <span class="side-sub">Outbound mailers</span>
-            </div>
-            <div class="field-list">
-              <div
-                v-for="f in mailFields"
-                :key="'mail-' + f"
-                class="field-row"
-                :class="{ 'has-error': !!fieldError('mail', f) }"
-              >
-                <div class="field-meta">
-                  <label :for="'mail-' + f" class="field-label">
-                    {{ labelForMail(f) }}
-                  </label>
-                  <span v-if="isRequired('mail', f)" class="pill pill-required">
-                    Required
-                  </span>
-                  <span v-else class="pill pill-optional"> Optional </span>
-                </div>
-
-                <div class="field-control">
-                  <select
-                    class="field-select"
-                    :class="{
-                      'is-missing': isRequired('mail', f) && !draft.mail[f],
-                      'is-error': !!fieldError('mail', f),
-                    }"
-                    :id="'mail-' + f"
-                    v-model="draft.mail[f]"
-                    @change="onFieldChange('mail', f)"
+          <div class="spreadsheet-wrapper">
+            <table class="spreadsheet">
+              <thead>
+                <tr class="col-letters-row">
+                  <th class="corner-cell"></th>
+                  <th
+                    v-for="(_h, i) in mailHeaders"
+                    :key="'ml-' + i"
+                    class="col-letter"
                   >
-                    <option value=""></option>
-                    <option
-                      v-for="h in headersForField('mail', f)"
-                      :key="'mh-' + h"
-                      :value="h"
-                    >
-                      {{ headerLabel("mail", h) }}
-                    </option>
-                  </select>
-
-                  <p v-if="fieldError('mail', f)" class="error-msg">
-                    {{ fieldError("mail", f) }}
-                  </p>
-                  <p v-else-if="exampleText('mail', f)" class="sample">
-                    e.g. {{ exampleText("mail", f) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- CRM SIDE -->
-          <article class="side-card">
-            <div class="side-header">
-              <h4>CRM CSV</h4>
-              <span class="side-sub">Jobs / conversions</span>
-            </div>
-            <div class="field-list">
-              <div
-                v-for="f in crmFields"
-                :key="'crm-' + f"
-                class="field-row"
-                :class="{ 'has-error': !!fieldError('crm', f) }"
-              >
-                <div class="field-meta">
-                  <label :for="'crm-' + f" class="field-label">
-                    {{ labelForCrm(f) }}
-                  </label>
-                  <span v-if="isRequired('crm', f)" class="pill pill-required">
-                    Required
-                  </span>
-                  <span v-else class="pill pill-optional"> Optional </span>
-                </div>
-
-                <div class="field-control">
-                  <select
-                    class="field-select"
-                    :class="{
-                      'is-missing': isRequired('crm', f) && !draft.crm[f],
-                      'is-error': !!fieldError('crm', f),
-                    }"
-                    :id="'crm-' + f"
-                    v-model="draft.crm[f]"
-                    @change="onFieldChange('crm', f)"
+                    {{ columnLetter(i) }}
+                  </th>
+                </tr>
+                <tr class="dropdown-row">
+                  <th class="row-label">Map to</th>
+                  <th
+                    v-for="h in mailHeaders"
+                    :key="'md-' + h"
+                    class="dropdown-cell"
                   >
-                    <option value=""></option>
-                    <option
-                      v-for="h in headersForField('crm', f)"
-                      :key="'ch-' + h"
-                      :value="h"
+                    <select
+                      class="col-select"
+                      :class="{
+                        'is-mapped': !!mailColumnMap[h],
+                        'is-error': !!columnError('mail', h),
+                      }"
+                      :value="mailColumnMap[h] || ''"
+                      @change="onColumnSelect('mail', h, ($event.target as HTMLSelectElement).value)"
                     >
-                      {{ headerLabel("crm", h) }}
-                    </option>
-                  </select>
+                      <option value="">-- Skip --</option>
+                      <option
+                        v-for="opt in fieldsForHeader('mail', h)"
+                        :key="opt.value"
+                        :value="opt.value"
+                        :disabled="opt.disabled"
+                      >
+                        {{ opt.label }}{{ opt.disabled ? ' (mapped)' : '' }}{{ opt.required ? ' *' : '' }}
+                      </option>
+                    </select>
+                    <p v-if="columnError('mail', h)" class="cell-error">
+                      {{ columnError('mail', h) }}
+                    </p>
+                  </th>
+                </tr>
+                <tr class="header-row">
+                  <th class="row-num">1</th>
+                  <th
+                    v-for="h in mailHeaders"
+                    :key="'mh-' + h"
+                    class="header-cell"
+                  >
+                    {{ h }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, ri) in displayedMailSamples"
+                  :key="'mr-' + ri"
+                  class="data-row"
+                >
+                  <td class="row-num">{{ ri + 2 }}</td>
+                  <td
+                    v-for="h in mailHeaders"
+                    :key="'mc-' + h + ri"
+                    class="data-cell"
+                  >
+                    {{ row[h] ?? '' }}
+                  </td>
+                </tr>
+                <tr v-if="!displayedMailSamples.length" class="empty-row">
+                  <td :colspan="mailHeaders.length + 1" class="empty-cell">
+                    No sample data available
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-                  <p v-if="fieldError('crm', f)" class="error-msg">
-                    {{ fieldError("crm", f) }}
-                  </p>
-                  <p v-else-if="exampleText('crm', f)" class="sample">
-                    e.g. {{ exampleText("crm", f) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </article>
-        </div>
+          <div v-if="unmappedRequiredMail.length" class="missing-banner">
+            Missing required mappings:
+            <strong>{{ unmappedRequiredMail.map(f => labelFor('mail', f)).join(', ') }}</strong>
+          </div>
+        </section>
+
+        <!-- CRM CSV -->
+        <section v-if="crmHeaders.length" class="csv-section">
+          <h4 class="csv-title">CRM CSV</h4>
+
+          <div class="spreadsheet-wrapper">
+            <table class="spreadsheet">
+              <thead>
+                <tr class="col-letters-row">
+                  <th class="corner-cell"></th>
+                  <th
+                    v-for="(_h, i) in crmHeaders"
+                    :key="'cl-' + i"
+                    class="col-letter"
+                  >
+                    {{ columnLetter(i) }}
+                  </th>
+                </tr>
+                <tr class="dropdown-row">
+                  <th class="row-label">Map to</th>
+                  <th
+                    v-for="h in crmHeaders"
+                    :key="'cd-' + h"
+                    class="dropdown-cell"
+                  >
+                    <select
+                      class="col-select"
+                      :class="{
+                        'is-mapped': !!crmColumnMap[h],
+                        'is-error': !!columnError('crm', h),
+                      }"
+                      :value="crmColumnMap[h] || ''"
+                      @change="onColumnSelect('crm', h, ($event.target as HTMLSelectElement).value)"
+                    >
+                      <option value="">-- Skip --</option>
+                      <option
+                        v-for="opt in fieldsForHeader('crm', h)"
+                        :key="opt.value"
+                        :value="opt.value"
+                        :disabled="opt.disabled"
+                      >
+                        {{ opt.label }}{{ opt.disabled ? ' (mapped)' : '' }}{{ opt.required ? ' *' : '' }}
+                      </option>
+                    </select>
+                    <p v-if="columnError('crm', h)" class="cell-error">
+                      {{ columnError('crm', h) }}
+                    </p>
+                  </th>
+                </tr>
+                <tr class="header-row">
+                  <th class="row-num">1</th>
+                  <th
+                    v-for="h in crmHeaders"
+                    :key="'ch-' + h"
+                    class="header-cell"
+                  >
+                    {{ h }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, ri) in displayedCrmSamples"
+                  :key="'cr-' + ri"
+                  class="data-row"
+                >
+                  <td class="row-num">{{ ri + 2 }}</td>
+                  <td
+                    v-for="h in crmHeaders"
+                    :key="'cc-' + h + ri"
+                    class="data-cell"
+                  >
+                    {{ row[h] ?? '' }}
+                  </td>
+                </tr>
+                <tr v-if="!displayedCrmSamples.length" class="empty-row">
+                  <td :colspan="crmHeaders.length + 1" class="empty-cell">
+                    No sample data available
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="unmappedRequiredCrm.length" class="missing-banner">
+            Missing required mappings:
+            <strong>{{ unmappedRequiredCrm.map(f => labelFor('crm', f)).join(', ') }}</strong>
+          </div>
+        </section>
       </div>
 
       <footer class="mapper-footer">
@@ -166,7 +224,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
-import { BRAND } from "@/config/brand";
 
 type MappingSide = Record<string, string>;
 type HeaderType =
@@ -186,7 +243,7 @@ const props = defineProps<{
   crmHeaders: string[];
   mailHeaderTypes: Record<string, HeaderType>;
   crmHeaderTypes: Record<string, HeaderType>;
-  mailSamples: Record<string, any>[]; // currently unused but kept for future
+  mailSamples: Record<string, any>[];
   crmSamples: Record<string, any>[];
   mailFields: string[];
   crmFields: string[];
@@ -209,6 +266,8 @@ const emit = defineEmits<{
 }>();
 
 const dialogEl = ref<HTMLElement | null>(null);
+
+const DISPLAY_ROW_COUNT = 5;
 
 /* ---------- canonical field types (mirror of backend FIELD_TYPES_*) ---------- */
 
@@ -245,7 +304,6 @@ function allowedHeaderTypeSet(
   source: "mail" | "crm",
   field: string
 ): Set<HeaderType> {
-  // Special-case address2: unit/apt numbers often come through as numeric
   if (field === "address2") {
     return new Set<HeaderType>(["string", "number", "unknown"]);
   }
@@ -253,18 +311,14 @@ function allowedHeaderTypeSet(
   const t = expectedCanonicalType(source, field);
   switch (t) {
     case "date":
-      // true dates + "text-ish" when we couldn't classify
       return new Set<HeaderType>(["date", "string", "unknown"]);
     case "state":
-      // state-like and generic text; not zips, numbers, etc.
       return new Set<HeaderType>(["state", "string", "unknown"]);
     case "zip":
-      // allow numeric ZIP columns as well as text
       return new Set<HeaderType>(["zip", "number", "string", "unknown"]);
     case "currency":
       return new Set<HeaderType>(["currency", "number", "string", "unknown"]);
     default:
-      // generic text fields: don't allow clearly structured codes
       return new Set<HeaderType>(["string", "unknown"]);
   }
 }
@@ -274,10 +328,10 @@ function allowedHeaderTypeSet(
 const titleCase = (s: string): string =>
   s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-const labelForMail = (f: string): string =>
-  props.mailLabels?.[f] ?? titleCase(f);
-
-const labelForCrm = (f: string): string => props.crmLabels?.[f] ?? titleCase(f);
+function labelFor(source: "mail" | "crm", field: string): string {
+  const labels = source === "mail" ? props.mailLabels : props.crmLabels;
+  return labels?.[field] ?? titleCase(field);
+}
 
 function isRequired(source: "mail" | "crm", field: string): boolean {
   if (!field) return false;
@@ -286,132 +340,122 @@ function isRequired(source: "mail" | "crm", field: string): boolean {
     : props.requiredCrm.includes(field);
 }
 
-function emptyMapping(
-  mailFields: string[],
-  crmFields: string[]
-): MapperMapping {
-  const mailBlank: MappingSide = {};
-  mailFields.forEach((f) => (mailBlank[f] = ""));
-  const crmBlank: MappingSide = {};
-  crmFields.forEach((f) => (crmBlank[f] = ""));
-  return { mail: mailBlank, crm: crmBlank };
+function columnLetter(index: number): string {
+  let result = "";
+  let n = index;
+  do {
+    result = String.fromCharCode(65 + (n % 26)) + result;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return result;
 }
 
-function mergeMapping(
-  base: MapperMapping,
-  over?: Partial<MapperMapping>
-): MapperMapping {
-  if (!over) return base;
+/* ---------- inverted mapping state (header → field) ---------- */
 
-  const m: MapperMapping = {
-    mail: { ...base.mail },
-    crm: { ...base.crm },
-  };
+const mailColumnMap = ref<Record<string, string>>({});
+const crmColumnMap = ref<Record<string, string>>({});
 
-  if (over.mail) {
-    for (const [k, v] of Object.entries(over.mail)) {
-      if (typeof v === "string") m.mail[k] = v;
+function invertFieldToHeader(
+  fieldMap: Record<string, string> | undefined,
+  headers: string[]
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const h of headers) {
+    result[h] = "";
+  }
+  if (fieldMap) {
+    for (const [field, header] of Object.entries(fieldMap)) {
+      if (header && headers.includes(header)) {
+        result[header] = field;
+      }
     }
   }
-
-  if (over.crm) {
-    for (const [k, v] of Object.entries(over.crm)) {
-      if (typeof v === "string") m.crm[k] = v;
-    }
-  }
-
-  return m;
+  return result;
 }
 
-const draft = ref<MapperMapping>(
-  emptyMapping(props.mailFields, props.crmFields)
-);
+function invertToFieldMap(
+  columnMap: Record<string, string>
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [header, field] of Object.entries(columnMap)) {
+    if (field) result[field] = header;
+  }
+  return result;
+}
 
 function seedFromProps() {
-  draft.value = mergeMapping(
-    emptyMapping(props.mailFields, props.crmFields),
-    props.initialMapping
+  mailColumnMap.value = invertFieldToHeader(
+    props.initialMapping?.mail,
+    props.mailHeaders
+  );
+  crmColumnMap.value = invertFieldToHeader(
+    props.initialMapping?.crm,
+    props.crmHeaders
   );
 }
 
-/* ---------- static examples (don’t move with dropdowns) ---------- */
+/* ---------- sample data ---------- */
 
-const MAIL_EXAMPLES: Record<string, string> = {
-  source_id: "",
-  address1:
-    "4215 14th Avenue South, 1290 Trailwood South, 600 5th Avenue South",
-  address2: "Apt 3, Suite 201, Unit B",
-  city: "Minneapolis, Hopkins, Golden Valley",
-  state: "MN, WI, IA",
-  zip: "55407, 55343, 55415",
-  sent_date: "01/01/2024, 02/14/2024, 12/31/2024",
+const displayedMailSamples = computed(() =>
+  props.mailSamples.slice(0, DISPLAY_ROW_COUNT)
+);
+const displayedCrmSamples = computed(() =>
+  props.crmSamples.slice(0, DISPLAY_ROW_COUNT)
+);
+
+/* ---------- dropdown options per column ---------- */
+
+type FieldOption = {
+  value: string;
+  label: string;
+  disabled: boolean;
+  required: boolean;
 };
 
-const CRM_EXAMPLES: Record<string, string> = {
-  source_id: "",
-  address1: "3350 Quail Avenue North, 2940 Orchard Avenue North",
-  address2: "Unit 2, Suite 4B",
-  city: "Golden Valley, Plymouth, Eden Prairie",
-  state: "MN, WI, IA",
-  zip: "55422, 55369, 55416",
-  job_date: "01/01/2024, 03/15/2024, 10/01/2024",
-  job_value: "200, 1500, 2750",
-};
-
-function exampleText(source: "mail" | "crm", field: string): string | null {
-  const map = source === "mail" ? MAIL_EXAMPLES : CRM_EXAMPLES;
-  return map[field] ?? null;
-}
-
-/* ---------- header label with type tag + field-specific filtering ---------- */
-
-function headerTypeLabel(source: "mail" | "crm", header: string): string {
+function fieldsForHeader(
+  source: "mail" | "crm",
+  header: string
+): FieldOption[] {
+  const fields = source === "mail" ? props.mailFields : props.crmFields;
+  const columnMap =
+    source === "mail" ? mailColumnMap.value : crmColumnMap.value;
   const typesMap =
     source === "mail"
       ? props.mailHeaderTypes || {}
       : props.crmHeaderTypes || {};
-  const t: HeaderType = (typesMap[header] as HeaderType) || "string";
+  const headerType: HeaderType =
+    (typesMap[header] as HeaderType) || "string";
 
-  const tag =
-    t === "date"
-      ? "Date"
-      : t === "number" || t === "currency"
-      ? "Number"
-      : "Text";
+  const usedFields = new Set(
+    Object.values(columnMap).filter((v) => v && v !== columnMap[header])
+  );
 
-  return `${header} (${tag})`;
+  return fields
+    .filter((f) => {
+      const allowed = allowedHeaderTypeSet(source, f);
+      return allowed.has(headerType);
+    })
+    .map((f) => ({
+      value: f,
+      label: labelFor(source, f),
+      disabled: usedFields.has(f),
+      required: isRequired(source, f),
+    }));
 }
 
-function headerLabel(source: "mail" | "crm", header: string): string {
-  return headerTypeLabel(source, header);
+/* ---------- column selection handler ---------- */
+
+function onColumnSelect(
+  source: "mail" | "crm",
+  header: string,
+  field: string
+) {
+  const columnMap =
+    source === "mail" ? mailColumnMap : crmColumnMap;
+  columnMap.value = { ...columnMap.value, [header]: field };
 }
 
-function headersForField(source: "mail" | "crm", field: string): string[] {
-  const all = source === "mail" ? props.mailHeaders : props.crmHeaders;
-  const typesMap =
-    source === "mail"
-      ? props.mailHeaderTypes || {}
-      : props.crmHeaderTypes || {};
-  const allowed = allowedHeaderTypeSet(source, field);
-
-  const selected =
-    source === "mail" ? draft.value.mail[field] : draft.value.crm[field];
-
-  const list: string[] = [];
-  for (const h of all) {
-    const ht: HeaderType = (typesMap[h] as HeaderType) || "string";
-    if (allowed.has(ht)) list.push(h);
-  }
-
-  // Always include current selection so user can see/fix it
-  if (selected && !list.includes(selected) && all.includes(selected)) {
-    list.push(selected);
-  }
-
-  return list;
-}
-
-/* ---------- error helpers (backend + local) ---------- */
+/* ---------- error helpers ---------- */
 
 const localErrors = ref<{
   mail: Record<string, string>;
@@ -423,97 +467,46 @@ const localErrors = ref<{
 
 const backendErrors = computed(() => props.errors ?? { mail: {}, crm: {} });
 
-const combinedErrors = computed(() => ({
-  mail: { ...backendErrors.value.mail, ...localErrors.value.mail },
-  crm: { ...backendErrors.value.crm, ...localErrors.value.crm },
-}));
+function columnError(
+  source: "mail" | "crm",
+  header: string
+): string | null {
+  const columnMap =
+    source === "mail" ? mailColumnMap.value : crmColumnMap.value;
+  const field = columnMap[header];
+  if (!field) return null;
 
-function fieldError(source: "mail" | "crm", field: string): string | null {
   const bucket =
-    source === "mail" ? combinedErrors.value.mail : combinedErrors.value.crm;
+    source === "mail" ? backendErrors.value.mail : backendErrors.value.crm;
   return bucket?.[field] || null;
 }
 
-const hasLocalErrors = computed(
+/* ---------- required field validation ---------- */
+
+const unmappedRequiredMail = computed(() => {
+  const mapped = new Set(Object.values(mailColumnMap.value).filter(Boolean));
+  return props.requiredMail.filter((f) => !mapped.has(f));
+});
+
+const unmappedRequiredCrm = computed(() => {
+  const mapped = new Set(Object.values(crmColumnMap.value).filter(Boolean));
+  return props.requiredCrm.filter((f) => !mapped.has(f));
+});
+
+const saveDisabled = computed(
   () =>
-    Object.keys(localErrors.value.mail).length > 0 ||
-    Object.keys(localErrors.value.crm).length > 0
+    !!props.saving ||
+    unmappedRequiredMail.value.length > 0 ||
+    unmappedRequiredCrm.value.length > 0
 );
-
-const saveDisabled = computed(() => !!props.saving || hasLocalErrors.value);
-
-function humanCanonicalType(t: CanonicalType): string {
-  switch (t) {
-    case "date":
-      return "date column";
-    case "state":
-      return "state code column";
-    case "zip":
-      return "ZIP / Postal column";
-    case "currency":
-      return "amount/number column";
-    default:
-      return "text column";
-  }
-}
-
-function humanHeaderType(t: HeaderType): string {
-  switch (t) {
-    case "date":
-      return "date column";
-    case "number":
-      return "number column";
-    case "state":
-      return "state code column";
-    case "zip":
-      return "ZIP / Postal column";
-    case "currency":
-      return "amount/number column";
-    default:
-      return "text column";
-  }
-}
-
-function onFieldChange(source: "mail" | "crm", field: string) {
-  const current =
-    source === "mail" ? draft.value.mail[field] : draft.value.crm[field];
-
-  const bucket =
-    source === "mail" ? localErrors.value.mail : localErrors.value.crm;
-
-  if (!current) {
-    delete bucket[field];
-    return;
-  }
-
-  const typesMap =
-    source === "mail"
-      ? props.mailHeaderTypes || {}
-      : props.crmHeaderTypes || {};
-  const ht: HeaderType = (typesMap[current] as HeaderType) || "string";
-  const allowed = allowedHeaderTypeSet(source, field);
-
-  if (!allowed.has(ht)) {
-    const canonType = expectedCanonicalType(source, field);
-    const fieldLabel =
-      source === "mail" ? labelForMail(field) : labelForCrm(field);
-    bucket[field] = `“${fieldLabel}” expects a ${humanCanonicalType(
-      canonType
-    )}, but “${current}” looks like a ${humanHeaderType(ht)}.`;
-  } else {
-    delete bucket[field];
-  }
-}
 
 /* ---------- lifecycle / focus ---------- */
 
-// focus + seed on open
 watch(
   () => props.open,
   (open) => {
     if (open) {
       seedFromProps();
-      // clear any stale local errors when reopening
       localErrors.value = { mail: {}, crm: {} };
       setTimeout(() => {
         dialogEl.value?.focus();
@@ -529,7 +522,6 @@ onMounted(() => {
   }
 });
 
-// re-seed when backend inputs change
 watch(
   () => [props.initialMapping, props.mailFields, props.crmFields],
   seedFromProps,
@@ -557,13 +549,10 @@ onBeforeUnmount(() => {
 });
 
 function confirm() {
-  const raw = toRaw(draft.value) as MapperMapping;
-
   const payload: MapperMapping = {
-    mail: { ...(raw.mail || {}) },
-    crm: { ...(raw.crm || {}) },
+    mail: invertToFieldMap(toRaw(mailColumnMap.value)),
+    crm: invertToFieldMap(toRaw(crmColumnMap.value)),
   };
-
   emit("confirm", payload);
 }
 </script>
@@ -580,7 +569,7 @@ function confirm() {
 }
 
 .mapper-modal {
-  width: min(820px, 96vw);
+  width: min(1100px, 96vw);
   max-height: 90vh;
   background: #ffffff;
   border-radius: 12px;
@@ -596,7 +585,7 @@ function confirm() {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 14px 16px 10px;
+  padding: 14px 20px 10px;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -621,194 +610,203 @@ function confirm() {
   color: #0c2d50;
 }
 
-.subtitle {
-  margin: 0;
-  font-size: 12px;
-  color: #64748b;
-}
-
 .mapper-body {
-  padding: 14px 16px 10px;
+  padding: 16px 20px 12px;
   overflow: auto;
 }
 
-.mapper-hint {
-  margin: 0 0 10px;
+.mapper-desc {
+  margin: 0 0 16px;
   font-size: 13px;
+  line-height: 1.5;
   color: #4b5563;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
 }
 
-.mapper-hint strong {
-  font-weight: 600;
-  color: #0c2d50;
+/* ---------- CSV section ---------- */
+
+.csv-section {
+  margin-bottom: 20px;
 }
 
-.header-type-legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  font-size: 11px;
-  color: #6b7280;
+.csv-section:last-of-type {
+  margin-bottom: 0;
 }
 
-.legend-label {
-  font-weight: 500;
-}
-
-.legend-pill {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  font-size: 10px;
-}
-
-.mapper-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.side-card {
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: #f9fafb;
-  padding: 10px 12px 12px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-}
-
-.side-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 8px;
-}
-
-.side-header h4 {
-  margin: 0;
+.csv-title {
+  margin: 0 0 8px;
   font-size: 14px;
   font-weight: 600;
   color: #0c2d50;
 }
 
-.side-sub {
-  font-size: 11px;
-  color: #6b7280;
+/* ---------- spreadsheet ---------- */
+
+.spreadsheet-wrapper {
+  overflow-x: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
 }
 
-.field-list {
-  display: grid;
-  gap: 8px;
-}
-
-.field-row {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.field-row.has-error {
-  animation: shake 0.18s ease-in-out;
-}
-
-@keyframes shake {
-  0% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-2px);
-  }
-  50% {
-    transform: translateX(2px);
-  }
-  75% {
-    transform: translateX(-1px);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-.field-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-label {
+.spreadsheet {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 12px;
-  color: #6b7280;
+  table-layout: fixed;
+  min-width: max-content;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 999px;
+.spreadsheet th,
+.spreadsheet td {
+  border: 1px solid #e5e7eb;
+  padding: 4px 8px;
+  text-align: left;
+  min-width: 120px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* corner cell & row number column */
+
+.corner-cell,
+.row-num,
+.row-label {
+  min-width: 48px;
+  max-width: 48px;
+  width: 48px;
+  text-align: center;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.row-label {
   font-size: 10px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
 }
 
-.pill-required {
-  background: #fee2e2;
-  color: #b91c1c;
+/* column letter row */
+
+.col-letters-row {
+  background: #f9fafb;
 }
 
-.pill-optional {
-  background: #e0f2fe;
-  color: #0369a1;
+.col-letter {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  color: #9ca3af;
+  padding: 2px 8px;
 }
 
-.field-control {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* dropdown row */
+
+.dropdown-row {
+  background: #ffffff;
 }
 
-.field-select {
+.dropdown-cell {
+  padding: 6px 6px;
+  vertical-align: top;
+}
+
+.col-select {
   width: 100%;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #cbd5e1;
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: 4px 6px;
+  font-size: 11px;
   color: #0f172a;
   background: #ffffff;
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
 }
 
-.field-select:focus {
+.col-select:focus {
   outline: 2px solid #47bfa9;
   outline-offset: 1px;
   border-color: #47bfa9;
 }
 
-.field-select.is-missing {
-  border-color: #f97373;
+.col-select.is-mapped {
+  border-color: #47bfa9;
+  background: #f0fdfa;
 }
 
-.field-select.is-error {
+.col-select.is-error {
   border-color: #f97373;
   box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.4);
 }
 
-.sample {
-  margin: 0;
-  font-size: 11px;
-  color: #6b7280;
+.cell-error {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: #b91c1c;
+  white-space: normal;
 }
 
-.error-msg {
-  margin: 0;
-  font-size: 11px;
-  color: #b91c1c;
+/* header row (actual CSV headers) */
+
+.header-row {
+  background: #f3f4f6;
 }
+
+.header-cell {
+  font-weight: 600;
+  color: #0c2d50;
+  font-size: 12px;
+}
+
+/* data rows */
+
+.data-row:nth-child(even) {
+  background: #fafbfc;
+}
+
+.data-cell {
+  color: #374151;
+  font-size: 12px;
+}
+
+.empty-row .empty-cell {
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 12px;
+}
+
+/* ---------- missing required banner ---------- */
+
+.missing-banner {
+  margin-top: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+}
+
+.missing-banner strong {
+  font-weight: 600;
+}
+
+/* ---------- footer ---------- */
 
 .mapper-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 10px 16px 14px;
+  padding: 10px 20px 14px;
   border-top: 1px solid #e2e8f0;
 }
 
@@ -845,15 +843,5 @@ function confirm() {
 
 .btn-ghost:hover {
   background: #f8fafb;
-}
-
-@media (max-width: 900px) {
-  .mapper-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .field-row {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
