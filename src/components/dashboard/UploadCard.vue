@@ -3,7 +3,7 @@
 import { ref, watch } from "vue";
 
 import UploadIconUrl from "@/assets/upload.svg?url";
-import { uploadBatch, type Source } from "@/api/uploads";
+import { uploadBatch, deleteBatch, type Source } from "@/api/uploads";
 import { log } from "@/utils/logger";
 
 const props = defineProps<{
@@ -229,6 +229,7 @@ function onDropCrm(e: DragEvent) {
 
 /* ---- clear file ------------------------------------------- */
 function clearMail() {
+  const id = mailBatchId.value;
   mailBatchId.value = null;
   lastMailFile.value = null;
   if (mailInput.value) mailInput.value.value = "";
@@ -236,9 +237,11 @@ function clearMail() {
     mailBatchId: null,
     crmBatchId: crmBatchId.value,
   });
+  if (id) deleteBatch(id).catch((e) => log.error("Failed to delete mail batch", e));
 }
 
 function clearCrm() {
+  const id = crmBatchId.value;
   crmBatchId.value = null;
   lastCrmFile.value = null;
   if (crmInput.value) crmInput.value.value = "";
@@ -246,6 +249,7 @@ function clearCrm() {
     mailBatchId: mailBatchId.value,
     crmBatchId: null,
   });
+  if (id) deleteBatch(id).catch((e) => log.error("Failed to delete crm batch", e));
 }
 
 /* ---- mapper ------------------------------- */
