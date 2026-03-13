@@ -225,7 +225,6 @@
 import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
 
-type MappingSide = Record<string, string>;
 type HeaderType =
   | "string"
   | "number"
