@@ -1,44 +1,55 @@
 <!-- src/components/home/HomeVisualize.vue -->
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
-import { useInView } from "@/composables/useInView";
+import SectionWrapper from "@/components/marketing/SectionWrapper.vue";
+import SectionHeading from "@/components/marketing/SectionHeading.vue";
+import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 import VisualizeDashboardMockup from "./visualize/VisualizeDashboardMockup.vue";
 import VisualizeTrendMockup from "./visualize/VisualizeTrendMockup.vue";
 import VisualizeGeoMockup from "./visualize/VisualizeGeoMockup.vue";
+import VisualizeAIMockup from "./visualize/VisualizeAIMockup.vue";
+import VisualizeDemoMockup from "./visualize/VisualizeDemoMockup.vue";
 
-/* ── Tab config ─────────────────────────────────────────── */
 const tabs = [
   {
     id: 0,
     label: "Performance Dashboard",
     description:
-      "Instantly see total mail sent, conversions matched, revenue generated, and cost-per-acquisition. Every metric updates automatically when you upload new data.",
+      "See total mail sent, conversions matched, revenue generated, and cost per acquisition. Every metric updates automatically when you upload new data.",
   },
   {
     id: 1,
     label: "Trend Analytics",
     description:
-      "Track mail volume, CRM conversions, and match rates month over month. Spot seasonal patterns and measure the impact of campaign changes over time.",
+      "Track conversion rates and revenue over time across campaigns. Spot what's improving, what's declining, and when your mail is hitting hardest.",
   },
   {
     id: 2,
     label: "Geographic Insights",
     description:
-      "Discover which cities and ZIP codes convert highest, identify underperforming areas to cut, and find untapped markets for your next campaign.",
+      "See which zip codes and neighborhoods convert best. Double down on high-performing areas and stop mailing the ones that aren't working.",
   },
-] as const;
+  {
+    id: 3,
+    label: "AI Insights",
+    description:
+      "Get automated analysis of what's working and why. PostCanary surfaces patterns across your campaigns so you're not digging through data to find the answer.",
+  },
+  {
+    id: 4,
+    label: "Demographics",
+    description:
+      "See who's converting, not just where. Break down matched conversions by age, income, household size, and other demographic signals to sharpen your targeting on the next send.",
+  },
+];
 
 const activeTab = ref(0);
+const isVisible = ref(false);
 
 function setTab(index: number) {
   activeTab.value = index;
 }
 
-/* ── Scroll entrance ────────────────────────────────────── */
-const sectionRef = ref<HTMLElement | null>(null);
-const { isInView } = useInView(sectionRef);
-
-/* ── Auto-cycle ─────────────────────────────────────────── */
 let autoPlayTimer: ReturnType<typeof setInterval> | null = null;
 
 function startAutoPlay() {
@@ -56,46 +67,32 @@ function stopAutoPlay() {
   }
 }
 
-onMounted(() => startAutoPlay());
+onMounted(() => {
+  startAutoPlay();
+  isVisible.value = true;
+});
 onUnmounted(() => stopAutoPlay());
 </script>
 
 <template>
-  <section
-    ref="sectionRef"
-    class="bg-[var(--pc-navy-2)] py-16 sm:py-24"
+  <SectionWrapper
+    bg="light"
+    id="features"
     @mouseenter="stopAutoPlay"
     @mouseleave="startAutoPlay"
     @focusin="stopAutoPlay"
     @focusout="startAutoPlay"
   >
-    <div
-      class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
-    >
-      <!-- Heading -->
-      <div
-        class="text-center max-w-[900px] mx-auto mb-10 sm:mb-14 transition-all duration-700"
-        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
-      >
-        <h2
-          class="text-[var(--pc-text)] text-[32px] leading-10 sm:text-[44px] sm:leading-[54px] xl:text-[64px] xl:leading-[76px] font-normal tracking-[-0.04em]"
-        >
-          See the Full Picture of<br />
-          Your Direct Mail ROI
-        </h2>
-        <p
-          class="mt-4 sm:mt-6 text-[15px] sm:text-[18px] leading-relaxed text-[var(--pc-text-muted)] max-w-[720px] mx-auto"
-        >
-          From campaign KPIs to geographic hotspots, PostCanary turns your mail
-          and CRM data into actionable dashboards &mdash; no manual
-          spreadsheets, no guesswork.
-        </p>
-      </div>
+    <SectionHeading
+      badge="Direct Mail Analytics"
+      heading="One dashboard. Every conversion accounted for."
+      subheading="Upload your mailing list and CRM data. PostCanary matches them automatically and gives you campaign performance, geographic breakdowns, and trend data in one place. No spreadsheets. No manual reporting."
+    />
 
-      <!-- Tab Bar -->
+    <!-- Tab bar -->
+    <AnimatedEntry :delay="100">
       <div
-        class="flex items-center justify-start sm:justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto transition-all duration-700 delay-100"
-        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+        class="flex items-center justify-start sm:justify-center gap-1 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto"
         role="tablist"
       >
         <button
@@ -104,60 +101,73 @@ onUnmounted(() => stopAutoPlay());
           type="button"
           role="tab"
           :aria-selected="activeTab === tab.id"
-          class="relative whitespace-nowrap px-3 sm:px-5 py-2.5 sm:py-3 text-[13px] sm:text-[15px] font-medium rounded-lg transition-all duration-300"
+          class="relative whitespace-nowrap px-3 sm:px-5 py-2.5 sm:py-3 text-[13px] sm:text-[15px] font-medium rounded-lg transition-all duration-300 cursor-pointer"
           :class="
             activeTab === tab.id
-              ? 'text-[var(--pc-cyan)] bg-[var(--pc-cyan)]/10'
-              : 'text-[var(--pc-text-soft)] hover:text-[var(--pc-text-muted)] hover:bg-[var(--pc-navy)]/50'
+              ? 'text-[var(--mkt-teal)] bg-[var(--mkt-teal)]/8'
+              : 'text-[var(--mkt-text-soft)] hover:text-[var(--mkt-text-muted)] hover:bg-[var(--mkt-bg-alt)]'
           "
           @click="setTab(tab.id)"
         >
           {{ tab.label }}
-          <!-- Active indicator line -->
           <span
             v-if="activeTab === tab.id"
-            class="absolute bottom-0 left-3 right-3 sm:left-5 sm:right-5 h-[2px] bg-[var(--pc-cyan)] rounded-full"
+            class="absolute bottom-0 left-3 right-3 sm:left-5 sm:right-5 h-[2px] bg-[var(--mkt-teal)] rounded-full"
           />
         </button>
       </div>
+    </AnimatedEntry>
 
-      <!-- Tab Description -->
-      <div class="grid [&>*]:col-start-1 [&>*]:row-start-1 mb-6 sm:mb-8">
-        <p
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="text-center text-[14px] sm:text-[16px] text-[var(--pc-text-muted)] max-w-[640px] mx-auto transition-opacity duration-300"
-          :class="activeTab === tab.id ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-        >
-          {{ tab.description }}
-        </p>
-      </div>
+    <!-- Tab description -->
+    <div class="grid [&>*]:col-start-1 [&>*]:row-start-1 mb-6 sm:mb-8">
+      <p
+        v-for="tab in tabs"
+        :key="tab.id"
+        class="text-center text-[14px] sm:text-[16px] text-[var(--mkt-text-muted)] max-w-[640px] mx-auto transition-opacity duration-300"
+        :class="
+          activeTab === tab.id
+            ? 'opacity-100'
+            : 'opacity-0 pointer-events-none'
+        "
+      >
+        {{ tab.description }}
+      </p>
+    </div>
 
-      <!-- Showcase Panel -->
+    <!-- Showcase panel -->
+    <AnimatedEntry :delay="200">
       <div
-        class="rounded-2xl border border-[var(--pc-border)] bg-[var(--pc-navy)] p-4 sm:p-6 lg:p-8 shadow-[0_24px_70px_rgba(0,0,0,0.45)] transition-all duration-700 delay-200"
-        :class="isInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+        class="rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-4 sm:p-6 lg:p-8 shadow-[var(--mkt-card-shadow-lg)]"
         role="tabpanel"
       >
         <div class="grid [&>*]:col-start-1 [&>*]:row-start-1">
           <VisualizeDashboardMockup
             class="transition-opacity duration-300"
             :class="activeTab === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-            :active="isInView && activeTab === 0"
+            :active="isVisible && activeTab === 0"
           />
           <VisualizeTrendMockup
             class="transition-opacity duration-300"
             :class="activeTab === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-            :active="isInView && activeTab === 1"
+            :active="isVisible && activeTab === 1"
           />
           <VisualizeGeoMockup
             class="transition-opacity duration-300"
             :class="activeTab === 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
-            :active="isInView && activeTab === 2"
+            :active="isVisible && activeTab === 2"
+          />
+          <VisualizeAIMockup
+            class="transition-opacity duration-300"
+            :class="activeTab === 3 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+            :active="isVisible && activeTab === 3"
+          />
+          <VisualizeDemoMockup
+            class="transition-opacity duration-300"
+            :class="activeTab === 4 ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+            :active="isVisible && activeTab === 4"
           />
         </div>
       </div>
-    </div>
-  </section>
+    </AnimatedEntry>
+  </SectionWrapper>
 </template>
-

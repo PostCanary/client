@@ -1,91 +1,77 @@
+<!-- src/components/home/HomePainPoints.vue -->
 <script setup lang="ts">
 import qrIcon from "@/assets/home/qr-code-icon.svg?url";
 import wastedAdIcon from "@/assets/home/cash-burn-icon.svg?url";
 import spreadsheetsIcon from "@/assets/home/spreadsheet-icon.svg?url";
 import noAttributionIcon from "@/assets/home/network-icon.svg?url";
-import { BRAND } from "@/config/brand";
+import SectionWrapper from "@/components/marketing/SectionWrapper.vue";
+import SectionHeading from "@/components/marketing/SectionHeading.vue";
+import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 
 const painCards = [
   {
     icon: qrIcon,
-    alt: "QR code pain point",
-    title: "Relying On QR Codes & Call-Tracking Alone",
-    body: `Only a fraction of conversions get tracked — ${BRAND.name} connects the rest.`,
+    title: "Codes only capture a fraction of conversions",
+    body: "Someone gets your mailer, Googles you two weeks later, and books. QR codes and promo codes never see that. PostCanary does.",
   },
   {
     icon: wastedAdIcon,
-    alt: "Wasted ad spend icon",
-    title: "Wasted Ad Spend",
-    body: `Thousands of mailers go out — but there's no insight on how they performed. ${BRAND.name} shows real ROI and CPA.`,
+    title: "You're spending without knowing what's working",
+    body: "Every campaign is an investment. Without accurate attribution, you can't tell which lists, neighborhoods, or offers are pulling their weight.",
   },
   {
     icon: noAttributionIcon,
-    alt: "No attribution icon",
-    title: "No Attribution For Web Or Walk-In Customers",
-    body: `${BRAND.name} links offline and online conversions automatically.`,
+    title: "Online conversions go unconnected",
+    body: "A recipient visits your site, fills out a form, or makes a purchase, but nothing ties it back to the mailer that started it. PostCanary connects the two automatically.",
   },
   {
     icon: spreadsheetsIcon,
-    alt: "Data stuck in spreadsheets icon",
-    title: "Data Stuck In Spreadsheets",
-    body: `Manual reports kill momentum and accuracy — ${BRAND.name} makes measurement effortless.`,
+    title: "Manual reporting eats your time",
+    body: "Exporting data into spreadsheets every month is slow, messy, and error-prone. PostCanary replaces all of that with a live dashboard.",
   },
 ];
 </script>
 
 <template>
-  <section class="bg-[var(--pc-navy)] py-24">
-    <div
-      class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-6 md:px-10 xl:px-16"
-    >
-      <!-- Heading -->
-      <h2
-        class="text-center font-normal text-[var(--pc-text)] text-[36px] leading-44px md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-80px tracking-[-0.04em]"
-      >
-        Recognize These Challenges?
-      </h2>
+  <SectionWrapper bg="alt">
+    <SectionHeading
+      heading="The attribution gap is costing you."
+      subheading="Most direct mail tracking relies on customers scanning a code or typing in a URL. Most customers don't. Here's what that means for your campaigns."
+    />
 
-      <!-- Subheading -->
-      <p
-        class="mx-auto mt-6 max-w-[640px] text-center text-[16px] leading-[26px] md:text-[20px] md:leading-28px text-[var(--pc-text-muted)]"
+    <div class="grid gap-6 sm:gap-8 md:grid-cols-2 xl:grid-cols-4">
+      <AnimatedEntry
+        v-for="(card, i) in painCards"
+        :key="card.title"
+        :delay="i * 100"
       >
-        You’re not the only one wondering where your mail marketing data
-        disappears to. See how {{ BRAND.name }} brings it all back in view.
-      </p>
-
-      <!-- Cards -->
-      <div class="mt-14 grid gap-8 md:grid-cols-2 xl:grid-cols-4">
         <article
-          v-for="card in painCards"
-          :key="card.title"
-          class="flex flex-col items-center rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-8 pt-12 pb-10 shadow-[0_18px_45px_rgba(0,0,0,0.35)]"
+          class="flex h-full flex-col items-center text-center rounded-[var(--mkt-card-radius)] border border-[var(--mkt-border)] bg-[var(--mkt-card)] px-6 sm:px-8 pt-10 pb-8 shadow-[var(--mkt-card-shadow)] hover:shadow-[var(--mkt-card-shadow-lg)] transition-shadow duration-300"
         >
           <!-- Icon circle -->
           <div
-            class="mb-8 flex h-[139px] w-[139px] items-center justify-center rounded-full bg-[var(--pc-cyan)]"
+            class="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--mkt-teal)]/10"
           >
             <img
               :src="card.icon"
-              :alt="card.alt"
-              class="h-[72px] w-[72px] object-contain"
+              alt=""
+              class="h-10 w-10 object-contain"
             />
           </div>
 
-          <!-- Title -->
           <h3
-            class="text-center text-[22px] leading-[30px] md:text-[24px] md:leading-32px lg:text-[30px] lg:leading-36px font-semibold text-[var(--pc-text)]"
+            class="text-[18px] sm:text-[20px] leading-snug font-semibold text-[var(--mkt-text)]"
           >
             {{ card.title }}
           </h3>
 
-          <!-- Body -->
           <p
-            class="mt-4 text-center text-[16px] leading-[26px] text-[var(--pc-text-muted)]"
+            class="mt-3 text-[15px] sm:text-[16px] leading-relaxed text-[var(--mkt-text-muted)]"
           >
             {{ card.body }}
           </p>
         </article>
-      </div>
+      </AnimatedEntry>
     </div>
-  </section>
+  </SectionWrapper>
 </template>

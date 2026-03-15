@@ -14,12 +14,12 @@ interface KpiCard {
 }
 
 const kpis: KpiCard[] = [
-  { label: "Total Mail", value: 15420, border: "var(--pc-cyan)" },
-  { label: "Unique Addresses", value: 14837, border: "var(--pc-yellow)" },
-  { label: "Total Jobs", value: 892, border: "var(--pc-cyan)" },
-  { label: "Matches", value: 487, sub: "3.2% match rate", border: "var(--pc-yellow)" },
-  { label: "Match Revenue", value: 24350, prefix: "$", sub: "$1.58 per mailer", border: "var(--pc-cyan)" },
-  { label: "Avg Ticket", value: 50, prefix: "$", decimals: 2, sub: "23 days to convert", border: "var(--pc-yellow)" },
+  { label: "Total Mail", value: 15420, border: "var(--mkt-teal)" },
+  { label: "Unique Addresses", value: 14837, border: "var(--mkt-navy)" },
+  { label: "Total Jobs", value: 892, border: "var(--mkt-teal)" },
+  { label: "Matches", value: 487, sub: "3.2% match rate", border: "var(--mkt-navy)" },
+  { label: "Match Revenue", value: 24350, prefix: "$", sub: "$1.58 per mailer", border: "var(--mkt-teal)" },
+  { label: "Avg Ticket", value: 50, prefix: "$", decimals: 2, sub: "23 days to convert", border: "var(--mkt-navy)" },
 ];
 
 /* ── Chart config ────────────────────────────────────────── */
@@ -37,17 +37,17 @@ const chartMonths = [
 const chartSeries = [
   {
     name: "Mail Volume",
-    color: "var(--pc-text)",
+    color: "var(--mkt-text)",
     data: [32, 59, 48, 49, 45, 44, 45, 37, 47, 46, 45, 45, 55, 60, 65, 68, 60, 58, 57, 48, 62, 63, 60, 82],
   },
   {
     name: "CRM Jobs",
-    color: "var(--pc-cyan)",
+    color: "var(--mkt-teal)",
     data: [3, 12, 22, 23, 21, 20, 21, 20, 8, 21, 24, 26, 10, 25, 30, 29, 28, 29, 30, 28, 28, 30, 35, 22],
   },
   {
     name: "Matches",
-    color: "var(--pc-text-soft)",
+    color: "var(--mkt-text-soft)",
     data: [2, 8, 5, 4, 3, 3, 3, 3, 5, 5, 5, 5, 7, 8, 10, 10, 8, 7, 7, 5, 5, 5, 7, 4],
   },
 ];
@@ -218,7 +218,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="demo-root w-full rounded-2xl bg-[var(--pc-navy)] p-4 sm:p-6 transition-opacity duration-700"
+    class="demo-root w-full rounded-2xl bg-[var(--mkt-bg-alt)] p-4 sm:p-6 transition-opacity duration-700"
     :class="{ 'opacity-0': fading }"
   >
     <!-- Phase 1: Upload Cards -->
@@ -227,32 +227,32 @@ onUnmounted(() => {
       :class="phase >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'"
     >
       <!-- Mail CSV Card -->
-      <div class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4">
+      <div class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4">
         <div class="flex items-center gap-2 mb-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--pc-navy-2)]">
-            <svg class="h-4 w-4 text-[var(--pc-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mkt-bg)]">
+            <svg class="h-4 w-4 text-[var(--mkt-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
-          <span class="text-sm font-semibold text-[var(--pc-text)]">Mail CSV</span>
+          <span class="text-sm font-semibold text-[var(--mkt-text)]">Mail CSV</span>
         </div>
-        <div class="mb-3 rounded-lg border-2 border-dashed border-[var(--pc-cyan)]/40 bg-[var(--pc-navy-2)] p-3 sm:p-4 text-center">
-          <svg class="mx-auto h-6 w-6 text-[var(--pc-cyan)]/60 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="mb-3 rounded-lg border-2 border-dashed border-[var(--mkt-teal)]/40 bg-[var(--mkt-bg)] p-3 sm:p-4 text-center">
+          <svg class="mx-auto h-6 w-6 text-[var(--mkt-teal)]/60 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p class="text-xs text-[var(--pc-text-soft)]">mail_data.csv</p>
+          <p class="text-xs text-[var(--mkt-text-soft)]">mail_data.csv</p>
         </div>
         <div>
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-[var(--pc-text-muted)]">
+            <span class="text-xs text-[var(--mkt-text-muted)]">
               {{ progress1 < 100 ? 'Uploading mail data...' : 'Upload complete' }}
             </span>
-            <span class="text-xs font-medium text-[var(--pc-cyan)]">{{ Math.round(progress1) }}%</span>
+            <span class="text-xs font-medium text-[var(--mkt-teal)]">{{ Math.round(progress1) }}%</span>
           </div>
-          <div class="h-2 w-full rounded-full bg-[var(--pc-navy)] overflow-hidden">
+          <div class="h-2 w-full rounded-full bg-[var(--mkt-bg-alt)] overflow-hidden">
             <div
               class="h-full rounded-full transition-none"
-              style="background: linear-gradient(90deg, var(--pc-cyan), #00cccc)"
+              style="background: linear-gradient(90deg, var(--mkt-teal), #3aa893)"
               :style="{ width: progress1 + '%' }"
             />
           </div>
@@ -260,32 +260,32 @@ onUnmounted(() => {
       </div>
 
       <!-- CRM CSV Card -->
-      <div class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4">
+      <div class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4">
         <div class="flex items-center gap-2 mb-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--pc-navy-2)]">
-            <svg class="h-4 w-4 text-[var(--pc-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mkt-bg)]">
+            <svg class="h-4 w-4 text-[var(--mkt-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
-          <span class="text-sm font-semibold text-[var(--pc-text)]">CRM CSV</span>
+          <span class="text-sm font-semibold text-[var(--mkt-text)]">CRM CSV</span>
         </div>
-        <div class="mb-3 rounded-lg border-2 border-dashed border-[var(--pc-cyan)]/40 bg-[var(--pc-navy-2)] p-3 sm:p-4 text-center">
-          <svg class="mx-auto h-6 w-6 text-[var(--pc-cyan)]/60 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="mb-3 rounded-lg border-2 border-dashed border-[var(--mkt-teal)]/40 bg-[var(--mkt-bg)] p-3 sm:p-4 text-center">
+          <svg class="mx-auto h-6 w-6 text-[var(--mkt-teal)]/60 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p class="text-xs text-[var(--pc-text-soft)]">crm_export.csv</p>
+          <p class="text-xs text-[var(--mkt-text-soft)]">crm_export.csv</p>
         </div>
         <div>
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-[var(--pc-text-muted)]">
+            <span class="text-xs text-[var(--mkt-text-muted)]">
               {{ progress2 < 100 ? 'Uploading CRM data...' : 'Upload complete' }}
             </span>
-            <span class="text-xs font-medium text-[var(--pc-cyan)]">{{ Math.round(progress2) }}%</span>
+            <span class="text-xs font-medium text-[var(--mkt-teal)]">{{ Math.round(progress2) }}%</span>
           </div>
-          <div class="h-2 w-full rounded-full bg-[var(--pc-navy)] overflow-hidden">
+          <div class="h-2 w-full rounded-full bg-[var(--mkt-bg-alt)] overflow-hidden">
             <div
               class="h-full rounded-full transition-none"
-              style="background: linear-gradient(90deg, var(--pc-cyan), #00cccc)"
+              style="background: linear-gradient(90deg, var(--mkt-teal), #3aa893)"
               :style="{ width: progress2 + '%' }"
             />
           </div>
@@ -295,17 +295,17 @@ onUnmounted(() => {
 
     <!-- Phase 2: Results Banner -->
     <div
-      class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] px-4 sm:px-5 py-3 flex items-center justify-between transition-all duration-500"
+      class="mt-3 sm:mt-4 rounded-xl border border-[var(--mkt-border)] px-4 sm:px-5 py-3 flex items-center justify-between transition-all duration-500"
       :class="phase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'"
-      style="background: linear-gradient(135deg, var(--pc-navy-2), var(--pc-card))"
+      style="background: linear-gradient(135deg, var(--mkt-bg), var(--mkt-card))"
     >
       <div class="flex items-center gap-2">
-        <svg class="h-5 w-5 text-[var(--pc-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="h-5 w-5 text-[var(--mkt-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span class="text-sm sm:text-base font-bold text-[var(--pc-text)]">Results</span>
+        <span class="text-sm sm:text-base font-bold text-[var(--mkt-text)]">Results</span>
       </div>
-      <span class="text-xs sm:text-sm text-[var(--pc-yellow)] font-medium">Campaign Analysis Complete</span>
+      <span class="text-xs sm:text-sm text-[var(--mkt-yellow)] font-medium">Campaign Analysis Complete</span>
     </div>
 
     <!-- Phase 3: KPI Cards -->
@@ -316,7 +316,7 @@ onUnmounted(() => {
       <div
         v-for="(kpi, i) in kpis"
         :key="kpi.label"
-        class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4 transition-all duration-500"
+        class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4 transition-all duration-500"
         :class="[
           kpiVisible[i]
             ? 'opacity-100 translate-y-0'
@@ -324,13 +324,13 @@ onUnmounted(() => {
         ]"
         :style="{ borderLeft: '3px solid ' + kpi.border }"
       >
-        <p class="text-[10px] sm:text-xs font-medium text-[var(--pc-text-soft)] uppercase tracking-wide mb-1">
+        <p class="text-[10px] sm:text-xs font-medium text-[var(--mkt-text-soft)] uppercase tracking-wide mb-1">
           {{ kpi.label }}
         </p>
-        <p class="text-base sm:text-xl lg:text-2xl font-bold text-[var(--pc-text)] leading-tight">
+        <p class="text-base sm:text-xl lg:text-2xl font-bold text-[var(--mkt-text)] leading-tight">
           {{ kpi.prefix || '' }}{{ fmt(kpiDisplayValues[i], kpi.decimals ?? 0) }}{{ kpi.suffix || '' }}
         </p>
-        <p v-if="kpi.sub" class="text-[10px] sm:text-xs text-[var(--pc-text-muted)] mt-0.5">
+        <p v-if="kpi.sub" class="text-[10px] sm:text-xs text-[var(--mkt-text-muted)] mt-0.5">
           {{ kpi.sub }}
         </p>
       </div>
@@ -338,7 +338,7 @@ onUnmounted(() => {
 
     <!-- Phase 4: Trend Chart -->
     <div
-      class="mt-3 sm:mt-4 rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4 transition-all duration-500"
+      class="mt-3 sm:mt-4 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4 transition-all duration-500"
       :class="phase >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'"
     >
         <!-- Legend -->
@@ -352,7 +352,7 @@ onUnmounted(() => {
               class="inline-block h-2 w-2 rounded-full"
               :style="{ backgroundColor: series.color }"
             />
-            <span class="text-[9px] sm:text-[10px] text-[var(--pc-text-muted)]">
+            <span class="text-[9px] sm:text-[10px] text-[var(--mkt-text-muted)]">
               {{ series.name }}
             </span>
           </div>
@@ -372,7 +372,7 @@ onUnmounted(() => {
             :x2="CV.w - CV.pr"
             :y1="gl.y"
             :y2="gl.y"
-            stroke="var(--pc-border)"
+            stroke="var(--mkt-border)"
             stroke-width="0.5"
           />
 
@@ -384,7 +384,7 @@ onUnmounted(() => {
             :y="gl.y"
             text-anchor="end"
             dominant-baseline="central"
-            fill="var(--pc-text-soft)"
+            fill="var(--mkt-text-soft)"
             font-size="8"
             class="chart-text"
           >
@@ -398,7 +398,7 @@ onUnmounted(() => {
             :x="xl.x"
             :y="CV.h - 8"
             text-anchor="middle"
-            fill="var(--pc-text-soft)"
+            fill="var(--mkt-text-soft)"
             font-size="7"
             class="chart-text"
           >

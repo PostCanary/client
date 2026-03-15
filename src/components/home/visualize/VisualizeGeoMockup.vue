@@ -117,7 +117,7 @@ onUnmounted(() => {
       :class="mapVisible ? 'opacity-100' : 'opacity-0'"
     >
       <div
-        class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-navy)] p-3 sm:p-4"
+        class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] p-3 sm:p-4"
       >
         <svg
           viewBox="0 0 500 310"
@@ -126,8 +126,8 @@ onUnmounted(() => {
         >
           <defs>
             <radialGradient id="dotGlow">
-              <stop offset="0%" stop-color="var(--pc-cyan)" stop-opacity="0.6" />
-              <stop offset="100%" stop-color="var(--pc-cyan)" stop-opacity="0" />
+              <stop offset="0%" stop-color="var(--mkt-teal)" stop-opacity="0.6" />
+              <stop offset="100%" stop-color="var(--mkt-teal)" stop-opacity="0" />
             </radialGradient>
           </defs>
 
@@ -135,15 +135,15 @@ onUnmounted(() => {
           <path
             d="M60,45 L90,40 L100,35 L130,50 L160,45 L180,50 L200,45 L220,42 L250,45 L280,42 L310,48 L340,50 L360,42 L380,48 L400,50 L420,55 L435,60 L440,75 L435,90 L430,100 L435,110 L440,120 L438,135 L430,150 L425,165 L420,175 L415,185 L410,195 L415,210 L420,225 L425,240 L420,250 L410,255 L405,260 L400,265 L390,260 L380,255 L370,260 L360,255 L350,250 L340,245 L320,240 L300,238 L280,240 L270,250 L260,260 L250,265 L240,260 L230,250 L220,240 L200,235 L180,230 L160,225 L140,220 L120,215 L100,210 L80,200 L65,190 L55,175 L50,160 L48,140 L50,120 L55,100 L58,80 L60,60 Z"
             fill="none"
-            stroke="var(--pc-border)"
+            stroke="var(--mkt-border)"
             stroke-width="1.5"
             opacity="0.6"
           />
 
           <!-- State-like interior divisions (subtle) -->
-          <line x1="200" y1="45" x2="200" y2="235" stroke="var(--pc-border)" stroke-width="0.3" opacity="0.3" />
-          <line x1="320" y1="48" x2="320" y2="240" stroke="var(--pc-border)" stroke-width="0.3" opacity="0.3" />
-          <line x1="50" y1="140" x2="440" y2="140" stroke="var(--pc-border)" stroke-width="0.3" opacity="0.3" />
+          <line x1="200" y1="45" x2="200" y2="235" stroke="var(--mkt-border)" stroke-width="0.3" opacity="0.3" />
+          <line x1="320" y1="48" x2="320" y2="240" stroke="var(--mkt-border)" stroke-width="0.3" opacity="0.3" />
+          <line x1="50" y1="140" x2="440" y2="140" stroke="var(--mkt-border)" stroke-width="0.3" opacity="0.3" />
 
           <!-- Hotspot dots with glow -->
           <template v-for="(spot, i) in hotspots" :key="spot.label">
@@ -162,7 +162,7 @@ onUnmounted(() => {
               :cx="spot.x"
               :cy="spot.y"
               :r="spot.r"
-              fill="var(--pc-cyan)"
+              fill="var(--mkt-teal)"
               class="dot-inner"
               :class="{ visible: dotsVisible }"
               :style="{ transitionDelay: i * 0.08 + 's' }"
@@ -176,10 +176,10 @@ onUnmounted(() => {
     <div class="flex-[45] min-w-0 flex flex-col gap-3 sm:gap-4">
       <!-- Top Converting Cities -->
       <div
-        class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4"
+        class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4"
       >
         <h4
-          class="text-xs sm:text-sm font-semibold text-[var(--pc-text)] mb-3"
+          class="text-xs sm:text-sm font-semibold text-[var(--mkt-text)] mb-3"
         >
           Top Converting Cities
         </h4>
@@ -187,17 +187,17 @@ onUnmounted(() => {
           <thead>
             <tr>
               <th
-                class="text-left text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-left text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 City
               </th>
               <th
-                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 Matches
               </th>
               <th
-                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 Match Rate
               </th>
@@ -207,18 +207,18 @@ onUnmounted(() => {
             <tr
               v-for="(row, i) in topCities"
               :key="row.city"
-              class="border-t border-[var(--pc-border)] transition-all duration-400"
+              class="border-t border-[var(--mkt-border)] transition-all duration-400"
               :class="
                 tableRowsVisible[i]
                   ? 'opacity-100 translate-x-0'
                   : 'opacity-0 translate-x-4'
               "
             >
-              <td class="py-2 text-xs sm:text-sm text-[var(--pc-text-muted)]">
+              <td class="py-2 text-xs sm:text-sm text-[var(--mkt-text-muted)]">
                 {{ row.city }}
               </td>
               <td
-                class="py-2 text-xs sm:text-sm text-[var(--pc-text-muted)] text-right"
+                class="py-2 text-xs sm:text-sm text-[var(--mkt-text-muted)] text-right"
               >
                 {{ row.matches }}
               </td>
@@ -227,13 +227,13 @@ onUnmounted(() => {
               >
                 <span class="inline-flex items-center gap-1">
                   <span
-                    class="inline-block h-1.5 w-6 rounded-full bg-[var(--pc-cyan)]"
+                    class="inline-block h-1.5 w-6 rounded-full bg-[var(--mkt-teal)]"
                     :style="{
                       width: (parseFloat(row.rate) / 12) * 100 + '%',
                       maxWidth: '24px',
                     }"
                   />
-                  <span class="text-[var(--pc-text)]  font-medium">{{
+                  <span class="text-[var(--mkt-text)]  font-medium">{{
                     row.rate
                   }}</span>
                 </span>
@@ -245,10 +245,10 @@ onUnmounted(() => {
 
       <!-- Top ZIP Codes -->
       <div
-        class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4"
+        class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4"
       >
         <h4
-          class="text-xs sm:text-sm font-semibold text-[var(--pc-text)] mb-3"
+          class="text-xs sm:text-sm font-semibold text-[var(--mkt-text)] mb-3"
         >
           Top ZIP Codes
         </h4>
@@ -256,17 +256,17 @@ onUnmounted(() => {
           <thead>
             <tr>
               <th
-                class="text-left text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-left text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 ZIP
               </th>
               <th
-                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 Matches
               </th>
               <th
-                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--pc-cyan)] uppercase tracking-wide pb-2"
+                class="text-right text-[10px] sm:text-xs font-semibold text-[var(--mkt-teal)] uppercase tracking-wide pb-2"
               >
                 Match Rate
               </th>
@@ -276,18 +276,18 @@ onUnmounted(() => {
             <tr
               v-for="(row, i) in topZips"
               :key="row.zip"
-              class="border-t border-[var(--pc-border)] transition-all duration-400"
+              class="border-t border-[var(--mkt-border)] transition-all duration-400"
               :class="
                 zipRowsVisible[i]
                   ? 'opacity-100 translate-x-0'
                   : 'opacity-0 translate-x-4'
               "
             >
-              <td class="py-2 text-xs sm:text-sm text-[var(--pc-text-muted)]">
+              <td class="py-2 text-xs sm:text-sm text-[var(--mkt-text-muted)]">
                 {{ row.zip }}
               </td>
               <td
-                class="py-2 text-xs sm:text-sm text-[var(--pc-text-muted)] text-right"
+                class="py-2 text-xs sm:text-sm text-[var(--mkt-text-muted)] text-right"
               >
                 {{ row.matches }}
               </td>
@@ -296,13 +296,13 @@ onUnmounted(() => {
               >
                 <span class="inline-flex items-center gap-1">
                   <span
-                    class="inline-block h-1.5 w-6 rounded-full bg-[var(--pc-yellow)]"
+                    class="inline-block h-1.5 w-6 rounded-full bg-[var(--mkt-yellow)]"
                     :style="{
                       width: (parseFloat(row.rate) / 12) * 100 + '%',
                       maxWidth: '24px',
                     }"
                   />
-                  <span class="text-[var(--pc-text)] font-medium">{{
+                  <span class="text-[var(--mkt-text)] font-medium">{{
                     row.rate
                   }}</span>
                 </span>

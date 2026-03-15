@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import CalculatorHero from "@/components/calculators/CalculatorHero.vue";
-import HomeFooter from "@/components/home/HomeFooter.vue";
+
 import IndustryFAQ from "@/components/industry/IndustryFAQ.vue";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -180,22 +180,22 @@ const faqContent: IndustryFAQContent = {
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div>
     <CalculatorHero :content="heroContent" />
 
     <!-- Calculator Section -->
-    <section id="calculator" class="bg-[var(--pc-navy-2)] py-16 sm:py-24">
+    <section id="calculator" class="bg-[var(--mkt-bg)] py-16 sm:py-24">
       <div
         class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
       >
         <div class="mx-auto max-w-5xl">
           <!-- Calculator Card -->
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] overflow-hidden"
+            class="bg-[var(--mkt-card)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] overflow-hidden"
           >
             <!-- Calculator Header -->
             <div
-              class="bg-gradient-to-r from-[var(--pc-navy)] to-[var(--pc-navy-2)] p-6 sm:p-8"
+              class="bg-gradient-to-r from-[var(--mkt-bg-alt)] to-[var(--mkt-bg)] p-6 sm:p-8"
             >
               <div class="flex items-center gap-3">
                 <div
@@ -204,10 +204,10 @@ const faqContent: IndustryFAQContent = {
                   <Calculator class="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 class="text-xl sm:text-2xl font-bold text-[var(--pc-text)]">
+                  <h2 class="text-xl sm:text-2xl font-bold text-[var(--mkt-text)]">
                     Calculate Your Direct Mail ROI
                   </h2>
-                  <p class="text-[var(--pc-text-muted)] text-sm mt-1">
+                  <p class="text-[var(--mkt-text-muted)] text-sm mt-1">
                     Enter your numbers to see what you're really earning
                   </p>
                 </div>
@@ -220,7 +220,7 @@ const faqContent: IndustryFAQContent = {
                 <!-- Industry -->
                 <div>
                   <label
-                    class="block text-sm font-medium text-[var(--pc-text)] mb-2"
+                    class="block text-sm font-medium text-[var(--mkt-text)] mb-2"
                     for="industry"
                   >
                     Industry
@@ -228,7 +228,7 @@ const faqContent: IndustryFAQContent = {
                   <select
                     id="industry"
                     v-model="inputs.industry"
-                    class="w-full rounded-lg bg-[var(--pc-navy)] border border-[var(--pc-border)] px-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                    class="w-full rounded-lg bg-[var(--mkt-bg-alt)] border border-[var(--mkt-border)] px-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                   >
                     <option
                       v-for="option in industryOptions"
@@ -243,7 +243,7 @@ const faqContent: IndustryFAQContent = {
                 <!-- Monthly Mail Volume -->
                 <div>
                   <label
-                    class="block text-sm font-medium text-[var(--pc-text)] mb-2"
+                    class="block text-sm font-medium text-[var(--mkt-text)] mb-2"
                     for="volume"
                   >
                     Monthly Mail Volume
@@ -254,9 +254,9 @@ const faqContent: IndustryFAQContent = {
                     type="number"
                     min="100"
                     max="100000"
-                    class="w-full rounded-lg bg-[var(--pc-navy)] border border-[var(--pc-border)] px-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                    class="w-full rounded-lg bg-[var(--mkt-bg-alt)] border border-[var(--mkt-border)] px-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                   />
-                  <p class="text-xs text-[var(--pc-text-muted)] mt-1">
+                  <p class="text-xs text-[var(--mkt-text-muted)] mt-1">
                     Pieces sent per month
                   </p>
                 </div>
@@ -264,14 +264,14 @@ const faqContent: IndustryFAQContent = {
                 <!-- Cost Per Mailer -->
                 <div>
                   <label
-                    class="block text-sm font-medium text-[var(--pc-text)] mb-2"
+                    class="block text-sm font-medium text-[var(--mkt-text)] mb-2"
                     for="cost"
                   >
                     Cost Per Mailer
                   </label>
                   <div class="relative">
                     <span
-                      class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--pc-text-muted)]"
+                      class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--mkt-text-muted)]"
                       >$</span
                     >
                     <input
@@ -281,10 +281,10 @@ const faqContent: IndustryFAQContent = {
                       min="0.25"
                       max="5"
                       step="0.05"
-                      class="w-full rounded-lg bg-[var(--pc-navy)] border border-[var(--pc-border)] pl-8 pr-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                      class="w-full rounded-lg bg-[var(--mkt-bg-alt)] border border-[var(--mkt-border)] pl-8 pr-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                     />
                   </div>
-                  <p class="text-xs text-[var(--pc-text-muted)] mt-1">
+                  <p class="text-xs text-[var(--mkt-text-muted)] mt-1">
                     Print + postage per piece
                   </p>
                 </div>
@@ -292,14 +292,14 @@ const faqContent: IndustryFAQContent = {
                 <!-- Average Ticket Value -->
                 <div>
                   <label
-                    class="block text-sm font-medium text-[var(--pc-text)] mb-2"
+                    class="block text-sm font-medium text-[var(--mkt-text)] mb-2"
                     for="ticket"
                   >
                     Average Ticket / Job Value
                   </label>
                   <div class="relative">
                     <span
-                      class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--pc-text-muted)]"
+                      class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--mkt-text-muted)]"
                       >$</span
                     >
                     <input
@@ -308,10 +308,10 @@ const faqContent: IndustryFAQContent = {
                       type="number"
                       min="50"
                       max="100000"
-                      class="w-full rounded-lg bg-[var(--pc-navy)] border border-[var(--pc-border)] pl-8 pr-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                      class="w-full rounded-lg bg-[var(--mkt-bg-alt)] border border-[var(--mkt-border)] pl-8 pr-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                     />
                   </div>
-                  <p class="text-xs text-[var(--pc-text-muted)] mt-1">
+                  <p class="text-xs text-[var(--mkt-text-muted)] mt-1">
                     Revenue per customer/job
                   </p>
                 </div>
@@ -319,7 +319,7 @@ const faqContent: IndustryFAQContent = {
                 <!-- Tracked Conversion Rate -->
                 <div class="md:col-span-2">
                   <label
-                    class="block text-sm font-medium text-[var(--pc-text)] mb-2"
+                    class="block text-sm font-medium text-[var(--mkt-text)] mb-2"
                     for="conversion"
                   >
                     Current Tracked Conversion Rate
@@ -332,15 +332,15 @@ const faqContent: IndustryFAQContent = {
                       min="0.1"
                       max="10"
                       step="0.1"
-                      class="flex-1 h-2 bg-[var(--pc-navy)] rounded-lg appearance-none cursor-pointer accent-[var(--pc-cyan)]"
+                      class="flex-1 h-2 bg-[var(--mkt-bg-alt)] rounded-lg appearance-none cursor-pointer accent-[var(--mkt-teal)]"
                     />
                     <div
-                      class="w-20 text-center font-semibold text-[var(--pc-text)] bg-[var(--pc-navy)] rounded-lg px-3 py-2"
+                      class="w-20 text-center font-semibold text-[var(--mkt-text)] bg-[var(--mkt-bg-alt)] rounded-lg px-3 py-2"
                     >
                       {{ inputs.trackedConversionRate.toFixed(1) }}%
                     </div>
                   </div>
-                  <p class="text-xs text-[var(--pc-text-muted)] mt-1">
+                  <p class="text-xs text-[var(--mkt-text-muted)] mt-1">
                     % of mailers that convert (via QR codes, promo codes, etc.)
                   </p>
                 </div>
@@ -350,7 +350,7 @@ const faqContent: IndustryFAQContent = {
               <div class="mt-8 flex justify-center">
                 <button
                   @click="calculate"
-                  class="inline-flex items-center gap-2 rounded-lg bg-[var(--pc-yellow)] px-8 py-4 text-lg font-semibold text-[var(--pc-navy)] shadow-md hover:brightness-110 cursor-pointer transition-all"
+                  class="inline-flex items-center gap-2 rounded-lg bg-[var(--mkt-yellow)] px-8 py-4 text-lg font-semibold text-[var(--mkt-bg-alt)] shadow-md hover:brightness-110 cursor-pointer transition-all"
                 >
                   <Calculator class="h-5 w-5" />
                   Calculate My ROI
@@ -395,35 +395,35 @@ const faqContent: IndustryFAQContent = {
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <!-- What You See -->
               <div
-                class="bg-[var(--pc-navy)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] overflow-hidden"
+                class="bg-[var(--mkt-bg-alt)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] overflow-hidden"
               >
-                <div class="bg-[var(--pc-navy-2)] p-4 flex items-center gap-3">
-                  <EyeOff class="h-5 w-5 text-[var(--pc-text-muted)]" />
-                  <h3 class="font-semibold text-[var(--pc-text-muted)]">
+                <div class="bg-[var(--mkt-bg)] p-4 flex items-center gap-3">
+                  <EyeOff class="h-5 w-5 text-[var(--mkt-text-muted)]" />
+                  <h3 class="font-semibold text-[var(--mkt-text-muted)]">
                     What You Currently Track
                   </h3>
                 </div>
                 <div class="p-6 space-y-4">
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Monthly Mail Spend</span>
-                    <span class="font-semibold text-[var(--pc-text)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Monthly Mail Spend</span>
+                    <span class="font-semibold text-[var(--mkt-text)]">{{
                       formatCurrency(results.monthlyMailSpend)
                     }}</span>
                   </div>
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Tracked Conversions</span>
-                    <span class="font-semibold text-[var(--pc-text)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Tracked Conversions</span>
+                    <span class="font-semibold text-[var(--mkt-text)]">{{
                       formatNumber(results.trackedConversions)
                     }}</span>
                   </div>
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Tracked Revenue</span>
-                    <span class="font-semibold text-[var(--pc-text)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Tracked Revenue</span>
+                    <span class="font-semibold text-[var(--mkt-text)]">{{
                       formatCurrency(results.trackedRevenue)
                     }}</span>
                   </div>
                   <div class="flex justify-between items-center py-3">
-                    <span class="text-[var(--pc-text-muted)]">Apparent ROI</span>
+                    <span class="text-[var(--mkt-text-muted)]">Apparent ROI</span>
                     <span
                       class="font-bold text-lg"
                       :class="
@@ -439,10 +439,10 @@ const faqContent: IndustryFAQContent = {
 
               <!-- What's Really Happening -->
               <div
-                class="bg-[var(--pc-card)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border-2 border-[var(--pc-cyan)] overflow-hidden"
+                class="bg-[var(--mkt-card)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border-2 border-[var(--mkt-teal)] overflow-hidden"
               >
                 <div
-                  class="bg-gradient-to-r from-[var(--pc-cyan)] to-[var(--pc-cyan)]/80 p-4 flex items-center gap-3"
+                  class="bg-gradient-to-r from-[var(--mkt-teal)] to-[var(--mkt-teal)]/80 p-4 flex items-center gap-3"
                 >
                   <Eye class="h-5 w-5 text-white" />
                   <h3 class="font-semibold text-white">
@@ -450,27 +450,27 @@ const faqContent: IndustryFAQContent = {
                   </h3>
                 </div>
                 <div class="p-6 space-y-4">
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Monthly Mail Spend</span>
-                    <span class="font-semibold text-[var(--pc-text)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Monthly Mail Spend</span>
+                    <span class="font-semibold text-[var(--mkt-text)]">{{
                       formatCurrency(results.monthlyMailSpend)
                     }}</span>
                   </div>
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Estimated True Conversions</span>
-                    <span class="font-semibold text-[var(--pc-cyan)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Estimated True Conversions</span>
+                    <span class="font-semibold text-[var(--mkt-teal)]">{{
                       formatNumber(results.estimatedTrueConversions)
                     }}</span>
                   </div>
-                  <div class="flex justify-between items-center py-3 border-b border-[var(--pc-border)]">
-                    <span class="text-[var(--pc-text-muted)]">Estimated True Revenue</span>
-                    <span class="font-semibold text-[var(--pc-cyan)]">{{
+                  <div class="flex justify-between items-center py-3 border-b border-[var(--mkt-border)]">
+                    <span class="text-[var(--mkt-text-muted)]">Estimated True Revenue</span>
+                    <span class="font-semibold text-[var(--mkt-teal)]">{{
                       formatCurrency(results.estimatedTrueRevenue)
                     }}</span>
                   </div>
                   <div class="flex justify-between items-center py-3">
-                    <span class="text-[var(--pc-text-muted)]">Estimated True ROI</span>
-                    <span class="font-bold text-lg text-[var(--pc-cyan)]">{{
+                    <span class="text-[var(--mkt-text-muted)]">Estimated True ROI</span>
+                    <span class="font-bold text-lg text-[var(--mkt-teal)]">{{
                       formatPercent(results.trueRoi)
                     }}</span>
                   </div>
@@ -480,12 +480,12 @@ const faqContent: IndustryFAQContent = {
 
             <!-- Hidden Revenue Breakdown -->
             <div
-              class="bg-[var(--pc-card)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] p-6 sm:p-8"
+              class="bg-[var(--mkt-card)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] p-6 sm:p-8"
             >
               <h3
-                class="text-xl font-bold text-[var(--pc-text)] mb-6 flex items-center gap-2"
+                class="text-xl font-bold text-[var(--mkt-text)] mb-6 flex items-center gap-2"
               >
-                <BarChart3 class="h-6 w-6 text-[var(--pc-cyan)]" />
+                <BarChart3 class="h-6 w-6 text-[var(--mkt-teal)]" />
                 Revenue Attribution Gap
               </h3>
 
@@ -493,7 +493,7 @@ const faqContent: IndustryFAQContent = {
               <div class="mb-6">
                 <div class="flex h-12 rounded-lg overflow-hidden">
                   <div
-                    class="bg-[var(--pc-text-muted)]/40 flex items-center justify-center text-sm font-medium text-[var(--pc-text)]"
+                    class="bg-[var(--mkt-text-muted)]/40 flex items-center justify-center text-sm font-medium text-[var(--mkt-text)]"
                     :style="{
                       width: `${(results.trackedRevenue / results.estimatedTrueRevenue) * 100}%`,
                     }"
@@ -547,19 +547,19 @@ const faqContent: IndustryFAQContent = {
 
             <!-- CTA Section -->
             <div
-              class="bg-gradient-to-r from-[var(--pc-navy)] to-[var(--pc-navy-2)] rounded-[14px] p-8 sm:p-10 text-center"
+              class="bg-gradient-to-r from-[var(--mkt-bg-alt)] to-[var(--mkt-bg)] rounded-[14px] p-8 sm:p-10 text-center"
             >
-              <h3 class="text-2xl sm:text-3xl font-bold text-[var(--pc-text)] mb-4">
+              <h3 class="text-2xl sm:text-3xl font-bold text-[var(--mkt-text)] mb-4">
                 See Your Real Numbers with PostCanary
               </h3>
-              <p class="text-[var(--pc-text-muted)] max-w-2xl mx-auto mb-8">
+              <p class="text-[var(--mkt-text-muted)] max-w-2xl mx-auto mb-8">
                 Stop guessing. PostCanary matches your mailed addresses directly
                 to your CRM data—no QR codes or promo codes needed. Upload your
                 files and get your actual ROI in minutes.
               </p>
               <button
                 @click="onGetStarted"
-                class="inline-flex items-center gap-2 rounded-lg bg-[var(--pc-yellow)] px-8 py-4 text-lg font-semibold text-[var(--pc-navy)] shadow-md hover:brightness-110 cursor-pointer transition-all"
+                class="inline-flex items-center gap-2 rounded-lg bg-[var(--mkt-yellow)] px-8 py-4 text-lg font-semibold text-[var(--mkt-bg-alt)] shadow-md hover:brightness-110 cursor-pointer transition-all"
               >
                 <Target class="h-5 w-5" />
                 Get Started Free
@@ -571,17 +571,17 @@ const faqContent: IndustryFAQContent = {
     </section>
 
     <!-- Industry Benchmarks -->
-    <section class="bg-[var(--pc-navy)] py-16 sm:py-20">
+    <section class="bg-[var(--mkt-bg-alt)] py-16 sm:py-20">
       <div
         class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
       >
         <div class="mx-auto max-w-4xl text-center mb-12">
           <h2
-            class="text-[var(--pc-text)] text-[28px] sm:text-[36px] font-normal tracking-[-0.04em]"
+            class="text-[var(--mkt-text)] text-[28px] sm:text-[36px] font-normal tracking-[-0.04em]"
           >
             Industry Benchmarks
           </h2>
-          <p class="text-[var(--pc-text-muted)] mt-4">
+          <p class="text-[var(--mkt-text-muted)] mt-4">
             Data from the Association of National Advertisers, DMA, and industry
             studies
           </p>
@@ -589,34 +589,34 @@ const faqContent: IndustryFAQContent = {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] p-6 shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] text-center"
+            class="bg-[var(--mkt-card)] rounded-[14px] p-6 shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] text-center"
           >
-            <div class="text-3xl font-bold text-[var(--pc-cyan)]">161%</div>
-            <div class="text-sm text-[var(--pc-text-muted)] mt-2">
+            <div class="text-3xl font-bold text-[var(--mkt-teal)]">161%</div>
+            <div class="text-sm text-[var(--mkt-text-muted)] mt-2">
               Average Direct Mail ROI (House List)
             </div>
           </div>
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] p-6 shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] text-center"
+            class="bg-[var(--mkt-card)] rounded-[14px] p-6 shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] text-center"
           >
-            <div class="text-3xl font-bold text-[var(--pc-cyan)]">9%</div>
-            <div class="text-sm text-[var(--pc-text-muted)] mt-2">
+            <div class="text-3xl font-bold text-[var(--mkt-teal)]">9%</div>
+            <div class="text-sm text-[var(--mkt-text-muted)] mt-2">
               Average Response Rate (House List)
             </div>
           </div>
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] p-6 shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] text-center"
+            class="bg-[var(--mkt-card)] rounded-[14px] p-6 shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] text-center"
           >
-            <div class="text-3xl font-bold text-[var(--pc-cyan)]">70-90%</div>
-            <div class="text-sm text-[var(--pc-text-muted)] mt-2">
+            <div class="text-3xl font-bold text-[var(--mkt-teal)]">70-90%</div>
+            <div class="text-sm text-[var(--mkt-text-muted)] mt-2">
               Conversions Missed by QR/Promo Codes
             </div>
           </div>
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] p-6 shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] text-center"
+            class="bg-[var(--mkt-card)] rounded-[14px] p-6 shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] text-center"
           >
-            <div class="text-3xl font-bold text-[var(--pc-cyan)]">6x</div>
-            <div class="text-sm text-[var(--pc-text-muted)] mt-2">
+            <div class="text-3xl font-bold text-[var(--mkt-teal)]">6x</div>
+            <div class="text-sm text-[var(--mkt-text-muted)] mt-2">
               More Revenue from Mail vs Digital Leads
             </div>
           </div>
@@ -625,7 +625,6 @@ const faqContent: IndustryFAQContent = {
     </section>
 
     <IndustryFAQ :content="faqContent" />
-    <HomeFooter />
   </div>
 </template>
 

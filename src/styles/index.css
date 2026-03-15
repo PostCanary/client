@@ -8,7 +8,24 @@
   font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
 
-  /* PostCanary marketing palette */
+  /* ── Marketing (light) palette ──────────────────────────── */
+  --mkt-bg: #ffffff;
+  --mkt-bg-alt: #f4f6f9;
+  --mkt-card: #ffffff;
+  --mkt-border: #e2e8f0;
+  --mkt-text: #0c2d50;
+  --mkt-text-muted: #64748b;
+  --mkt-text-soft: #94a3b8;
+  --mkt-navy: #0b2d50;
+  --mkt-teal: #47bfa9;
+  --mkt-teal-hover: #3aa893;
+  --mkt-yellow: #f3d129;
+  --mkt-cyan: #0891b2;
+  --mkt-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
+  --mkt-card-shadow-lg: 0 4px 6px rgba(12, 45, 80, 0.04), 0 20px 50px rgba(12, 45, 80, 0.08);
+  --mkt-card-radius: 14px;
+
+  /* ── Deprecated marketing dark palette (remove after full migration) ── */
   --pc-navy: #1e2947;
   --pc-navy-2: #243155;
   --pc-card: #222e52;
@@ -19,7 +36,7 @@
   --pc-yellow: #f3d129;
   --pc-cyan: #00ffff;
 
-  /* PostCanary app dashboard palette */
+  /* ── App dashboard palette (unchanged) ──────────────────── */
   --app-navy: #0b2d50;
   --app-navy-light: #163b69;
   --app-teal: #47bfa9;
@@ -41,27 +58,6 @@ html {
   scrollbar-gutter: stable; /* avoids content right up against the scrollbar */
 }
 
-/* Make scrollbars thicker + visible for Chromium (Edge/Chrome) */
-body::-webkit-scrollbar {
-  width: 12px;              /* thicker than the default overlay */
-}
-
-body::-webkit-scrollbar-track {
-  background: var(--pc-navy-2);
-}
-
-body::-webkit-scrollbar-thumb {
-  background: var(--pc-border);
-  border-radius: 999px;
-  border: 3px solid var(--pc-navy-2); /* creates a “pill” thumb */
-}
-
-/* Firefox scrollbar styling */
-body {
-  scrollbar-width: auto;                      /* not ultra-thin */
-  scrollbar-color: var(--pc-border) var(--pc-navy-2); /* thumb / track */
-}
-
 html,
 body,
 #app {
@@ -69,8 +65,48 @@ body,
   margin: 0;
 }
 
-/* Global MailTrace page background */
+/* ── Marketing page scrollbar (light) ─────────────────────── */
+.mkt-page::-webkit-scrollbar {
+  width: 12px;
+}
+
+.mkt-page::-webkit-scrollbar-track {
+  background: #f4f6f9;
+}
+
+.mkt-page::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+  border: 3px solid #f4f6f9;
+}
+
+.mkt-page {
+  scrollbar-width: auto;
+  scrollbar-color: #cbd5e1 #f4f6f9;
+}
+
+/* ── Dashboard scrollbar (dark, existing) ─────────────────── */
+.app-page::-webkit-scrollbar {
+  width: 12px;
+}
+
+.app-page::-webkit-scrollbar-track {
+  background: var(--pc-navy-2);
+}
+
+.app-page::-webkit-scrollbar-thumb {
+  background: var(--pc-border);
+  border-radius: 999px;
+  border: 3px solid var(--pc-navy-2);
+}
+
+.app-page {
+  scrollbar-width: auto;
+  scrollbar-color: var(--pc-border) var(--pc-navy-2);
+}
+
+/* ── Neutral body defaults ────────────────────────────────── */
 body {
-  background-color: var(--pc-navy);
-  color: var(--pc-text);
+  background-color: var(--mkt-bg);
+  color: var(--mkt-text);
 }

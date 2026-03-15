@@ -16,16 +16,16 @@ interface KpiCard {
 }
 
 const kpis: KpiCard[] = [
-  { label: "Total Mail Sent", value: 24180, border: "var(--pc-cyan)" },
-  { label: "Unique Addresses", value: 22641, border: "var(--pc-yellow)" },
-  { label: "CRM Conversions", value: 1847, border: "var(--pc-cyan)" },
-  { label: "Match Rate", value: 7.6, suffix: "%", decimals: 1, border: "var(--pc-yellow)" },
+  { label: "Total Mail Sent", value: 24180, border: "var(--mkt-teal)" },
+  { label: "Unique Addresses", value: 22641, border: "var(--mkt-yellow)" },
+  { label: "CRM Conversions", value: 1847, border: "var(--mkt-teal)" },
+  { label: "Match Rate", value: 7.6, suffix: "%", decimals: 1, border: "var(--mkt-yellow)" },
   {
     label: "Match Revenue",
     value: 148290,
     prefix: "$",
     sub: "$6.13 per mailer",
-    border: "var(--pc-cyan)",
+    border: "var(--mkt-teal)",
   },
   {
     label: "Avg Ticket",
@@ -33,7 +33,7 @@ const kpis: KpiCard[] = [
     prefix: "$",
     decimals: 2,
     sub: "19 days to convert",
-    border: "var(--pc-yellow)",
+    border: "var(--mkt-yellow)",
   },
 ];
 
@@ -132,13 +132,13 @@ onUnmounted(() => {
   <div class="w-full">
     <!-- Results Banner -->
     <div
-      class="rounded-xl border border-[var(--pc-border)] px-4 sm:px-5 py-3 flex items-center justify-between transition-all duration-500"
+      class="rounded-xl border border-[var(--mkt-border)] px-4 sm:px-5 py-3 flex items-center justify-between transition-all duration-500"
       :class="bannerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-      style="background: linear-gradient(135deg, var(--pc-navy-2), var(--pc-card))"
+      style="background: linear-gradient(135deg, var(--mkt-bg), var(--mkt-card))"
     >
       <div class="flex items-center gap-2">
         <svg
-          class="h-5 w-5 text-[var(--pc-cyan)]"
+          class="h-5 w-5 text-[var(--mkt-teal)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -150,11 +150,11 @@ onUnmounted(() => {
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span class="text-sm sm:text-base font-bold text-[var(--pc-text)]"
+        <span class="text-sm sm:text-base font-bold text-[var(--mkt-text)]"
           >Campaign Analysis Complete</span
         >
       </div>
-      <span class="text-xs sm:text-sm text-[var(--pc-yellow)] font-medium"
+      <span class="text-xs sm:text-sm text-[var(--mkt-yellow)] font-medium"
         >24,180 mailers analyzed</span
       >
     </div>
@@ -164,7 +164,7 @@ onUnmounted(() => {
       <div
         v-for="(kpi, i) in kpis"
         :key="kpi.label"
-        class="rounded-xl border border-[var(--pc-border)] bg-[var(--pc-card)] p-3 sm:p-4 transition-all duration-500"
+        class="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-3 sm:p-4 transition-all duration-500"
         :class="
           kpiVisible[i]
             ? 'opacity-100 translate-y-0'
@@ -173,19 +173,19 @@ onUnmounted(() => {
         :style="{ borderLeft: '3px solid ' + kpi.border }"
       >
         <p
-          class="text-[10px] sm:text-xs font-medium text-[var(--pc-text-soft)] uppercase tracking-wide mb-1"
+          class="text-[10px] sm:text-xs font-medium text-[var(--mkt-text-soft)] uppercase tracking-wide mb-1"
         >
           {{ kpi.label }}
         </p>
         <p
-          class="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--pc-text)] leading-tight"
+          class="text-lg sm:text-xl lg:text-2xl font-bold text-[var(--mkt-text)] leading-tight"
         >
           {{ kpi.prefix || "" }}{{ fmt(kpiDisplayValues[i], kpi.decimals ?? 0)
           }}{{ kpi.suffix || "" }}
         </p>
         <p
           v-if="kpi.sub"
-          class="text-[10px] sm:text-xs text-[var(--pc-text-muted)] mt-0.5"
+          class="text-[10px] sm:text-xs text-[var(--mkt-text-muted)] mt-0.5"
         >
           {{ kpi.sub }}
         </p>
@@ -204,10 +204,10 @@ onUnmounted(() => {
       <div
         v-for="stat in summaryStats"
         :key="stat.label"
-        class="flex items-center gap-2 rounded-lg border border-[var(--pc-border)] bg-[var(--pc-card)] px-3 sm:px-4 py-2"
+        class="flex items-center gap-2 rounded-lg border border-[var(--mkt-border)] bg-[var(--mkt-card)] px-3 sm:px-4 py-2"
       >
-        <span class="text-xs text-[var(--pc-text-soft)]">{{ stat.label }}</span>
-        <span class="text-sm sm:text-base font-bold text-[var(--pc-cyan)]">{{
+        <span class="text-xs text-[var(--mkt-text-soft)]">{{ stat.label }}</span>
+        <span class="text-sm sm:text-base font-bold text-[var(--mkt-teal)]">{{
           stat.value
         }}</span>
       </div>

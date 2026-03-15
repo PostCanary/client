@@ -1,6 +1,9 @@
 <!-- src/components/industry/IndustryTestimonials.vue -->
 <script setup lang="ts">
 import type { IndustryTestimonialsContent } from "@/types/industry";
+import SectionWrapper from "@/components/marketing/SectionWrapper.vue";
+import SectionHeading from "@/components/marketing/SectionHeading.vue";
+import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 
 defineProps<{
   content?: IndustryTestimonialsContent;
@@ -8,39 +11,31 @@ defineProps<{
 </script>
 
 <template>
-  <section
+  <SectionWrapper
     v-if="content && content.testimonials && content.testimonials.length > 0"
-    class="bg-[var(--pc-navy-2)] py-24"
+    bg="alt"
   >
-    <div
-      class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-6 md:px-10 xl:px-16"
-    >
-      <h2
-        class="text-center font-normal text-[var(--pc-text)] text-[36px] leading-44px md:text-[48px] md:leading-[58px] xl:text-[70px] xl:leading-80px tracking-[-0.04em]"
-      >
-        {{ content.heading }}
-      </h2>
+    <SectionHeading
+      :heading="content.heading"
+      :subheading="content.subheading"
+    />
 
-      <p
-        v-if="content.subheading"
-        class="mx-auto mt-6 max-w-[640px] text-center text-[16px] leading-[26px] md:text-[20px] md:leading-8 text-[var(--pc-text-muted)]"
+    <div class="grid gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <AnimatedEntry
+        v-for="(testimonial, index) in content.testimonials"
+        :key="index"
+        :delay="index * 100"
       >
-        {{ content.subheading }}
-      </p>
-
-      <div class="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         <article
-          v-for="(testimonial, index) in content.testimonials"
-          :key="index"
-          class="flex flex-col rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] p-8 shadow-[0_18px_45px_rgba(0,0,0,0.35)]"
+          class="flex h-full flex-col rounded-[var(--mkt-card-radius)] border border-[var(--mkt-border)] bg-[var(--mkt-card)] p-6 sm:p-8 shadow-[var(--mkt-card-shadow)] hover:shadow-[var(--mkt-card-shadow-lg)] transition-shadow duration-300"
         >
-          <blockquote class="flex-1 text-[16px] leading-[26px] text-[var(--pc-text-muted)]">
+          <blockquote class="flex-1 text-[15px] sm:text-[16px] leading-relaxed text-[var(--mkt-text-muted)]">
             "{{ testimonial.quote }}"
           </blockquote>
 
           <div
             v-if="testimonial.metric"
-            class="mt-4 inline-flex self-start rounded-full bg-[var(--pc-cyan)]/10 px-4 py-1.5 text-[14px] font-semibold text-[var(--pc-cyan)]"
+            class="mt-4 inline-flex self-start rounded-full bg-[var(--mkt-teal)]/10 px-4 py-1.5 text-[14px] font-semibold text-[var(--mkt-teal)]"
           >
             {{ testimonial.metric }}
           </div>
@@ -48,7 +43,7 @@ defineProps<{
           <div class="mt-6 flex items-center gap-3">
             <div
               v-if="testimonial.avatar"
-              class="h-12 w-12 overflow-hidden rounded-full bg-[var(--pc-navy)]"
+              class="h-11 w-11 overflow-hidden rounded-full bg-[var(--mkt-bg-alt)]"
             >
               <img
                 :src="testimonial.avatar"
@@ -58,22 +53,22 @@ defineProps<{
             </div>
             <div
               v-else
-              class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pc-cyan)] text-[var(--pc-navy)] font-semibold"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--mkt-teal)] text-white font-semibold"
             >
               {{ testimonial.author.charAt(0) }}
             </div>
             <div>
-              <p class="font-semibold text-[var(--pc-text)]">
+              <p class="font-semibold text-[var(--mkt-text)]">
                 {{ testimonial.author }}
               </p>
-              <p class="text-[14px] text-[var(--pc-text-soft)]">
+              <p class="text-[13px] text-[var(--mkt-text-soft)]">
                 <span v-if="testimonial.role">{{ testimonial.role }}, </span>
                 {{ testimonial.company }}
               </p>
             </div>
           </div>
         </article>
-      </div>
+      </AnimatedEntry>
     </div>
-  </section>
+  </SectionWrapper>
 </template>

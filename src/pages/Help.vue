@@ -58,7 +58,7 @@
           or
           <button
             type="button"
-            class="text-[var(--pc-cyan)] hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit"
+            class="text-[var(--mkt-teal)] hover:underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit"
             @click="demo.open()"
           >book a demo</button>
           for a personalized walkthrough.
@@ -67,7 +67,7 @@
           You can also
           <router-link
             to="/dashboard?tour=1"
-            class="text-[var(--pc-cyan)] hover:underline"
+            class="text-[var(--mkt-teal)] hover:underline"
           >replay the guided tour</router-link>
           to revisit key features.
         </p>
@@ -349,16 +349,16 @@ const filteredSections = computed(() => {
 <style scoped>
 .help-page {
   min-height: 100vh;
-  background: var(--pc-navy);
+  background: var(--mkt-bg-alt);
   padding: 40px 20px;
-  color: var(--pc-text);
+  color: var(--mkt-text);
 }
 
 .help-container {
   max-width: 800px;
   margin: 0 auto;
-  background: var(--pc-card);
-  border: 1px solid var(--pc-border);
+  background: var(--mkt-card);
+  border: 1px solid var(--mkt-border);
   border-radius: 12px;
   padding: 48px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -368,7 +368,7 @@ const filteredSections = computed(() => {
   display: inline-block;
   margin-bottom: 24px;
   font-size: 14px;
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
   text-decoration: none;
 }
 .back-link:hover {
@@ -378,13 +378,13 @@ const filteredSections = computed(() => {
 .help-title {
   font-size: 36px;
   font-weight: 700;
-  color: var(--pc-text);
+  color: var(--mkt-text);
   margin-bottom: 8px;
 }
 
 .help-subtitle {
   font-size: 16px;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
   margin-bottom: 32px;
 }
 
@@ -397,18 +397,18 @@ const filteredSections = computed(() => {
   padding: 12px 16px;
   font-size: 15px;
   border-radius: 8px;
-  border: 1px solid var(--pc-border);
-  background: var(--pc-navy);
-  color: var(--pc-text);
+  border: 1px solid var(--mkt-border);
+  background: var(--mkt-bg-alt);
+  color: var(--mkt-text);
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
 .search-input::placeholder {
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
 }
 .search-input:focus {
-  border-color: var(--pc-cyan);
+  border-color: var(--mkt-teal);
 }
 
 /* sections */
@@ -419,14 +419,14 @@ const filteredSections = computed(() => {
 .section-title {
   font-size: 22px;
   font-weight: 600;
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
   margin-bottom: 16px;
   margin-top: 0;
 }
 
 /* accordion items */
 .faq-item {
-  border: 1px solid var(--pc-border);
+  border: 1px solid var(--mkt-border);
   border-radius: 8px;
   margin-bottom: 8px;
   overflow: hidden;
@@ -440,7 +440,7 @@ const filteredSections = computed(() => {
   padding: 14px 16px;
   background: transparent;
   border: none;
-  color: var(--pc-text);
+  color: var(--mkt-text);
   font-size: 15px;
   font-weight: 500;
   text-align: left;
@@ -455,7 +455,7 @@ const filteredSections = computed(() => {
   font-size: 20px;
   line-height: 1;
   flex-shrink: 0;
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
 }
 
 .faq-answer-wrapper {
@@ -472,11 +472,11 @@ const filteredSections = computed(() => {
   padding: 0 16px 14px;
   font-size: 15px;
   line-height: 1.7;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
 }
 
 .faq-answer :deep(a) {
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
   text-decoration: none;
 }
 .faq-answer :deep(a:hover) {
@@ -484,18 +484,18 @@ const filteredSections = computed(() => {
 }
 
 .faq-answer :deep(strong) {
-  color: var(--pc-text);
+  color: var(--mkt-text);
 }
 
 /* no results */
 .no-results {
   font-size: 15px;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
   text-align: center;
   padding: 24px 0;
 }
 .no-results a {
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
   text-decoration: none;
 }
 .no-results a:hover {
@@ -506,26 +506,26 @@ const filteredSections = computed(() => {
 .contact-cta {
   margin-top: 48px;
   padding: 32px;
-  background: var(--pc-navy);
-  border: 1px solid var(--pc-border);
+  background: var(--mkt-bg-alt);
+  border: 1px solid var(--mkt-border);
   border-radius: 12px;
   text-align: center;
 }
 .contact-cta h2 {
   font-size: 22px;
   font-weight: 600;
-  color: var(--pc-text);
+  color: var(--mkt-text);
   margin-top: 0;
   margin-bottom: 12px;
 }
 .contact-cta p {
   font-size: 15px;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
   line-height: 1.7;
   margin: 0;
 }
 .contact-cta a {
-  color: var(--pc-cyan);
+  color: var(--mkt-teal);
   text-decoration: none;
 }
 .contact-cta a:hover {

@@ -17,17 +17,17 @@ const chartMonths = [
 const chartSeries = [
   {
     name: "Mail Volume",
-    color: "var(--pc-text)",
+    color: "var(--mkt-text)",
     data: [45, 52, 58, 63, 71, 68, 74, 82, 78, 85, 90, 88],
   },
   {
     name: "CRM Jobs",
-    color: "var(--pc-cyan)",
+    color: "var(--mkt-teal)",
     data: [18, 22, 28, 31, 35, 33, 38, 42, 40, 44, 48, 46],
   },
   {
     name: "Matches",
-    color: "var(--pc-yellow)",
+    color: "var(--mkt-yellow)",
     data: [4, 6, 8, 10, 12, 11, 14, 16, 15, 18, 20, 19],
   },
 ];
@@ -113,7 +113,7 @@ onUnmounted(() => {
   <div class="w-full">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3">
-      <span class="text-sm sm:text-base font-semibold text-[var(--pc-text)]"
+      <span class="text-sm sm:text-base font-semibold text-[var(--mkt-text)]"
         >Monthly Performance</span
       >
       <div class="flex items-center gap-3 sm:gap-4">
@@ -126,7 +126,7 @@ onUnmounted(() => {
             class="inline-block h-2.5 w-2.5 rounded-full"
             :style="{ backgroundColor: series.color }"
           />
-          <span class="text-[10px] sm:text-xs text-[var(--pc-text-muted)]">{{
+          <span class="text-[10px] sm:text-xs text-[var(--mkt-text-muted)]">{{
             series.name
           }}</span>
         </div>
@@ -141,8 +141,8 @@ onUnmounted(() => {
     >
       <defs>
         <linearGradient id="areaGradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="var(--pc-text)" stop-opacity="0.08" />
-          <stop offset="100%" stop-color="var(--pc-text)" stop-opacity="0" />
+          <stop offset="0%" stop-color="var(--mkt-text)" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="var(--mkt-text)" stop-opacity="0" />
         </linearGradient>
       </defs>
 
@@ -154,7 +154,7 @@ onUnmounted(() => {
         :x2="CV.w - CV.pr"
         :y1="gl.y"
         :y2="gl.y"
-        stroke="var(--pc-border)"
+        stroke="var(--mkt-border)"
         stroke-width="0.5"
       />
 
@@ -166,7 +166,7 @@ onUnmounted(() => {
         :y="gl.y"
         text-anchor="end"
         dominant-baseline="central"
-        fill="var(--pc-text-soft)"
+        fill="var(--mkt-text-soft)"
         font-size="10"
         class="chart-text"
       >
@@ -180,7 +180,7 @@ onUnmounted(() => {
         :x="xl.x"
         :y="CV.h - 10"
         text-anchor="middle"
-        fill="var(--pc-text-soft)"
+        fill="var(--mkt-text-soft)"
         font-size="9"
         class="chart-text"
       >
@@ -241,10 +241,10 @@ onUnmounted(() => {
       "
     >
       <div
-        class="inline-flex items-center gap-2 rounded-lg border border-[var(--pc-yellow)]/30 bg-[var(--pc-yellow)]/10 px-3 py-2"
+        class="inline-flex items-center gap-2 rounded-lg border border-[var(--mkt-yellow)]/30 bg-[var(--mkt-yellow)]/10 px-3 py-2"
       >
         <svg
-          class="h-4 w-4 text-[var(--pc-yellow)]"
+          class="h-4 w-4 text-[var(--mkt-yellow)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -256,7 +256,7 @@ onUnmounted(() => {
             d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
           />
         </svg>
-        <span class="text-xs sm:text-sm font-semibold text-[var(--pc-yellow)]"
+        <span class="text-xs sm:text-sm font-semibold text-[var(--mkt-yellow)]"
           >Matches up 375% year over year</span
         >
       </div>
