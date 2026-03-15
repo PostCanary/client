@@ -51,6 +51,7 @@ import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import { getHeatmapPoints, type HeatmapKind } from "@/api/geocodes";
 import { useBilling } from "@/composables/useBilling";
 import { useRunData } from "@/composables/useRunData";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 
 type Point = {
   lat: number;
@@ -247,8 +248,12 @@ async function loadPoints(): Promise<Point[]> {
     limit: 20000,
   } as const;
 
+  // Campaign filter
+  const campaignStore = useCampaignStore();
+  campaignStore.hydrate();
+
   // Send request with matched kind
-  const res = await getHeatmapPoints({ ...base, kind: sel });
+  const res = await getHeatmapPoints({ ...base, kind: sel, campaignId: campaignStore.activeCampaignId });
   return (res.points ?? [])
     .filter((p): p is NonNullable<typeof p> => !!p)
     .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
@@ -331,8 +336,14 @@ onMounted(async () => {
   await draw();
 });
 
+function onCampaignChanged() {
+  void draw();
+}
+window.addEventListener("mt:campaign-changed", onCampaignChanged);
+
 onBeforeUnmount(() => {
   window.removeEventListener("resize", ensureMapSized);
+  window.removeEventListener("mt:campaign-changed", onCampaignChanged);
   map?.remove();
   map = null;
   cluster = null;

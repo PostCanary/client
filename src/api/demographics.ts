@@ -88,6 +88,7 @@ export type DemoParams = {
   view?: DemographicView;
   start?: string;
   end?: string;
+  campaignId?: string | null;
 };
 
 export async function getDemographicsPayload(
@@ -97,6 +98,7 @@ export async function getDemographicsPayload(
   if (params.view) q.set("view", params.view);
   if (params.start) q.set("start", params.start);
   if (params.end) q.set("end", params.end);
+  if (params.campaignId) q.set("campaign_id", params.campaignId);
 
   const qs = q.toString();
   return get<DemographicsPayload>(

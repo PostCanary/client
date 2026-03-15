@@ -10,6 +10,7 @@ import {
   type RunStatus,
   type RunRequirement,
 } from "@/api/runs";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 
 const POLL_DELAY_MS = 1000;
 const POLL_MAX_TICKS = 240;
@@ -208,9 +209,13 @@ export function useRunData() {
   }
 
   async function fetchLatestDoneResultAndMatches(): Promise<{ r: any | null; m: any | null }> {
+    const campaignStore = useCampaignStore();
+    campaignStore.hydrate();
+    const cid = campaignStore.activeCampaignId;
+
     const [r, m] = await Promise.all([
-      getLatestRunResult(REQUIRE_DONE).catch(() => null),
-      getLatestRunMatches(REQUIRE_DONE).catch(() => null),
+      getLatestRunResult(REQUIRE_DONE, cid).catch(() => null),
+      getLatestRunMatches(REQUIRE_DONE, cid).catch(() => null),
     ]);
     return { r: r ?? null, m: m ?? null };
   }

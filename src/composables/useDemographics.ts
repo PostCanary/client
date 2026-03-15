@@ -1,15 +1,19 @@
 // src/composables/useDemographics.ts
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onBeforeUnmount } from "vue";
 import {
   getDemographicsPayload,
   type DemographicsPayload,
   type DemographicView,
 } from "@/api/demographics";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 
 export function useDemographics() {
   const view = ref<DemographicView>("matches");
   const start = ref<string | undefined>(undefined);
   const end = ref<string | undefined>(undefined);
+
+  const campaignStore = useCampaignStore();
+  campaignStore.hydrate();
 
   const data = ref<DemographicsPayload | null>(null);
   const loading = ref(false);
@@ -27,6 +31,7 @@ export function useDemographics() {
         view: view.value,
         start: start.value,
         end: end.value,
+        campaignId: campaignStore.activeCampaignId,
       });
 
       if (mySeq !== reqSeq) return;
@@ -42,6 +47,15 @@ export function useDemographics() {
   }
 
   watch([view, start, end], refresh, { immediate: true });
+
+  // Re-fetch when campaign changes
+  function onCampaignChanged() {
+    void refresh();
+  }
+  window.addEventListener("mt:campaign-changed", onCampaignChanged);
+  onBeforeUnmount(() => {
+    window.removeEventListener("mt:campaign-changed", onCampaignChanged);
+  });
 
   const hero = computed(() => data.value?.hero ?? null);
   const charts = computed(() => data.value?.charts ?? null);

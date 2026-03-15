@@ -35,6 +35,7 @@ import { useLoader } from "@/stores/loader";
 import { useBilling } from "@/composables/useBilling";
 import { useRunStore } from "@/stores/useRunStore";
 import { useAuthStore } from "@/stores/auth";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 import { BRAND } from "@/config/brand";
 
 declare global {
@@ -48,6 +49,8 @@ const router = useRouter();
 const loader = useLoader();
 const runStore = useRunStore();
 const auth = useAuthStore();
+const campaignStore = useCampaignStore();
+campaignStore.hydrate();
 
 /* ------------------------------------------------------------------
  * Loader policy helpers
@@ -396,6 +399,16 @@ async function onUploadCommit(payload: {
   if (!mailId && !crmId) {
     console.info("[Dashboard] Upload commit skipped: no batch IDs");
     return;
+  }
+
+  // Auto-assign mail batch to active campaign (if one is selected)
+  if (mailId && campaignStore.activeCampaignId) {
+    try {
+      await campaignStore.assignBatches(campaignStore.activeCampaignId, [mailId]);
+      console.info("[Dashboard] Mail batch %s assigned to campaign %s", mailId, campaignStore.activeCampaignId);
+    } catch (err) {
+      console.warn("[Dashboard] Failed to assign batch to campaign", err);
+    }
   }
 
   // Check if any side has an auto-generated mapping that needs review
@@ -889,8 +902,15 @@ onMounted(() => {
   void init();
 });
 
+function onCampaignChanged() {
+  void refreshRunData();
+}
+
+window.addEventListener("mt:campaign-changed", onCampaignChanged);
+
 onBeforeUnmount(() => {
   window.removeEventListener("mt:run-completed", onRunCompleted);
+  window.removeEventListener("mt:campaign-changed", onCampaignChanged);
 });
 </script>
 

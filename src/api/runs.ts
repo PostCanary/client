@@ -171,17 +171,27 @@ export async function getLatestRunStatus(): Promise<RunStatus | null> {
 }
 
 export async function getLatestRunResult(
-  requirement: RunRequirement = "any"
+  requirement: RunRequirement = "any",
+  campaignId?: string | null,
 ): Promise<RunResult | null> {
-  const res = await getRaw<RunResult>(`/api/runs/latest/result${asQuery(requirement)}`);
+  let url = `/api/runs/latest/result${asQuery(requirement)}`;
+  if (campaignId) {
+    url += url.includes("?") ? `&campaign_id=${campaignId}` : `?campaign_id=${campaignId}`;
+  }
+  const res = await getRaw<RunResult>(url);
   if (res.status === 204) return null;
   return res.data ?? null;
 }
 
 export async function getLatestRunMatches(
-  requirement: RunRequirement = "any"
+  requirement: RunRequirement = "any",
+  campaignId?: string | null,
 ): Promise<RunMatchesResponse | null> {
-  const res = await getRaw<RunMatchesResponse>(`/api/runs/latest/matches${asQuery(requirement)}`);
+  let url = `/api/runs/latest/matches${asQuery(requirement)}`;
+  if (campaignId) {
+    url += url.includes("?") ? `&campaign_id=${campaignId}` : `?campaign_id=${campaignId}`;
+  }
+  const res = await getRaw<RunMatchesResponse>(url);
   if (res.status === 204) return null;
   return res.data ?? null;
 }

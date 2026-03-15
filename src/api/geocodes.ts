@@ -24,6 +24,7 @@ export type HeatmapParams = {
   start?: string;     // YYYY-MM-DD
   end?: string;       // YYYY-MM-DD
   limit?: number;     // 1..200000 (backend enforces)
+  campaignId?: string | null;
 };
 
 export async function getHeatmapPoints(params: HeatmapParams): Promise<HeatmapResponse> {
@@ -45,6 +46,8 @@ export async function getHeatmapPoints(params: HeatmapParams): Promise<HeatmapRe
     throw new Error("limit must be between 1 and 200000");
   }
   q.set("limit", String(limit));
+
+  if (params.campaignId) q.set("campaign_id", params.campaignId);
 
   const url = `/api/geocodes/heatmap?${q.toString()}`;
 

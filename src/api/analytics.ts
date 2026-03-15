@@ -47,10 +47,20 @@ export type AnalyticsResponse = {
   message: string;
 };
 
-export async function getAnalyticsInsights(): Promise<AnalyticsResponse> {
-  return get<AnalyticsResponse>("/api/analytics/insights");
+export async function getAnalyticsInsights(
+  campaignId?: string | null,
+): Promise<AnalyticsResponse> {
+  const url = campaignId
+    ? `/api/analytics/insights?campaign_id=${campaignId}`
+    : "/api/analytics/insights";
+  return get<AnalyticsResponse>(url);
 }
 
-export async function regenerateInsights(): Promise<AnalyticsResponse> {
-  return postJson<AnalyticsResponse>("/api/analytics/regenerate");
+export async function regenerateInsights(
+  campaignId?: string | null,
+): Promise<AnalyticsResponse> {
+  const url = campaignId
+    ? `/api/analytics/regenerate?campaign_id=${campaignId}`
+    : "/api/analytics/regenerate";
+  return postJson<AnalyticsResponse>(url);
 }

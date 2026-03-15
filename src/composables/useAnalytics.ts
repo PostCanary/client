@@ -1,10 +1,11 @@
 // src/composables/useAnalytics.ts
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import {
   getAnalyticsInsights,
   regenerateInsights,
   type AnalyticsInsights,
 } from "@/api/analytics";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 
 export function useAnalytics() {
   const insights = ref<AnalyticsInsights | null>(null);
@@ -12,6 +13,9 @@ export function useAnalytics() {
   const loading = ref(false);
   const regenerating = ref(false);
   const error = ref<string | null>(null);
+
+  const campaignStore = useCampaignStore();
+  campaignStore.hydrate();
 
   let reqSeq = 0;
 
@@ -21,7 +25,7 @@ export function useAnalytics() {
     error.value = null;
 
     try {
-      const res = await getAnalyticsInsights();
+      const res = await getAnalyticsInsights(campaignStore.activeCampaignId);
 
       if (mySeq !== reqSeq) return;
 
@@ -47,7 +51,7 @@ export function useAnalytics() {
     error.value = null;
 
     try {
-      const res = await regenerateInsights();
+      const res = await regenerateInsights(campaignStore.activeCampaignId);
 
       if ("insights" in res) {
         insights.value = res.insights;
@@ -59,6 +63,15 @@ export function useAnalytics() {
       regenerating.value = false;
     }
   }
+
+  // Re-fetch when campaign changes
+  function onCampaignChanged() {
+    void refresh();
+  }
+  window.addEventListener("mt:campaign-changed", onCampaignChanged);
+  onBeforeUnmount(() => {
+    window.removeEventListener("mt:campaign-changed", onCampaignChanged);
+  });
 
   onMounted(refresh);
 
