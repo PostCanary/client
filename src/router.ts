@@ -17,73 +17,81 @@ function seoMeta(path: string) {
 }
 
 const routes: RouteRecordRaw[] = [
+  // ── Marketing pages (wrapped in MarketingLayout) ───────
   {
     path: "/",
-    name: "Home",
-    component: () => import("@/pages/Home.vue"),
-    meta: seoMeta("/"),
+    component: () => import("@/layouts/MarketingLayout.vue"),
+    children: [
+      {
+        path: "",
+        name: "Home",
+        component: () => import("@/pages/Home.vue"),
+        meta: seoMeta("/"),
+      },
+      {
+        path: "terms",
+        name: "TermsOfService",
+        component: () => import("@/pages/TermsOfService.vue"),
+        meta: seoMeta("/terms"),
+      },
+      {
+        path: "privacy",
+        name: "PrivacyPolicy",
+        component: () => import("@/pages/PrivacyPolicy.vue"),
+        meta: seoMeta("/privacy"),
+      },
+      {
+        path: "help",
+        name: "Help",
+        component: () => import("@/pages/Help.vue"),
+        meta: seoMeta("/help"),
+      },
+
+      // Calculators
+      {
+        path: "attribution-gap-calculator",
+        name: "AttributionGapCalculator",
+        component: () => import("@/pages/calculators/AttributionGapCalculator.vue"),
+        meta: seoMeta("/attribution-gap-calculator"),
+      },
+      {
+        path: "direct-mail-roi-calculator",
+        name: "DirectMailRoiCalculator",
+        component: () => import("@/pages/calculators/DirectMailRoiCalculator.vue"),
+        meta: seoMeta("/direct-mail-roi-calculator"),
+      },
+      {
+        path: "savings-calculator",
+        name: "SavingsCalculator",
+        component: () => import("@/pages/calculators/SavingsCalculator.vue"),
+        meta: seoMeta("/savings-calculator"),
+      },
+
+      // Industry pages
+      {
+        path: "hvac-direct-mail-tracking",
+        name: "HvacMailTracking",
+        component: () => import("@/pages/industries/HvacMailTracking.vue"),
+        meta: seoMeta("/hvac-direct-mail-tracking"),
+      },
+      {
+        path: "plumbing-direct-mail-tracking",
+        name: "PlumbingMailTracking",
+        component: () => import("@/pages/industries/PlumbingMailTracking.vue"),
+        meta: seoMeta("/plumbing-direct-mail-tracking"),
+      },
+      {
+        path: "real-estate-direct-mail-tracking",
+        name: "RealtorMailTracking",
+        component: () => import("@/pages/industries/RealtorMailTracking.vue"),
+        meta: seoMeta("/real-estate-direct-mail-tracking"),
+      },
+    ],
   },
+
   { path: "/home", redirect: "/" },
-  {
-    path: "/terms",
-    name: "TermsOfService",
-    component: () => import("@/pages/TermsOfService.vue"),
-    meta: seoMeta("/terms"),
-  },
-  {
-    path: "/privacy",
-    name: "PrivacyPolicy",
-    component: () => import("@/pages/PrivacyPolicy.vue"),
-    meta: seoMeta("/privacy"),
-  },
-  {
-    path: "/help",
-    name: "Help",
-    component: () => import("@/pages/Help.vue"),
-    meta: seoMeta("/help"),
-  },
 
-  // Calculators
-  {
-    path: "/attribution-gap-calculator",
-    name: "AttributionGapCalculator",
-    component: () => import("@/pages/calculators/AttributionGapCalculator.vue"),
-    meta: seoMeta("/attribution-gap-calculator"),
-  },
-  {
-    path: "/direct-mail-roi-calculator",
-    name: "DirectMailRoiCalculator",
-    component: () => import("@/pages/calculators/DirectMailRoiCalculator.vue"),
-    meta: seoMeta("/direct-mail-roi-calculator"),
-  },
-  {
-    path: "/savings-calculator",
-    name: "SavingsCalculator",
-    component: () => import("@/pages/calculators/SavingsCalculator.vue"),
-    meta: seoMeta("/savings-calculator"),
-  },
-
-  // Industry pages
-  {
-    path: "/hvac-direct-mail-tracking",
-    name: "HvacMailTracking",
-    component: () => import("@/pages/industries/HvacMailTracking.vue"),
-    meta: seoMeta("/hvac-direct-mail-tracking"),
-  },
-  {
-    path: "/plumbing-direct-mail-tracking",
-    name: "PlumbingMailTracking",
-    component: () => import("@/pages/industries/PlumbingMailTracking.vue"),
-    meta: seoMeta("/plumbing-direct-mail-tracking"),
-  },
-  {
-    path: "/real-estate-direct-mail-tracking",
-    name: "RealtorMailTracking",
-    component: () => import("@/pages/industries/RealtorMailTracking.vue"),
-    meta: seoMeta("/real-estate-direct-mail-tracking"),
-  },
-
-  // ✅ Layout ONLY for app pages
+  // ── App pages (wrapped in MainLayout) ──────────────────
   {
     path: "/app",
     component: () => import("@/layouts/MainLayout.vue"),

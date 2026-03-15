@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@vicons/ionicons5": "0.13.0",
+    "@vueuse/motion": "^3.0.3",
     "axios": "1.13.1",
     "chart.js": "4.5.1",
     "leaflet": "1.9.4",

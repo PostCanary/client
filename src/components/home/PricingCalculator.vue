@@ -114,10 +114,10 @@ watch(
 
 <template>
   <div
-    class="w-full max-w-3xl mx-auto rounded-[14px] border border-[var(--pc-border)] bg-[var(--pc-card)] px-5 sm:px-8 py-6 sm:py-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+    class="w-full max-w-3xl mx-auto rounded-[14px] border border-[var(--mkt-border)] bg-[var(--mkt-card)] px-5 sm:px-8 py-6 sm:py-8 shadow-[var(--mkt-card-shadow-lg)]"
   >
     <h3
-      class="text-[16px] sm:text-[18px] font-bold tracking-[0.02em] text-[var(--pc-text)] text-center mb-6 sm:mb-8"
+      class="text-[16px] sm:text-[18px] font-bold tracking-[0.02em] text-[var(--mkt-text)] text-center mb-6 sm:mb-8"
     >
       Find Your Plan
     </h3>
@@ -126,12 +126,12 @@ watch(
     <div class="mb-6">
       <div class="flex items-baseline justify-between mb-2">
         <label
-          class="text-[13px] sm:text-[15px] font-semibold text-[var(--pc-text-muted)]"
+          class="text-[13px] sm:text-[15px] font-semibold text-[var(--mkt-text-muted)]"
         >
           Monthly Mail Volume
         </label>
         <span
-          class="text-[15px] sm:text-[18px] font-bold text-[var(--pc-cyan)] tabular-nums"
+          class="text-[15px] sm:text-[18px] font-bold text-[var(--mkt-teal)] tabular-nums"
         >
           {{ fmtVolume(monthlyVolume) }}
         </span>
@@ -147,7 +147,7 @@ watch(
         aria-label="Monthly mail volume"
       />
       <div
-        class="flex justify-between mt-1 text-[11px] text-[var(--pc-text-soft)]"
+        class="flex justify-between mt-1 text-[11px] text-[var(--mkt-text-soft)]"
       >
         <span>100</span>
         <span>100K+</span>
@@ -158,12 +158,12 @@ watch(
     <div class="mb-6 sm:mb-8">
       <div class="flex items-baseline justify-between mb-2">
         <label
-          class="text-[13px] sm:text-[15px] font-semibold text-[var(--pc-text-muted)]"
+          class="text-[13px] sm:text-[15px] font-semibold text-[var(--mkt-text-muted)]"
         >
           Months of Historical Data
         </label>
         <span
-          class="text-[15px] sm:text-[18px] font-bold text-[var(--pc-cyan)] tabular-nums"
+          class="text-[15px] sm:text-[18px] font-bold text-[var(--mkt-teal)] tabular-nums"
         >
           {{ monthsBackData }}
           {{ monthsBackData === 1 ? "month" : "months" }}
@@ -180,7 +180,7 @@ watch(
         aria-label="Months of historical data"
       />
       <div
-        class="flex justify-between mt-1 text-[11px] text-[var(--pc-text-soft)]"
+        class="flex justify-between mt-1 text-[11px] text-[var(--mkt-text-soft)]"
       >
         <span>0</span>
         <span>24</span>
@@ -189,7 +189,7 @@ watch(
 
     <!-- Results area -->
     <div
-      class="rounded-[10px] bg-[var(--pc-navy)] px-5 sm:px-6 py-5 sm:py-6"
+      class="rounded-[10px] bg-[var(--mkt-bg-alt)] px-5 sm:px-6 py-5 sm:py-6"
     >
       <div
         class="grid gap-5 sm:gap-6"
@@ -199,21 +199,21 @@ watch(
         <Transition name="result-swap" mode="out-in">
           <div :key="ongoingPlan.id">
             <p
-              class="text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--pc-text-soft)] mb-2"
+              class="text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--mkt-text-soft)] mb-2"
             >
               Ongoing Plan
             </p>
             <p
-              class="text-[20px] sm:text-[24px] font-bold text-[var(--pc-text)] leading-tight"
+              class="text-[20px] sm:text-[24px] font-bold text-[var(--mkt-text)] leading-tight"
             >
               {{ ongoingPlan.name }}
             </p>
             <p
-              class="text-[16px] sm:text-[18px] font-semibold text-[var(--pc-cyan)] mt-1"
+              class="text-[16px] sm:text-[18px] font-semibold text-[var(--mkt-teal)] mt-1"
             >
               {{ ongoingPlan.price }}
             </p>
-            <p class="text-[12px] sm:text-[13px] text-[var(--pc-text-muted)] mt-1">
+            <p class="text-[12px] sm:text-[13px] text-[var(--mkt-text-muted)] mt-1">
               {{ ongoingPlan.limitLabel }}
             </p>
           </div>
@@ -226,25 +226,25 @@ watch(
             :key="fastStartPlan.id + '-fs'"
           >
             <p
-              class="text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--pc-text-soft)] mb-2"
+              class="text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--mkt-text-soft)] mb-2"
             >
               Fast Start Plan
             </p>
             <p
-              class="text-[20px] sm:text-[24px] font-bold text-[var(--pc-text)] leading-tight"
+              class="text-[20px] sm:text-[24px] font-bold text-[var(--mkt-text)] leading-tight"
             >
               {{ fastStartPlan.name }}
             </p>
             <p
-              class="text-[16px] sm:text-[18px] font-semibold text-[var(--pc-yellow)] mt-1"
+              class="text-[16px] sm:text-[18px] font-semibold text-[var(--mkt-yellow)] mt-1"
             >
               {{ fastStartPlan.price }}
             </p>
-            <p class="text-[12px] sm:text-[13px] text-[var(--pc-text-muted)] mt-1">
+            <p class="text-[12px] sm:text-[13px] text-[var(--mkt-text-muted)] mt-1">
               {{ fmtVolume(firstMonthTotal) }} mailers in month 1
             </p>
             <p
-              class="text-[11px] sm:text-[12px] text-[var(--pc-cyan)] mt-2 font-medium"
+              class="text-[11px] sm:text-[12px] text-[var(--mkt-teal)] mt-2 font-medium"
             >
               Downgrade to {{ ongoingPlan.name }} after month 1
             </p>
@@ -257,7 +257,7 @@ watch(
         <p
           v-if="monthsBackData > 0"
           :key="backDataUpload"
-          class="mt-4 pt-4 border-t border-[var(--pc-border)] text-[11px] sm:text-[12px] text-[var(--pc-text-soft)]"
+          class="mt-4 pt-4 border-t border-[var(--mkt-border)] text-[11px] sm:text-[12px] text-[var(--mkt-text-soft)]"
         >
           Back data upload: {{ fmtVolume(backDataUpload) }} mailers ({{
             monthsBackData
@@ -281,10 +281,10 @@ watch(
   cursor: pointer;
   background: linear-gradient(
     to right,
-    var(--pc-cyan) 0%,
-    var(--pc-cyan) var(--fill-pct, 0%),
-    var(--pc-border) var(--fill-pct, 0%),
-    var(--pc-border) 100%
+    var(--mkt-teal) 0%,
+    var(--mkt-teal) var(--fill-pct, 0%),
+    var(--mkt-border) var(--fill-pct, 0%),
+    var(--mkt-border) 100%
   );
 }
 
@@ -295,8 +295,8 @@ watch(
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--pc-cyan);
-  border: 2px solid var(--pc-navy);
+  background: var(--mkt-teal);
+  border: 2px solid var(--mkt-bg-alt);
   box-shadow: 0 0 0 0 rgba(0, 255, 255, 0);
   transition: box-shadow 0.2s ease;
   cursor: pointer;
@@ -312,8 +312,8 @@ watch(
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--pc-cyan);
-  border: 2px solid var(--pc-navy);
+  background: var(--mkt-teal);
+  border: 2px solid var(--mkt-bg-alt);
   box-shadow: 0 0 0 0 rgba(0, 255, 255, 0);
   transition: box-shadow 0.2s ease;
   cursor: pointer;
@@ -328,13 +328,13 @@ watch(
 .calc-slider::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: var(--pc-border);
+  background: var(--mkt-border);
 }
 
 .calc-slider::-moz-range-progress {
   height: 6px;
   border-radius: 999px;
-  background: var(--pc-cyan);
+  background: var(--mkt-teal);
 }
 
 /* ── Result swap transition ───────────────────────────────── */

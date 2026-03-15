@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import CalculatorHero from "@/components/calculators/CalculatorHero.vue";
-import HomeFooter from "@/components/home/HomeFooter.vue";
+
 import IndustryFAQ from "@/components/industry/IndustryFAQ.vue";
 import { useAuthStore } from "@/stores/auth";
 import {
@@ -135,30 +135,30 @@ const faqContent: IndustryFAQContent = {
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div>
     <CalculatorHero :content="heroContent" />
 
     <!-- Calculator Section -->
-    <section id="calculator" class="bg-[var(--pc-navy-2)] py-16 sm:py-24">
+    <section id="calculator" class="bg-[var(--mkt-bg)] py-16 sm:py-24">
       <div
         class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
       >
         <div class="mx-auto max-w-5xl">
           <!-- Calculator Card -->
           <div
-            class="bg-[var(--pc-card)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] overflow-hidden"
+            class="bg-[var(--mkt-card)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] overflow-hidden"
           >
             <!-- Calculator Header -->
-            <div class="bg-gradient-to-r from-[var(--pc-navy)] to-[var(--pc-navy-2)] p-6 sm:p-8">
+            <div class="bg-gradient-to-r from-[var(--mkt-bg-alt)] to-[var(--mkt-bg)] p-6 sm:p-8">
               <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--pc-cyan)]/10">
-                  <PieChart class="h-6 w-6 text-[var(--pc-cyan)]" />
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10">
+                  <PieChart class="h-6 w-6 text-[var(--mkt-teal)]" />
                 </div>
                 <div>
-                  <h2 class="text-xl sm:text-2xl font-bold text-[var(--pc-text)]">
+                  <h2 class="text-xl sm:text-2xl font-bold text-[var(--mkt-text)]">
                     Find Your Attribution Gap
                   </h2>
-                  <p class="text-[var(--pc-text-soft)] text-sm mt-1">
+                  <p class="text-[var(--mkt-text-soft)] text-sm mt-1">
                     Compare tracked vs. actual conversions
                   </p>
                 </div>
@@ -169,7 +169,7 @@ const faqContent: IndustryFAQContent = {
             <div class="p-6 sm:p-8">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label class="block text-sm font-medium text-[var(--pc-text)] mb-2" for="mailers">
+                  <label class="block text-sm font-medium text-[var(--mkt-text)] mb-2" for="mailers">
                     Monthly Mailers Sent
                   </label>
                   <input
@@ -178,13 +178,13 @@ const faqContent: IndustryFAQContent = {
                     type="number"
                     min="100"
                     max="100000"
-                    class="w-full rounded-lg border border-[var(--pc-border)] bg-[var(--pc-navy)] px-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                    class="w-full rounded-lg border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                   />
-                  <p class="text-xs text-[var(--pc-text-soft)] mt-1">Total pieces mailed per month</p>
+                  <p class="text-xs text-[var(--mkt-text-soft)] mt-1">Total pieces mailed per month</p>
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-[var(--pc-text)] mb-2" for="tracked">
+                  <label class="block text-sm font-medium text-[var(--mkt-text)] mb-2" for="tracked">
                     Tracked Conversions (QR/Promo Codes)
                   </label>
                   <input
@@ -193,13 +193,13 @@ const faqContent: IndustryFAQContent = {
                     type="number"
                     min="0"
                     max="10000"
-                    class="w-full rounded-lg border border-[var(--pc-border)] bg-[var(--pc-navy)] px-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                    class="w-full rounded-lg border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                   />
-                  <p class="text-xs text-[var(--pc-text-soft)] mt-1">Customers who used your tracking code</p>
+                  <p class="text-xs text-[var(--mkt-text-soft)] mt-1">Customers who used your tracking code</p>
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-[var(--pc-text)] mb-2" for="total">
+                  <label class="block text-sm font-medium text-[var(--mkt-text)] mb-2" for="total">
                     Total New Customers from Mailed Areas
                   </label>
                   <input
@@ -208,34 +208,34 @@ const faqContent: IndustryFAQContent = {
                     type="number"
                     min="0"
                     max="50000"
-                    class="w-full rounded-lg border border-[var(--pc-border)] bg-[var(--pc-navy)] px-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                    class="w-full rounded-lg border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] px-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                   />
-                  <p class="text-xs text-[var(--pc-text-soft)] mt-1">All customers in your mailed zip codes/neighborhoods</p>
+                  <p class="text-xs text-[var(--mkt-text-soft)] mt-1">All customers in your mailed zip codes/neighborhoods</p>
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-[var(--pc-text)] mb-2" for="revenue">
+                  <label class="block text-sm font-medium text-[var(--mkt-text)] mb-2" for="revenue">
                     Average Revenue Per Customer
                   </label>
                   <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--pc-text-soft)]">$</span>
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--mkt-text-soft)]">$</span>
                     <input
                       id="revenue"
                       v-model.number="inputs.averageRevenuePerCustomer"
                       type="number"
                       min="50"
                       max="100000"
-                      class="w-full rounded-lg border border-[var(--pc-border)] bg-[var(--pc-navy)] pl-8 pr-4 py-3 text-[var(--pc-text)] focus:border-[var(--pc-cyan)] focus:ring-2 focus:ring-[var(--pc-cyan)]/20 outline-none transition-colors"
+                      class="w-full rounded-lg border border-[var(--mkt-border)] bg-[var(--mkt-bg-alt)] pl-8 pr-4 py-3 text-[var(--mkt-text)] focus:border-[var(--mkt-teal)] focus:ring-2 focus:ring-[var(--mkt-teal)]/20 outline-none transition-colors"
                     />
                   </div>
-                  <p class="text-xs text-[var(--pc-text-soft)] mt-1">Average ticket or job value</p>
+                  <p class="text-xs text-[var(--mkt-text-soft)] mt-1">Average ticket or job value</p>
                 </div>
               </div>
 
               <div class="mt-8 flex justify-center">
                 <button
                   @click="calculate"
-                  class="inline-flex items-center gap-2 rounded-lg bg-[var(--pc-yellow)] px-8 py-4 text-lg font-semibold text-[var(--pc-navy)] shadow-md hover:opacity-90 cursor-pointer transition-colors"
+                  class="inline-flex items-center gap-2 rounded-lg bg-[var(--mkt-yellow)] px-8 py-4 text-lg font-semibold text-[var(--mkt-bg-alt)] shadow-md hover:opacity-90 cursor-pointer transition-colors"
                 >
                   <Calculator class="h-5 w-5" />
                   Calculate My Gap
@@ -264,44 +264,44 @@ const faqContent: IndustryFAQContent = {
             </div>
 
             <!-- Donut Chart Visualization -->
-            <div class="bg-[var(--pc-card)] rounded-[14px] shadow-[0_18px_45px_rgba(0,0,0,0.35)] border border-[var(--pc-border)] p-6 sm:p-8">
-              <h3 class="text-xl font-bold text-[var(--pc-text)] mb-6 flex items-center gap-2">
-                <PieChart class="h-6 w-6 text-[var(--pc-cyan)]" />
+            <div class="bg-[var(--mkt-card)] rounded-[14px] shadow-[var(--mkt-card-shadow-lg)] border border-[var(--mkt-border)] p-6 sm:p-8">
+              <h3 class="text-xl font-bold text-[var(--mkt-text)] mb-6 flex items-center gap-2">
+                <PieChart class="h-6 w-6 text-[var(--mkt-teal)]" />
                 Attribution Breakdown
               </h3>
 
               <div class="flex flex-col lg:flex-row items-center justify-center gap-12">
                 <div class="relative">
                   <svg width="240" height="240" viewBox="0 0 240 240" class="transform -rotate-90">
-                    <circle cx="120" cy="120" r="90" fill="none" stroke="var(--pc-border)" stroke-width="30" />
+                    <circle cx="120" cy="120" r="90" fill="none" stroke="var(--mkt-border)" stroke-width="30" />
                     <circle
                       cx="120" cy="120" r="90" fill="none"
-                      stroke="var(--pc-cyan)" stroke-width="30"
+                      stroke="var(--mkt-teal)" stroke-width="30"
                       :stroke-dasharray="`${(results.trackingCaptureRate / 100) * 565.48} 565.48`"
                     />
                   </svg>
                   <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <span class="text-4xl font-bold text-[var(--pc-text)]">{{ formatPercent(results.attributionGapPercentage) }}</span>
-                    <span class="text-sm text-[var(--pc-text-soft)]">Untracked</span>
+                    <span class="text-4xl font-bold text-[var(--mkt-text)]">{{ formatPercent(results.attributionGapPercentage) }}</span>
+                    <span class="text-sm text-[var(--mkt-text-soft)]">Untracked</span>
                   </div>
                 </div>
 
                 <div class="space-y-4">
                   <div class="flex items-center gap-4">
-                    <div class="w-5 h-5 rounded bg-[var(--pc-cyan)]"></div>
+                    <div class="w-5 h-5 rounded bg-[var(--mkt-teal)]"></div>
                     <div>
-                      <div class="font-semibold text-[var(--pc-text)]">Tracked Conversions</div>
-                      <div class="text-sm text-[var(--pc-text-muted)]">
+                      <div class="font-semibold text-[var(--mkt-text)]">Tracked Conversions</div>
+                      <div class="text-sm text-[var(--mkt-text-muted)]">
                         {{ formatNumber(inputs.trackedConversions) }} customers ({{ formatPercent(results.trackingCaptureRate) }})
                       </div>
-                      <div class="text-sm font-medium text-[var(--pc-cyan)]">{{ formatCurrency(results.attributedRevenue) }}</div>
+                      <div class="text-sm font-medium text-[var(--mkt-teal)]">{{ formatCurrency(results.attributedRevenue) }}</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-4">
-                    <div class="w-5 h-5 rounded bg-[var(--pc-border)]"></div>
+                    <div class="w-5 h-5 rounded bg-[var(--mkt-border)]"></div>
                     <div>
-                      <div class="font-semibold text-[var(--pc-text)]">Untracked Conversions</div>
-                      <div class="text-sm text-[var(--pc-text-muted)]">
+                      <div class="font-semibold text-[var(--mkt-text)]">Untracked Conversions</div>
+                      <div class="text-sm text-[var(--mkt-text-muted)]">
                         {{ formatNumber(results.untrackedConversions) }} customers ({{ formatPercent(results.attributionGapPercentage) }})
                       </div>
                       <div class="text-sm font-medium text-rose-400">{{ formatCurrency(results.unattributedRevenue) }}</div>
@@ -313,16 +313,16 @@ const faqContent: IndustryFAQContent = {
 
             <!-- Metrics Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div class="bg-[var(--pc-card)] rounded-xl p-6 border border-[var(--pc-cyan)]/30">
+              <div class="bg-[var(--mkt-card)] rounded-xl p-6 border border-[var(--mkt-teal)]/30">
                 <div class="flex items-center justify-between mb-2">
-                  <div class="text-sm font-medium text-[var(--pc-text-muted)]">Total Revenue</div>
-                  <DollarSign class="w-5 h-5 text-[var(--pc-cyan)]" />
+                  <div class="text-sm font-medium text-[var(--mkt-text-muted)]">Total Revenue</div>
+                  <DollarSign class="w-5 h-5 text-[var(--mkt-teal)]" />
                 </div>
-                <div class="text-2xl font-bold text-[var(--pc-text)]">{{ formatCurrency(results.totalActualRevenue) }}</div>
-                <div class="text-xs text-[var(--pc-text-soft)] mt-1">per month</div>
+                <div class="text-2xl font-bold text-[var(--mkt-text)]">{{ formatCurrency(results.totalActualRevenue) }}</div>
+                <div class="text-xs text-[var(--mkt-text-soft)] mt-1">per month</div>
               </div>
 
-              <div class="bg-[var(--pc-card)] rounded-xl p-6 border border-rose-500/30">
+              <div class="bg-[var(--mkt-card)] rounded-xl p-6 border border-rose-500/30">
                 <div class="flex items-center justify-between mb-2">
                   <div class="text-sm font-medium text-rose-400">Unattributed</div>
                   <AlertCircle class="w-5 h-5 text-rose-400" />
@@ -331,7 +331,7 @@ const faqContent: IndustryFAQContent = {
                 <div class="text-xs text-rose-400/70 mt-1">revenue invisible</div>
               </div>
 
-              <div class="bg-[var(--pc-card)] rounded-xl p-6 border border-purple-500/30">
+              <div class="bg-[var(--mkt-card)] rounded-xl p-6 border border-purple-500/30">
                 <div class="flex items-center justify-between mb-2">
                   <div class="text-sm font-medium text-purple-400">True Conversion Rate</div>
                   <Users class="w-5 h-5 text-purple-400" />
@@ -340,7 +340,7 @@ const faqContent: IndustryFAQContent = {
                 <div class="text-xs text-purple-400/70 mt-1">of mailers convert</div>
               </div>
 
-              <div class="bg-[var(--pc-card)] rounded-xl p-6 border border-emerald-500/30">
+              <div class="bg-[var(--mkt-card)] rounded-xl p-6 border border-emerald-500/30">
                 <div class="flex items-center justify-between mb-2">
                   <div class="text-sm font-medium text-emerald-400">Revenue Per Mailer</div>
                   <TrendingUp class="w-5 h-5 text-emerald-400" />
@@ -351,44 +351,44 @@ const faqContent: IndustryFAQContent = {
             </div>
 
             <!-- The Problem Explained -->
-            <div class="bg-[var(--pc-navy)] rounded-[14px] border border-[var(--pc-border)] p-6 sm:p-8">
-              <h3 class="text-lg font-bold text-[var(--pc-text)] mb-4">Why Traditional Tracking Fails</h3>
+            <div class="bg-[var(--mkt-bg-alt)] rounded-[14px] border border-[var(--mkt-border)] p-6 sm:p-8">
+              <h3 class="text-lg font-bold text-[var(--mkt-text)] mb-4">Why Traditional Tracking Fails</h3>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="flex items-start gap-3">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pc-border)] text-[var(--pc-text-muted)] font-bold text-sm">1</div>
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-border)] text-[var(--mkt-text-muted)] font-bold text-sm">1</div>
                   <div>
-                    <div class="font-medium text-[var(--pc-text)]">Customer Sees Mailer</div>
-                    <p class="text-sm text-[var(--pc-text-muted)] mt-1">They're interested but don't scan the QR code</p>
+                    <div class="font-medium text-[var(--mkt-text)]">Customer Sees Mailer</div>
+                    <p class="text-sm text-[var(--mkt-text-muted)] mt-1">They're interested but don't scan the QR code</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-3">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pc-border)] text-[var(--pc-text-muted)] font-bold text-sm">2</div>
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-border)] text-[var(--mkt-text-muted)] font-bold text-sm">2</div>
                   <div>
-                    <div class="font-medium text-[var(--pc-text)]">They Google Your Name</div>
-                    <p class="text-sm text-[var(--pc-text-muted)] mt-1">Or call directly, or visit your website</p>
+                    <div class="font-medium text-[var(--mkt-text)]">They Google Your Name</div>
+                    <p class="text-sm text-[var(--mkt-text-muted)] mt-1">Or call directly, or visit your website</p>
                   </div>
                 </div>
                 <div class="flex items-start gap-3">
                   <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 font-bold text-sm">?</div>
                   <div>
-                    <div class="font-medium text-[var(--pc-text)]">Attribution Lost</div>
-                    <p class="text-sm text-[var(--pc-text-muted)] mt-1">No way to connect this customer to your mailer</p>
+                    <div class="font-medium text-[var(--mkt-text)]">Attribution Lost</div>
+                    <p class="text-sm text-[var(--mkt-text-muted)] mt-1">No way to connect this customer to your mailer</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- CTA Section -->
-            <div class="bg-gradient-to-r from-[var(--pc-navy)] to-[var(--pc-navy-2)] rounded-[14px] border border-[var(--pc-cyan)]/20 p-8 sm:p-10 text-center">
-              <h3 class="text-2xl sm:text-3xl font-bold text-[var(--pc-text)] mb-4">
+            <div class="bg-gradient-to-r from-[var(--mkt-bg-alt)] to-[var(--mkt-bg)] rounded-[14px] border border-[var(--mkt-teal)]/20 p-8 sm:p-10 text-center">
+              <h3 class="text-2xl sm:text-3xl font-bold text-[var(--mkt-text)] mb-4">
                 Close the Gap with PostCanary
               </h3>
-              <p class="text-[var(--pc-text-muted)] max-w-2xl mx-auto mb-8">
+              <p class="text-[var(--mkt-text-muted)] max-w-2xl mx-auto mb-8">
                 PostCanary uses deterministic address matching to connect every customer to the mailer they received. No more guessing—see your actual attribution in minutes.
               </p>
               <button
                 @click="onGetStarted"
-                class="inline-flex items-center gap-2 rounded-lg bg-[var(--pc-yellow)] px-8 py-4 text-lg font-semibold text-[var(--pc-navy)] shadow-md hover:opacity-90 cursor-pointer transition-colors"
+                class="inline-flex items-center gap-2 rounded-lg bg-[var(--mkt-yellow)] px-8 py-4 text-lg font-semibold text-[var(--mkt-bg-alt)] shadow-md hover:opacity-90 cursor-pointer transition-colors"
               >
                 <Target class="h-5 w-5" />
                 Get Started Free
@@ -400,7 +400,6 @@ const faqContent: IndustryFAQContent = {
     </section>
 
     <IndustryFAQ :content="faqContent" />
-    <HomeFooter />
   </div>
 </template>
 

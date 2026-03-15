@@ -1,8 +1,10 @@
 <!-- src/components/home/HomePricing.vue -->
 <script setup lang="ts">
 import { ref } from "vue";
+import SectionWrapper from "@/components/marketing/SectionWrapper.vue";
+import SectionHeading from "@/components/marketing/SectionHeading.vue";
+import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 import check from "@/assets/home/check-icon.svg?url";
-import rightDown from "@/assets/home/right-down.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
@@ -27,22 +29,22 @@ function onRecommendations(rec: {
 
 function badgeFor(
   tierId: PlanCode,
-): { label: string; color: "cyan" | "yellow" } | null {
+): { label: string; variant: "teal" | "navy" } | null {
   if (!recommendations.value) return null;
   const { ongoingPlanId, fastStartPlanId } = recommendations.value;
   const isOngoing = ongoingPlanId === tierId;
   const isFastStart = fastStartPlanId === tierId;
 
-  if (isOngoing && isFastStart) return { label: "Recommended", color: "cyan" };
-  if (isOngoing && !isFastStart) return { label: "Best for ongoing", color: "cyan" };
-  if (!isOngoing && isFastStart) return { label: "Best for fast start", color: "yellow" };
+  if (isOngoing && isFastStart) return { label: "Recommended", variant: "teal" };
+  if (isOngoing && !isFastStart) return { label: "Best for ongoing", variant: "teal" };
+  if (!isOngoing && isFastStart) return { label: "Best for fast start", variant: "navy" };
   return null;
 }
 
 type Feature = { icon: string; label: string };
 
 type Tier = {
-  id: PlanCode; // <-- was string
+  id: PlanCode;
   name: string;
   price: string;
   perMonthLabel: string;
@@ -60,8 +62,6 @@ const commonFeatures: Feature[] = [
   { icon: check, label: "Demographics" },
 ];
 
-
-// Public tiers – keep these in sync with Pricing.xlsx/backend limits
 const tiers: Tier[] = [
   {
     id: "INSIGHT",
@@ -108,7 +108,6 @@ const onGetStartedClick = async (tierId: PlanCode) => {
     return;
   }
 
-  // If user already has "free" or "active", just go to dashboard
   if (auth.isSubscribed) {
     router.push("/dashboard");
     return;
@@ -144,50 +143,35 @@ const onGetStartedClick = async (tierId: PlanCode) => {
 </script>
 
 <template>
-  <section id="pricing" class="bg-[var(--pc-navy)] py-16 sm:py-24 lg:py-28">
-    <div
-      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col items-center gap-10 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20"
-    >
-      <!-- Heading / copy (centered) -->
-      <div class="max-w-3xl text-center">
-        <span
-          class="inline-flex items-center rounded-full bg-[var(--pc-cyan)] px-4 py-1 text-[12px] sm:text-[13px] font-semibold text-[var(--pc-navy)]"
-        >
-          PLANS &amp; PRICING
-        </span>
+  <SectionWrapper bg="alt" id="pricing">
+    <SectionHeading
+      badge="Pricing"
+      heading="Plans that scale with your mail volume."
+      subheading="Full access to every feature on every plan. Pick the volume that fits."
+    />
 
-        <h2
-          class="mt-6 sm:mt-8 font-normal text-[var(--pc-text)] tracking-[-0.04em] text-[34px] leading-10 sm:text-[48px] sm:leading-[54px] md:text-[64px] md:leading-[72px] xl:text-[70px] xl:leading-20"
-        >
-          Flexible Plans for
-          <br />
-          Teams of Every Size
-        </h2>
-
-        <p
-          class="mt-6 sm:mt-8 mx-auto max-w-[520px] text-[16px] sm:text-[20px] leading-[22px] sm:leading-[24.4px] text-[var(--pc-text-muted)]"
-        >
-          Simple, transparent pricing. Scale only when you need to.
-        </p>
-      </div>
-
-      <!-- Calculator -->
+    <!-- Calculator -->
+    <AnimatedEntry>
       <PricingCalculator @recommendations="onRecommendations" />
+    </AnimatedEntry>
 
-      <!-- Cards row -->
-      <div class="w-full">
-        <div
-          class="flex w-full flex-col gap-6 sm:gap-8 sm:flex-row sm:flex-wrap lg:flex-nowrap justify-center"
+    <!-- Cards row -->
+    <div class="mt-10 sm:mt-12">
+      <div
+        class="flex w-full flex-col gap-6 sm:gap-8 sm:flex-row sm:flex-wrap lg:flex-nowrap justify-center"
+      >
+        <AnimatedEntry
+          v-for="(tier, i) in tiers"
+          :key="tier.id"
+          :delay="i * 100"
+          class="w-full max-w-[360px]"
         >
-          <!-- Paid tiers -->
           <article
-            v-for="tier in tiers"
-            :key="tier.id"
-            class="relative flex w-full max-w-[360px] flex-col rounded-[14px] border bg-[var(--pc-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-300"
+            class="relative flex h-full flex-col rounded-[var(--mkt-card-radius)] border bg-[var(--mkt-card)] px-6 sm:px-8 pt-8 sm:pt-10 pb-8 shadow-[var(--mkt-card-shadow)] hover:shadow-[var(--mkt-card-shadow-lg)] transition-all duration-300"
             :class="[
               badgeFor(tier.id)
-                ? 'ring-2 ring-[var(--pc-cyan)] border-transparent'
-                : 'border-[var(--pc-border)]',
+                ? 'ring-2 ring-[var(--mkt-teal)] border-transparent'
+                : 'border-[var(--mkt-border)]',
             ]"
           >
             <!-- Recommendation badge -->
@@ -197,48 +181,49 @@ const onGetStartedClick = async (tierId: PlanCode) => {
                 :key="badgeFor(tier.id)!.label"
                 class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-0.5 text-[11px] sm:text-[12px] font-semibold"
                 :class="
-                  badgeFor(tier.id)!.color === 'cyan'
-                    ? 'bg-[var(--pc-cyan)] text-[var(--pc-navy)]'
-                    : 'bg-[var(--pc-yellow)] text-[var(--pc-navy)]'
+                  badgeFor(tier.id)!.variant === 'teal'
+                    ? 'bg-[var(--mkt-teal)] text-white'
+                    : 'bg-[var(--mkt-navy)] text-white'
                 "
               >
                 {{ badgeFor(tier.id)!.label }}
               </span>
             </Transition>
+
             <div>
               <h3
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--pc-text)] uppercase"
+                class="text-[18px] sm:text-[20px] font-bold tracking-[0.02em] text-[var(--mkt-text)] uppercase"
               >
                 {{ tier.name }}
               </h3>
 
-              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
+              <div class="mt-4 h-px w-full bg-[var(--mkt-border)]" />
 
               <div class="mt-6 flex items-baseline gap-3">
                 <span
-                  class="text-[40px] leading-[46px] sm:text-[52px] sm:leading-[60px] xl:text-[60px] xl:leading-[68px] font-medium tracking-[-0.04em] text-[var(--pc-text)]"
+                  class="text-[40px] leading-[46px] sm:text-[48px] sm:leading-[56px] font-semibold tracking-[-0.04em] text-[var(--mkt-text)]"
                 >
                   {{ tier.price }}
                 </span>
                 <span
-                  class="text-[16px] sm:text-[18px] font-bold text-[var(--pc-cyan)]"
+                  class="text-[16px] sm:text-[18px] font-semibold text-[var(--mkt-teal)]"
                 >
                   {{ tier.perMonthLabel }}
                 </span>
               </div>
 
-              <div class="mt-4 h-px w-full bg-[var(--pc-border)]" />
+              <div class="mt-4 h-px w-full bg-[var(--mkt-border)]" />
 
               <p
                 v-if="tier.includedLabel"
-                class="mt-5 rounded-lg bg-[var(--pc-cyan)]/10 px-4 py-3 text-center text-[18px] sm:text-[22px] font-semibold tracking-[-0.02em] text-[var(--pc-cyan)]"
+                class="mt-5 rounded-lg bg-[var(--mkt-teal)]/8 px-4 py-3 text-center text-[16px] sm:text-[18px] font-semibold tracking-[-0.02em] text-[var(--mkt-teal)]"
               >
                 {{ tier.includedLabel }}
               </p>
             </div>
 
             <ul
-              class="mt-6 sm:mt-8 text-[16px] sm:text-[20px] leading-9 text-[var(--pc-text-muted)]"
+              class="mt-6 sm:mt-8 text-[15px] sm:text-[17px] leading-9 text-[var(--mkt-text-muted)]"
             >
               <li
                 v-for="feature in tier.features"
@@ -248,17 +233,17 @@ const onGetStartedClick = async (tierId: PlanCode) => {
                 <img
                   :src="feature.icon"
                   alt=""
-                  class="mt-2 h-[15px] w-[15px] shrink-0"
+                  class="mt-2.5 h-[14px] w-[14px] shrink-0"
                 />
                 <span>{{ feature.label }}</span>
               </li>
             </ul>
 
             <div class="mt-auto">
-              <div class="mt-6 h-px w-full bg-[var(--pc-border)]" />
+              <div class="mt-6 h-px w-full bg-[var(--mkt-border)]" />
               <p
                 v-if="tier.perMailerLabel"
-                class="mt-1 text-[14px] sm:text-[16px] text-[var(--pc-text-soft)]"
+                class="mt-1 text-[14px] sm:text-[16px] text-[var(--mkt-text-soft)]"
               >
                 {{ tier.perMailerLabel }}
               </p>
@@ -267,32 +252,29 @@ const onGetStartedClick = async (tierId: PlanCode) => {
                 type="button"
                 @click="onGetStartedClick(tier.id)"
                 :disabled="starterBusy"
-                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-3 rounded-md bg-[var(--pc-yellow)] px-6 py-3 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-navy)] hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                class="mt-5 sm:mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--mkt-navy)] px-6 py-3 text-[15px] sm:text-[16px] font-semibold text-white hover:bg-[var(--mkt-navy)]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 <span v-if="!starterBusy || activeTierId !== tier.id">
                   Get Started
                 </span>
                 <span v-else>Redirecting…</span>
-                <img
-                  :src="rightDown"
-                  alt=""
-                  class="h-6 sm:h-[30px] w-6 sm:w-[30px]"
-                />
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
               </button>
             </div>
           </article>
-
-        </div>
-
-        <!-- bottom note -->
-        <p
-          class="mt-8 sm:mt-10 text-center text-[14px] sm:text-[18px] leading-5 sm:leading-[22px] text-[var(--pc-cyan)]"
-        >
-          No hidden fees. Upgrade anytime.
-        </p>
+        </AnimatedEntry>
       </div>
+
+      <!-- Bottom note -->
+      <p
+        class="mt-8 sm:mt-10 text-center text-[14px] sm:text-[16px] text-[var(--mkt-teal)] font-medium"
+      >
+        No setup fees. No contracts. Upgrade or cancel anytime.
+      </p>
     </div>
-  </section>
+  </SectionWrapper>
 </template>
 
 <style scoped>

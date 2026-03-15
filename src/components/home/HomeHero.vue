@@ -1,260 +1,145 @@
 <!-- src/components/home/HomeHero.vue -->
 <script setup lang="ts">
 import HeroDemoAnimation from "@/components/home/HeroDemoAnimation.vue";
-import landingLogo from "@/assets/postcanary-white.png";
-
-import curve from "@/assets/home/curve.svg?url";
-import rightDown from "@/assets/home/right-down.svg?url";
+import CTAButton from "@/components/marketing/CTAButton.vue";
 import { useAuthStore } from "@/stores/auth";
-import { useDemoStore } from "@/stores/demo";
 import { useRouter } from "vue-router";
-import { BRAND } from "@/config/brand";
 
 const router = useRouter();
 const auth = useAuthStore();
-const demo = useDemoStore();
 
-/**
- * Top-right "Sign Up" button in the navbar.
- * - If not authenticated → open modal (default to signup view)
- * - If authenticated      → send them to the dashboard
- */
-const onNavSignUpLoginClick = () => {
+const onStartTracking = () => {
   if (!auth.isAuthenticated) {
     auth.openLoginModal("/dashboard", "signup");
     return;
   }
-
-  // Already logged in → go to dashboard
   window.location.href = "/dashboard";
 };
 
-/**
- * Hero "Get Started" button:
- * Prefer pushing user down to pricing section (#pricing).
- * If pricing section is not mounted (different route), fall back to routing with hash.
- */
-const onHeroGetStarted = () => {
-  const el = document.getElementById("pricing");
+const onSeeHowItWorks = () => {
+  const el = document.getElementById("features");
   if (el) {
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
-
-  // Fallback: if user is on some other route and pricing is on "/"
-  router.push({ path: "/", hash: "#pricing" }).catch(() => {
-    /* ignore duplicate nav */
-  });
+  router.push({ path: "/", hash: "#features" }).catch(() => {});
 };
+
+const steps = [
+  { number: "01", text: "Upload your mailing list" },
+  { number: "02", text: "Connect your conversion data" },
+  { number: "03", text: "Get attribution and campaign guidance automatically" },
+];
 </script>
 
 <template>
-  <section
-    class="bg-[linear-gradient(180deg,var(--pc-navy)_0%,var(--pc-navy-2)_100%)] min-h-[980px] flex flex-col pt-0"
-  >
-    <!-- NAVBAR -->
-    <header
-      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] items-center justify-between px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pt-0 pb-1"
-    >
-      <!-- logo -->
-      <div class="flex items-center gap-2">
-        <img
-          :src="landingLogo"
-          :alt="BRAND.name"
-          class="h-[clamp(220px,24vw,320px)] w-auto -my-[clamp(60px,6.5vw,90px)]"
-        />
-      </div>
-
-      <!-- top-right CTAs -->
-      <div class="flex items-center gap-2 sm:gap-3">
-        <button
-          type="button"
-          class="whitespace-nowrap rounded-lg bg-[var(--pc-yellow)] px-3 sm:px-4 md:px-6 py-1 sm:py-1.5 md:py-2 text-[13px] sm:text-[16px] md:text-[20px] font-semibold text-[var(--pc-navy)] shadow-sm hover:opacity-90 cursor-pointer"
-          @click="onNavSignUpLoginClick"
-        >
-          Sign Up
-        </button>
-
-        <!-- Book a Demo -> Calendly modal -->
-        <button
-          type="button"
-          class="hidden md:inline-flex whitespace-nowrap rounded-lg border border-[var(--pc-cyan)] px-3 sm:px-4 md:px-6 py-1 sm:py-1.5 md:py-2 text-[13px] sm:text-[16px] md:text-[20px] font-semibold text-[var(--pc-cyan)] shadow-sm hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] cursor-pointer"
-          @click="demo.open()"
-        >
-          Book a Demo
-        </button>
-      </div>
-    </header>
-
-    <!-- HERO ROW -->
+  <section class="relative overflow-hidden bg-[var(--mkt-bg)] pt-8 sm:pt-16 pb-16 sm:pb-28">
+    <!-- Subtle background gradient -->
     <div
-      class="mx-auto flex w-full max-w-[1660px] 2xl:max-w-[1760px] flex-col md:flex-row md:items-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 2xl:px-20 pb-16 sm:pb-24 pt-0 flex-1"
+      class="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(71,191,169,0.08),transparent)]"
+    />
+
+    <div
+      class="relative mx-auto flex w-full max-w-[1440px] flex-col md:flex-row md:items-center md:justify-between gap-12 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16"
     >
-      <!-- LEFT COLUMN -->
-      <div class="w-full md:w-[52%] max-w-[780px] text-center">
-        <h1
-          class="font-normal text-[var(--pc-text)] tracking-[-0.04em] text-[34px] sm:text-[56px] xl:text-[78px] leading-10 sm:leading-16 xl:leading-[90px]"
+      <!-- Left column -->
+      <div class="w-full md:w-[52%] max-w-[680px] text-center md:text-left">
+        <!-- Eyebrow -->
+        <div
+          v-motion
+          :initial="{ opacity: 0, y: 20 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 500 } }"
         >
-          Finally you can see how your direct mail performs
+          <span
+            class="inline-flex items-center rounded-full bg-[var(--mkt-teal)]/10 px-4 py-1.5 text-[13px] font-semibold tracking-wide text-[var(--mkt-teal)]"
+          >
+            Direct Mail Performance Platform
+          </span>
+        </div>
+
+        <!-- Headline -->
+        <h1
+          class="mt-6 sm:mt-8 font-semibold text-[var(--mkt-text)] tracking-[-0.04em] text-[34px] sm:text-[52px] xl:text-[68px] leading-[1.08]"
+          v-motion
+          :initial="{ opacity: 0, y: 30 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 80 } }"
+        >
+          Direct mail attribution and optimization in one platform.
         </h1>
 
+        <!-- Sub -->
         <p
-          class="mt-6 text-[15px] sm:text-[18px] leading-6 sm:leading-7 font-semibold text-[var(--pc-cyan)]"
+          class="mt-5 sm:mt-7 text-[16px] sm:text-[19px] leading-[1.65] text-[var(--mkt-text-muted)] max-w-[560px] mx-auto md:mx-0"
+          v-motion
+          :initial="{ opacity: 0, y: 20 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 160 } }"
         >
-          QR codes and promo codes only track the people who use them. That's 10-30% of your direct mail conversions, at best. PostCanary tracks the rest.
+          See every conversion your mail drives. Get data-backed guidance on
+          where to spend next. No promo codes. No spreadsheets. No guessing.
         </p>
 
-        <!-- Mobile-only hero animation -->
-        <div class="mt-6 flex justify-center md:hidden">
+        <!-- Steps -->
+        <div
+          class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-center md:items-start"
+          v-motion
+          :initial="{ opacity: 0, y: 20 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 240 } }"
+        >
           <div
-            class="relative w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
+            v-for="step in steps"
+            :key="step.number"
+            class="flex items-center gap-3"
           >
-            <HeroDemoAnimation />
-          </div>
-        </div>
-
-        <!-- 01 / 02 / 03 strip -->
-        <!-- Desktop / tablet: horizontal circles + curves + labels -->
-        <div class="mt-8 sm:mt-10 hidden md:flex flex-col items-center gap-5">
-          <div class="flex items-center">
-            <!-- 01 -->
-            <div
-              class="flex h-10 w-10 sm:h-[45px] sm:w-[45px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
+            <span
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10 text-[12px] font-bold text-[var(--mkt-teal)]"
             >
-              <span
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                01
-              </span>
-            </div>
-
-            <img :src="curve" alt="" class="h-10 sm:h-[45px] w-auto" />
-
-            <!-- 02 -->
-            <div
-              class="flex h-10 w-10 sm:h-[45px] sm:w-[45px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
-            >
-              <span
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                02
-              </span>
-            </div>
-
-            <img :src="curve" alt="" class="h-10 sm:h-[45px] w-auto" />
-
-            <!-- 03 -->
-            <div
-              class="flex h-10 w-10 sm:h-[45px] sm:w-[45px] shrink-0 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)]"
-            >
-              <span
-                class="text-[18px] sm:text-[20px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                03
-              </span>
-            </div>
-          </div>
-
-          <div
-            class="grid w-full max-w-[640px] grid-cols-3 gap-2 text-[16px] sm:text-[18px] font-semibold text-[var(--pc-text)]"
-          >
-            <div class="relative group text-center md:text-left cursor-pointer">
-              <span>Sign Up</span>
-            </div>
-
-            <p class="text-center md:text-left">Upload Your CSV</p>
-            <p class="text-center md:text-left">Review KPIs &amp; Trends</p>
-          </div>
-        </div>
-
-        <!-- Mobile: vertical stepper with circles + dashed connector -->
-        <div class="mt-8 flex flex-col gap-4 md:hidden">
-          <!-- Step 1 -->
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)] shrink-0"
-            >
-              <span
-                class="text-[18px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                01
-              </span>
-            </div>
-            <div class="relative group text-left">
-              <span class="text-[16px] font-semibold text-[var(--pc-text)]">
-                Sign Up
-              </span>
-            </div>
-          </div>
-
-          <!-- connector -->
-          <div class="ml-5 h-6 border-l border-dashed border-[var(--pc-cyan)]" />
-
-          <!-- Step 2 -->
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)] shrink-0"
-            >
-              <span
-                class="text-[18px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                02
-              </span>
-            </div>
-            <p class="text-[16px] font-semibold text-[var(--pc-text)]">
-              Upload Your CSV
-            </p>
-          </div>
-
-          <!-- connector -->
-          <div class="ml-5 h-6 border-l border-dashed border-[var(--pc-cyan)]" />
-
-          <!-- Step 3 -->
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--pc-cyan)] bg-[var(--pc-navy-2)] shadow-[0_4px_14px_rgba(0,0,0,0.35)] shrink-0"
-            >
-              <span
-                class="text-[18px] font-bold tracking-[0.27px] text-[var(--pc-text)]"
-              >
-                03
-              </span>
-            </div>
-            <p class="text-[16px] font-semibold text-[var(--pc-text)]">
-              Review KPIs &amp; Trends
-            </p>
+              {{ step.number }}
+            </span>
+            <span class="text-[15px] sm:text-[16px] font-medium text-[var(--mkt-text)]">
+              {{ step.text }}
+            </span>
           </div>
         </div>
 
         <!-- CTAs -->
-        <div class="mt-8 sm:mt-10 flex flex-col items-center gap-3">
-          <!-- Book a Demo (mobile only) -->
-          <button
-            type="button"
-            @click="demo.open()"
-            class="md:hidden inline-flex items-center rounded-lg border border-[var(--pc-cyan)] px-6 py-3 text-[18px] font-semibold text-[var(--pc-cyan)] shadow-md hover:bg-[var(--pc-cyan)] hover:text-[var(--pc-navy)] cursor-pointer"
-          >
-            Book a Demo
-          </button>
+        <div
+          class="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center md:items-start gap-3"
+          v-motion
+          :initial="{ opacity: 0, y: 20 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 320 } }"
+        >
+          <CTAButton size="lg" @click="onStartTracking">
+            Start Tracking
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </CTAButton>
 
-          <!-- Get Started -->
-          <button
-            type="button"
-            @click="onHeroGetStarted"
-            class="inline-flex items-center gap-3 rounded-lg bg-[var(--pc-yellow)] px-6 sm:px-8 py-3 sm:py-3.5 text-[18px] font-semibold text-[var(--pc-navy)] shadow-md hover:opacity-90 cursor-pointer"
-          >
-            Get Started
-            <img :src="rightDown" alt="" class="h-[26px] sm:h-28px" />
-          </button>
+          <CTAButton variant="outline" size="lg" @click="onSeeHowItWorks">
+            See How It Works
+          </CTAButton>
         </div>
+
+        <!-- Proof line -->
+        <p
+          class="mt-6 sm:mt-8 text-[13px] sm:text-[14px] text-[var(--mkt-text-soft)] max-w-[480px] mx-auto md:mx-0"
+          v-motion
+          :initial="{ opacity: 0 }"
+          :visible-once="{ opacity: 1, transition: { duration: 600, delay: 500 } }"
+        >
+          See 3-5x more attributed conversions than QR code tracking alone.
+        </p>
       </div>
 
-      <!-- RIGHT COLUMN: hero animation card (desktop/tablet only) -->
+      <!-- Right column: hero animation card -->
       <div
-        class="hidden md:flex w-full md:w-[48%] justify-center md:justify-end mb-4 md:mb-0"
+        class="w-full md:w-[48%] flex justify-center md:justify-end"
+        v-motion
+        :initial="{ opacity: 0, x: 40 }"
+        :visible-once="{ opacity: 1, x: 0, transition: { duration: 700, delay: 300 } }"
       >
         <div
-          class="relative w-full max-w-[802px] rounded-2xl bg-[var(--pc-card)] shadow-[0_24px_70px_rgba(0,0,0,0.45)]"
+          class="relative w-full max-w-[700px] rounded-2xl bg-[var(--mkt-card)] border border-[var(--mkt-border)] shadow-[var(--mkt-card-shadow-lg)]"
         >
           <HeroDemoAnimation />
         </div>

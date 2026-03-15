@@ -50,17 +50,17 @@ onBeforeUnmount(() => {
 
       <!-- Modal panel -->
       <div
-        class="relative z-10 w-full max-w-2xl mx-4 rounded-2xl bg-[var(--pc-card)] border border-[var(--pc-border)] shadow-[0_24px_70px_rgba(0,0,0,0.45)] flex flex-col"
+        class="relative z-10 w-full max-w-2xl mx-4 rounded-2xl bg-[var(--mkt-card)] border border-[var(--mkt-border)] shadow-[0_24px_70px_rgba(0,0,0,0.45)] flex flex-col"
         style="height: min(90vh, 760px);"
       >
         <!-- Header -->
         <div class="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
-          <h2 class="text-[20px] font-semibold text-[var(--pc-text)]">
+          <h2 class="text-[20px] font-semibold text-[var(--mkt-text)]">
             Book a Demo
           </h2>
           <button
             type="button"
-            class="text-[var(--pc-text-muted)] hover:text-[var(--pc-text)] text-2xl leading-none cursor-pointer"
+            class="text-[var(--mkt-text-muted)] hover:text-[var(--mkt-text)] text-2xl leading-none cursor-pointer"
             @click="close()"
             aria-label="Close"
           >
@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
         <!-- Loading indicator (shown until iframe loads) -->
         <div
           v-if="!iframeLoaded"
-          class="flex items-center justify-center py-20 text-[var(--pc-text-muted)] text-sm"
+          class="flex items-center justify-center py-20 text-[var(--mkt-text-muted)] text-sm"
         >
           Loading scheduling widget...
         </div>

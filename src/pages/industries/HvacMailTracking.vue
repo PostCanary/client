@@ -3,8 +3,6 @@
 import HomeVisualize from "@/components/home/HomeVisualize.vue";
 import HomeHowItWorks from "@/components/home/HomeHowItWorks.vue";
 import HomePricing from "@/components/home/HomePricing.vue";
-import HomeFooter from "@/components/home/HomeFooter.vue";
-
 import IndustryHero from "@/components/industry/IndustryHero.vue";
 import IndustryPainPoints from "@/components/industry/IndustryPainPoints.vue";
 import IndustryFAQ from "@/components/industry/IndustryFAQ.vue";
@@ -107,7 +105,7 @@ const faqContent: IndustryFAQContent = {
 </script>
 
 <template>
-  <div class="min-h-screen">
+  <div>
     <IndustryHero :content="heroContent" />
     <IndustryPainPoints :content="painPointsContent" />
     <HomeVisualize />
@@ -115,6 +113,5 @@ const faqContent: IndustryFAQContent = {
     <IndustryTestimonials />
     <HomePricing />
     <IndustryFAQ :content="faqContent" />
-    <HomeFooter />
   </div>
 </template>

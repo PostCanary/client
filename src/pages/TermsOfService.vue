@@ -261,16 +261,16 @@ import { BRAND } from "@/config/brand";
 <style scoped>
 .terms-page {
   min-height: 100vh;
-  background: var(--pc-navy);
+  background: var(--mkt-bg-alt);
   padding: 40px 20px;
-  color: var(--pc-text);
+  color: var(--mkt-text);
 }
 
 .terms-container {
   max-width: 800px;
   margin: 0 auto;
-  background: var(--pc-card);
-  border: 1px solid var(--pc-border);
+  background: var(--mkt-card);
+  border: 1px solid var(--mkt-border);
   border-radius: 12px;
   padding: 48px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -279,19 +279,19 @@ import { BRAND } from "@/config/brand";
 .terms-title {
   font-size: 36px;
   font-weight: 700;
-  color: var(--pc-text);
+  color: var(--mkt-text);
   margin-bottom: 8px;
 }
 
 .terms-updated {
   font-size: 14px;
-  color: var(--pc-text-soft);
+  color: var(--mkt-text-soft);
   margin-bottom: 32px;
 }
 
 .terms-content {
   line-height: 1.7;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
 }
 
 .terms-section {
@@ -301,7 +301,7 @@ import { BRAND } from "@/config/brand";
 .terms-section h2 {
   font-size: 24px;
   font-weight: 600;
-  color: var(--pc-text);
+  color: var(--mkt-text);
   margin-bottom: 12px;
   margin-top: 0;
 }
@@ -309,7 +309,7 @@ import { BRAND } from "@/config/brand";
 .terms-section p {
   font-size: 16px;
   margin-bottom: 12px;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
 }
 
 .terms-section ul {
@@ -320,7 +320,7 @@ import { BRAND } from "@/config/brand";
 
 .terms-section li {
   font-size: 16px;
-  color: var(--pc-text-muted);
+  color: var(--mkt-text-muted);
   margin-bottom: 8px;
 }
 
