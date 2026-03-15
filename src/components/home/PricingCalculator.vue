@@ -156,33 +156,12 @@ watch(
 
     <!-- Months of historical data slider -->
     <div class="mb-6 sm:mb-8">
-      <div class="flex items-baseline justify-between mb-2">
-        <div class="flex items-center gap-1.5">
-          <label
-            class="text-[13px] sm:text-[15px] font-semibold text-[var(--mkt-text-muted)]"
-          >
-            Months of Historical Data
-          </label>
-          <div class="relative group">
-            <button
-              type="button"
-              class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--mkt-teal)] text-white text-[10px] font-bold leading-none cursor-help hover:opacity-80 transition-opacity"
-              aria-label="Why upload historical data?"
-            >
-              i
-            </button>
-            <div
-              class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 rounded-lg bg-[var(--mkt-heading)] text-white text-[12px] leading-relaxed shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 z-10"
-            >
-              We recommend all new subscribers upload historical direct mail
-              campaigns. This will pre-populate your dashboard with the most
-              relevant information so you can make informed decisions today!
-              <div
-                class="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-[6px] border-x-transparent border-t-[6px] border-t-[var(--mkt-heading)]"
-              ></div>
-            </div>
-          </div>
-        </div>
+      <div class="flex items-baseline justify-between mb-1">
+        <label
+          class="text-[13px] sm:text-[15px] font-semibold text-[var(--mkt-text-muted)]"
+        >
+          Months of Historical Data
+        </label>
         <span
           class="text-[15px] sm:text-[18px] font-bold text-[var(--mkt-teal)] tabular-nums"
         >
@@ -190,6 +169,10 @@ watch(
           {{ monthsBackData === 1 ? "month" : "months" }}
         </span>
       </div>
+      <p class="text-[11px] sm:text-[12px] text-[var(--mkt-text-soft)] mb-2">
+        We recommend uploading historical direct mail campaigns to pre-populate
+        your dashboard so you can make informed decisions today!
+      </p>
       <input
         type="range"
         :min="0"
