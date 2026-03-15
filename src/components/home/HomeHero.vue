@@ -88,14 +88,14 @@ const steps = [
           <div
             v-for="step in steps"
             :key="step.number"
-            class="flex items-center gap-3"
+            class="flex items-start gap-3"
           >
             <span
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10 text-[12px] font-bold text-[var(--mkt-teal)]"
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10 text-[12px] font-bold text-[var(--mkt-teal)] mt-0.5"
             >
               {{ step.number }}
             </span>
-            <span class="text-[15px] sm:text-[16px] font-medium text-[var(--mkt-text)]">
+            <span class="text-[15px] sm:text-[16px] font-medium text-[var(--mkt-text)] text-left">
               {{ step.text }}
             </span>
           </div>
