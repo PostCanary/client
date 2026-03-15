@@ -156,7 +156,7 @@ watch(
 
     <!-- Months of historical data slider -->
     <div class="mb-6 sm:mb-8">
-      <div class="flex items-baseline justify-between mb-2">
+      <div class="flex items-baseline justify-between mb-1">
         <label
           class="text-[13px] sm:text-[15px] font-semibold text-[var(--mkt-text-muted)]"
         >
@@ -169,6 +169,10 @@ watch(
           {{ monthsBackData === 1 ? "month" : "months" }}
         </span>
       </div>
+      <p class="text-[11px] sm:text-[12px] text-[var(--mkt-text-soft)] mb-2">
+        We recommend uploading historical direct mail campaigns to pre-populate
+        your dashboard so you can make informed decisions today!
+      </p>
       <input
         type="range"
         :min="0"
