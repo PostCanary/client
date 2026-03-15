@@ -80,7 +80,7 @@ const steps = [
 
         <!-- Steps -->
         <div
-          class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-center md:items-start"
+          class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-start mx-auto md:mx-0 w-fit"
           v-motion
           :initial="{ opacity: 0, y: 20 }"
           :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 240 } }"
@@ -88,14 +88,14 @@ const steps = [
           <div
             v-for="step in steps"
             :key="step.number"
-            class="flex items-center gap-3"
+            class="flex items-start gap-3"
           >
             <span
-              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10 text-[12px] font-bold text-[var(--mkt-teal)]"
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-teal)]/10 text-[12px] font-bold text-[var(--mkt-teal)] mt-0.5"
             >
               {{ step.number }}
             </span>
-            <span class="text-[15px] sm:text-[16px] font-medium text-[var(--mkt-text)]">
+            <span class="text-[15px] sm:text-[16px] font-medium text-[var(--mkt-text)] text-left">
               {{ step.text }}
             </span>
           </div>
