@@ -80,7 +80,7 @@ const steps = [
 
         <!-- Steps -->
         <div
-          class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-center md:items-start"
+          class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-start mx-auto md:mx-0 w-fit"
           v-motion
           :initial="{ opacity: 0, y: 20 }"
           :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 240 } }"
