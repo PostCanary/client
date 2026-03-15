@@ -4,10 +4,8 @@ import SectionWrapper from "@/components/marketing/SectionWrapper.vue";
 import CTAButton from "@/components/marketing/CTAButton.vue";
 import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 import { useAuthStore } from "@/stores/auth";
-import { useDemoStore } from "@/stores/demo";
 
 const auth = useAuthStore();
-const demo = useDemoStore();
 
 const onSignUp = () => {
   if (!auth.isAuthenticated) {
