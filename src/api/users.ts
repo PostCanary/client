@@ -75,4 +75,8 @@ export type AuthMeResponse =
       role?: string | null;
       avatar_url?: string | null;
       billing?: BillingState | null;
+      org_id?: string;
+      org_name?: string;
+      org_role?: string;
+      orgs?: Array<{ id: string; name: string; slug: string; role: string }>;
     };

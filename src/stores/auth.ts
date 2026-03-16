@@ -65,6 +65,22 @@ export const useAuthStore = defineStore("auth", {
     billing: (state) =>
       state.me?.authenticated === true ? state.me.billing ?? null : null,
 
+    orgId: (state) =>
+      state.me?.authenticated === true ? state.me.org_id ?? null : null,
+
+    orgName: (state) =>
+      state.me?.authenticated === true ? state.me.org_name ?? null : null,
+
+    orgRole: (state) =>
+      state.me?.authenticated === true ? state.me.org_role ?? null : null,
+
+    orgs: (state) =>
+      state.me?.authenticated === true ? state.me.orgs ?? [] : [],
+
+    hasMultipleOrgs(): boolean {
+      return this.orgs.length > 1;
+    },
+
     isSubscribed(): boolean {
       return !!this.billing?.is_subscribed;
     },
