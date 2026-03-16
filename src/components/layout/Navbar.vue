@@ -1,6 +1,6 @@
 <!-- src/components/layout/Navbar.vue -->
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCampaignStore } from "@/stores/useCampaignStore";
@@ -10,6 +10,10 @@ import { BRAND } from "@/config/brand";
 const campaignStore = useCampaignStore();
 campaignStore.hydrate();
 campaignStore.fetchCampaigns();
+
+const showNewCampaignInput = ref(false);
+const newCampaignName = ref("");
+const newCampaignInput = ref<HTMLInputElement | null>(null);
 
 const props = withDefaults(
   defineProps<{
@@ -71,8 +75,37 @@ function navigate(path: string) {
 
 function onCampaignChange(event: Event) {
   const val = (event.target as HTMLSelectElement).value;
+  if (val === "__new__") {
+    showNewCampaignInput.value = true;
+    nextTick(() => newCampaignInput.value?.focus());
+    // Reset select back to current value
+    (event.target as HTMLSelectElement).value = campaignStore.activeCampaignId ?? "";
+    return;
+  }
   campaignStore.setActiveCampaign(val || null);
   window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: val || null } }));
+}
+
+async function createNewCampaign() {
+  const name = newCampaignName.value.trim();
+  if (!name) {
+    showNewCampaignInput.value = false;
+    return;
+  }
+  try {
+    const campaign = await campaignStore.createCampaign(name);
+    campaignStore.setActiveCampaign(campaign.id);
+    window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: campaign.id } }));
+  } catch (e) {
+    console.error("Failed to create campaign", e);
+  }
+  newCampaignName.value = "";
+  showNewCampaignInput.value = false;
+}
+
+function cancelNewCampaign() {
+  newCampaignName.value = "";
+  showNewCampaignInput.value = false;
 }
 
 function toggleDropdown() {
@@ -156,24 +189,37 @@ function doSearch() {
     </nav>
 
     <!-- Campaign selector -->
-    <div
-      v-if="campaignStore.campaigns.length > 0"
-      class="campaign-selector-wrap hidden sm:flex items-center ml-4"
-    >
-      <select
-        class="campaign-select"
-        :value="campaignStore.activeCampaignId ?? ''"
-        @change="onCampaignChange"
-      >
-        <option value="">All Campaigns</option>
-        <option
-          v-for="c in campaignStore.campaigns"
-          :key="c.id"
-          :value="c.id"
+    <div class="campaign-selector-wrap hidden sm:flex items-center ml-4 gap-2">
+      <template v-if="showNewCampaignInput">
+        <input
+          ref="newCampaignInput"
+          v-model="newCampaignName"
+          type="text"
+          placeholder="Campaign name…"
+          class="campaign-input"
+          @keydown.enter.prevent="createNewCampaign"
+          @keydown.escape.prevent="cancelNewCampaign"
+          @blur="createNewCampaign"
+        />
+      </template>
+      <template v-else>
+        <select
+          class="campaign-select"
+          :value="campaignStore.activeCampaignId ?? ''"
+          @change="onCampaignChange"
         >
-          {{ c.name }}
-        </option>
-      </select>
+          <option value="">All Campaigns</option>
+          <option
+            v-for="c in campaignStore.campaigns"
+            :key="c.id"
+            :value="c.id"
+          >
+            {{ c.name }}
+          </option>
+          <option disabled>───────────</option>
+          <option value="__new__">+ New Campaign</option>
+        </select>
+      </template>
     </div>
 
     <!-- Spacer -->
@@ -305,6 +351,23 @@ function doSearch() {
   outline: none;
   border-color: #47bfa9;
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
+}
+
+.campaign-input {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #47bfa9;
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0c2d50;
+  min-width: 160px;
+  box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
+}
+
+.campaign-input:focus {
+  outline: none;
 }
 
 /* User name button styled like Edit Mapping */
