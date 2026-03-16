@@ -3,8 +3,13 @@
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 import LogoUrl from "@/assets/source-logo-02.png";
 import { BRAND } from "@/config/brand";
+
+const campaignStore = useCampaignStore();
+campaignStore.hydrate();
+campaignStore.fetchCampaigns();
 
 const props = withDefaults(
   defineProps<{
@@ -62,6 +67,12 @@ function isActive(path: string) {
 
 function navigate(path: string) {
   router.push(path);
+}
+
+function onCampaignChange(event: Event) {
+  const val = (event.target as HTMLSelectElement).value;
+  campaignStore.setActiveCampaign(val || null);
+  window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: val || null } }));
 }
 
 function toggleDropdown() {
@@ -143,6 +154,27 @@ function doSearch() {
         {{ item.label }}
       </button>
     </nav>
+
+    <!-- Campaign selector -->
+    <div
+      v-if="campaignStore.campaigns.length > 0"
+      class="campaign-selector-wrap hidden sm:flex items-center ml-4"
+    >
+      <select
+        class="campaign-select"
+        :value="campaignStore.activeCampaignId ?? ''"
+        @change="onCampaignChange"
+      >
+        <option value="">All Campaigns</option>
+        <option
+          v-for="c in campaignStore.campaigns"
+          :key="c.id"
+          :value="c.id"
+        >
+          {{ c.name }}
+        </option>
+      </select>
+    </div>
 
     <!-- Spacer -->
     <div class="grow"></div>
@@ -247,6 +279,32 @@ function doSearch() {
 
 .nav-link-active:hover {
   color: #0c2d50;
+}
+
+/* Campaign selector */
+.campaign-select {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0c2d50;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: auto;
+  min-width: 140px;
+}
+
+.campaign-select:hover {
+  border-color: #47bfa9;
+}
+
+.campaign-select:focus {
+  outline: none;
+  border-color: #47bfa9;
+  box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
 /* User name button styled like Edit Mapping */

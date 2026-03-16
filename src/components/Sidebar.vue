@@ -2,7 +2,6 @@
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
-import CampaignSelector from "@/components/CampaignSelector.vue";
 
 /* Assets */
 import LogoUrl from "@/assets/source-logo-02.png";
@@ -69,10 +68,6 @@ async function onLogoutClick() {
           <img :src="LogoUrl" :alt="BRAND.name" class="logo" draggable="false" />
         </button>
       </div>
-
-      <hr class="sep" />
-
-      <CampaignSelector />
 
       <hr class="sep" />
 
