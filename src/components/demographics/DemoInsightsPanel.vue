@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { DemoInsightMessage, ConfidenceTier } from "@/api/demographics";
+import { sanitizeHtml } from "@/composables/useSafeHtml";
 
-defineProps<{
+const props = defineProps<{
   message: DemoInsightMessage;
   tier: ConfidenceTier;
 }>();
+
+const safeText = computed(() => sanitizeHtml(props.message?.text ?? ""));
 </script>
 
 <template>
@@ -13,7 +17,7 @@ defineProps<{
       <h3>What Your Data Is Telling You</h3>
     </div>
     <div class="insight-body">
-      <div class="insight-text" v-html="message.text"></div>
+      <div class="insight-text" v-html="safeText"></div>
       <div class="insight-qualifier" v-if="message.qualifier">
         {{ message.qualifier }}
       </div>
