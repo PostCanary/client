@@ -38,7 +38,7 @@
                 }}</span>
               </button>
               <div class="faq-answer-wrapper">
-                <div class="faq-answer" v-html="item.a" />
+                <div class="faq-answer" v-html="sanitizeHtml(item.a)" />
               </div>
             </div>
           </div>
@@ -80,6 +80,7 @@
 import { ref, computed } from "vue";
 import { BRAND, getSupportEmailLink } from "@/config/brand";
 import { useDemoStore } from "@/stores/demo";
+import { sanitizeHtml } from "@/composables/useSafeHtml";
 
 const demo = useDemoStore();
 
