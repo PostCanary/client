@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCampaignStore } from "@/stores/useCampaignStore";
 import LogoUrl from "@/assets/source-logo-02.png";
 import { BRAND } from "@/config/brand";
+import CampaignManageModal from "@/components/CampaignManageModal.vue";
 
 const campaignStore = useCampaignStore();
 campaignStore.hydrate();
@@ -14,6 +15,7 @@ campaignStore.fetchCampaigns();
 const showNewCampaignInput = ref(false);
 const newCampaignName = ref("");
 const newCampaignInput = ref<HTMLInputElement | null>(null);
+const showManageCampaigns = ref(false);
 
 const props = withDefaults(
   defineProps<{
@@ -78,7 +80,11 @@ function onCampaignChange(event: Event) {
   if (val === "__new__") {
     showNewCampaignInput.value = true;
     nextTick(() => newCampaignInput.value?.focus());
-    // Reset select back to current value
+    (event.target as HTMLSelectElement).value = campaignStore.activeCampaignId ?? "";
+    return;
+  }
+  if (val === "__manage__") {
+    showManageCampaigns.value = true;
     (event.target as HTMLSelectElement).value = campaignStore.activeCampaignId ?? "";
     return;
   }
@@ -218,6 +224,7 @@ function doSearch() {
           </option>
           <option disabled>───────────</option>
           <option value="__new__">+ New Campaign</option>
+          <option value="__manage__">Manage Campaigns</option>
         </select>
       </template>
     </div>
@@ -296,6 +303,12 @@ function doSearch() {
         </button>
       </div>
     </div>
+
+    <!-- Campaign manage modal -->
+    <CampaignManageModal
+      :open="showManageCampaigns"
+      @close="showManageCampaigns = false"
+    />
   </div>
 </template>
 
