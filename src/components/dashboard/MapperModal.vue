@@ -649,11 +649,11 @@ function confirm() {
 .mapper-modal {
   width: min(1100px, 96vw);
   max-height: 90vh;
-  background: #ffffff;
+  background: var(--app-card-bg);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
     0 10px 24px rgba(12, 45, 80, 0.16);
-  border: 1px solid #dde3ea;
+  border: 1px solid var(--app-border-medium);
   display: flex;
   flex-direction: column;
   outline: none;
@@ -664,7 +664,7 @@ function confirm() {
   align-items: center;
   gap: 0.75rem;
   padding: 14px 20px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .dot {
@@ -685,7 +685,7 @@ function confirm() {
 .mapper-header h3 {
   font-size: 16px;
   margin: 0;
-  color: #0c2d50;
+  color: var(--app-text);
 }
 
 .mapper-body {
@@ -697,9 +697,9 @@ function confirm() {
   margin: 0 0 16px;
   font-size: 13px;
   line-height: 1.5;
-  color: #4b5563;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  color: var(--app-text-body);
+  background: #f0fdfa;
+  border: 1px solid rgba(71, 191, 169, 0.25);
   border-radius: 8px;
   padding: 10px 14px;
 }
@@ -714,43 +714,43 @@ function confirm() {
 .campaign-label {
   font-size: 14px;
   font-weight: 600;
-  color: #0c2d50;
+  color: var(--app-text);
   white-space: nowrap;
 }
 
 .campaign-select {
   padding: 6px 12px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--app-border);
   background: #f8fafc;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
-  color: #0c2d50;
+  color: var(--app-text);
   cursor: pointer;
   min-width: 180px;
   transition: border-color 0.15s ease;
 }
 
 .campaign-select:hover {
-  border-color: #47bfa9;
+  border-color: var(--app-teal);
 }
 
 .campaign-select:focus {
   outline: none;
-  border-color: #47bfa9;
+  border-color: var(--app-teal);
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
 .campaign-input {
   padding: 6px 12px;
   border-radius: 8px;
-  border: 1px solid #47bfa9;
-  background: #fff;
+  border: 1px solid var(--app-teal);
+  background: var(--app-card-bg);
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
-  color: #0c2d50;
+  color: var(--app-text);
   min-width: 180px;
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
@@ -773,28 +773,29 @@ function confirm() {
   margin: 0 0 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #0c2d50;
+  color: var(--app-text);
 }
 
 /* ---------- spreadsheet ---------- */
 
 .spreadsheet-wrapper {
   overflow-x: auto;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid var(--app-border-medium);
+  border-radius: 8px;
 }
 
 .spreadsheet {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-family: inherit;
+  font-size: 13px;
   table-layout: fixed;
   min-width: max-content;
 }
 
 .spreadsheet th,
 .spreadsheet td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--app-border);
   padding: 4px 8px;
   text-align: left;
   min-width: 120px;
@@ -813,38 +814,38 @@ function confirm() {
   max-width: 48px;
   width: 48px;
   text-align: center;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--app-bg);
+  color: var(--app-text-muted);
   font-size: 11px;
   font-weight: 500;
 }
 
 .row-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #9ca3af;
+  color: var(--app-text-muted);
 }
 
 /* column letter row */
 
 .col-letters-row {
-  background: #f9fafb;
+  background: var(--app-bg);
 }
 
 .col-letter {
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--app-text-muted);
   padding: 2px 8px;
 }
 
 /* dropdown row */
 
 .dropdown-row {
-  background: #ffffff;
+  background: var(--app-card-bg);
 }
 
 .dropdown-cell {
@@ -855,23 +856,24 @@ function confirm() {
 .col-select {
   width: 100%;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--app-border);
   padding: 4px 6px;
-  font-size: 11px;
-  color: #0f172a;
-  background: #ffffff;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--app-text);
+  background: var(--app-card-bg);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
   cursor: pointer;
 }
 
 .col-select:focus {
-  outline: 2px solid #47bfa9;
+  outline: 2px solid var(--app-teal);
   outline-offset: 1px;
-  border-color: #47bfa9;
+  border-color: var(--app-teal);
 }
 
 .col-select.is-mapped {
-  border-color: #47bfa9;
+  border-color: var(--app-teal);
   background: #f0fdfa;
 }
 
@@ -890,29 +892,29 @@ function confirm() {
 /* header row (actual CSV headers) */
 
 .header-row {
-  background: #f3f4f6;
+  background: var(--app-bg);
 }
 
 .header-cell {
   font-weight: 600;
-  color: #0c2d50;
-  font-size: 12px;
+  color: var(--app-text);
+  font-size: 13px;
 }
 
 /* data rows */
 
 .data-row:nth-child(even) {
-  background: #fafbfc;
+  background: var(--app-bg);
 }
 
 .data-cell {
-  color: #374151;
-  font-size: 12px;
+  color: var(--app-text-body);
+  font-size: 13px;
 }
 
 .empty-row .empty-cell {
   text-align: center;
-  color: #9ca3af;
+  color: var(--app-text-muted);
   font-style: italic;
   padding: 12px;
 }
@@ -940,7 +942,7 @@ function confirm() {
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 10px 20px 14px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--app-border);
 }
 
 .btn {
@@ -954,9 +956,9 @@ function confirm() {
 }
 
 .btn-primary {
-  background: #47bfa9;
-  color: #ffffff;
-  border-color: #47bfa9;
+  background: var(--app-teal);
+  color: var(--app-card-bg);
+  border-color: var(--app-teal);
 }
 
 .btn-primary:disabled {
@@ -969,9 +971,9 @@ function confirm() {
 }
 
 .btn-ghost {
-  background: #ffffff;
-  color: #0c2d50;
-  border-color: #cfd6dd;
+  background: var(--app-card-bg);
+  color: var(--app-text);
+  border-color: var(--app-border-medium);
 }
 
 .btn-ghost:hover {
