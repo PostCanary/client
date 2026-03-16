@@ -251,11 +251,11 @@ async function doDelete(id: string) {
 }
 
 .action-btn.edit {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #e6f7f4;
+  color: #2a9d8f;
 }
 .action-btn.edit:hover {
-  background: #bae6fd;
+  background: #ccefea;
 }
 
 .action-btn.delete-trigger {
