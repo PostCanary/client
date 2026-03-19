@@ -4,6 +4,7 @@ import type { Org, OrgMember, OrgInvitation } from "@/api/orgs";
 import {
   getOrgs as apiGetOrgs,
   getMembers as apiGetMembers,
+  getInvitations as apiGetInvitations,
   sendInvite as apiSendInvite,
   removeMember as apiRemoveMember,
   updateMemberRole as apiUpdateRole,
@@ -54,6 +55,15 @@ export const useOrgStore = defineStore("org", {
       this.loading = true;
       try {
         this.members = await apiGetMembers(orgId);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchInvitations(orgId: string) {
+      this.loading = true;
+      try {
+        this.invitations = await apiGetInvitations(orgId);
       } finally {
         this.loading = false;
       }

@@ -21,6 +21,8 @@ export interface OrgInvitation {
   id: string;
   email: string;
   role: string;
+  invited_by: string;
+  token: string;
   expires_at: string;
   created_at: string;
 }
@@ -30,6 +32,9 @@ export interface InvitationDetails {
   email: string;
   role: string;
   invited_by: string;
+  expires_at: string;
+  accepted: boolean;
+  expired: boolean;
 }
 
 export async function getOrgs(): Promise<Org[]> {
@@ -56,6 +61,13 @@ export async function switchOrg(orgId: string): Promise<void> {
 export async function getMembers(orgId: string): Promise<OrgMember[]> {
   const res = await get<{ members: OrgMember[] }>(`/api/orgs/${orgId}/members`);
   return res.members;
+}
+
+export async function getInvitations(orgId: string): Promise<OrgInvitation[]> {
+  const res = await get<{ invitations: OrgInvitation[] }>(
+    `/api/orgs/${orgId}/invitations`,
+  );
+  return res.invitations;
 }
 
 export async function sendInvite(

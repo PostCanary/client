@@ -29,7 +29,7 @@ const activeMembers = computed(() =>
 );
 
 const pendingMembers = computed(() =>
-  orgStore.members.filter((m) => m.status === "pending"),
+  orgStore.invitations,
 );
 
 onMounted(async () => {
@@ -37,7 +37,10 @@ onMounted(async () => {
   if (!orgId) return;
 
   try {
-    await orgStore.fetchMembers(orgId);
+    await Promise.all([
+      orgStore.fetchMembers(orgId),
+      orgStore.fetchInvitations(orgId),
+    ]);
   } finally {
     loading.value = false;
   }
@@ -70,8 +73,11 @@ async function onSendInvite() {
     await orgStore.sendInvite(orgId, email, inviteRole.value);
     message.success(`Invitation sent to ${email}`);
     closeInviteModal();
-    // Refresh members to show the pending invite
-    await orgStore.fetchMembers(orgId);
+    // Refresh both lists so active members and pending invites stay in sync.
+    await Promise.all([
+      orgStore.fetchMembers(orgId),
+      orgStore.fetchInvitations(orgId),
+    ]);
   } catch (err: any) {
     console.error("[Team] sendInvite failed", err);
     message.error(err?.message || "Failed to send invitation.");
@@ -280,13 +286,13 @@ function displayRole(role: string): string {
 
           <div class="divide-y divide-slate-100">
             <div
-              v-for="member in pendingMembers"
-              :key="member.user_id || member.email"
+              v-for="invitation in pendingMembers"
+              :key="invitation.id"
               class="flex items-center justify-between gap-4 px-4 py-3 sm:px-6"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium text-slate-600 truncate">
-                  {{ member.email }}
+                  {{ invitation.email }}
                 </p>
                 <p class="text-xs text-slate-400">Invitation pending</p>
               </div>
@@ -294,7 +300,7 @@ function displayRole(role: string): string {
               <span
                 class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"
               >
-                {{ displayRole(member.role) }}
+                {{ displayRole(invitation.role) }}
               </span>
             </div>
           </div>
