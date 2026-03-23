@@ -12,6 +12,7 @@ export interface UserProfile {
   mail_provider: string | null;
   avatar_url: string | null;
   role: string | null;
+  is_invited_user: boolean;
   profile_complete: boolean;
   tour_completed: boolean;
   created_at: string | null;
