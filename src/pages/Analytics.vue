@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useAnalytics } from "@/composables/useAnalytics";
 import { useRunData } from "@/composables/useRunData";
 import { useBilling } from "@/composables/useBilling";
+import { useCampaignStore } from "@/stores/useCampaignStore";
 import AnalyticsHeroCards from "@/components/analytics/AnalyticsHeroCards.vue";
 import InsightsSummary from "@/components/analytics/InsightsSummary.vue";
 import InsightSectionCard from "@/components/analytics/InsightSection.vue";
@@ -28,7 +29,9 @@ const {
   regenerate,
 } = useAnalytics();
 
-const { runResult } = useRunData();
+const { runResult, refreshOnce: refreshRunData } = useRunData();
+const campaignStore = useCampaignStore();
+campaignStore.hydrate();
 
 const {
   showPaywall,
@@ -68,6 +71,14 @@ watch(
 const shouldBlur = computed(() => {
   return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
 });
+
+watch(
+  () => campaignStore.activeCampaignId,
+  () => {
+    void refreshRunData();
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
