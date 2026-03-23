@@ -71,9 +71,12 @@ export const useRunStore = defineStore("run", {
       this.persist();
     },
 
-    setResultAndMatches(r: RunResult | null, m: MatchRow[] | null | undefined) {
-      if (r) this.runResult = r;
-      if (m) this.matches = m;
+    setResultAndMatches(
+      r: RunResult | null | undefined,
+      m: MatchRow[] | null | undefined,
+    ) {
+      if (r !== undefined) this.runResult = r;
+      if (m !== undefined) this.matches = Array.isArray(m) ? m : [];
       this.persist();
     },
   },

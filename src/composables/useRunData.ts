@@ -226,15 +226,13 @@ export function useRunData() {
 
     try {
       const { r, m } = await fetchLatestDoneResultAndMatches();
-
-      // IMPORTANT: don’t wipe persisted data if endpoints temporarily return 204/null.
       const nextMatches =
-        m && Array.isArray((m as any).matches) ? (m as any).matches : undefined;
+        m && Array.isArray((m as any).matches) ? (m as any).matches : [];
 
-      // Only commit if we got something meaningful
-      if (r || nextMatches !== undefined) {
-        runStore.setResultAndMatches(r ?? null, nextMatches);
-      }
+      // Campaign changes should always reconcile the cache to the latest API response,
+      // including empty lists/null payloads, so "All Campaigns" cannot get stuck on
+      // a previously selected campaign view.
+      runStore.setResultAndMatches(r ?? null, nextMatches);
     } finally {
       runResultLoading.value = false;
       matchesLoading.value = false;
