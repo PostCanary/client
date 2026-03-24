@@ -30,6 +30,13 @@
       {{ error }}
     </div>
 
+    <div
+      v-if="matchCoverageMessage"
+      class="px-4 py-3 border-b border-slate-200 bg-amber-50 text-amber-900 text-sm"
+    >
+      {{ matchCoverageMessage }}
+    </div>
+
     <div ref="mapEl" class="flex-1 min-h-[360px]" />
   </section>
 </template>
@@ -106,6 +113,7 @@ const shouldBlur = computed(() => {
 });
 
 const mapEl = ref<HTMLDivElement | null>(null);
+const points = ref<Point[]>([]);
 let map: L.Map | null = null;
 let cluster: ClusterLike | null = null;
 
@@ -140,6 +148,40 @@ watch(shouldBlur, (blurred) => {
 
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+const totalMatchedCount = computed(() => {
+  return Number(runResult.value?.kpis?.matches ?? 0);
+});
+
+const mappedMatchedCount = computed(() => {
+  return points.value.reduce((sum, point) => {
+    const count = Number(point.event_count ?? 1);
+    return sum + (Number.isFinite(count) && count > 0 ? count : 1);
+  }, 0);
+});
+
+const unmappedMatchedCount = computed(() => {
+  return Math.max(totalMatchedCount.value - mappedMatchedCount.value, 0);
+});
+
+const matchCoverageMessage = computed(() => {
+  if (!kinds.matched) return "";
+  if (loading.value) return "";
+
+  const total = totalMatchedCount.value;
+  const mapped = mappedMatchedCount.value;
+  const missing = unmappedMatchedCount.value;
+
+  if (total <= 0) return "";
+  if (mapped >= total) {
+    return `Showing all ${mapped.toLocaleString()} matched records on the map.`;
+  }
+  if (mapped <= 0) {
+    return `The current selection has ${total.toLocaleString()} total matches, but none of them have mappable addresses yet.`;
+  }
+
+  return `Showing ${mapped.toLocaleString()} mapped matches out of ${total.toLocaleString()} total. ${missing.toLocaleString()} matched records do not have a geocoded mail-side address yet, so they cannot be placed on the map.`;
+});
 
 // Load filter state from localStorage or use defaults
 function loadFilterState(): FilterState {
@@ -228,6 +270,23 @@ function createCluster(): ClusterLike {
       ? anyL.markerClusterGroup({
           showCoverageOnHover: false,
           spiderfyOnMaxZoom: true,
+          iconCreateFunction(group: any) {
+            const total = (group.getAllChildMarkers() as Array<L.Marker & { __eventCount?: number }>).reduce(
+              (sum, marker) => sum + Number(marker.__eventCount ?? 1),
+              0
+            );
+
+            const childCount = group.getChildCount();
+            let sizeClass = "marker-cluster-small";
+            if (childCount >= 100) sizeClass = "marker-cluster-large";
+            else if (childCount >= 10) sizeClass = "marker-cluster-medium";
+
+            return anyL.divIcon({
+              html: `<div><span>${total.toLocaleString()}</span></div>`,
+              className: `marker-cluster ${sizeClass}`,
+              iconSize: new anyL.Point(40, 40),
+            });
+          },
         })
       : L.layerGroup()
   ) as ClusterLike;
@@ -275,19 +334,24 @@ async function draw() {
   error.value = null;
 
   try {
-    const points = await loadPoints();
+    const nextPoints = await loadPoints();
+    points.value = nextPoints;
 
     cluster.clearLayers();
     const bounds: L.LatLngTuple[] = [];
 
-    for (const p of points) {
+    for (const p of nextPoints) {
       const title = escapeHtml((p.kind || "").toUpperCase());
       const addr = escapeHtml(p.address || p.label || "");
       const dt = escapeHtml(p.event_date || "");
+      const count = Number.isFinite(Number(p.event_count)) && Number(p.event_count) > 0
+        ? Number(p.event_count)
+        : 1;
 
       const marker = L.marker([p.lat, p.lon], { icon: defaultIcon }).bindPopup(
-        `<b>${title}</b><br>${addr}${dt ? `<br>${dt}` : ""}`
+        `<b>${title}</b><br>${addr}${dt ? `<br>${dt}` : ""}<br>Count: ${count.toLocaleString()}`
       );
+      (marker as L.Marker & { __eventCount?: number }).__eventCount = count;
 
       cluster.addLayer(marker);
       bounds.push([p.lat, p.lon]);
