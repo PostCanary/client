@@ -78,6 +78,15 @@ const steps = [
           where to spend next. No promo codes. No spreadsheets. No guessing.
         </p>
 
+        <p
+          class="mt-3 sm:mt-4 text-[16px] sm:text-[19px] leading-[1.65] text-[var(--mkt-text-muted)] max-w-[560px] mx-auto md:mx-0"
+          v-motion
+          :initial="{ opacity: 0, y: 20 }"
+          :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: 200 } }"
+        >
+          Works with your current mail provider. No switching. Fast &amp; easy.
+        </p>
+
         <!-- Steps -->
         <div
           class="mt-8 sm:mt-10 flex flex-col gap-3 sm:gap-4 items-start mx-auto md:mx-0 w-fit"

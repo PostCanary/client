@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
+import { sanitizeHtml } from "@/composables/useSafeHtml";
 
 type Props = {
   modelValue: boolean;
@@ -59,6 +60,8 @@ watch(
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", onEsc);
 });
+
+const safeMessage = computed(() => sanitizeHtml(props.message ?? ""));
 
 function onBackdrop(e: MouseEvent) {
   if (e.target === e.currentTarget) {
@@ -123,7 +126,7 @@ function onConfirm() {
       </header>
 
       <div class="content">
-        <p id="upload-guard-desc" class="message" v-html="message" />
+        <p id="upload-guard-desc" class="message" v-html="safeMessage" />
       </div>
 
       <footer class="guard-footer">

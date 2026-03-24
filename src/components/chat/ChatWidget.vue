@@ -118,7 +118,7 @@ const greeting = computed(() => {
 const salesQuestions = [
   "Start my free trial",
   "What is PostCanary?",
-  "How does matching work?",
+  "What can PostCanary measure?",
   "Show me pricing",
 ];
 
