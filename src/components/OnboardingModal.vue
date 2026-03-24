@@ -32,6 +32,7 @@ if (!hasLoaded.value && auth.isAuthenticated) {
 }
 
 const submitting = computed(() => saving.value || avatarUploading.value);
+const isInvitedUser = computed(() => !!profile.value?.is_invited_user);
 
 // Name to feed into the gradient hasher
 const displayName = computed(() => {
@@ -77,8 +78,16 @@ async function onAvatarChanged(e: Event) {
 
     <div class="onboarding-modal">
       <header class="onboarding-header">
-        <h2>Tell us about your mail setup</h2>
-        <p>We’ll use this to tailor KPIs and future features.</p>
+        <h2>
+          {{ isInvitedUser ? "Finish joining your team" : "Tell us about your mail setup" }}
+        </h2>
+        <p>
+          {{
+            isInvitedUser
+              ? "Add your name so your team can recognize you in PostCanary."
+              : "We’ll use this to tailor KPIs and future features."
+          }}
+        </p>
       </header>
 
       <section class="onboarding-body">
@@ -124,49 +133,51 @@ async function onAvatarChanged(e: Event) {
             />
           </div>
 
-          <!-- Website -->
-          <div class="field">
-            <label>Website</label>
-            <input
-              v-model="form.website_url"
-              type="text"
-              placeholder="joesplumbing.com"
-              required
-            />
-          </div>
+          <template v-if="!isInvitedUser">
+            <!-- Website -->
+            <div class="field">
+              <label>Website</label>
+              <input
+                v-model="form.website_url"
+                type="text"
+                placeholder="joesplumbing.com"
+                required
+              />
+            </div>
 
-          <!-- Industry -->
-          <div class="field">
-            <label>Industry</label>
-            <input
-              v-model="form.industry"
-              type="text"
-              placeholder="plumbing, carpentry, etc."
-              required
-            />
-          </div>
+            <!-- Industry -->
+            <div class="field">
+              <label>Industry</label>
+              <input
+                v-model="form.industry"
+                type="text"
+                placeholder="plumbing, carpentry, etc."
+                required
+              />
+            </div>
 
-          <!-- CRM -->
-          <div class="field">
-            <label>CRM</label>
-            <input
-              v-model="form.crm"
-              type="text"
-              placeholder="HubSpot, Salesforce, custom…"
-              required
-            />
-          </div>
+            <!-- CRM -->
+            <div class="field">
+              <label>CRM</label>
+              <input
+                v-model="form.crm"
+                type="text"
+                placeholder="HubSpot, Salesforce, custom..."
+                required
+              />
+            </div>
 
-          <!-- Mail provider -->
-          <div class="field">
-            <label>Mail provider</label>
-            <input
-              v-model="form.mail_provider"
-              type="text"
-              placeholder="Lob, Click2Mail, in-house…"
-              required
-            />
-          </div>
+            <!-- Mail provider -->
+            <div class="field">
+              <label>Mail provider</label>
+              <input
+                v-model="form.mail_provider"
+                type="text"
+                placeholder="Lob, Click2Mail, in-house..."
+                required
+              />
+            </div>
+          </template>
 
           <!-- Terms of Service Checkbox -->
           <div class="terms-checkbox">
@@ -196,7 +207,13 @@ async function onAvatarChanged(e: Event) {
               class="btn-primary"
               :disabled="submitting || loading || !acceptedTerms"
             >
-              {{ isProfileComplete ? "Save" : "Save & continue" }}
+              {{
+                isInvitedUser
+                  ? "Continue"
+                  : isProfileComplete
+                    ? "Save"
+                    : "Save & continue"
+              }}
             </button>
           </div>
         </form>

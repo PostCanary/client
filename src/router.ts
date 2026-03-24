@@ -138,10 +138,26 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/History.vue"),
         meta: { title: `History • ${BRAND.name}`, navbarTitle: "History" },
       },
+      {
+        path: "team",
+        name: "Team",
+        alias: "/team",
+        component: () => import("@/pages/Team.vue"),
+        meta: { title: `Team • ${BRAND.name}`, navbarTitle: "Team" },
+      },
 
       // /app -> /dashboard
       { path: "", redirect: { name: "Dashboard" } },
     ],
+  },
+
+  // ── Invitation accept page (marketing layout, no auth check initially) ──
+  {
+    path: "/app/invite/:token",
+    name: "AcceptInvite",
+    alias: "/invite/:token",
+    component: () => import("@/pages/AcceptInvite.vue"),
+    meta: { title: `Accept Invitation • ${BRAND.name}`, marketing: true },
   },
 
   { path: "/:pathMatch(.*)*", redirect: "/" },

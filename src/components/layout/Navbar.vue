@@ -7,6 +7,7 @@ import { useCampaignStore } from "@/stores/useCampaignStore";
 import LogoUrl from "@/assets/source-logo-02.png";
 import { BRAND } from "@/config/brand";
 import CampaignManageModal from "@/components/CampaignManageModal.vue";
+import OrgSwitcher from "@/components/OrgSwitcher.vue";
 
 const campaignStore = useCampaignStore();
 campaignStore.hydrate();
@@ -228,6 +229,12 @@ function doSearch() {
         </select>
       </template>
     </div>
+
+    <!-- Org switcher (only shown for users in multiple orgs) -->
+    <OrgSwitcher
+      v-if="auth.hasMultipleOrgs"
+      class="hidden sm:block ml-2"
+    />
 
     <!-- Spacer -->
     <div class="grow"></div>

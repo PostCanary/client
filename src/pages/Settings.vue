@@ -11,8 +11,10 @@ import {
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
+import { useOrgStore } from "@/stores/org";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
+import { updateOrg } from "@/api/orgs";
 
 const {
   profile,
@@ -31,8 +33,38 @@ const deleteError = ref<string | null>(null);
 
 const router = useRouter();
 const auth = useAuthStore();
+const orgStore = useOrgStore();
 const { startTour } = useTour();
 const message = useMessage();
+
+// Org name editing
+const orgName = ref(auth.orgName || "");
+const orgNameSaving = ref(false);
+const isOrgAdmin = computed(() => orgStore.isAdmin);
+
+async function onSaveOrgName() {
+  const orgId = auth.orgId;
+  if (!orgId) return;
+
+  const trimmed = orgName.value.trim();
+  if (!trimmed) {
+    message.error("Organization name cannot be empty.");
+    return;
+  }
+
+  orgNameSaving.value = true;
+  try {
+    await updateOrg(orgId, trimmed);
+    await auth.fetchMe();
+    orgName.value = auth.orgName || "";
+    message.success("Organization name updated.");
+  } catch (err: any) {
+    console.error("[Settings] updateOrg failed", err);
+    message.error(err?.message || "Failed to update organization name.");
+  } finally {
+    orgNameSaving.value = false;
+  }
+}
 
 onMounted(() => {
   loadProfile();
@@ -276,6 +308,62 @@ async function onDeleteAccount() {
           </button>
         </div>
       </form>
+
+      <!-- Organization card -->
+      <section
+        v-if="auth.orgId"
+        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+        <div class="space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900">Organization</h2>
+            <p class="mt-1 text-xs text-slate-500">
+              Manage your organization settings and team.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-sm font-medium text-slate-700">
+                Organization name
+              </label>
+              <input
+                v-model="orgName"
+                type="text"
+                :disabled="!isOrgAdmin || orgNameSaving"
+                class="mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+                :class="
+                  isOrgAdmin
+                    ? 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500'
+                    : 'border-slate-200 bg-slate-50 text-slate-500'
+                "
+              />
+            </div>
+            <button
+              v-if="isOrgAdmin"
+              type="button"
+              class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="orgNameSaving"
+              @click="onSaveOrgName"
+            >
+              {{ orgNameSaving ? "Saving..." : "Save" }}
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between pt-1">
+            <p class="text-xs text-slate-500">
+              Manage team members, roles, and invitations.
+            </p>
+            <button
+              type="button"
+              class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+              @click="router.push('/team')"
+            >
+              Manage team
+            </button>
+          </div>
+        </div>
+      </section>
 
       <!-- Billing card -->
       <section

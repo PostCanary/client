@@ -310,6 +310,8 @@ campaignStore.fetchCampaigns();
 const showNewCampaignInput = ref(false);
 const newCampaignName = ref("");
 const newCampaignInputEl = ref<HTMLInputElement | null>(null);
+const campaignCreating = ref(false);
+let campaignCreationPromise: Promise<void> | null = null;
 
 function onCampaignChange(event: Event) {
   const val = (event.target as HTMLSelectElement).value;
@@ -324,20 +326,31 @@ function onCampaignChange(event: Event) {
 }
 
 async function createNewCampaign() {
+  if (campaignCreationPromise) return campaignCreationPromise;
+
   const name = newCampaignName.value.trim();
   if (!name) {
     showNewCampaignInput.value = false;
     return;
   }
-  try {
-    const campaign = await campaignStore.createCampaign(name);
-    campaignStore.setActiveCampaign(campaign.id);
-    window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: campaign.id } }));
-  } catch (e) {
-    console.error("Failed to create campaign", e);
-  }
-  newCampaignName.value = "";
-  showNewCampaignInput.value = false;
+
+  campaignCreating.value = true;
+  campaignCreationPromise = (async () => {
+    try {
+      const campaign = await campaignStore.createCampaign(name);
+      campaignStore.setActiveCampaign(campaign.id);
+      window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: campaign.id } }));
+    } catch (e) {
+      console.error("Failed to create campaign", e);
+    } finally {
+      newCampaignName.value = "";
+      showNewCampaignInput.value = false;
+      campaignCreating.value = false;
+      campaignCreationPromise = null;
+    }
+  })();
+
+  return campaignCreationPromise;
 }
 
 function cancelNewCampaign() {
@@ -574,6 +587,7 @@ const unmappedRequiredCrm = computed(() => {
 const saveDisabled = computed(
   () =>
     !!props.saving ||
+    campaignCreating.value ||
     unmappedRequiredMail.value.length > 0 ||
     unmappedRequiredCrm.value.length > 0
 );
@@ -626,7 +640,13 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", onEsc);
 });
 
-function confirm() {
+async function confirm() {
+  if (showNewCampaignInput.value || newCampaignName.value.trim()) {
+    await createNewCampaign();
+  } else if (campaignCreationPromise) {
+    await campaignCreationPromise;
+  }
+
   const payload: MapperMapping = {
     mail: invertToFieldMap(toRaw(mailColumnMap.value)),
     crm: invertToFieldMap(toRaw(crmColumnMap.value)),

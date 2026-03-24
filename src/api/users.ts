@@ -12,6 +12,7 @@ export interface UserProfile {
   mail_provider: string | null;
   avatar_url: string | null;
   role: string | null;
+  is_invited_user: boolean;
   profile_complete: boolean;
   tour_completed: boolean;
   created_at: string | null;
@@ -75,4 +76,8 @@ export type AuthMeResponse =
       role?: string | null;
       avatar_url?: string | null;
       billing?: BillingState | null;
+      org_id?: string;
+      org_name?: string;
+      org_role?: string;
+      orgs?: Array<{ id: string; name: string; slug: string; role: string }>;
     };
