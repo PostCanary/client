@@ -1,8 +1,6 @@
----
-name: PostCanary V1 Build Decisions
-description: All UX, architecture, and product decisions for the V1 direct mail platform build. Agreed upon 2026-03-23 with expert panel input.
-type: project
----
+# PostCanary V1 Build Decisions
+
+> All UX, architecture, and product decisions for the V1 direct mail platform build. Agreed upon March 23-24, 2026.
 
 ## Build Strategy
 - Build frontend first with realistic mock data ("model home" approach)
