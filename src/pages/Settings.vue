@@ -6,8 +6,11 @@ import { useMessage } from "naive-ui";
 
 import { useUserProfile } from "@/composables/useUserProfile";
 import {
+  cancelSubscription,
   createBillingPortalSession,
   createCheckoutSession,
+  pauseSubscription,
+  type BillingState,
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
@@ -28,8 +31,9 @@ const {
 } = useUserProfile();
 
 const billingBusy = ref(false);
-const deleteBusy = ref(false);
-const deleteError = ref<string | null>(null);
+const subscriptionActionBusy = ref(false);
+const pauseModalOpen = ref(false);
+const cancelModalOpen = ref(false);
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -37,10 +41,61 @@ const orgStore = useOrgStore();
 const { startTour } = useTour();
 const message = useMessage();
 
+const PLAN_DETAILS: Record<PlanCode, { name: string; price: string }> = {
+  INSIGHT: { name: "Insight", price: "$99/mo" },
+  PERFORMANCE: { name: "Performance", price: "$249/mo" },
+  PRECISION: { name: "Precision", price: "$499/mo" },
+  ELITE: { name: "Elite", price: "$999/mo" },
+};
+
 // Org name editing
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
 const isOrgAdmin = computed(() => orgStore.isAdmin);
+const billing = computed<BillingState | null>(() => (auth.billing as BillingState | null) ?? null);
+const billingStatus = computed(() =>
+  String(billing.value?.subscription_status || "none").toLowerCase()
+);
+const cancelAtPeriodEnd = computed(() => !!billing.value?.cancel_at_period_end);
+const canManageBilling = computed(() => !!auth.orgId && isOrgAdmin.value);
+const currentPlanCode = computed<PlanCode | null>(() => {
+  const pc = (billing.value?.plan_code || billing.value?.resume_plan_code) as PlanCode | undefined;
+  return pc ?? null;
+});
+const currentPlanLabel = computed(() => {
+  const code = currentPlanCode.value;
+  if (!code) return "No paid plan selected";
+  const detail = PLAN_DETAILS[code];
+  return detail ? `${detail.name} (${detail.price})` : code;
+});
+const subscriptionStatusLabel = computed(() => {
+  switch (billingStatus.value) {
+    case "active":
+      return cancelAtPeriodEnd.value ? "Cancellation scheduled" : "Active";
+    case "paused":
+      return "Paused";
+    case "past_due":
+      return "Payment issue";
+    case "canceled":
+      return "Canceled";
+    default:
+      return "Not subscribed";
+  }
+});
+const subscriptionStatusClasses = computed(() => {
+  switch (billingStatus.value) {
+    case "active":
+      return cancelAtPeriodEnd.value
+        ? "border-amber-300 bg-amber-50 text-amber-700"
+        : "border-emerald-300 bg-emerald-50 text-emerald-700";
+    case "paused":
+      return "border-slate-300 bg-slate-100 text-slate-700";
+    case "past_due":
+      return "border-red-300 bg-red-50 text-red-700";
+    default:
+      return "border-slate-300 bg-slate-100 text-slate-700";
+  }
+});
 
 async function onSaveOrgName() {
   const orgId = auth.orgId;
@@ -74,29 +129,22 @@ async function onSubmit() {
   await saveProfile();
 }
 
-/**
- * Best-effort plan_code from backend “me” payload / billing blob.
- * Used only for fallback checkout if portal isn't available.
- */
-const currentPlanCode = computed<PlanCode | null>(() => {
-  const pc = (auth.billing?.plan_code ||
-    (auth.billing as any)?.subscription?.plan_code) as PlanCode | undefined;
-  return pc ?? null;
-});
-
-/**
- * Manage subscription:
- *  - First try Stripe Billing Portal (for existing customers).
- *  - If portal isn't available:
- *      - If we don't know a plan_code, route user to pricing to pick a tier.
- *      - If we do know a plan_code, start checkout for that plan.
- */
-async function onManageSubscription() {
+async function onChangePlan() {
   if (billingBusy.value) return;
   billingBusy.value = true;
 
   try {
-    // 1) Try portal (existing Stripe customer)
+    if (billingStatus.value === "paused" && currentPlanCode.value) {
+      const { url: checkoutUrl } = await createCheckoutSession(
+        currentPlanCode.value,
+        "settings_resume_subscription"
+      );
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+    }
+
     try {
       const { url } = await createBillingPortalSession();
       if (url) {
@@ -113,14 +161,12 @@ async function onManageSubscription() {
       );
     }
 
-    // 2) If we don't know a plan code, don't guess: send them to pricing to choose.
     if (!currentPlanCode.value) {
-      message.info("Choose a plan to start your subscription.");
+      message.info("Choose a plan to start or resume your subscription.");
       router.push({ path: "/", hash: "#pricing" });
       return;
     }
 
-    // 3) Start checkout for known plan code
     try {
       const { url: checkoutUrl } = await createCheckoutSession(
         currentPlanCode.value,
@@ -139,49 +185,56 @@ async function onManageSubscription() {
   }
 }
 
+async function onConfirmPauseSubscription() {
+  if (subscriptionActionBusy.value) return;
+  subscriptionActionBusy.value = true;
+
+  try {
+    await pauseSubscription();
+    await auth.fetchMe();
+    pauseModalOpen.value = false;
+    message.success("Subscription paused. The account is now read-only.");
+  } catch (err: any) {
+    console.error("[Settings] Failed to pause subscription:", err);
+    message.error(err?.message || "Failed to pause subscription.");
+  } finally {
+    subscriptionActionBusy.value = false;
+  }
+}
+
+async function onConfirmCancelSubscription() {
+  if (subscriptionActionBusy.value) return;
+  subscriptionActionBusy.value = true;
+
+  try {
+    await cancelSubscription();
+    await auth.fetchMe();
+    cancelModalOpen.value = false;
+    message.success("Cancellation scheduled for the end of the current billing period.");
+  } catch (err: any) {
+    console.error("[Settings] Failed to cancel subscription:", err);
+    message.error(err?.message || "Failed to cancel subscription.");
+  } finally {
+    subscriptionActionBusy.value = false;
+  }
+}
+
+function onPauseInsteadFromCancel() {
+  cancelModalOpen.value = false;
+  pauseModalOpen.value = true;
+}
+
 function onReplayTour() {
   router.push("/dashboard");
   setTimeout(() => {
     startTour();
   }, 500);
 }
-
-/**
- * Delete the current user account + data via auth store helper.
- */
-async function onDeleteAccount() {
-  if (deleteBusy.value) return;
-
-  const confirmed = window.confirm(
-    `Deleting your account will permanently remove your ${BRAND.name} data. This cannot be undone. Are you sure?`
-  );
-  if (!confirmed) return;
-
-  deleteBusy.value = true;
-  deleteError.value = null;
-
-  try {
-    const ok = await auth.deleteAccount();
-
-    if (ok) {
-      message.success("Your account has been deleted.");
-      router.push("/");
-    }
-  } catch (err: any) {
-    console.error("[Settings] Failed to delete account:", err);
-    deleteError.value =
-      err?.message || "Failed to delete account. Please try again.";
-  } finally {
-    deleteBusy.value = false;
-  }
-}
 </script>
 
 <template>
   <div class="min-h-dvh px-4 py-6 sm:px-6">
-    <!-- Centered column; gutters on large screens, full width on small -->
     <div class="mx-auto w-full max-w-3xl space-y-6">
-      <!-- Header -->
       <header
         class="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4"
       >
@@ -213,17 +266,20 @@ async function onDeleteAccount() {
         </span>
       </header>
 
-      <!-- Profile form card -->
       <form
         class="w-full space-y-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
         @submit.prevent="onSubmit"
       >
         <fieldset :disabled="loading || saving" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label
+              for="settings-full-name"
+              class="block text-sm font-medium text-slate-700"
+            >
               Full name
             </label>
             <input
+              id="settings-full-name"
               v-model="form.full_name"
               type="text"
               class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -244,10 +300,14 @@ async function onDeleteAccount() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label
+              for="settings-website"
+              class="block text-sm font-medium text-slate-700"
+            >
               Website
             </label>
             <input
+              id="settings-website"
               v-model="form.website_url"
               type="text"
               placeholder="example.com"
@@ -309,7 +369,6 @@ async function onDeleteAccount() {
         </div>
       </form>
 
-      <!-- Organization card -->
       <section
         v-if="auth.orgId"
         class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
@@ -324,10 +383,14 @@ async function onDeleteAccount() {
 
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex-1 min-w-[200px]">
-              <label class="block text-sm font-medium text-slate-700">
+              <label
+                for="settings-org-name"
+                class="block text-sm font-medium text-slate-700"
+              >
                 Organization name
               </label>
               <input
+                id="settings-org-name"
                 v-model="orgName"
                 type="text"
                 :disabled="!isOrgAdmin || orgNameSaving"
@@ -365,33 +428,115 @@ async function onDeleteAccount() {
         </div>
       </section>
 
-      <!-- Billing card -->
       <section
         class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
       >
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-sm font-semibold text-slate-900">
-              Billing &amp; subscription
-            </h2>
-            <p class="mt-1 text-xs text-slate-500">
-              Manage your {{ BRAND.name }} subscription, update your payment method, or
-              change plans via Stripe.
-            </p>
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-900">
+                Billing &amp; subscription
+              </h2>
+              <p class="mt-1 text-xs text-slate-500">
+                Manage your {{ BRAND.name }} subscription, pause for read-only access, or
+                schedule cancellation while keeping historical data intact.
+              </p>
+            </div>
+
+            <span
+              class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium"
+              :class="subscriptionStatusClasses"
+              data-testid="settings-subscription-status"
+            >
+              {{ subscriptionStatusLabel }}
+            </span>
           </div>
 
-          <button
-            type="button"
-            class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            :disabled="billingBusy"
-            @click="onManageSubscription"
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Current plan
+              </p>
+              <p class="mt-1 text-sm font-medium text-slate-900" data-testid="settings-plan-label">
+                {{ currentPlanLabel }}
+              </p>
+              <p
+                v-if="billingStatus === 'paused'"
+                class="mt-1 text-xs text-slate-500"
+              >
+                Historical data remains available while uploads and matching are paused.
+              </p>
+            </div>
+
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Billing state
+              </p>
+              <p class="mt-1 text-sm font-medium text-slate-900">
+                {{ subscriptionStatusLabel }}
+              </p>
+              <p
+                v-if="cancelAtPeriodEnd"
+                class="mt-1 text-xs text-slate-500"
+              >
+                Your subscription remains active through the current billing period.
+              </p>
+              <p
+                v-else-if="billingStatus === 'paused'"
+                class="mt-1 text-xs text-slate-500"
+              >
+                Paused accounts are billed at $20/month and stay in read-only mode.
+              </p>
+            </div>
+          </div>
+
+          <p
+            v-if="!canManageBilling"
+            class="text-xs text-slate-500"
+            data-testid="settings-billing-role-note"
           >
-            Manage subscription
-          </button>
+            Only organization owners and admins can manage subscription changes.
+          </p>
+
+          <div
+            v-else
+            class="flex flex-wrap gap-3"
+            data-testid="settings-billing-actions"
+          >
+            <button
+              type="button"
+              class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="billingBusy"
+              data-testid="settings-change-plan"
+              @click="onChangePlan"
+            >
+              {{ billingStatus === "paused" ? "Resume subscription" : "Change plan" }}
+            </button>
+
+            <button
+              v-if="billingStatus !== 'paused'"
+              type="button"
+              class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="subscriptionActionBusy || cancelAtPeriodEnd"
+              data-testid="settings-pause-subscription"
+              @click="pauseModalOpen = true"
+            >
+              Pause account
+            </button>
+
+            <button
+              type="button"
+              class="inline-flex items-center rounded-full border border-red-300 px-5 py-2 text-sm font-medium text-red-700 hover:bg-red-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="subscriptionActionBusy || cancelAtPeriodEnd"
+              data-testid="settings-cancel-subscription"
+              @click="cancelModalOpen = true"
+            >
+              {{ cancelAtPeriodEnd ? "Cancellation scheduled" : "Cancel subscription" }}
+            </button>
+          </div>
         </div>
       </section>
 
-      <!-- Guided tour -->
       <section
         class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
       >
@@ -413,35 +558,87 @@ async function onDeleteAccount() {
           </button>
         </div>
       </section>
+    </div>
 
-      <!-- Danger zone -->
-      <section
-        class="w-full rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm sm:p-5"
-      >
-        <div
-          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <h2 class="text-sm font-semibold text-red-700">Danger zone</h2>
-            <p class="mt-1 text-xs text-red-700/80">
-              Deleting your account will permanently remove your {{ BRAND.name }} data.
-              This action cannot be undone.
-            </p>
-            <p v-if="deleteError" class="mt-1 text-xs text-red-800">
-              {{ deleteError }}
-            </p>
-          </div>
+    <div
+      v-if="pauseModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+      data-testid="pause-subscription-modal"
+    >
+      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 class="text-lg font-semibold text-slate-900">Pause account</h3>
+        <p class="mt-3 text-sm text-slate-600">
+          Pausing moves this organization to a $20/month read-only mode. Team members can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.
+        </p>
+        <p class="mt-2 text-sm text-slate-600">
+          Your existing data stays intact while the account is paused.
+        </p>
 
+        <div class="mt-6 flex flex-wrap justify-end gap-3">
           <button
             type="button"
-            class="inline-flex items-center rounded-full bg-red-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="deleteBusy"
-            @click="onDeleteAccount"
+            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            :disabled="subscriptionActionBusy"
+            @click="pauseModalOpen = false"
           >
-            Delete account
+            Keep current plan
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full bg-[#243b53] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d3145] disabled:opacity-60"
+            :disabled="subscriptionActionBusy"
+            data-testid="confirm-pause-subscription"
+            @click="onConfirmPauseSubscription"
+          >
+            {{ subscriptionActionBusy ? "Pausing..." : "Pause for $20/month" }}
           </button>
         </div>
-      </section>
+      </div>
+    </div>
+
+    <div
+      v-if="cancelModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+      data-testid="cancel-subscription-modal"
+    >
+      <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 class="text-lg font-semibold text-slate-900">Cancel subscription</h3>
+        <p class="mt-3 text-sm text-slate-600">
+          Before canceling, consider pausing instead. Paused accounts keep full historical data access in a $20/month read-only mode.
+        </p>
+        <p class="mt-2 text-sm text-slate-600">
+          If you continue, billing stays active through the current period and your historical data is retained after cancellation.
+        </p>
+
+        <div class="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            :disabled="subscriptionActionBusy"
+            data-testid="cancel-subscription-pause-instead"
+            @click="onPauseInsteadFromCancel"
+          >
+            Pause instead
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            :disabled="subscriptionActionBusy"
+            @click="cancelModalOpen = false"
+          >
+            Keep subscription
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+            :disabled="subscriptionActionBusy"
+            data-testid="confirm-cancel-subscription"
+            @click="onConfirmCancelSubscription"
+          >
+            {{ subscriptionActionBusy ? "Scheduling..." : "Continue to cancel" }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
