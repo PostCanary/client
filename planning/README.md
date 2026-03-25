@@ -2,6 +2,12 @@
 
 These are the detailed coding plans for the V1 direct mail platform build. They've been through 4 rounds of review: expert product review, codebase stress testing, pre-mortem analysis, and Codex readiness audit.
 
+## Start Here
+
+1. `00-product-spec.md` — The complete product spec from March 23-24 planning sessions (source of truth)
+2. `00-decisions-changelog.md` — Everything that changed from the spec during the March 25 coding plan session
+3. Then read each terminal's 3 files below
+
 ## How to Read
 
 Each terminal has 3 files:
@@ -36,6 +42,11 @@ Each merges to main before the next starts. Each gets its own feature branch.
 4. **Anything that looks wrong** — these plans were stress-tested but you know the codebase better than anyone.
 
 ## Files
+
+| # | File | Description |
+|---|------|-------------|
+| - | `00-product-spec.md` | Complete product spec (March 23-24 sessions) — source of truth |
+| - | `00-decisions-changelog.md` | All changes made during March 25 planning session |
 
 | # | File | Size | Description |
 |---|------|------|-------------|
