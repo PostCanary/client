@@ -401,16 +401,6 @@ async function onUploadCommit(payload: {
     return;
   }
 
-  // Auto-assign mail batch to active campaign (if one is selected)
-  if (mailId && campaignStore.activeCampaignId) {
-    try {
-      await campaignStore.assignBatches(campaignStore.activeCampaignId, [mailId]);
-      console.info("[Dashboard] Mail batch %s assigned to campaign %s", mailId, campaignStore.activeCampaignId);
-    } catch (err) {
-      console.warn("[Dashboard] Failed to assign batch to campaign", err);
-    }
-  }
-
   // Check if any side has an auto-generated mapping that needs review
   try {
     const mappingBundle = await fetchMapperMapping({
@@ -439,6 +429,22 @@ async function onUploadCommit(payload: {
  * Extracted so it can be called from both onUploadCommit (direct path)
  * and onMappingConfirm (after auto-mapping review).
  */
+async function assignMailBatchToActiveCampaign(mailBatchId: string | null) {
+  const campaignId = campaignStore.activeCampaignId;
+  if (!mailBatchId || !campaignId) return;
+
+  try {
+    await campaignStore.assignBatches(campaignId, [mailBatchId]);
+    console.info(
+      "[Dashboard] Mail batch %s assigned to campaign %s",
+      mailBatchId,
+      campaignId,
+    );
+  } catch (err) {
+    console.warn("[Dashboard] Failed to assign batch to campaign", err);
+  }
+}
+
 async function onUploadCommitNormalize(payload: {
   mailBatchId: string | null;
   crmBatchId: string | null;
@@ -453,6 +459,8 @@ async function onUploadCommitNormalize(payload: {
     console.info("[Dashboard] Upload commit skipped: no batch IDs");
     return;
   }
+
+  await assignMailBatchToActiveCampaign(mailId);
 
   foregroundBusy.value = true;
 
