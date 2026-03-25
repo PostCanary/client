@@ -305,13 +305,21 @@ const dialogEl = ref<HTMLElement | null>(null);
 /* ---------- campaign selector ---------- */
 const campaignStore = useCampaignStore();
 campaignStore.hydrate();
-campaignStore.fetchCampaigns();
 
 const showNewCampaignInput = ref(false);
 const newCampaignName = ref("");
 const newCampaignInputEl = ref<HTMLInputElement | null>(null);
 const campaignCreating = ref(false);
 let campaignCreationPromise: Promise<void> | null = null;
+
+watch(
+  () => props.open,
+  (open) => {
+    if (!open) return;
+    void campaignStore.fetchCampaigns();
+  },
+  { immediate: true }
+);
 
 function onCampaignChange(event: Event) {
   const val = (event.target as HTMLSelectElement).value;
