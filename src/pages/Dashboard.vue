@@ -155,6 +155,9 @@ const pendingNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | 
 
 // Track if we're in preview mode (results blurred until payment)
 const isPreviewMode = ref(false); // Tracks if results should be blurred due to paywall
+const billingReadOnly = computed(
+  () => String(auth.billing?.subscription_status || "").toLowerCase() === "paused"
+);
 
 // Store the run_id from preview mode uploads so we can verify we show the correct run after payment
 const PREVIEW_RUN_ID_KEY = "mt_preview_run_id";
@@ -254,7 +257,11 @@ function isNormalizeGateDenied(r: NormalizeBatchRes): boolean {
   if (!(r.status === 402 || r.status === 400)) return false;
   const d: any = r.data || {};
   const reason = normalizeReason(d);
-  return reason === "subscription_required" || reason === "upgrade_required";
+  return (
+    reason === "subscription_required" ||
+    reason === "upgrade_required" ||
+    reason === "paused_subscription"
+  );
 }
 
 /* ------------------------------------------------------------------
@@ -636,7 +643,11 @@ async function onUploadCommitNormalize(payload: {
 
     if (
       (status === 402 || status === 400) &&
-      (code === "subscription_required" || code === "upgrade_required")
+      (
+        code === "subscription_required" ||
+        code === "upgrade_required" ||
+        code === "paused_subscription"
+      )
     ) {
       loaderCloseForModal();
       onRequireSubscription();
@@ -965,6 +976,7 @@ onBeforeUnmount(() => {
       <UploadCard
         :reset-key="uploadResetKey"
         :mapping-blocked="mappingBlocked"
+        :billing-blocked="billingReadOnly"
         @edit-mapping="openMapper"
         @batch-ids="onBatchIdsUpdated"
         @upload-commit="onUploadCommit"

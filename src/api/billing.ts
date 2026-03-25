@@ -42,6 +42,8 @@ export interface BillingState {
   last_payment_failed?: boolean;
   paywall_config?: PaywallConfig | null;
   plan_code?: PlanCode | null;
+  resume_plan_code?: PlanCode | null;
+  cancel_at_period_end?: boolean;
 }
 
 /**
@@ -106,6 +108,20 @@ export async function createBillingPortalSession(): Promise<CheckoutSessionResul
   }
 
   return { url };
+}
+
+export async function pauseSubscription(): Promise<{ billing?: BillingState | null }> {
+  return postJson<{ billing?: BillingState | null }>(
+    "/api/billing/pause-subscription",
+    {}
+  );
+}
+
+export async function cancelSubscription(): Promise<{ billing?: BillingState | null }> {
+  return postJson<{ billing?: BillingState | null }>(
+    "/api/billing/cancel-subscription",
+    {}
+  );
 }
 
 /* ------------------------------------------------------------------

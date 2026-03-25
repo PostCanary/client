@@ -13,6 +13,10 @@ const props = defineProps<{
    * should not emit upload-commit (mapping must be fixed first).
    */
   mappingBlocked?: boolean;
+  /**
+   * When true, uploads are disabled because the org is read-only.
+   */
+  billingBlocked?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -100,6 +104,7 @@ function clearFileInput(source: Source) {
  * - If backend returns 409 mapping_required, emits mapping-required to Dashboard.
  */
 async function handleFile(source: Source, file: File) {
+  if (props.billingBlocked) return;
   if (!file) return;
   if (!csvGuard(file)) return;
 
@@ -271,6 +276,11 @@ function openMapper() {
 function onUpload(ev?: Event) {
   ev?.preventDefault?.();
 
+  if (props.billingBlocked) {
+    log.info("UI > upload blocked due to paused billing");
+    return;
+  }
+
   if (props.mappingBlocked) {
     log.info("UI > upload blocked due to mapping issues");
     return;
@@ -295,9 +305,11 @@ function onUpload(ev?: Event) {
 
 /* ---- browse buttons ------------------------------------------- */
 function browseMail() {
+  if (props.billingBlocked) return;
   mailInput.value?.click();
 }
 function browseCrm() {
+  if (props.billingBlocked) return;
   crmInput.value?.click();
 }
 </script>
@@ -316,9 +328,10 @@ function browseCrm() {
         <div
           v-if="!lastMailFile"
           class="drop-zone"
-          :class="{ 'is-drag': mailDrag }"
+          :class="{ 'is-drag': mailDrag, 'drop-zone-disabled': props.billingBlocked }"
           role="button"
-          tabindex="0"
+          :tabindex="props.billingBlocked ? -1 : 0"
+          :aria-disabled="props.billingBlocked ? 'true' : 'false'"
           @click="browseMail"
           @dragover="onDragOverMail"
           @dragleave="onDragLeaveMail"
@@ -359,9 +372,10 @@ function browseCrm() {
         <div
           v-if="!lastCrmFile"
           class="drop-zone"
-          :class="{ 'is-drag': crmDrag }"
+          :class="{ 'is-drag': crmDrag, 'drop-zone-disabled': props.billingBlocked }"
           role="button"
-          tabindex="0"
+          :tabindex="props.billingBlocked ? -1 : 0"
+          :aria-disabled="props.billingBlocked ? 'true' : 'false'"
           @click="browseCrm"
           @dragover="onDragOverCrm"
           @dragleave="onDragLeaveCrm"
@@ -392,6 +406,14 @@ function browseCrm() {
         />
       </div>
     </div>
+
+    <p
+      v-if="props.billingBlocked"
+      class="upload-readonly"
+      data-testid="upload-readonly-message"
+    >
+      Subscription is paused. Historical data stays available, but uploads and matching are disabled until you resume a paid plan.
+    </p>
 
     <!-- PROGRESS -->
     <div class="upload-progress" v-if="isUploading">
@@ -426,12 +448,15 @@ function browseCrm() {
       <button
         type="button"
         class="btn btn-primary"
-        :disabled="isUploading || !!props.mappingBlocked"
+        :disabled="isUploading || !!props.mappingBlocked || !!props.billingBlocked"
         :title="
-          props.mappingBlocked
+          props.billingBlocked
+            ? 'Uploads are disabled while the subscription is paused'
+            : props.mappingBlocked
             ? 'Please fix column mapping before attempting an upload'
             : ''
         "
+        data-testid="upload-match-button"
         @click="onUpload"
       >
         Upload &amp; Match
@@ -517,6 +542,24 @@ function browseCrm() {
 .drop-zone.is-drag {
   border-color: var(--app-teal, #47bfa9);
   background: rgba(71, 191, 169, 0.06);
+}
+
+.drop-zone-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.drop-zone-disabled:hover {
+  border-color: rgba(12, 45, 80, 0.15);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.upload-readonly {
+  padding: 0 16px 12px;
+  color: var(--app-text-secondary, #64748b);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .drop-icon {
