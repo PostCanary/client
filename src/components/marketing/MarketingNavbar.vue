@@ -32,9 +32,9 @@ function closeTools() {
   }, 150);
 }
 
-const onSignUpClick = () => {
+const onAuthClick = () => {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/dashboard", "signup");
+    auth.openLoginModal("/dashboard", "login");
     return;
   }
   window.location.href = "/dashboard";
@@ -139,9 +139,9 @@ const toolLinks = [
         <button
           type="button"
           class="whitespace-nowrap rounded-lg bg-[var(--mkt-navy)] px-4 md:px-5 py-1.5 md:py-2 text-[14px] md:text-[15px] font-semibold text-white shadow-sm hover:bg-[var(--mkt-navy)]/90 transition-all cursor-pointer"
-          @click="onSignUpClick"
+          @click="onAuthClick"
         >
-          {{ auth.isAuthenticated ? "Dashboard" : "Sign Up" }}
+          {{ auth.isAuthenticated ? "Dashboard" : "Log In / Sign Up" }}
         </button>
 
         <!-- Mobile menu toggle -->
