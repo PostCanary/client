@@ -281,11 +281,15 @@ const sections: FaqSection[] = [
       },
       {
         q: "How do I upgrade or downgrade my plan?",
-        a: "Go to <strong>Settings → Billing</strong> in your account. You can switch plans at any time; changes take effect at the start of your next billing cycle.",
+        a: "Go to <strong>Settings → Billing</strong> in your account. Owners and admins can change plans from the billing controls at any time.",
       },
       {
         q: "How do I cancel my subscription?",
-        a: "You can cancel from <strong>Settings → Billing</strong>. Your account will remain active until the end of the current billing period. No data is deleted upon cancellation.",
+        a: "Go to <strong>Settings → Billing</strong> and choose <strong>Cancel subscription</strong>. We will prompt you to pause first, and if you confirm cancellation your current access continues through the end of the billing period. Your historical data is retained.",
+      },
+      {
+        q: "What happens when I pause my subscription?",
+        a: "Paused accounts move to a <strong>$20/month</strong> read-only mode. You can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.",
       },
       {
         q: "What happens if my payment fails?",
