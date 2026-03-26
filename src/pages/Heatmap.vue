@@ -177,9 +177,7 @@ watch(shouldBlur, (blurred) => {
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-const totalMatchedCount = computed(() => {
-  return Number(runResult.value?.kpis?.matches ?? 0);
-});
+const totalMatchedCount = ref(0);
 
 const mappedMatchedCount = computed(() => {
   return points.value.reduce((sum, point) => {
@@ -325,9 +323,9 @@ function createCluster(): ClusterLike {
  * - If user selects matched, send kind=matched
  * - If user selects NONE, return []
  */
-async function loadPoints(): Promise<Point[]> {
+async function loadPoints(): Promise<{ points: Point[]; matchedTotal: number }> {
   const sel = selectedKinds();
-  if (!sel.length) return [];
+  if (!sel.length) return { points: [], matchedTotal: 0 };
 
   const base = {
     start: from.value || undefined,
@@ -341,7 +339,9 @@ async function loadPoints(): Promise<Point[]> {
 
   // Send request with matched kind
   const res = await getHeatmapPoints({ ...base, kind: sel, campaignId: campaignStore.activeCampaignId });
-  return (res.points ?? [])
+  return {
+    matchedTotal: Number(res.matched_total ?? 0),
+    points: (res.points ?? [])
     .filter((p): p is NonNullable<typeof p> => !!p)
     .filter((p) => typeof p.lat === "number" && typeof p.lon === "number")
     .map((p) => ({
@@ -352,7 +352,8 @@ async function loadPoints(): Promise<Point[]> {
       address: p.address ?? null,
       event_date: p.event_date ?? null,
       event_count: p.event_count ?? null,
-    }));
+    })),
+  };
 }
 
 async function draw() {
@@ -362,8 +363,9 @@ async function draw() {
   error.value = null;
 
   try {
-    const nextPoints = await loadPoints();
+    const { points: nextPoints, matchedTotal } = await loadPoints();
     points.value = nextPoints;
+    totalMatchedCount.value = matchedTotal;
 
     cluster.clearLayers();
     const bounds: L.LatLngTuple[] = [];

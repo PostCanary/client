@@ -1167,7 +1167,14 @@ export async function installMockApi(page: Page, state: MockAppState) {
         end: searchParams.get("end"),
         kind: searchParams.get("kind"),
       });
-      return json(route, state.heatmapByOrg[activeOrgId(state)]);
+      const response = clone(state.heatmapByOrg[activeOrgId(state)]);
+      if (response && response.matched_total == null && Array.isArray(response.points)) {
+        response.matched_total = response.points.reduce((sum, point) => {
+          const count = Number(point?.event_count ?? 1);
+          return sum + (Number.isFinite(count) && count > 0 ? count : 1);
+        }, 0);
+      }
+      return json(route, response);
     }
 
     if (pathname === "/api/billing/create-portal-session" && method === "POST") {

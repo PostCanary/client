@@ -17,6 +17,7 @@ export type HeatmapResponse = {
   ok: boolean;
   count: number;
   points: HeatmapPoint[];
+  matched_total?: number | null;
 };
 
 export type HeatmapParams = {
@@ -67,5 +68,7 @@ export async function getHeatmapPoints(params: HeatmapParams): Promise<HeatmapRe
     ok: data.ok ?? true,
     count: data.count ?? (data.points?.length ?? 0),
     points: (data.points ?? []) as HeatmapPoint[],
+    matched_total:
+      data.matched_total == null ? null : Number(data.matched_total),
   };
 }
