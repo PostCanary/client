@@ -1,5 +1,10 @@
 <!-- src/pages/Heatmap.vue -->
 <template>
+  <PreviewUpgradeBanner
+    v-if="showPreviewUpgradeBanner"
+    @select-plan="onRequireSubscription"
+  />
+
   <section 
     class="min-h-dvh flex flex-col"
     :class="{ 'heatmap-blurred': shouldBlur }"
@@ -64,6 +69,7 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
 import { getHeatmapPoints, type HeatmapKind } from "@/api/geocodes";
+import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 import PaywallModal from "@/components/dashboard/PaywallModal.vue";
 import { useBilling } from "@/composables/useBilling";
 import { useRunData } from "@/composables/useRunData";
@@ -128,6 +134,10 @@ watch(
 
 const shouldBlur = computed(() => {
   return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
+});
+
+const showPreviewUpgradeBanner = computed(() => {
+  return isPreviewMode.value && !showBillingSuccess.value;
 });
 
 const mapEl = ref<HTMLDivElement | null>(null);

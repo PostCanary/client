@@ -15,6 +15,7 @@ import YoyChart from "@/components/dashboard/YoyChart.vue";
 import TopCitiesTable from "@/components/dashboard/TopCitiesTable.vue";
 import TopZipsTable from "@/components/dashboard/TopZipsTable.vue";
 import SummaryTable from "@/components/dashboard/SummaryTable.vue";
+import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 
 import {
   normalizeBatch,
@@ -798,6 +799,10 @@ const dashMainInner = computed(() => {
   return shouldBlur;
 });
 
+const showPreviewUpgradeBanner = computed(() => {
+  return isPreviewMode.value && !showBillingSuccess.value;
+});
+
 // Watch blur state changes (separate watcher to avoid logging on every computed access)
 let lastBlurState: boolean | null = null;
 watch(
@@ -934,6 +939,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <PreviewUpgradeBanner
+    v-if="showPreviewUpgradeBanner"
+    @select-plan="onRequireSubscription"
+  />
+
   <div
     class="dash-main-inner"
     :class="{ 'dash-main-inner--blurred': dashMainInner }"
