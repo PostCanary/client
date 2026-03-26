@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from "vue";
-import Chart, { type ChartDataset, type ChartOptions } from "chart.js/auto";
+import Chart, {
+  type ChartDataset,
+  type ChartOptions,
+  type TooltipModel,
+} from "chart.js/auto";
 
 type LineDS = ChartDataset<"line", number[]>;
 
@@ -24,6 +28,7 @@ const props = withDefaults(
 const showYoy = ref(true);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let chart: Chart<"line", number[], string> | null = null;
+const TOOLTIP_CLASS = "chartjs-html-tooltip";
 
 // colors
 const cMail = "#0b2d50";
@@ -83,6 +88,103 @@ function createGradient(
   gradient.addColorStop(0, `${color}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`);
   gradient.addColorStop(1, `${color}00`);
   return gradient;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function datasetStrokeStyle(dataset: LineDS): "solid" | "dashed" {
+  return Array.isArray(dataset.borderDash) && dataset.borderDash.length ? "dashed" : "solid";
+}
+
+function datasetStrokeColor(dataset: LineDS): string {
+  return typeof dataset.borderColor === "string" ? dataset.borderColor : cMail;
+}
+
+function getOrCreateTooltip(chartInstance: Chart<"line", number[], string>): HTMLDivElement {
+  const parent = chartInstance.canvas.parentNode as HTMLElement | null;
+  if (!parent) {
+    throw new Error("Chart tooltip parent not found");
+  }
+
+  let tooltipEl = parent.querySelector<HTMLDivElement>(`.${TOOLTIP_CLASS}`);
+  if (!tooltipEl) {
+    tooltipEl = document.createElement("div");
+    tooltipEl.className = TOOLTIP_CLASS;
+    parent.appendChild(tooltipEl);
+  }
+
+  return tooltipEl;
+}
+
+function removeTooltip() {
+  const parent = canvasEl.value?.parentElement;
+  parent?.querySelector(`.${TOOLTIP_CLASS}`)?.remove();
+}
+
+function externalTooltipHandler(context: {
+  chart: Chart<"line", number[], string>;
+  tooltip: TooltipModel<"line">;
+}) {
+  const { chart: chartInstance, tooltip } = context;
+  const tooltipEl = getOrCreateTooltip(chartInstance);
+
+  if (tooltip.opacity === 0) {
+    tooltipEl.style.opacity = "0";
+    tooltipEl.style.transform = "translate3d(0, 0, 0)";
+    return;
+  }
+
+  const title = (tooltip.title ?? []).map((line) => escapeHtml(line)).join("<br />");
+  const body = (tooltip.dataPoints ?? [])
+    .map((point) => {
+      const dataset = point.dataset as LineDS;
+      const label = escapeHtml(dataset.label ?? "");
+      const value = escapeHtml(point.formattedValue ?? "");
+      const strokeStyle = datasetStrokeStyle(dataset);
+      const strokeColor = datasetStrokeColor(dataset);
+
+      return `
+        <div class="chartjs-html-tooltip__row">
+          <span
+            class="chartjs-html-tooltip__swatch chartjs-html-tooltip__swatch--${strokeStyle}"
+            style="--swatch-color: ${strokeColor};"
+            aria-hidden="true"
+          ></span>
+          <span class="chartjs-html-tooltip__label">${label}</span>
+          <span class="chartjs-html-tooltip__value">${value}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  tooltipEl.innerHTML = `
+    <div class="chartjs-html-tooltip__card">
+      <div class="chartjs-html-tooltip__title">${title}</div>
+      <div class="chartjs-html-tooltip__body">${body}</div>
+    </div>
+  `;
+
+  const parent = chartInstance.canvas.parentNode as HTMLElement;
+  const tooltipRect = tooltipEl.getBoundingClientRect();
+  const gutter = 12;
+  const desiredLeft = tooltip.caretX + 16;
+  const desiredTop = tooltip.caretY - tooltipRect.height / 2;
+  const maxLeft = Math.max(gutter, parent.clientWidth - tooltipRect.width - gutter);
+  const maxTop = Math.max(gutter, parent.clientHeight - tooltipRect.height - gutter);
+  const left = Math.min(Math.max(desiredLeft, gutter), maxLeft);
+  const top = Math.min(Math.max(desiredTop, gutter), maxTop);
+
+  tooltipEl.style.opacity = "1";
+  tooltipEl.style.left = `${left}px`;
+  tooltipEl.style.top = `${top}px`;
+  tooltipEl.style.transform = "translate3d(0, 0, 0)";
 }
 
 // ---------- chart build ----------
@@ -197,18 +299,10 @@ function buildChart() {
     plugins: {
       legend: { display: false },
       tooltip: {
+        enabled: false,
         mode: "index",
         intersect: false,
-        backgroundColor: "#0b2d50",
-        titleColor: "#fff",
-        bodyColor: "rgba(255,255,255,0.85)",
-        borderColor: "#47bfa9",
-        borderWidth: 1,
-        cornerRadius: 8,
-        padding: 12,
-        titleFont: { weight: "bold" as const, size: 13 },
-        bodyFont: { size: 12 },
-        boxPadding: 4,
+        external: externalTooltipHandler,
       },
     },
     scales: {
@@ -258,6 +352,7 @@ onMounted(buildChart);
 onBeforeUnmount(() => {
   chart?.destroy();
   chart = null;
+  removeTooltip();
 });
 
 // Rebuild when data changes
@@ -418,6 +513,75 @@ watch(
 .chart-canvas-wrap {
   position: relative;
   height: 320px;
+}
+
+:deep(.chartjs-html-tooltip) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 120ms ease;
+}
+
+:deep(.chartjs-html-tooltip__card) {
+  min-width: 190px;
+  max-width: 260px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+  color: #0f172a;
+  backdrop-filter: blur(10px);
+}
+
+:deep(.chartjs-html-tooltip__title) {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+:deep(.chartjs-html-tooltip__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+:deep(.chartjs-html-tooltip__row) {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+:deep(.chartjs-html-tooltip__swatch) {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid var(--swatch-color);
+  border-radius: 999px;
+}
+
+:deep(.chartjs-html-tooltip__swatch--dashed) {
+  border-top-style: dashed;
+}
+
+:deep(.chartjs-html-tooltip__label) {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+:deep(.chartjs-html-tooltip__value) {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
 }
 
 /* YoY switch */
