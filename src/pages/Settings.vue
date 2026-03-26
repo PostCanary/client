@@ -17,6 +17,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrgStore } from "@/stores/org";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
+import { PLAN_DISPLAY_DETAILS } from "@/config/plans";
 import { updateOrg } from "@/api/orgs";
 
 const {
@@ -41,13 +42,6 @@ const orgStore = useOrgStore();
 const { startTour } = useTour();
 const message = useMessage();
 
-const PLAN_DETAILS: Record<PlanCode, { name: string; price: string }> = {
-  INSIGHT: { name: "Insight", price: "$99/mo" },
-  PERFORMANCE: { name: "Performance", price: "$249/mo" },
-  PRECISION: { name: "Precision", price: "$499/mo" },
-  ELITE: { name: "Elite", price: "$999/mo" },
-};
-
 // Org name editing
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
@@ -65,7 +59,7 @@ const currentPlanCode = computed<PlanCode | null>(() => {
 const currentPlanLabel = computed(() => {
   const code = currentPlanCode.value;
   if (!code) return "No paid plan selected";
-  const detail = PLAN_DETAILS[code];
+  const detail = PLAN_DISPLAY_DETAILS[code];
   return detail ? `${detail.name} (${detail.price})` : code;
 });
 const subscriptionStatusLabel = computed(() => {

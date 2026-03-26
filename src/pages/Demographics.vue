@@ -168,6 +168,19 @@ const shouldBlur = computed(() => {
           :labels="charts.income?.labels ?? []"
           :values="charts.income?.values ?? []"
         />
+        <DemoBarChart
+          title="Home Age"
+          :subtitle="view === 'matches' ? 'Estimated year-built profile of homes that converted' : 'Estimated year-built profile of customer homes'"
+          :labels="charts.home_age?.labels ?? []"
+          :values="charts.home_age?.values ?? []"
+        />
+      </div>
+
+      <div
+        class="chart-grid chart-grid-single"
+        :class="{ 'charts-greyed': view === 'matches' && confidenceTier === 'insufficient' }"
+        v-if="charts"
+      >
         <DemoDoughnutChart
           title="Property Type"
           :subtitle="view === 'matches' ? 'Type of property that converted' : 'Type of customer property'"
@@ -268,6 +281,10 @@ const shouldBlur = computed(() => {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   transition: opacity 0.3s ease;
+}
+
+.chart-grid-single {
+  grid-template-columns: 1fr;
 }
 
 .charts-greyed {

@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import type { PlanCode } from "@/api/billing";
+import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
 
 const emit = defineEmits<{
   recommendations: [
@@ -37,42 +38,19 @@ type PlanInfo = {
   limitLabel: string;
 };
 
-const plans: PlanInfo[] = [
-  {
-    id: "INSIGHT",
-    name: "Tier 1",
-    price: "$99/mo",
-    limit: 1_000,
-    limitLabel: "Up to 1,000 mailers/mo",
-  },
-  {
-    id: "PERFORMANCE",
-    name: "Tier 2",
-    price: "$249/mo",
-    limit: 5_000,
-    limitLabel: "Up to 5,000 mailers/mo",
-  },
-  {
-    id: "PRECISION",
-    name: "Tier 3",
-    price: "$499/mo",
-    limit: 25_000,
-    limitLabel: "Up to 25,000 mailers/mo",
-  },
-  {
-    id: "ELITE",
-    name: "Tier 4",
-    price: "$999/mo",
-    limit: Infinity,
-    limitLabel: "Unlimited mailers",
-  },
-];
+const plans: PlanInfo[] = PLAN_DISPLAY_ORDER.map((code) => ({
+  id: code,
+  name: PLAN_DISPLAY_DETAILS[code].name,
+  price: PLAN_DISPLAY_DETAILS[code].price,
+  limit: PLAN_DISPLAY_DETAILS[code].limit,
+  limitLabel: PLAN_DISPLAY_DETAILS[code].limitLabel.replace(" / month", ""),
+}));
 
 function recommendPlan(volume: number): PlanInfo {
   for (const plan of plans) {
     if (volume <= plan.limit) return plan;
   }
-  return plans[plans.length - 1]!; // fallback to ELITE
+  return plans[plans.length - 1]!;
 }
 
 /* ── Computed results ─────────────────────────────────────── */
