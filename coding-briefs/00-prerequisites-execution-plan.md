@@ -36,14 +36,24 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 - `app/models.py`: Add nullable columns to **Organization** (NOT User — org-level data in multi-org system): `business_name` (String), `location` (String), `service_types` (ARRAY of String)
 - `app/services/users.py` — ONE change:
   1. **CRITICAL — `compute_profile_complete()`**: Current logic (line 122) requires `industry AND crm AND mail_provider AND website_url`. Change to OR strategy:
+     - KEEP invited user fast-path: `if invited_user: return bool((user.full_name or "").strip())`
      - Old formula (existing users): `industry AND crm AND mail_provider AND website_url`
      - New formula (new users): `industry AND org.location`
      - Combined: `old_formula OR new_formula`
-     - **CRITICAL: existing users must NOT be re-triggered for onboarding.** Any user who already has `profile_complete = true` keeps it. The OR ensures existing users pass via the old formula while new users can pass via the new formula.
-- `app/services/organizations.py` (create if needed): add `serialize_organization()` including `business_name`, `location`, `service_types` in returned dict. Add `update_organization()` endpoint logic for updating org-level fields.
-- `src/api/organizations.ts` (create or extend): add `updateOrganization()` API function for saving `business_name`, `location`, `service_types` to the org. The Organization type needs `business_name`, `location`, `service_types` fields added.
+     - **New function signature:** `compute_profile_complete(user, org=None, invited_user=None)`
+     - **CRITICAL: existing users must NOT be re-triggered for onboarding.**
+  2. **CRITICAL — `serialize_user()` must fetch org and pass it:**
+     - Add `org = Organization.query.get(user.default_org_id) if user.default_org_id else None`
+     - Pass `org=org` to `compute_profile_complete()`. Without this, org is always None and new users stay stuck in onboarding.
+     - Also update `update_user_profile()` the same way.
+- `app/services/orgs.py` (EXISTING file — NOT `organizations.py`):
+  - Extend `update_org()` to accept optional `business_name`, `location`, `service_types` parameters
+  - Extend `get_org_details()` to include these fields in the returned dict
+- `src/api/orgs.ts` (EXISTING file — NOT `organizations.ts`):
+  - Add `business_name`, `location`, `service_types` to the `Org` type
+  - Extend `updateOrg()` payload to accept these fields
 - Onboarding modal and wizard should call the org update endpoint (not user profile endpoint) for business_name, location, service_types.
-- **Verify:** PUT to `/api/organizations/<org_id>` with `{ business_name: "Drake's Plumbing", location: "Scottsdale, AZ", service_types: ["plumbing"] }` → org updates. POST to `/api/users/me` with `{ industry: "plumbing" }` + org has location → `profile_complete` returns true
+- **Verify:** PATCH to `/api/orgs/<org_id>` (NOT PUT, NOT `/api/organizations/`) with `{ business_name: "Drake's Plumbing", location: "Scottsdale, AZ", service_types: ["plumbing"] }` → org updates. PATCH to `/api/users/me` with `{ industry: "plumbing" }` + org has location → `profile_complete` returns true
 
 **Task 3: Add CampaignDraft and BrandKit models (`app/models.py`)**
 - `CampaignDraft`: id, org_id, created_by, current_step, completed_steps, needs_review_steps, data (JSONB), schema_version, timestamps
@@ -165,7 +175,7 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 | `src/components/layout/Navbar.vue` | Add button | Check MobileNavbar.vue too |
 | `src/components/OnboardingModal.vue` | Rebuild | Check MainLayout.vue trigger |
 | `src/stores/auth.ts` | NO change needed — trigger stays as `!profile_complete` | Existing users never see modal again. Missing fields collected in wizard. |
-| `app/models.py` | Add 2 models + 3 Organization columns (`business_name`, `location`, `service_types`) | Check existing Organization serialization, update services/organizations.py |
+| `app/models.py` | Add 2 models + 3 Organization columns (`business_name`, `location`, `service_types`) | Check existing Organization serialization, update `services/orgs.py` |
 | `app/__init__.py` | Register 2 blueprints | No blast radius |
 
 ## Codebase Guardian Rules (during every task)

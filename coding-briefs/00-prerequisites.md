@@ -48,7 +48,7 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 - Services in `app/services/` — module-level functions (not classes)
 - DAOs in `app/dao/` — thin data access functions, return `dict` not ORM objects
 - Models in `app/models.py` — UUID PK, `created_at`/`updated_at` timestamps, `org_id` FK
-- Auth: `_uid()` gets `user_id` from session, `_org_id()` gets `org_id` from session
+- Auth: `_uid()` gets `user_id` from session, `_oid()` gets `org_id` from session
 - **WARNING: `_oid()` fallback.** In edge cases, `_oid()` falls back to `session['org_id'] = user_id`. This is a user UUID, not an org UUID. New blueprints should validate that `_oid()` returns a valid org by checking `Organization.query.get(org_id)` is not None before using it in FK-constrained inserts.
 - Every new table: `org_id` FK to `organizations.id` with CASCADE + index
 - Every query: filter by `org_id` — no exceptions
@@ -790,6 +790,7 @@ once the server is ready.
   - Actions: `fetch()`, `update(partial)`, `triggerScrape(url)` — all with try/catch setting error state
   - Getter: `isComplete` (completenessPercent >= 80)
   - Error handling: if fetch fails, set error message. UI shows "Couldn't load your brand info — try again" with retry button.
+  - **Org switch handling:** Watch `auth.orgId` — when it changes (user switches org via OrgSwitcher), call `fetch()` to reload brand kit for new org. Without this, the wizard uses stale brand data from the previous org.
 
 ### Phase 2: Server — Models + Endpoints
 
@@ -804,8 +805,12 @@ location = db.Column(db.String, nullable=True)              # "Scottsdale, AZ"
 service_types = db.Column(ARRAY(sa.Text), nullable=True)   # ["AC Repair", "Heating"]
 ```
 These are nullable so existing orgs aren't broken. The onboarding modal populates them on the current org.
-Also update `app/services/organizations.py` and relevant API endpoints to include these fields
-in the org read/write. The onboarding modal saves these to `auth.orgId`'s organization, not the user.
+Also update `app/services/orgs.py` (NOT `organizations.py` — file is named `orgs.py`):
+- Extend `update_org()` to accept optional `business_name`, `location`, `service_types`
+- Extend `get_org_details()` to include these fields in the returned dict
+- Extend `PATCH /api/orgs/<org_id>` to accept these fields
+- On client: extend `src/api/orgs.ts` (NOT `organizations.ts`) with updated `Org` type + `updateOrg()` payload
+The onboarding modal saves these to `auth.orgId`'s organization, not the user.
 
 **5b. Add new models:**
 ```python
@@ -1031,8 +1036,8 @@ Each stub is a simple form that sets mock data in the draft store, allowing othe
   - Step 1: Your name (full_name, text input, pre-fill from User profile) + Business name (text input, saves to Organization, pre-fill from org if available)
   - Step 2: Location (city/state or ZIP, auto-detect from browser geolocation if allowed)
   - Step 3: Services offered — industry selector (HVAC, Plumbing, Roofing, Cleaning, Electrical, Pest Control, Landscaping, Other) + sub-category checkboxes
-  - Step 4: Website URL (optional, "skip if no website" link)
-  - On completion: save business_name/location/service_types to Organization (via `auth.orgId`), save industry to User profile, then trigger brand kit scrape in background
+  - Step 4: Website URL (optional, "skip if no website" link) + Terms of Service checkbox (PRESERVE from current modal — required before completion, legal compliance)
+  - On completion: save business_name/location/service_types to Organization (via `PATCH /api/orgs/<org_id>`), save industry to User profile (via `PATCH /api/users/me`), then trigger brand kit scrape in background
   - If dismissed: returns next login until completed (existing pattern)
   - Progress dots: 4 dots at bottom
   - Copy (Wiebe voice): "Let's get you set up — 60 seconds"
@@ -1135,13 +1140,33 @@ Return pre-written options. Example headlines for plumber + neighbor marketing:
 
 ### profile_complete Logic (CRITICAL — do not break existing users)
 ```python
-def compute_profile_complete(user, org=None):
+def compute_profile_complete(user, org=None, invited_user=None):
+    # KEEP invited user fast-path (existing behavior — invited users only need full_name)
+    invited_user = is_invited_user(user) if invited_user is None else invited_user
+    if invited_user:
+        return bool((user.full_name or "").strip())
+
     # Old formula: existing users who completed old onboarding stay complete
     old_complete = bool(user.industry and user.crm and user.mail_provider and user.website_url)
     # New formula: new users complete via simplified onboarding
     new_complete = bool(user.industry and org and org.location) if org else False
     return old_complete or new_complete
 ```
+
+**CRITICAL call site update — `serialize_user()` must fetch the org and pass it:**
+```python
+def serialize_user(user: User) -> dict[str, Any]:
+    invited_user = is_invited_user(user)
+    # Fetch the user's default org for profile_complete evaluation
+    org = Organization.query.get(user.default_org_id) if user.default_org_id else None
+    return {
+        ...
+        "profile_complete": compute_profile_complete(user, org=org, invited_user=invited_user),
+        ...
+    }
+```
+Without the org lookup, `org` is always `None` and the new formula never fires — new users would be stuck in onboarding. Also update `update_user_profile()` the same way.
+
 **CRITICAL: existing users must NOT see the onboarding modal again. The OR strategy ensures old completions remain valid.** Never change this to only use the new formula — that would lock out every existing user.
 
 ### PostcardPreview Is a Shared Component
