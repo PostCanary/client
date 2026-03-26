@@ -62,6 +62,8 @@ Without this CSS import, the drawing toolbar renders as broken unstyled elements
 
 Also add to brief's leaflet-draw section: if `@types/leaflet-draw` doesn't exist on npm or is outdated, create a minimal `src/types/leaflet-draw.d.ts` declaration file.
 
+> **NOTE:** Check if `leaflet-draw` has built-in types first. If it does, skip `@types/leaflet-draw`. The execution plan says built-in types may be sufficient. Only install `@types/leaflet-draw` if the package lacks its own type definitions.
+
 ## Fix 3: Map center — BrandKit.location is not geocodable
 
 `BrandKit.location` is a string like "Scottsdale, AZ" — you can't pass this to Leaflet's `setView()`. Fix:
@@ -184,7 +186,7 @@ Task 3: Create `src/composables/useTargetingMap.ts`
 - `handlePanelToggle()` with `map.invalidateSize()` after 350ms
 - ResizeObserver for window resize
 - leaflet-draw CSS imported here
-- Read first: `src/pages/Heatmap.vue` (copy tile layer pattern), `src/composables/useHeatmapPoints.ts` (existing composable style)
+- Read first: `src/pages/Heatmap.vue` (copy tile layer pattern), `src/composables/useHeatMapPoints.ts` (existing composable style)
 - Done: composable can be instantiated, map initializes in a test div
 
 **Phase 2: Sub-Components (Tasks 4-8) — one component per task**

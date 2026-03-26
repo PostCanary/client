@@ -29,6 +29,7 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 ## Codebase Patterns (MUST follow — non-negotiable)
 
 ### Client (Vue 3)
+- **TypeScript strict mode:** `tsconfig.app.json` has `noUnusedLocals: true`. Every import must be used. Type-only imports use `import type { X }`. Stub components must not import types they don't reference.
 - `<script setup lang="ts">` with Composition API
 - Pinia stores: `defineStore("name", { state, getters, actions })`
 - API calls: use helpers from `src/api/http.ts` (`get`, `postJson`, `putJson`, `del_`)
@@ -48,6 +49,7 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 - DAOs in `app/dao/` — thin data access functions, return `dict` not ORM objects
 - Models in `app/models.py` — UUID PK, `created_at`/`updated_at` timestamps, `org_id` FK
 - Auth: `_uid()` gets `user_id` from session, `_org_id()` gets `org_id` from session
+- **WARNING: `_oid()` fallback.** In edge cases, `_oid()` falls back to `session['org_id'] = user_id`. This is a user UUID, not an org UUID. New blueprints should validate that `_oid()` returns a valid org by checking `Organization.query.get(org_id)` is not None before using it in FK-constrained inserts.
 - Every new table: `org_id` FK to `organizations.id` with CASCADE + index
 - Every query: filter by `org_id` — no exceptions
 - Errors: raise `APIError` subclasses from `app/errors.py`
@@ -92,6 +94,8 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 | `src/components/postcard/PostcardPreview.vue` | SHARED: renders a single postcard front or back (used by Terminal 2 + Terminal 3) |
 | `src/components/postcard/PostcardFrontStub.vue` | Stub front renderer (colored rectangle + text). Terminal 2 replaces with real layout. |
 | `src/components/postcard/PostcardBackStub.vue` | Stub back renderer. Terminal 2 replaces with real layout. |
+| `src/pages/CampaignsStub.vue` | Stub campaigns list page ("Campaigns coming soon" + link to start new wizard). Terminal 3 replaces. |
+| `src/pages/CampaignDetailStub.vue` | Stub campaign detail page ("Campaign details coming soon" + back link). Terminal 3 replaces. |
 
 ### New Files — Server
 
@@ -102,7 +106,7 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 | `app/dao/campaign_drafts_dao.py` | Draft data access |
 | `app/services/brand_kit.py` | Brand kit logic (scrape mock for Round 1) |
 | `app/dao/brand_kit_dao.py` | Brand kit data access |
-| `migrations/versions/20260325_add_campaign_drafts.py` | Draft + BrandKit tables + User profile field additions |
+| `migrations/versions/20260325_add_campaign_drafts.py` | Draft + BrandKit tables + Organization field additions (business_name, location, service_types) |
 
 > **NOTE (DHH override):** `ai_generation.py` removed from prerequisites. Terminal 2 creates it when
 > they build the postcard generator — no point building an abstraction before we need it.
@@ -114,8 +118,8 @@ Shared infrastructure that all 3 terminals depend on. After this brief is comple
 | `src/router.ts` | Add wizard route, campaigns page route |
 | `src/components/layout/Navbar.vue` | Add "+ Send Postcards" button |
 | `src/components/OnboardingModal.vue` | Update to 4-question flow (name, location, services, website) |
-| `app/__init__.py` | Register `campaign_drafts` blueprint |
-| `app/models.py` | Add `CampaignDraft` and `BrandKit` models |
+| `app/__init__.py` | Register `campaign_drafts` and `brand_kit` blueprints |
+| `app/models.py` | Add `CampaignDraft` and `BrandKit` models + add business_name/location/service_types to Organization |
 
 ---
 
@@ -125,11 +129,11 @@ This is the MOST IMPORTANT file. All 3 terminals import from here. Every interfa
 
 ```typescript
 // ============================================================
-// API CONVENTION: Server returns snake_case (e.g., goal_type,
-// created_at). Client uses camelCase (e.g., goalType, createdAt).
-// The API layer (src/api/*.ts) must transform keys in BOTH
-// directions. Follow the existing pattern in api/users.ts and
-// api/campaigns.ts — they already handle this transformation.
+// API CONVENTION: The codebase uses snake_case directly in TypeScript
+// (no camelCase transformation). New API files should follow this same
+// pattern — use snake_case field names to match the server response.
+// NOTE: The TypeScript interfaces in this file use camelCase for
+// readability, but the API layer does NOT transform keys.
 // ============================================================
 
 // ============================================================
@@ -424,6 +428,16 @@ export interface BrandKit {
 }
 
 // ============================================================
+// INDUSTRY NORMALIZATION
+// ============================================================
+// Existing users have free-text `industry` values (e.g., 'plumbing',
+// 'HVAC', 'carpet cleaning'). The brand kit's `getPhotosForIndustry()`
+// and targeting smart defaults expect enum values. Add a
+// `normalizeIndustry(raw: string): Industry | null` helper that maps
+// common free-text values to the enum. Fallback to null (use generic
+// defaults) for unrecognized values.
+
+// ============================================================
 // TEMPLATE SYSTEM
 // ============================================================
 
@@ -515,7 +529,7 @@ Central wizard state. ALL wizard steps read from and write to this store.
 
 ```typescript
 // Key behaviors:
-// - Auto-save strategy: save on STEP COMPLETION + EXIT + 10-second idle debounce
+// - Auto-save strategy: save on STEP COMPLETION + EXIT + 5-second idle debounce
 //   (not on every keystroke — reduces server load, still prevents data loss)
 // - Step completion: track which steps have valid data
 // - Goal change handling: flag later steps as "needs review", don't wipe
@@ -531,6 +545,12 @@ import type {
 import { GOAL_DEFAULTS } from '@/types/campaign'  // runtime value, NOT type-only import
 import { saveDraft, loadDraft, createDraft, deleteDraft } from '@/api/campaignDrafts'
 
+// Module-level — NOT in Pinia state (avoids HMR/serialization issues)
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+let _pendingSave = false
+let _retryCount = 0
+const MAX_RETRIES = 3
+
 export const useCampaignDraftStore = defineStore('campaignDraft', {
   state: () => ({
     draft: null as CampaignDraft | null,
@@ -538,8 +558,6 @@ export const useCampaignDraftStore = defineStore('campaignDraft', {
     loading: false,
     error: null as string | null,           // error state for failed API calls
     lastSavedAt: null as string | null,
-    _saveTimer: null as ReturnType<typeof setTimeout> | null,
-    _pendingSave: false,                     // tracks if a save is queued behind an in-flight save
   }),
 
   getters: {
@@ -669,15 +687,15 @@ export const useCampaignDraftStore = defineStore('campaignDraft', {
     },
 
     _debounceSave() {
-      if (this._saveTimer) clearTimeout(this._saveTimer)
-      this._saveTimer = setTimeout(() => this._save(), 5000)
+      if (_saveTimer) clearTimeout(_saveTimer)
+      _saveTimer = setTimeout(() => this._save(), 5000)
     },
 
     async _save() {
       if (!this.draft) return
       if (this.saving) {
         // Save already in-flight — queue another after it finishes
-        this._pendingSave = true
+        _pendingSave = true
         return
       }
       this.saving = true
@@ -685,15 +703,24 @@ export const useCampaignDraftStore = defineStore('campaignDraft', {
         await saveDraft(this.draft)
         this.lastSavedAt = new Date().toISOString()
         this.error = null  // clear any previous save error
+        _retryCount = 0    // reset retry counter on success
       } catch (e: any) {
         this.error = 'Save failed — retrying...'
-        // Retry once after 10 seconds
-        setTimeout(() => this._save(), 10000)
+        // Retry with exponential backoff, max 3 attempts
+        if (_retryCount < MAX_RETRIES) {
+          _retryCount++
+          setTimeout(() => this._save(), 10000 * _retryCount) // exponential backoff
+        } else {
+          this.error = 'Unable to save. Your work may be lost if you leave this page.'
+          // Do NOT trigger _pendingSave chain after max retries exhausted
+          _pendingSave = false
+        }
       } finally {
         this.saving = false
         // If another save was queued while this one was running, fire it now
-        if (this._pendingSave) {
-          this._pendingSave = false
+        // (only if we didn't exhaust retries)
+        if (_pendingSave) {
+          _pendingSave = false
           await this._save()
         }
       }
@@ -701,7 +728,7 @@ export const useCampaignDraftStore = defineStore('campaignDraft', {
 
     // Force immediate save (on step completion, exit, beforeunload)
     async saveNow() {
-      if (this._saveTimer) clearTimeout(this._saveTimer)
+      if (_saveTimer) clearTimeout(_saveTimer)
       await this._save()
     },
   },
@@ -766,18 +793,19 @@ once the server is ready.
 
 ### Phase 2: Server — Models + Endpoints
 
-**Task 5: Add models and extend User model**
+**Task 5: Add models and extend Organization model**
 
-**5a. Add new columns to the existing `User` model** (for onboarding data):
+**5a. Add new columns to the existing `Organization` model** (for onboarding data):
 ```python
-# ADD to existing User model in app/models.py:
-business_name = db.Column(db.String, nullable=True)       # "Martinez Plumbing"
-location = db.Column(db.String, nullable=True)             # "Scottsdale, AZ"
-service_types = db.Column(ARRAY(db.String), nullable=True) # ["AC Repair", "Heating"]
+# ADD to existing Organization model in app/models.py:
+# These are org-level fields, NOT user-level — one user can belong to multiple orgs.
+business_name = db.Column(db.String, nullable=True)        # "Martinez Plumbing"
+location = db.Column(db.String, nullable=True)              # "Scottsdale, AZ"
+service_types = db.Column(ARRAY(sa.Text), nullable=True)   # ["AC Repair", "Heating"]
 ```
-These are nullable so existing users aren't broken. The onboarding modal populates them.
-Also update `app/services/users.py` and `app/api/users.ts` to include these fields
-in the profile read/write.
+These are nullable so existing orgs aren't broken. The onboarding modal populates them on the current org.
+Also update `app/services/organizations.py` and relevant API endpoints to include these fields
+in the org read/write. The onboarding modal saves these to `auth.orgId`'s organization, not the user.
 
 **5b. Add new models:**
 ```python
@@ -788,8 +816,9 @@ class CampaignDraft(Model):
                    server_default=text("gen_random_uuid()"), nullable=False)
     org_id = db.Column(UUID(as_uuid=True),
                        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    # SET NULL not CASCADE — drafts are shared org resources. Deleting a user should NOT delete their drafts.
     created_by = db.Column(UUID(as_uuid=True),
-                           ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+                           ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     current_step = db.Column(db.Integer, nullable=False, default=1)
     completed_steps = db.Column(ARRAY(db.Integer), nullable=False,
                                 server_default=text("'{}'::integer[]"))
@@ -841,7 +870,18 @@ class BrandKit(Model):
 - `app/services/campaign_drafts.py`: Thin wrappers calling DAOs + validation
 - `app/services/brand_kit.py`:
   - `get_or_create(org_id)` — returns existing or creates empty brand kit
-  - `populate_from_profile(org_id, user)` — reads user's `business_name`, `location`, `industry`, `service_types` and populates brand kit. Called AFTER onboarding completion.
+  - `populate_from_profile(org_id)` — reads from the Organization, not the User:
+    ```python
+    def populate_from_profile(org_id):
+        org = Organization.query.get(org_id)
+        # Read from org, not user
+        brand_kit.business_name = org.business_name
+        brand_kit.location = org.location
+        brand_kit.service_types = org.service_types
+        # industry comes from the user who completed onboarding
+        # (passed separately or read from session)
+    ```
+    Called AFTER onboarding completion.
   - `update_from_scrape(org_id, scraped_data)` — merges scraped data INTO existing brand kit (doesn't overwrite profile data)
   - `mock_scrape(url)` — Round 1 mock: returns hardcoded extras (logo, photos, reviews, certifications). Merged with profile data by `update_from_scrape`.
   - **Data flow: onboarding completion → `populate_from_profile()` → `mock_scrape(url)` (background) → brand kit has both profile data and scraped data**
@@ -854,11 +894,20 @@ class BrandKit(Model):
   - `GET /api/campaign-drafts/<id>` — get single draft
   - `PUT /api/campaign-drafts/<id>` — update draft (JSONB merge)
   - `DELETE /api/campaign-drafts/<id>` — delete draft
-- `app/blueprints/brand_kit.py` (or add to existing blueprint):
+- `app/blueprints/brand_kit.py`:
+  ```python
+  # In app/blueprints/brand_kit.py:
+  brand_kit_bp = Blueprint("brand_kit", __name__, url_prefix="/api/brand-kit")
+  ```
   - `GET /api/brand-kit` — get org's brand kit
   - `PUT /api/brand-kit` — update brand kit (using PUT, not PATCH — no patchJson helper in http.ts)
   - `POST /api/brand-kit/scrape` — trigger website scrape (mock for Round 1)
-- Register both in `app/__init__.py`
+- Register both in `app/__init__.py`:
+  ```python
+  # In app/__init__.py, add:
+  from .blueprints.brand_kit import brand_kit_bp
+  app.register_blueprint(brand_kit_bp)
+  ```
 
 ### Phase 3: Wizard UI
 
@@ -911,7 +960,7 @@ Each stub is a simple form that sets mock data in the draft store, allowing othe
   **Browser edge cases (Hendrickson QA):**
   - `beforeunload` handler: force-save draft if there are unsaved changes
   - Browser back button: `popstate` handler goes to previous wizard step (not out of wizard)
-  - Auto-save failure: show subtle inline indicator "Save failed — retrying..." with 10-second retry. Never lose work silently.
+  - Auto-save failure: show subtle inline indicator "Save failed — retrying..." with exponential backoff (10s, 20s, 30s), max 3 retries. After 3 failures, show "Unable to save. Your work may be lost if you leave this page." Never lose work silently.
   - Two tabs on same draft: `schemaVersion` field prevents stale overwrites (warn on conflict)
 
 **Task 14: Mobile gate for wizard**
@@ -924,7 +973,16 @@ Each stub is a simple form that sets mock data in the draft store, allowing othe
 
 **Task 15: Create SendWizard page + routing**
 - `src/pages/SendWizard.vue`:
-  - On mount: check `auth.orgId` exists. If null, show error: "Please complete setup first." (edge case: user without org)
+  - On mount: check `auth.profileComplete`. If false, redirect to `/app/dashboard` (MainLayout will show the onboarding modal):
+    ```typescript
+    // On mount: check profile is complete
+    if (!auth.profileComplete) {
+      router.replace('/app/dashboard') // MainLayout will show onboarding modal
+      return
+    }
+    ```
+    Note: WizardLayout does NOT render OnboardingModal. Must redirect to MainLayout if onboarding is incomplete.
+  - Then check `auth.orgId` exists. If null, show error: "Please complete setup first." (edge case: user without org)
   - Check route params for `draftId`
   - If `draftId`: call `draftStore.resume(draftId)`
   - If no `draftId`: call `draftStore.startNew()`, then **`router.replace('/app/send/' + draft.id)`** to update the URL with the new draft ID. This prevents duplicate drafts on page refresh.
@@ -947,14 +1005,17 @@ Each stub is a simple form that sets mock data in the draft store, allowing othe
   },
   ```
 - This goes at the SAME level as the MainLayout and MarketingLayout route groups
+- Add BEFORE the catch-all `/:pathMatch(.*)*` redirect. Place as a TOP-LEVEL route (peer of `/app`, not inside its children), using WizardLayout.
 - NOT inside the existing `/app` children — the wizard uses WizardLayout (no sidebar)
 - The existing `/app` routes with MainLayout stay untouched
 
   **Also add campaign routes inside the existing `/app` children (MainLayout):**
   ```typescript
-  { path: 'campaigns', component: () => import('@/pages/Campaigns.vue'), meta: { title: 'Campaigns' } },
-  { path: 'campaigns/:id', component: () => import('@/pages/CampaignDetail.vue'), meta: { title: 'Campaign Detail' } },
+  { path: 'campaigns', component: () => import('@/pages/CampaignsStub.vue'), meta: { title: 'Campaigns' } },
+  { path: 'campaigns/:id', component: () => import('@/pages/CampaignDetailStub.vue'), meta: { title: 'Campaign Detail' } },
   ```
+  These use STUB page components since the actual `Campaigns.vue` and `CampaignDetail.vue` pages
+  aren't built until Terminal 3. Terminal 3 replaces these stubs with real implementations.
 
 ### Phase 4: Nav Entry Point + Onboarding
 
@@ -967,11 +1028,11 @@ Each stub is a simple form that sets mock data in the draft store, allowing othe
 
 **Task 16: Update OnboardingModal**
 - Modify `src/components/OnboardingModal.vue`:
-  - Step 1: Business name (text input, pre-fill from profile if available)
+  - Step 1: Your name (full_name, text input, pre-fill from User profile) + Business name (text input, saves to Organization, pre-fill from org if available)
   - Step 2: Location (city/state or ZIP, auto-detect from browser geolocation if allowed)
   - Step 3: Services offered — industry selector (HVAC, Plumbing, Roofing, Cleaning, Electrical, Pest Control, Landscaping, Other) + sub-category checkboxes
   - Step 4: Website URL (optional, "skip if no website" link)
-  - On completion: save to user profile + trigger brand kit scrape in background
+  - On completion: save business_name/location/service_types to Organization (via `auth.orgId`), save industry to User profile, then trigger brand kit scrape in background
   - If dismissed: returns next login until completed (existing pattern)
   - Progress dots: 4 dots at bottom
   - Copy (Wiebe voice): "Let's get you set up — 60 seconds"
@@ -1067,10 +1128,21 @@ Return pre-written options. Example headlines for plumber + neighbor marketing:
 - The `created_by` field on the server model tracks who made the draft
 
 ### Onboarding Modal — Existing Users (FINAL DECISION)
-- **Existing users: NO re-onboarding modal.** `auth.ts` stays unchanged — `profile_complete` is already `true`, the modal never triggers.
+- **Existing users: NO re-onboarding modal.** The `compute_profile_complete()` logic uses an OR strategy so old completions remain valid.
 - Missing fields (location, services) are collected **in-context inside the campaign wizard** when they first click "+ Send Postcards." Terminal 3's `StepGoal.vue` handles this: if `brandKit.location` is null, show inline prompt before goal cards.
 - **New users only:** Full 4-screen onboarding modal on first login.
-- On completion: save new fields to profile → call `brand_kit.populate_from_profile()` → trigger mock scrape in background
+- On completion: save org-level fields (business_name, location, service_types) to Organization, save industry to User → call `brand_kit.populate_from_profile(org_id)` → trigger mock scrape in background
+
+### profile_complete Logic (CRITICAL — do not break existing users)
+```python
+def compute_profile_complete(user, org=None):
+    # Old formula: existing users who completed old onboarding stay complete
+    old_complete = bool(user.industry and user.crm and user.mail_provider and user.website_url)
+    # New formula: new users complete via simplified onboarding
+    new_complete = bool(user.industry and org and org.location) if org else False
+    return old_complete or new_complete
+```
+**CRITICAL: existing users must NOT see the onboarding modal again. The OR strategy ensures old completions remain valid.** Never change this to only use the new formula — that would lock out every existing user.
 
 ### PostcardPreview Is a Shared Component
 - Lives in `src/components/postcard/` — NOT inside Terminal 2's `design/` folder
@@ -1133,6 +1205,8 @@ the import line for that terminal's component changes).
 - `WizardShell.vue` — each terminal changes ONE import line. Merge one at a time.
 - `src/types/campaign.ts` — terminals may add helper types. Keep additions at the bottom.
 - `src/router.ts` — Prerequisites adds ALL routes. Terminals don't touch it.
+
+**Merge conflict plan:** All 3 terminals modify WizardShell.vue import lines when replacing stubs. Merge order: Prerequisites → Terminal 3 → Terminal 1 → Terminal 2. Each terminal's PR will need manual conflict resolution on the import lines in WizardShell.vue.
 
 ---
 

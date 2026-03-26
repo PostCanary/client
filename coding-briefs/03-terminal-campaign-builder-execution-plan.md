@@ -132,7 +132,7 @@ This builds the campaign lifecycle — from goal selection (Step 1) through appr
 - CampaignListCard for each campaign/draft
 - Empty states per tab with helpful CTA: "No active campaigns yet. Send your first postcards →"
 - Pagination: 20 per page
-- Route already added by Prerequisites: `/app/campaigns`
+- Route already added by Prerequisites: `/app/campaigns`. Prerequisites adds these routes with stub page components. Terminal 3 replaces the stubs with real `Campaigns.vue` and `CampaignDetail.vue` pages.
 - **Verify:** Page renders with mock campaigns. Tabs switch. Search and sort work. Empty states display correctly.
 
 ### Phase 4: Campaign Detail Page (Tasks 12-14)
@@ -153,7 +153,7 @@ This builds the campaign lifecycle — from goal selection (Step 1) through appr
 - Targeting summary with small static map image (placeholder rectangle for Round 1)
 - CampaignActions
 - `useCampaignDetail` composable: loads single campaign from API by route param `id`
-- Route already added by Prerequisites: `/app/campaigns/:id`
+- Route already added by Prerequisites: `/app/campaigns/:id`. Prerequisites adds this route with a stub component. Terminal 3 replaces it with the real `CampaignDetail.vue` page.
 - **Verify:** Page loads campaign by ID. All sections render. Back link works.
 
 **Task 14: Mock status progression (for demo/testing)**
