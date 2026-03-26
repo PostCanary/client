@@ -43,7 +43,7 @@ This builds the postcard design experience — Step 3: "Your Postcard." The cust
 
 **Task 3: Create postcard generator composable**
 - File: `src/composables/usePostcardGenerator.ts`
-- Also create: `app/services/ai_generation.py` on server (model-agnostic interface, mock for Round 1)
+- ~~`app/services/ai_generation.py`~~ — REMOVED per stress test review. Not needed for Round 1. All content generation is client-side in `usePostcardGenerator.ts`.
 - `generateCards(brandKit, goalType, sequenceLength, recipientBreakdown)` → returns `CardDesign[]`
 - `resolveContent()`: merges brand kit + goal + template → fills all content fields
 - `resolveBackContent()`: fills back-of-card content from brand kit
@@ -57,7 +57,7 @@ This builds the postcard design experience — Step 3: "Your Postcard." The cust
 ### Phase 2: Postcard Preview (Tasks 4-7)
 
 **Task 4: Create `PostcardFront.vue`**
-- File: `src/components/postcard/PostcardFront.vue` (REPLACES PostcardFrontStub from prerequisites)
+- File: `src/components/postcard/PostcardFront.vue` (NEW file alongside PostcardFrontStub. Stub remains untouched. Only PostcardPreview.vue's import line changes to point to this real component.)
 - Renders front of postcard at 6x9 proportions (aspect-ratio: 9/6)
 - 6 different layout rendering modes based on `layoutType` prop (use v-if per layout)
 - All layouts follow Z-pattern: top-left (logo) → top-right (credibility) → bottom-left (headline/offer) → bottom-right (phone/CTA)
@@ -66,7 +66,7 @@ This builds the postcard design experience — Step 3: "Your Postcard." The cust
 - **Verify:** Render each of the 6 layout types with mock data → all look distinct, all show correct elements
 
 **Task 5: Create `PostcardBack.vue`**
-- File: `src/components/postcard/PostcardBack.vue` (REPLACES PostcardBackStub from prerequisites)
+- File: `src/components/postcard/PostcardBack.vue` (NEW file alongside PostcardBackStub. Stub remains untouched. Only PostcardPreview.vue's import line changes to point to this real component.)
 - Left half: editable content — offer headline, review + stars, phone + CTA, QR placeholder, risk reversal, company address, website URL, urgency
 - Right half: locked USPS zone — address block (sample address), IMb barcode placeholder
 - Top left: return address (customer's business address, NOT PostCanary)
@@ -157,7 +157,7 @@ This builds the postcard design experience — Step 3: "Your Postcard." The cust
 ## Codebase Guardian Rules
 
 - Before modifying PostcardPreview.vue or WizardShell.vue: read fully, grep for all consumers
-- `PostcardFront.vue` and `PostcardBack.vue` REPLACE stubs — use exact same file paths as stubs
+- `PostcardFront.vue` and `PostcardBack.vue` are NEW files alongside stubs. Stubs (`PostcardFrontStub.vue`, `PostcardBackStub.vue`) remain untouched. Only `PostcardPreview.vue`'s import lines change to point to the real components.
 - After every task: `npm run build` must pass
 - After Task 13: run existing e2e Playwright tests
 

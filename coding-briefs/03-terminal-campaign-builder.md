@@ -174,6 +174,7 @@ export interface GoalDefinition {
   recommended: boolean   // changes based on user context
   seasonal: boolean      // only show in spring/fall
   displayPriority: 'primary' | 'more'  // top 3 vs under "More options"
+  comingSoon?: boolean   // show in list but disabled with "Coming Soon" badge
   defaults: CampaignGoalDefaults
 }
 
@@ -196,6 +197,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false,
     seasonal: false,
     displayPriority: 'primary',
+    defaults: GOAL_DEFAULTS.target_area,
   },
   {
     type: 'seasonal_tuneup',
@@ -205,6 +207,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false, // set true in spring/fall
     seasonal: true,
     displayPriority: 'more', // promoted to 'primary' when in season by getGoalsForDisplay()
+    defaults: GOAL_DEFAULTS.seasonal_tuneup,
   },
   {
     type: 'storm_response',
@@ -214,6 +217,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false,
     seasonal: false,
     displayPriority: 'more',
+    defaults: GOAL_DEFAULTS.storm_response,
   },
   {
     type: 'win_back',
@@ -223,6 +227,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false,
     seasonal: false,
     displayPriority: 'more',
+    defaults: GOAL_DEFAULTS.win_back,
   },
   {
     type: 'cross_service_promo',
@@ -232,6 +237,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false,
     seasonal: false,
     displayPriority: 'more',
+    defaults: GOAL_DEFAULTS.cross_service_promo,
   },
   {
     type: 'new_mover',
@@ -243,6 +249,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     displayPriority: 'more',
     // V1 PLACEHOLDER: show in list but mark "Coming Soon" — needs NCOA/Melissa new mover data
     comingSoon: true,
+    defaults: GOAL_DEFAULTS.new_mover,
   },
   {
     type: 'other',
@@ -252,6 +259,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     recommended: false,
     seasonal: false,
     displayPriority: 'more',
+    defaults: GOAL_DEFAULTS.other,
   },
 ]
 
@@ -898,7 +906,7 @@ def approve_campaign(org_id, draft_id):
     if not draft:
         raise APIError("Draft not found")
 
-    campaign = campaigns_dao.create(
+    campaign = mail_campaign_dao.create(
         org_id=org_id,
         name=draft['data'].get('review', {}).get('campaignName', 'Untitled Campaign'),
         status='approved',

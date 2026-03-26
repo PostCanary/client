@@ -232,7 +232,9 @@ Every goal × purpose has 3 headline options. No empty arrays. Placeholders reso
 
 The `resolveContent()` function returns `trustSignals: string[]` but the `CardDesign.resolvedContent` interface in Prerequisites types doesn't include it.
 
-**Fix: Add to `src/types/campaign.ts` in the Prerequisites brief:**
+> **UPDATE: FALSE ALARM.** The Prerequisites brief DOES include `trustSignals: string[]` in the `resolvedContent` interface. This is a false alarm — no fix needed. The type is already defined correctly in Brief #0.
+
+~~**Fix: Add to `src/types/campaign.ts` in the Prerequisites brief:**~~
 ```typescript
 resolvedContent: {
   headline: string
@@ -243,11 +245,11 @@ resolvedContent: {
   phoneNumber: string
   urgencyText: string
   riskReversal: string
-  trustSignals: string[]    // ← ADD THIS LINE
+  trustSignals: string[]    // ← ALREADY EXISTS in Prerequisites types
 }
 ```
 
-This must be added during Prerequisites build. If Prerequisites is already built, add it as the first task of Terminal 2.
+~~This must be added during Prerequisites build. If Prerequisites is already built, add it as the first task of Terminal 2.~~
 
 ---
 

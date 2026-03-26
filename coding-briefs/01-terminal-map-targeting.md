@@ -39,7 +39,7 @@ Also: minor upgrades to the existing sidebar Map page (layer toggles, "Send Post
 
 - Vue 3 `<script setup lang="ts">`, Pinia stores, Tailwind + CSS vars
 - Existing map: `src/pages/Heatmap.vue` uses Leaflet 1.9.4 + MarkerCluster
-- Existing composable: `src/composables/useHeatmapPoints.ts`
+- Existing composable: `src/composables/useHeatMapPoints.ts`
 - Map tile layer: check existing Heatmap.vue for the tile URL pattern
 - All data scoped by `org_id` via session cookie
 
