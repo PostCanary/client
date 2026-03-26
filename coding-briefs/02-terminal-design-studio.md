@@ -93,7 +93,7 @@ The step opens with a FINISHED postcard (not a template picker or blank canvas).
 | `src/data/templates.ts` | Template definitions: 6 layouts × card positions × goal presets |
 | `src/data/stockPhotos.ts` | Stock photo library by industry (URLs for Round 1) |
 | `src/composables/usePostcardGenerator.ts` | Merges brand kit + goal + template → resolved postcard content |
-| `app/services/ai_generation.py` | **(Server)** Model-agnostic AI interface. Mock for Round 1. `call_model(prompt, task_type)` with config switch. |
+| ~~`app/services/ai_generation.py`~~ | **REMOVED — not needed for Round 1.** All content generation is client-side in `usePostcardGenerator.ts`. Create in Round 2 when real AI calls are needed. |
 
 ### Modified Files
 

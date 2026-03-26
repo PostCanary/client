@@ -32,15 +32,18 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 
 ### Phase 2: Server (Tasks 2-6)
 
-**Task 2: Extend User model + profile logic**
-- `app/models.py`: Add nullable columns: `business_name` (String), `location` (String), `service_types` (ARRAY of String)
-- `app/services/users.py` — THREE changes:
-  1. `serialize_user()`: add `business_name`, `location`, `service_types` to returned dict
-  2. `update_user_profile()`: add `business_name`, `location`, `service_types` to `updatable_fields` set
-  3. **CRITICAL — `compute_profile_complete()`**: Current logic (line 122) requires `industry AND crm AND mail_provider AND website_url`. Change to: `industry AND location` (minimum for new onboarding). `crm`, `mail_provider`, `website_url` become optional. Without this fix, new onboarding never completes and the modal shows forever.
-- `src/api/users.ts`: add `business_name`, `location`, `service_types` to `UserProfile` type and `UpdateUserProfilePayload`
-- `src/composables/useUserProfile.ts`: extend `ProfileForm` interface and `buildFormFromProfile()` with new fields
-- **Verify:** POST to `/api/users/me` with `{ industry: "plumbing", location: "Scottsdale, AZ" }` → `profile_complete` returns true
+**Task 2: Extend Organization model + profile logic**
+- `app/models.py`: Add nullable columns to **Organization** (NOT User — org-level data in multi-org system): `business_name` (String), `location` (String), `service_types` (ARRAY of String)
+- `app/services/users.py` — ONE change:
+  1. **CRITICAL — `compute_profile_complete()`**: Current logic (line 122) requires `industry AND crm AND mail_provider AND website_url`. Change to OR strategy:
+     - Old formula (existing users): `industry AND crm AND mail_provider AND website_url`
+     - New formula (new users): `industry AND org.location`
+     - Combined: `old_formula OR new_formula`
+     - **CRITICAL: existing users must NOT be re-triggered for onboarding.** Any user who already has `profile_complete = true` keeps it. The OR ensures existing users pass via the old formula while new users can pass via the new formula.
+- `app/services/organizations.py` (create if needed): add `serialize_organization()` including `business_name`, `location`, `service_types` in returned dict. Add `update_organization()` endpoint logic for updating org-level fields.
+- `src/api/organizations.ts` (create or extend): add `updateOrganization()` API function for saving `business_name`, `location`, `service_types` to the org. The Organization type needs `business_name`, `location`, `service_types` fields added.
+- Onboarding modal and wizard should call the org update endpoint (not user profile endpoint) for business_name, location, service_types.
+- **Verify:** PUT to `/api/organizations/<org_id>` with `{ business_name: "Drake's Plumbing", location: "Scottsdale, AZ", service_types: ["plumbing"] }` → org updates. POST to `/api/users/me` with `{ industry: "plumbing" }` + org has location → `profile_complete` returns true
 
 **Task 3: Add CampaignDraft and BrandKit models (`app/models.py`)**
 - `CampaignDraft`: id, org_id, created_by, current_step, completed_steps, needs_review_steps, data (JSONB), schema_version, timestamps
@@ -50,7 +53,7 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 
 **Task 4: Create Alembic migration**
 - `migrations/versions/20260326_add_campaign_prerequisites.py`
-- Creates `campaign_drafts` table, `brand_kits` table, adds User columns
+- Creates `campaign_drafts` table, `brand_kits` table, adds Organization columns (`business_name`, `location`, `service_types`)
 - Include both upgrade and downgrade
 - Run `flask db upgrade` to verify
 - **Verify:** Tables exist in database, rollback works
@@ -59,16 +62,22 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 - `app/dao/campaign_drafts_dao.py`: create, get_by_id, list_for_org, update, delete — all filter by org_id
 - `app/dao/brand_kit_dao.py`: get_for_org, upsert
 - `app/services/campaign_drafts.py`: thin wrappers + validation
-- `app/services/brand_kit.py`: get_or_create, populate_from_profile, update_from_scrape, mock_scrape
+- `app/services/brand_kit.py`: get_or_create, `populate_from_profile(org_id)` (reads from Organization model, NOT User), update_from_scrape, mock_scrape
 - DAOs return dicts, not ORM objects (existing pattern)
 - **Verify:** Can call services from Flask shell
 
 **Task 6: Create Blueprints**
 - `app/blueprints/campaign_drafts.py`: POST/GET/GET:id/PUT/DELETE at `/api/campaign-drafts`
 - `app/blueprints/brand_kit.py`: GET/PUT at `/api/brand-kit`, POST at `/api/brand-kit/scrape`
-- Both use `_uid()` and `_org_id()` from session (existing auth pattern)
+- Both use `_uid()` and `_oid()` from session (existing auth pattern)
 - Delete endpoint: check created_by matches current user, OR user is owner/admin
-- Register both in `app/__init__.py`
+- Register both in `app/__init__.py`:
+  ```python
+  from .blueprints.campaign_drafts import campaign_drafts_bp
+  from .blueprints.brand_kit import brand_kit_bp
+  app.register_blueprint(campaign_drafts_bp)
+  app.register_blueprint(brand_kit_bp)
+  ```
 - **Verify:** curl endpoints, check responses match expected shapes, check org_id scoping
 
 ### Phase 3: Client API + Stores (Tasks 7-9)
@@ -125,7 +134,9 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 - `src/pages/SendWizard.vue`: checks auth.orgId, loads or creates draft, `router.replace` with draft ID after creation, error state with Try Again button, loading spinner
 - Add wizard route to `src/router.ts` as TOP-LEVEL sibling (not inside /app children): `/app/send/:draftId?` using WizardLayout
 - Add campaign routes INSIDE existing /app children: `/app/campaigns`, `/app/campaigns/:id`
-- **Verify:** Navigate to /app/send, wizard opens, URL updates with draft ID, refresh resumes same draft
+- **Also create stub pages:** `src/pages/CampaignsStub.vue` and `src/pages/CampaignDetailStub.vue` as placeholder pages (following the existing stub pattern). The real campaign list/detail pages aren't created until Terminal 3 — these stubs prevent 404s and give users a "Coming soon" landing.
+- **Onboarding gate:** On SendWizard mount, check `auth.profileComplete`. If false, redirect to `/app/dashboard` (WizardLayout does not render OnboardingModal — the user must complete onboarding on the dashboard first).
+- **Verify:** Navigate to /app/send, wizard opens, URL updates with draft ID, refresh resumes same draft. Navigate to /app/campaigns, see stub page. Incomplete profile redirects to dashboard.
 
 **Task 16: Update Navbar + OnboardingModal**
 - `Navbar.vue`: add teal "+ Send Postcards" button between nav links and campaign selector. Style: `bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg`. Routes to `/app/send`.
@@ -136,8 +147,12 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
   - **Screen 4:** "What's your website?" — optional with skip nudge: "Without your website, we can't auto-pull your logo, photos, and reviews onto your postcards. You'll add them manually instead." [Skip anyway] [Enter website]
   - Phone number is NOT asked here — collected in wizard Step 3 when the postcard needs it and phone is missing
   - Progress dots at bottom (4 dots)
-  - On completion: save profile → call `brand_kit.populate_from_profile()` → trigger mock scrape background
-  - Use existing `useUserProfile` composable extended with new fields
+  - On completion:
+    1. Save `full_name` to User profile (via existing user profile endpoint)
+    2. Save `business_name`, `location`, `service_types` to Organization (via org update endpoint — NOT the user profile endpoint)
+    3. Call `populate_from_profile(org_id)` to seed brand kit from org data
+    4. Trigger mock scrape background
+  - Use existing `useUserProfile` composable for user fields (full_name, industry). Use new org update API for org fields (business_name, location, service_types).
   - **Existing users:** NO re-onboarding modal. Missing fields (location, services) collected in-context inside the campaign wizard before Step 1 when they first use it.
 - `auth.ts`: onboarding trigger stays as `!profile_complete` (no change needed — existing users keep `profile_complete = true` and never see the modal again). Missing fields for existing users are collected in-context when they first open the campaign wizard.
 - **Verify:** New button visible in nav, clicking it opens wizard. New user sees onboarding modal. Existing user does NOT see modal — wizard handles missing fields.
@@ -150,7 +165,7 @@ This Prerequisites build creates the shared foundation all 3 terminal builds dep
 | `src/components/layout/Navbar.vue` | Add button | Check MobileNavbar.vue too |
 | `src/components/OnboardingModal.vue` | Rebuild | Check MainLayout.vue trigger |
 | `src/stores/auth.ts` | NO change needed — trigger stays as `!profile_complete` | Existing users never see modal again. Missing fields collected in wizard. |
-| `app/models.py` | Add 2 models + 3 User columns | Check existing User serialization in services/users.py |
+| `app/models.py` | Add 2 models + 3 Organization columns (`business_name`, `location`, `service_types`) | Check existing Organization serialization, update services/organizations.py |
 | `app/__init__.py` | Register 2 blueprints | No blast radius |
 
 ## Codebase Guardian Rules (during every task)

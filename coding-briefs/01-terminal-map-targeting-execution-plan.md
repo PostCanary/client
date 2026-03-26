@@ -53,8 +53,8 @@ This builds the targeting map for the campaign wizard — Step 2: "Pick Your Nei
 **Task 3: Create `TargetingPanel.vue`**
 - File: `src/components/targeting/TargetingPanel.vue`
 - Collapsible right panel: 360px default, 0px collapsed, toggle button on left edge
-- 3 tabs: "Target" | "Refine" | "Summary"
-- Tab indicators: "Refine" shows "(X applied)" when filters active
+- 3 tabs: "Target" | "Filters" | "Count & Cost"
+- Tab indicators: "Filters" shows "(X applied)" when filters active
 - **Verify:** Panel renders, tabs switch, collapse/expand works
 
 **Task 4: Create `PanelTabTarget.vue` + sub-components**
@@ -82,8 +82,8 @@ This builds the targeting map for the campaign wizard — Step 2: "Pick Your Nei
 - Reads sequence length from draft store (from Step 1)
 - First-time users: cost only. "After your first campaign, we'll show estimated returns."
 - Small campaigns (<100): "Great start! Even small campaigns drive results."
-- Save Audience button → modal with name input → saves criteria to localStorage (Round 1)
-- **Verify:** Count updates in real-time as areas/filters change. Cost math is correct. Save dialog works.
+- ~~Save Audience button~~ — REMOVED for Round 1 per stress test review. Ship when it works end-to-end (Round 2).
+- **Verify:** Count updates in real-time as areas/filters change. Cost math is correct.
 
 ### Phase 3: Integration + Polish (Tasks 7-10)
 
@@ -159,7 +159,7 @@ No `@types/leaflet-draw` needed if using the package's built-in types. Check aft
 9. Exclusion toggles auto-set based on Step 1 goal (neighbor = past customers OFF)
 10. Summary tab shows: total - exclusions = final count, per-card cost, total cost
 11. Small campaign (<100) shows encouraging message
-12. Save Audience → name dialog → saves to localStorage
+12. ~~Save Audience~~ — REMOVED for Round 1 per stress test review
 13. Collapse panel → map takes full width. Expand → panel returns.
 14. Click Next → data persists in draft store (check `draftStore.draft.targeting`)
 15. Click Back → return to Step 1 → data preserved
