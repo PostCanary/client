@@ -144,6 +144,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
 
 type PlanCode = "INSIGHT" | "PERFORMANCE" | "PRECISION" | "ELITE";
 
@@ -200,32 +201,12 @@ const cfg = computed(() => {
 
 const showTierPicker = computed(() => cfg.value.tierPicker);
 
-const plans = [
-  {
-    code: "INSIGHT" as const,
-    name: "Tier 1",
-    price: "$99/mo",
-    limit: "Up to 1,000 mailers / month",
-  },
-  {
-    code: "PERFORMANCE" as const,
-    name: "Tier 2",
-    price: "$249/mo",
-    limit: "Up to 5,000 mailers / month",
-  },
-  {
-    code: "PRECISION" as const,
-    name: "Tier 3",
-    price: "$499/mo",
-    limit: "Up to 25,000 mailers / month",
-  },
-  {
-    code: "ELITE" as const,
-    name: "Tier 4",
-    price: "$999/mo",
-    limit: "Unlimited mailers",
-  },
-];
+const plans = PLAN_DISPLAY_ORDER.map((code) => ({
+  code,
+  name: PLAN_DISPLAY_DETAILS[code].name,
+  price: PLAN_DISPLAY_DETAILS[code].price,
+  limit: PLAN_DISPLAY_DETAILS[code].limitLabel,
+}));
 
 const selectedPlan = ref<PlanCode | null>(null);
 

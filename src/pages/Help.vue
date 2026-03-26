@@ -241,7 +241,7 @@ const sections: FaqSection[] = [
     items: [
       {
         q: "What is the Demographics page?",
-        a: "The Demographics page shows a demographic profile of your campaign audience. It displays distributions for <strong>home value</strong>, <strong>age range</strong>, <strong>household income</strong>, and <strong>property type</strong>, helping you understand who your customers are and which segments convert best.",
+        a: "The Demographics page shows a demographic profile of your campaign audience. It displays distributions for <strong>home value</strong>, <strong>home age</strong>, <strong>age range</strong>, <strong>household income</strong>, and <strong>property type</strong>, helping you understand who your customers are and which segments convert best.",
       },
       {
         q: "Where does the demographic data come from?",

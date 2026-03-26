@@ -39,6 +39,14 @@
 
     <div ref="mapEl" class="flex-1 min-h-[360px]" />
   </section>
+
+  <PaywallModal
+    v-model="showPaywall"
+    :config="paywallConfig"
+    :loading="paywallBusy"
+    @primary="onPaywallPrimary"
+    @secondary="onPaywallSecondary"
+  />
 </template>
 
 <script setup lang="ts">
@@ -56,6 +64,7 @@ import iconUrl from "leaflet/dist/images/marker-icon.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
 import { getHeatmapPoints, type HeatmapKind } from "@/api/geocodes";
+import PaywallModal from "@/components/dashboard/PaywallModal.vue";
 import { useBilling } from "@/composables/useBilling";
 import { useRunData } from "@/composables/useRunData";
 import { useCampaignStore } from "@/stores/useCampaignStore";
@@ -87,8 +96,14 @@ const route = useRoute();
 const router = useRouter();
 
 const {
+  showPaywall,
+  paywallBusy,
+  paywallConfig,
   isBillingOverlayActive,
   showBillingSuccess,
+  onRequireSubscription,
+  onPaywallPrimary,
+  onPaywallSecondary,
 } = useBilling(route, router);
 
 const { runResult, refreshOnce: refreshRunData } = useRunData();
@@ -102,6 +117,9 @@ watch(
       const previewMode = result.preview_mode === true;
       if (previewMode !== isPreviewMode.value) {
         isPreviewMode.value = previewMode;
+        if (previewMode && !showPaywall.value) {
+          onRequireSubscription();
+        }
       }
     }
   },

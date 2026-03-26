@@ -39,6 +39,7 @@ export type DemoCharts = {
   home_value: DemoDistribution;
   age_range: DemoDistribution;
   income: DemoDistribution;
+  home_age: DemoDistribution;
   property_type: DemoDistribution;
   comparison?: {
     labels: string[];

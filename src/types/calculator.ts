@@ -1,3 +1,5 @@
+import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
+
 export interface CalculatorHeroContent {
   headline: string;
   subheadline: string;
@@ -94,12 +96,11 @@ export interface IndustryBenchmark {
   source?: string;
 }
 
-export const PRICING_TIERS: PricingTier[] = [
-  { name: "Tier 1", maxVolume: 1000, monthlyPrice: 99 },
-  { name: "Tier 2", maxVolume: 5000, monthlyPrice: 249 },
-  { name: "Tier 3", maxVolume: 25000, monthlyPrice: 499 },
-  { name: "Tier 4", maxVolume: Infinity, monthlyPrice: 999 },
-];
+export const PRICING_TIERS: PricingTier[] = PLAN_DISPLAY_ORDER.map((code) => ({
+  name: PLAN_DISPLAY_DETAILS[code].name,
+  maxVolume: PLAN_DISPLAY_DETAILS[code].limit,
+  monthlyPrice: PLAN_DISPLAY_DETAILS[code].monthlyPrice,
+}));
 
 export const INDUSTRY_DEFAULTS: Record<IndustryType, { ticketValue: number; conversionRate: number }> = {
   hvac: { ticketValue: 350, conversionRate: 3.1 },

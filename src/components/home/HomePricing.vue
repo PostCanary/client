@@ -6,6 +6,7 @@ import SectionHeading from "@/components/marketing/SectionHeading.vue";
 import AnimatedEntry from "@/components/marketing/AnimatedEntry.vue";
 import check from "@/assets/home/check-icon.svg?url";
 import { createCheckoutSession, type PlanCode } from "@/api/billing";
+import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "vue-router";
 import { generateEventId, trackInitiateCheckout } from "@/composables/useMetaPixel";
@@ -62,40 +63,14 @@ const commonFeatures: Feature[] = [
   { icon: check, label: "Demographics" },
 ];
 
-const tiers: Tier[] = [
-  {
-    id: "INSIGHT",
-    name: "Tier 1",
-    price: "$99",
-    perMonthLabel: "/ Month",
-    includedLabel: "Up to 1,000 mailers / month",
-    features: commonFeatures,
-  },
-  {
-    id: "PERFORMANCE",
-    name: "Tier 2",
-    price: "$249",
-    perMonthLabel: "/ Month",
-    includedLabel: "Up to 5,000 mailers / month",
-    features: commonFeatures,
-  },
-  {
-    id: "PRECISION",
-    name: "Tier 3",
-    price: "$499",
-    perMonthLabel: "/ Month",
-    includedLabel: "Up to 25,000 mailers / month",
-    features: commonFeatures,
-  },
-  {
-    id: "ELITE",
-    name: "Tier 4",
-    price: "$999",
-    perMonthLabel: "/ Month",
-    includedLabel: "Unlimited mailers",
-    features: commonFeatures,
-  },
-];
+const tiers: Tier[] = PLAN_DISPLAY_ORDER.map((code) => ({
+  id: code,
+  name: PLAN_DISPLAY_DETAILS[code].name,
+  price: PLAN_DISPLAY_DETAILS[code].price.replace("/mo", ""),
+  perMonthLabel: "/ Month",
+  includedLabel: PLAN_DISPLAY_DETAILS[code].includedLabel,
+  features: commonFeatures,
+}));
 
 const starterBusy = ref(false);
 const activeTierId = ref<PlanCode | null>(null);
