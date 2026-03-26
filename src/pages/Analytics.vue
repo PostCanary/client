@@ -10,6 +10,7 @@ import InsightsSummary from "@/components/analytics/InsightsSummary.vue";
 import InsightSectionCard from "@/components/analytics/InsightSection.vue";
 import RecommendationsPanel from "@/components/analytics/RecommendationsPanel.vue";
 import RegenerateButton from "@/components/analytics/RegenerateButton.vue";
+import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 import PaywallModal from "@/components/dashboard/PaywallModal.vue";
 import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
 
@@ -72,6 +73,10 @@ const shouldBlur = computed(() => {
   return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
 });
 
+const showPreviewUpgradeBanner = computed(() => {
+  return isPreviewMode.value && !showBillingSuccess.value;
+});
+
 watch(
   () => campaignStore.activeCampaignId,
   () => {
@@ -82,6 +87,11 @@ watch(
 </script>
 
 <template>
+  <PreviewUpgradeBanner
+    v-if="showPreviewUpgradeBanner"
+    @select-plan="onRequireSubscription"
+  />
+
   <div class="analytics-page" :class="{ 'analytics-blurred': shouldBlur }">
     <!-- Page Header -->
     <div class="page-header">

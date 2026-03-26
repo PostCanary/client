@@ -13,6 +13,7 @@ import DemoBarChart from "@/components/demographics/DemoBarChart.vue";
 import DemoDoughnutChart from "@/components/demographics/DemoDoughnutChart.vue";
 import DemoComparisonChart from "@/components/demographics/DemoComparisonChart.vue";
 import DemoRecommendationsTable from "@/components/demographics/DemoRecommendationsTable.vue";
+import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 import PaywallModal from "@/components/dashboard/PaywallModal.vue";
 import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
 
@@ -73,9 +74,18 @@ watch(
 const shouldBlur = computed(() => {
   return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
 });
+
+const showPreviewUpgradeBanner = computed(() => {
+  return isPreviewMode.value && !showBillingSuccess.value;
+});
 </script>
 
 <template>
+  <PreviewUpgradeBanner
+    v-if="showPreviewUpgradeBanner"
+    @select-plan="onRequireSubscription"
+  />
+
   <div class="demo-page" :class="{ 'demo-blurred': shouldBlur }">
     <!-- Page Header + View Toggle -->
     <div class="page-header">
