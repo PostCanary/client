@@ -100,6 +100,7 @@ This builds the campaign lifecycle — from goal selection (Step 1) through appr
   - id, org_id, created_by, name, status, goal_type, service_type, sequence_length, household_count, total_cost, total_spent, targeting_data (JSONB), design_data (JSONB), schedule_data (JSONB), cards_data (JSONB), approved_at, draft_id, timestamps
   - Status: draft/approved/printing/in_transit/delivered/results_ready/completed/paused
   - org_id FK + CASCADE + index
+  - created_by FK to users.id with **ondelete="SET NULL", nullable=True** (same as CampaignDraft — approved campaigns must survive user deletion)
 - `app/dao/mail_campaign_dao.py`: create, get_by_id, list_for_org, update_status
 - `app/services/mail_campaign_lifecycle.py`: approve_campaign (converts draft → MailCampaign), get_detail, list_campaigns
 - `app/blueprints/mail_campaigns.py`: POST `/api/mail-campaigns` (approve), GET list, GET detail, PATCH (pause/resume)
