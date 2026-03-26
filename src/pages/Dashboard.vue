@@ -8,6 +8,7 @@ import MapperModal from "@/components/dashboard/MapperModal.vue";
 import PaywallModal from "@/components/dashboard/PaywallModal.vue";
 import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
 import FirstUploadRunMatchingModal from "@/components/dashboard/FirstUploadRunMatchingModal.vue";
+import CampaignPromptModal from "@/components/dashboard/CampaignPromptModal.vue";
 
 import UploadCard from "@/components/dashboard/UploadCard.vue";
 import KpiSummaryCard from "@/components/dashboard/KpiSummaryCard.vue";
@@ -153,6 +154,10 @@ const firstUploadRunLoading = ref(false);
 const mailBatchId = ref<string | null>(null);
 const crmBatchId = ref<string | null>(null);
 const pendingNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | null } | null>(null);
+
+// Campaign prompt state — shown before normalize to nudge campaign assignment
+const showCampaignPrompt = ref(false);
+const pendingCampaignNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | null } | null>(null);
 
 // Track if we're in preview mode (results blurred until payment)
 const isPreviewMode = ref(false); // Tracks if results should be blurred due to paywall
@@ -340,11 +345,11 @@ async function onMappingConfirm(mapping: MapperMapping) {
     mapperErrors.value = null;
     missing.value = {};
 
-    // If we opened the mapper for auto-mapping review, continue to normalize
+    // If we opened the mapper for auto-mapping review, continue to campaign prompt → normalize
     if (pendingNormalize.value) {
       const pending = pendingNormalize.value;
       pendingNormalize.value = null;
-      await onUploadCommitNormalize(pending);
+      showCampaignPromptBeforeNormalize(pending);
     }
   } catch (err: any) {
     const status = err?.status ?? err?.response?.status;
@@ -429,13 +434,38 @@ async function onUploadCommit(payload: {
     console.warn("[Dashboard] Failed to check mapping, proceeding to normalize", err);
   }
 
-  await onUploadCommitNormalize(payload);
+  showCampaignPromptBeforeNormalize(payload);
+}
+
+/* ------------------------------------------------------------------
+ * Campaign prompt — shown before normalize to nudge campaign assignment
+ * ------------------------------------------------------------------ */
+
+function showCampaignPromptBeforeNormalize(payload: {
+  mailBatchId: string | null;
+  crmBatchId: string | null;
+}) {
+  pendingCampaignNormalize.value = payload;
+  showCampaignPrompt.value = true;
+}
+
+function onCampaignPromptConfirm(_campaignId: string | null) {
+  showCampaignPrompt.value = false;
+  const pending = pendingCampaignNormalize.value;
+  pendingCampaignNormalize.value = null;
+  if (pending) onUploadCommitNormalize(pending);
+}
+
+function onCampaignPromptSkip() {
+  showCampaignPrompt.value = false;
+  const pending = pendingCampaignNormalize.value;
+  pendingCampaignNormalize.value = null;
+  if (pending) onUploadCommitNormalize(pending);
 }
 
 /**
  * Normalize batches + kick off matching.
- * Extracted so it can be called from both onUploadCommit (direct path)
- * and onMappingConfirm (after auto-mapping review).
+ * Called after campaign prompt (confirm or skip).
  */
 async function assignMailBatchToActiveCampaign(mailBatchId: string | null) {
   const campaignId = campaignStore.activeCampaignId;
@@ -1055,6 +1085,12 @@ onBeforeUnmount(() => {
     :confirm-label="pendingNormalize ? 'Confirm & Run' : undefined"
     @close="showMapper = false"
     @confirm="onMappingConfirm"
+  />
+
+  <CampaignPromptModal
+    :open="showCampaignPrompt"
+    @confirm="onCampaignPromptConfirm"
+    @skip="onCampaignPromptSkip"
   />
 
   <PaywallModal

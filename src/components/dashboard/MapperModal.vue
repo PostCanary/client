@@ -24,41 +24,6 @@
           the same we will remember and you won't have to do this again!
         </p>
 
-        <!-- Campaign assignment -->
-        <div class="campaign-row">
-          <label class="campaign-label">Campaign</label>
-          <template v-if="showNewCampaignInput">
-            <input
-              ref="newCampaignInputEl"
-              v-model="newCampaignName"
-              type="text"
-              placeholder="Campaign name…"
-              class="campaign-input"
-              @keydown.enter.prevent="createNewCampaign"
-              @keydown.escape.prevent="cancelNewCampaign"
-              @blur="createNewCampaign"
-            />
-          </template>
-          <template v-else>
-            <select
-              class="campaign-select"
-              :value="campaignStore.activeCampaignId ?? ''"
-              @change="onCampaignChange"
-            >
-              <option value="">All Campaigns</option>
-              <option
-                v-for="c in campaignStore.campaigns"
-                :key="c.id"
-                :value="c.id"
-              >
-                {{ c.name }}
-              </option>
-              <option disabled>───────────</option>
-              <option value="__new__">+ New Campaign</option>
-            </select>
-          </template>
-        </div>
-
         <!-- MAIL CSV -->
         <section v-if="mailHeaders.length" class="csv-section">
           <h4 class="csv-title">Mail CSV</h4>
@@ -257,9 +222,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed, nextTick } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
-import { useCampaignStore } from "@/stores/useCampaignStore";
 
 type HeaderType =
   | "string"
@@ -301,70 +265,6 @@ const emit = defineEmits<{
 }>();
 
 const dialogEl = ref<HTMLElement | null>(null);
-
-/* ---------- campaign selector ---------- */
-const campaignStore = useCampaignStore();
-campaignStore.hydrate();
-
-const showNewCampaignInput = ref(false);
-const newCampaignName = ref("");
-const newCampaignInputEl = ref<HTMLInputElement | null>(null);
-const campaignCreating = ref(false);
-let campaignCreationPromise: Promise<void> | null = null;
-
-watch(
-  () => props.open,
-  (open) => {
-    if (!open) return;
-    void campaignStore.fetchCampaigns();
-  },
-  { immediate: true }
-);
-
-function onCampaignChange(event: Event) {
-  const val = (event.target as HTMLSelectElement).value;
-  if (val === "__new__") {
-    showNewCampaignInput.value = true;
-    nextTick(() => newCampaignInputEl.value?.focus());
-    (event.target as HTMLSelectElement).value = campaignStore.activeCampaignId ?? "";
-    return;
-  }
-  campaignStore.setActiveCampaign(val || null);
-  window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: val || null } }));
-}
-
-async function createNewCampaign() {
-  if (campaignCreationPromise) return campaignCreationPromise;
-
-  const name = newCampaignName.value.trim();
-  if (!name) {
-    showNewCampaignInput.value = false;
-    return;
-  }
-
-  campaignCreating.value = true;
-  campaignCreationPromise = (async () => {
-    try {
-      const campaign = await campaignStore.createCampaign(name);
-      campaignStore.setActiveCampaign(campaign.id);
-      window.dispatchEvent(new CustomEvent("mt:campaign-changed", { detail: { campaignId: campaign.id } }));
-    } catch (e) {
-      console.error("Failed to create campaign", e);
-    } finally {
-      newCampaignName.value = "";
-      showNewCampaignInput.value = false;
-      campaignCreating.value = false;
-      campaignCreationPromise = null;
-    }
-  })();
-
-  return campaignCreationPromise;
-}
-
-function cancelNewCampaign() {
-  newCampaignName.value = "";
-  showNewCampaignInput.value = false;
-}
 
 const DISPLAY_ROW_COUNT = 5;
 
@@ -595,7 +495,6 @@ const unmappedRequiredCrm = computed(() => {
 const saveDisabled = computed(
   () =>
     !!props.saving ||
-    campaignCreating.value ||
     unmappedRequiredMail.value.length > 0 ||
     unmappedRequiredCrm.value.length > 0
 );
@@ -648,13 +547,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", onEsc);
 });
 
-async function confirm() {
-  if (showNewCampaignInput.value || newCampaignName.value.trim()) {
-    await createNewCampaign();
-  } else if (campaignCreationPromise) {
-    await campaignCreationPromise;
-  }
-
+function confirm() {
   const payload: MapperMapping = {
     mail: invertToFieldMap(toRaw(mailColumnMap.value)),
     crm: invertToFieldMap(toRaw(crmColumnMap.value)),
@@ -730,61 +623,6 @@ async function confirm() {
   border: 1px solid rgba(71, 191, 169, 0.25);
   border-radius: 8px;
   padding: 10px 14px;
-}
-
-.campaign-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.campaign-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text);
-  white-space: nowrap;
-}
-
-.campaign-select {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--app-border);
-  background: #f8fafc;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--app-text);
-  cursor: pointer;
-  min-width: 180px;
-  transition: border-color 0.15s ease;
-}
-
-.campaign-select:hover {
-  border-color: var(--app-teal);
-}
-
-.campaign-select:focus {
-  outline: none;
-  border-color: var(--app-teal);
-  box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
-}
-
-.campaign-input {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--app-teal);
-  background: var(--app-card-bg);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--app-text);
-  min-width: 180px;
-  box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
-}
-
-.campaign-input:focus {
-  outline: none;
 }
 
 /* ---------- CSV section ---------- */
