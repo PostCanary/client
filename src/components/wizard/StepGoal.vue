@@ -36,7 +36,11 @@ async function completeSetup() {
         location: setupLocation.value.trim(),
       });
     }
-    // Refresh brand kit to pick up changes
+    // Save industry to brand kit so needsSetup becomes false
+    if (setupIndustry.value) {
+      await brandKitStore.update({ industry: setupIndustry.value });
+    }
+    // Refresh brand kit to pick up all changes
     await brandKitStore.fetch();
   } catch {
     // Continue anyway — they can still use the wizard

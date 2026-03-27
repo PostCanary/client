@@ -252,9 +252,12 @@ async function approve() {
         </template>
         <template v-else> Approve & Send Card 1 </template>
       </button>
-      <p class="text-xs text-gray-400 text-center mt-2">
+      <p v-if="seqLen > 1" class="text-xs text-gray-400 text-center mt-2">
         Cards {{ seqLen > 2 ? `2-${seqLen}` : "2" }} send on schedule
         unless you pause. You can cancel within 1 hour.
+      </p>
+      <p v-else class="text-xs text-gray-400 text-center mt-2">
+        You can cancel within 1 hour.
       </p>
     </div>
   </div>
