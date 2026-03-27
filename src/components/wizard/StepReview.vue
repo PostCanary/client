@@ -35,7 +35,12 @@ onMounted(() => {
       month: "short",
       day: "numeric",
     });
-    campaignName.value = `${goalLabel} — ${date}`;
+    // Format: [Goal] — [Primary Area] — [Date]
+    const area = targeting.value?.areas?.[0]?.zipCode
+      ?? brandKitStore.brandKit?.location
+      ?? "";
+    const areaStr = area ? ` — ${area}` : "";
+    campaignName.value = `${goalLabel}${areaStr} — ${date}`;
   }
 });
 
