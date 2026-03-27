@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
@@ -63,6 +63,10 @@ onMounted(async () => {
   } finally {
     initializing.value = false;
   }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", checkMobile);
 });
 </script>
 
