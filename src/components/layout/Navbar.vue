@@ -231,6 +231,14 @@ function doSearch() {
       </template>
     </div>
 
+    <!-- Send Postcards CTA -->
+    <button
+      class="hidden sm:flex items-center gap-1.5 ml-3 bg-[#47bfa9] text-white font-semibold text-sm px-4 py-2 rounded-lg hover:bg-[#3aa893] transition-colors"
+      @click="router.push('/app/send')"
+    >
+      + Send Postcards
+    </button>
+
     <!-- Org switcher (only shown for users in multiple orgs) -->
     <OrgSwitcher
       v-if="auth.hasMultipleOrgs"

@@ -3,72 +3,119 @@
 import { computed, ref } from "vue";
 import { useUserProfile } from "@/composables/useUserProfile";
 import { useAuthStore } from "@/stores/auth";
-import profileIcon from "@/assets/profile-icon.svg?url";
-import { hashUsernameToGradient } from "@/utils/avatar-gradient";
+import { updateOrg } from "@/api/orgs";
+import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { INDUSTRY_LABELS } from "@/types/campaign";
+import type { Industry } from "@/types/campaign";
 
 const emit = defineEmits<{
   (e: "completed"): void;
 }>();
 
 const auth = useAuthStore();
-const acceptedTerms = ref(false);
+const brandKitStore = useBrandKitStore();
 const {
   profile,
   form,
   loading,
   saving,
-  avatarUploading,
   error,
-  isProfileComplete,
   hasLoaded,
   loadProfile,
   saveProfile,
-  uploadAvatar,
 } = useUserProfile();
 
-// Load profile once when modal mounts if needed
 if (!hasLoaded.value && auth.isAuthenticated) {
   loadProfile();
 }
 
-const submitting = computed(() => saving.value || avatarUploading.value);
 const isInvitedUser = computed(() => !!profile.value?.is_invited_user);
+const submitting = ref(false);
 
-// Name to feed into the gradient hasher
-const displayName = computed(() => {
-  return (
-    profile.value?.full_name || auth.userName || profile.value?.email || "User"
-  );
-});
+// Multi-step state
+const currentScreen = ref(1);
+const totalScreens = computed(() => (isInvitedUser.value ? 1 : 4));
 
-// Match Navbar gradient logic
-const avatarGradientStyle = computed(() => {
-  const [from, to] = hashUsernameToGradient(displayName.value);
-  return {
-    background: `linear-gradient(135deg, ${from}, ${to})`,
-  };
+// New org-level fields
+const businessName = ref("");
+const location = ref("");
+const selectedIndustry = ref<Industry | "">("");
+const serviceTypes = ref<string[]>([]);
+const websiteUrl = ref("");
+const acceptedTerms = ref(false);
+
+const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
+
+// Screen navigation
+function nextScreen() {
+  if (currentScreen.value < totalScreens.value) {
+    currentScreen.value++;
+  }
+}
+
+function prevScreen() {
+  if (currentScreen.value > 1) {
+    currentScreen.value--;
+  }
+}
+
+// Can proceed from current screen
+const canProceed = computed(() => {
+  if (isInvitedUser.value) {
+    return !!(form.value.full_name || "").trim() && acceptedTerms.value;
+  }
+  switch (currentScreen.value) {
+    case 1:
+      return !!(form.value.full_name || "").trim() && !!businessName.value.trim();
+    case 2:
+      return !!location.value.trim();
+    case 3:
+      return !!selectedIndustry.value;
+    case 4:
+      return acceptedTerms.value;
+    default:
+      return false;
+  }
 });
 
 async function onSubmit() {
-  if (!acceptedTerms.value) {
-    return;
-  }
-  const updated = await saveProfile();
-  if (updated?.profile_complete) {
+  if (!canProceed.value) return;
+
+  submitting.value = true;
+  try {
+    // Save user-level fields (full_name, industry)
+    if (selectedIndustry.value) {
+      form.value.industry = selectedIndustry.value;
+    }
+    await saveProfile();
+
+    // Save org-level fields (not for invited users)
+    if (!isInvitedUser.value && auth.orgId) {
+      await updateOrg(auth.orgId, {
+        business_name: businessName.value.trim(),
+        location: location.value.trim(),
+        service_types: serviceTypes.value.length > 0 ? serviceTypes.value : undefined,
+      });
+
+      // Seed brand kit from org data + trigger mock scrape
+      await brandKitStore.fetch();
+      if (websiteUrl.value.trim()) {
+        brandKitStore.triggerScrape(websiteUrl.value.trim());
+      }
+    }
+
+    // Refresh auth state to pick up new profile_complete
+    await auth.fetchMe();
     emit("completed");
+  } catch (e: any) {
+    // error is handled by useUserProfile
+  } finally {
+    submitting.value = false;
   }
 }
 
 function openTerms() {
   window.open("/terms", "_blank");
-}
-
-async function onAvatarChanged(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  await uploadAvatar(file);
-  input.value = "";
 }
 </script>
 
@@ -78,142 +125,135 @@ async function onAvatarChanged(e: Event) {
 
     <div class="onboarding-modal">
       <header class="onboarding-header">
-        <h2>
-          {{ isInvitedUser ? "Finish joining your team" : "Tell us about your mail setup" }}
-        </h2>
-        <p>
-          {{
-            isInvitedUser
-              ? "Add your name so your team can recognize you in PostCanary."
-              : "We’ll use this to tailor KPIs and future features."
-          }}
+        <h2 v-if="isInvitedUser">Finish joining your team</h2>
+        <h2 v-else>Let's get you set up — 60 seconds</h2>
+        <p v-if="isInvitedUser">
+          Add your name so your team can recognize you in PostCanary.
         </p>
       </header>
 
       <section class="onboarding-body">
-        <form @submit.prevent="onSubmit" class="onboarding-form">
-          <div v-if="error" class="onboarding-error">
-            {{ error }}
-          </div>
+        <form @submit.prevent="isInvitedUser || currentScreen === totalScreens ? onSubmit() : nextScreen()">
+          <div v-if="error" class="onboarding-error">{{ error }}</div>
 
-          <!-- Avatar -->
-          <!-- Hidden for now - avatar upload functionality is broken -->
-          <div v-if="false" class="field-row avatar-row">
-            <div class="avatar-preview" :style="avatarGradientStyle">
-              <img
-                v-if="profile?.avatar_url"
-                :src="profile?.avatar_url ?? ''"
-                alt=""
-                class="avatar-img"
-              />
-              <img v-else :src="profileIcon" alt="" class="avatar-icon" />
+          <!-- Invited user: single screen -->
+          <template v-if="isInvitedUser">
+            <div class="field">
+              <label>Full name</label>
+              <input v-model="form.full_name" type="text" placeholder="Joe the Plumber" required />
             </div>
-            <div class="avatar-actions">
-              <label class="btn-secondary">
-                Upload avatar
-                <input
-                  type="file"
-                  accept="image/*"
-                  class="hidden-input"
-                  @change="onAvatarChanged"
-                />
+            <div class="terms-checkbox">
+              <label class="terms-label">
+                <input v-model="acceptedTerms" type="checkbox" class="terms-input" required />
+                <span class="terms-text">
+                  I agree to the
+                  <button type="button" @click="openTerms" class="terms-link">Terms of Service</button>
+                </span>
               </label>
-              <p class="hint">JPG or PNG, up to ~2MB.</p>
-            </div>
-          </div>
-
-          <!-- Full name -->
-          <div class="field">
-            <label>Full name</label>
-            <input
-              v-model="form.full_name"
-              type="text"
-              placeholder="Joe the Plumber"
-              required
-            />
-          </div>
-
-          <template v-if="!isInvitedUser">
-            <!-- Website -->
-            <div class="field">
-              <label>Website</label>
-              <input
-                v-model="form.website_url"
-                type="text"
-                placeholder="joesplumbing.com"
-                required
-              />
-            </div>
-
-            <!-- Industry -->
-            <div class="field">
-              <label>Industry</label>
-              <input
-                v-model="form.industry"
-                type="text"
-                placeholder="plumbing, carpentry, etc."
-                required
-              />
-            </div>
-
-            <!-- CRM -->
-            <div class="field">
-              <label>CRM</label>
-              <input
-                v-model="form.crm"
-                type="text"
-                placeholder="HubSpot, Salesforce, custom..."
-                required
-              />
-            </div>
-
-            <!-- Mail provider -->
-            <div class="field">
-              <label>Mail provider</label>
-              <input
-                v-model="form.mail_provider"
-                type="text"
-                placeholder="Lob, Click2Mail, in-house..."
-                required
-              />
             </div>
           </template>
 
-          <!-- Terms of Service Checkbox -->
-          <div class="terms-checkbox">
-            <label class="terms-label">
-              <input
-                v-model="acceptedTerms"
-                type="checkbox"
-                class="terms-input"
-                required
-              />
-              <span class="terms-text">
-                I agree to the
-                <button
-                  type="button"
-                  @click="openTerms"
-                  class="terms-link"
-                >
-                  Terms of Service
-                </button>
-              </span>
-            </label>
+          <!-- Non-invited: 4 screens -->
+          <template v-else>
+            <!-- Screen 1: Name + Business name -->
+            <template v-if="currentScreen === 1">
+              <div class="field">
+                <label>Your name</label>
+                <input v-model="form.full_name" type="text" placeholder="Joe Martinez" required />
+              </div>
+              <div class="field">
+                <label>Business name</label>
+                <input v-model="businessName" type="text" placeholder="Martinez Plumbing" required />
+              </div>
+            </template>
+
+            <!-- Screen 2: Location -->
+            <template v-if="currentScreen === 2">
+              <div class="field">
+                <label>Where's your business?</label>
+                <input v-model="location" type="text" placeholder="Scottsdale, AZ" required />
+                <span class="hint">City and state, or ZIP code</span>
+              </div>
+            </template>
+
+            <!-- Screen 3: Industry + Services -->
+            <template v-if="currentScreen === 3">
+              <div class="field">
+                <label>What industry are you in?</label>
+                <div class="industry-grid">
+                  <button
+                    v-for="[key, label] in industries"
+                    :key="key"
+                    type="button"
+                    class="industry-btn"
+                    :class="selectedIndustry === key ? 'industry-btn--active' : ''"
+                    @click="selectedIndustry = key"
+                  >
+                    {{ label }}
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Screen 4: Website + Terms -->
+            <template v-if="currentScreen === 4">
+              <div class="field">
+                <label>What's your website?</label>
+                <input v-model="websiteUrl" type="text" placeholder="joesplumbing.com" />
+                <span class="hint">
+                  We'll pull your logo, photos, and reviews to auto-build your postcards.
+                </span>
+              </div>
+              <button
+                v-if="!websiteUrl.trim()"
+                type="button"
+                class="skip-link"
+                @click="websiteUrl = ''"
+              >
+                Skip — I'll add them manually
+              </button>
+              <div class="terms-checkbox">
+                <label class="terms-label">
+                  <input v-model="acceptedTerms" type="checkbox" class="terms-input" required />
+                  <span class="terms-text">
+                    I agree to the
+                    <button type="button" @click="openTerms" class="terms-link">Terms of Service</button>
+                  </span>
+                </label>
+              </div>
+            </template>
+          </template>
+
+          <!-- Progress dots (non-invited only) -->
+          <div v-if="!isInvitedUser && totalScreens > 1" class="progress-dots">
+            <span
+              v-for="i in totalScreens"
+              :key="i"
+              class="dot"
+              :class="i === currentScreen ? 'dot--active' : i < currentScreen ? 'dot--done' : ''"
+            />
           </div>
 
+          <!-- Actions -->
           <div class="actions">
+            <button
+              v-if="!isInvitedUser && currentScreen > 1"
+              type="button"
+              class="btn-back"
+              @click="prevScreen"
+            >
+              Back
+            </button>
+            <div class="grow" />
             <button
               type="submit"
               class="btn-primary"
-              :disabled="submitting || loading || !acceptedTerms"
+              :disabled="!canProceed || submitting || loading"
             >
-              {{
-                isInvitedUser
-                  ? "Continue"
-                  : isProfileComplete
-                    ? "Save"
-                    : "Save & continue"
-              }}
+              <template v-if="submitting || saving">Saving...</template>
+              <template v-else-if="isInvitedUser">Continue</template>
+              <template v-else-if="currentScreen < totalScreens">Next</template>
+              <template v-else>Get Started</template>
             </button>
           </div>
         </form>
@@ -242,19 +282,18 @@ async function onAvatarChanged(e: Event) {
 .onboarding-modal {
   position: relative;
   z-index: 61;
-  max-width: 640px;
+  max-width: 480px;
   width: 100%;
   margin: 0 16px;
   border-radius: 24px;
   background: #ffffff;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25),
     0 0 0 1px rgba(15, 23, 42, 0.04);
-  padding: 24px 24px 20px;
+  padding: 28px 28px 24px;
 }
 
 .onboarding-header {
-  position: relative;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .onboarding-header h2 {
@@ -270,14 +309,10 @@ async function onAvatarChanged(e: Event) {
   color: #64748b;
 }
 
-.onboarding-body {
-  margin-top: 8px;
-}
-
-.onboarding-form {
+.onboarding-body form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .onboarding-error {
@@ -303,7 +338,7 @@ async function onAvatarChanged(e: Event) {
 .field input {
   border-radius: 10px;
   border: 1px solid #e2e8f0;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 14px;
   color: #1e293b;
 }
@@ -314,61 +349,109 @@ async function onAvatarChanged(e: Event) {
 
 .field input:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+  border-color: #47bfa9;
+  box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
-/* avatar row */
-.avatar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
-.avatar-preview {
-  width: 52px;
-  height: 52px;
-  border-radius: 999px;
-  overflow: hidden;
-  /* background is now controlled by :style (gradient) */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
+.industry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.industry-btn {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.industry-btn:hover {
+  border-color: #47bfa9;
+}
+
+.industry-btn--active {
+  border-color: #47bfa9;
+  background: rgba(71, 191, 169, 0.08);
   color: #0f172a;
 }
 
-.avatar-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.skip-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
 }
 
-.avatar-icon {
-  width: 70%;
-  height: 70%;
-  object-fit: contain;
+.skip-link:hover {
+  color: #475569;
 }
 
-.avatar-actions {
+.progress-dots {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
 }
 
-.hidden-input {
-  display: none;
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  transition: background 0.2s;
+}
+
+.dot--active {
+  background: #47bfa9;
+}
+
+.dot--done {
+  background: #47bfa9;
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.grow {
+  flex: 1;
 }
 
 .btn-primary {
   border-radius: 999px;
   border: none;
-  padding: 8px 18px;
+  padding: 10px 24px;
   font-size: 14px;
   font-weight: 500;
   background: #47bfa9;
   color: #ffffff;
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3aa893;
 }
 
 .btn-primary:disabled {
@@ -376,35 +459,21 @@ async function onAvatarChanged(e: Event) {
   cursor: default;
 }
 
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid #cbd5f5;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  background: #f8fafc;
-  color: #1d4ed8;
+.btn-back {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
   cursor: pointer;
+  padding: 8px 12px;
 }
 
-.hint {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  justify-content: flex-end;
+.btn-back:hover {
+  color: #475569;
 }
 
 .terms-checkbox {
   margin-top: 4px;
-  margin-bottom: 4px;
 }
 
 .terms-label {

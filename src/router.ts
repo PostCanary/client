@@ -152,9 +152,37 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Team • ${BRAND.name}`, navbarTitle: "Team" },
       },
 
+      // Campaign pages (stubs until Terminal 3 builds real pages)
+      {
+        path: "campaigns",
+        name: "Campaigns",
+        component: () => import("@/pages/CampaignsStub.vue"),
+        meta: { title: `Campaigns • ${BRAND.name}`, navbarTitle: "Campaigns" },
+      },
+      {
+        path: "campaigns/:id",
+        name: "CampaignDetail",
+        component: () => import("@/pages/CampaignDetailStub.vue"),
+        meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign" },
+      },
+
       // /app -> /dashboard
       { path: "", redirect: { name: "Dashboard" } },
     ],
+  },
+
+  // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──
+  {
+    path: "/app/send/:draftId?",
+    name: "SendWizard",
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SendWizard.vue"),
+      },
+    ],
+    meta: { title: `Send Postcards • ${BRAND.name}` },
   },
 
   // ── Invitation accept page (marketing layout, no auth check initially) ──
