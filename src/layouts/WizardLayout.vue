@@ -2,6 +2,7 @@
 import { RouterView, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useMessage } from "naive-ui";
+import LogoUrl from "@/assets/source-logo-02.png";
 
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
@@ -24,7 +25,7 @@ async function handleClose() {
     <header class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
       <!-- Logo -->
       <div class="flex items-center gap-2">
-        <img src="/postcanary-logo.svg" alt="PostCanary" class="h-8" />
+        <img :src="LogoUrl" alt="PostCanary" class="h-8" />
       </div>
 
       <!-- Progress bar slot (WizardProgress rendered inside SendWizard) -->
