@@ -12,10 +12,10 @@ const emit = defineEmits<{
 }>();
 
 const steps = [
-  { num: 1 as WizardStep, label: "Choose Your Goal" },
-  { num: 2 as WizardStep, label: "Pick Your Neighborhood" },
-  { num: 3 as WizardStep, label: "Your Postcard" },
-  { num: 4 as WizardStep, label: "Review & Send" },
+  { num: 1 as WizardStep, label: "Choose Your Goal", time: "30 sec" },
+  { num: 2 as WizardStep, label: "Pick Your Neighborhood", time: "1 min" },
+  { num: 3 as WizardStep, label: "Your Postcard", time: "2 min" },
+  { num: 4 as WizardStep, label: "Review & Send", time: "1 min" },
 ];
 
 const progressPercent = computed(() => {
@@ -85,6 +85,12 @@ function handleClick(step: WizardStep) {
         </span>
         <!-- Label (hidden on small screens) -->
         <span class="hidden sm:inline whitespace-nowrap">{{ step.label }}</span>
+        <span
+          v-if="!isCompleted(step.num) && step.num === currentStep"
+          class="hidden lg:inline text-[10px] text-gray-400 ml-0.5"
+        >
+          ~{{ step.time }}
+        </span>
       </button>
 
       <!-- Connector line -->
