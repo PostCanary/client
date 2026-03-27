@@ -100,10 +100,13 @@ const tabs = [
       />
       <PanelTabFilters
         v-if="activeTab === 'filters'"
-        v-model:filters="filters"
-        v-model:exclude-past-customers="excludePastCustomers"
-        v-model:exclude-mailed-within-days="excludeMailedWithinDays"
+        :filters="filters"
+        :exclude-past-customers="excludePastCustomers"
+        :exclude-mailed-within-days="excludeMailedWithinDays"
         :do-not-mail-count="doNotMailCount"
+        @update:filters="emit('update:filters', $event)"
+        @update:exclude-past-customers="emit('update:excludePastCustomers', $event)"
+        @update:exclude-mailed-within-days="emit('update:excludeMailedWithinDays', $event)"
       />
       <PanelTabSummary
         v-if="activeTab === 'summary'"
