@@ -113,7 +113,7 @@ export type RunGraph = {
 };
 
 export type TopCity = { city: string; matches: number; match_rate: number };
-export type TopZip = { zip5: string; matches: number; match_rate: number };
+export type TopZip = { zip?: string; zip5?: string; matches: number; match_rate: number };
 
 export type RunResult = {
   run_id: string;
@@ -127,6 +127,10 @@ export type RunResult = {
   graph: RunGraph;
   top_cities: TopCity[];
   top_zips: TopZip[];
+  top_cities_by_matches?: TopCity[];
+  top_cities_by_rate?: TopCity[];
+  top_zips_by_matches?: TopZip[];
+  top_zips_by_rate?: TopZip[];
 };
 
 // ---------------------------

@@ -30,6 +30,7 @@ const MONTH_ABBR = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT",
 
 type CityRow = { city: string; total: number; rate: string };
 type ZipRow = { zip: string; total: number; rate: string };
+export type TopAreaRanking = "matches" | "match_rate";
 
 export type SummaryRow = {
   mail_address1: string;
@@ -62,6 +63,22 @@ function fmtMoney(v: any): number {
 function fmtDates(arr: string[] | null | undefined): string {
   if (!arr || !arr.length) return "";
   return arr.join(", ");
+}
+
+function rankRows<T extends Record<string, any>>(
+  rows: T[],
+  sortField: "total" | "rateValue",
+  labelField: "city" | "zip",
+): T[] {
+  return [...rows].sort((a, b) => {
+    const primary = Number(b[sortField] ?? 0) - Number(a[sortField] ?? 0);
+    if (primary !== 0) return primary;
+
+    const secondary = Number(b.total ?? 0) - Number(a.total ?? 0);
+    if (secondary !== 0) return secondary;
+
+    return String(a[labelField] ?? "").localeCompare(String(b[labelField] ?? ""));
+  });
 }
 
 function isDone(s: RunStatus | null): boolean {
@@ -498,17 +515,16 @@ export function useRunData() {
 
   const graphRawMonths = computed<string[]>(() => (runResult.value as any)?.graph?.months ?? []);
 
-  const topCityRows = computed<CityRow[]>(() => {
-    const items = (runResult.value as any)?.top_cities ?? [];
+  function mapCityRows(items: any[]): (CityRow & { rateValue: number })[] {
     return items.map((c: any) => ({
       city: c.city ?? "",
       total: Number(c.matches ?? 0),
       rate: fmtPct(c.match_rate),
+      rateValue: Number(c.match_rate ?? 0),
     }));
-  });
+  }
 
-  const topZipRows = computed<ZipRow[]>(() => {
-    const items = (runResult.value as any)?.top_zips ?? [];
+  function mapZipRows(items: any[]): (ZipRow & { rateValue: number })[] {
     return items.map((z: any) => {
       const rawZip =
         z.zip5 ??
@@ -518,16 +534,47 @@ export function useRunData() {
         z.postal_code ??
         "";
 
-      // Keep leading zeros if backend sends numbers
-      const zip = rawZip == null ? "" : String(rawZip).padStart(5, "0");
-
-      const total =
-        Number(z.matches ?? z.total_matches ?? z.total ?? 0);
-
-      const rate = fmtPct(z.match_rate ?? z.rate);
-
-      return { zip, total, rate };
+      return {
+        zip: rawZip == null ? "" : String(rawZip).padStart(5, "0"),
+        total: Number(z.matches ?? z.total_matches ?? z.total ?? 0),
+        rate: fmtPct(z.match_rate ?? z.rate),
+        rateValue: Number(z.match_rate ?? z.rate ?? 0),
+      };
     });
+  }
+
+  const topCityRowsByMatches = computed<CityRow[]>(() => {
+    const result = (runResult.value as any) ?? {};
+    const explicit = Array.isArray(result.top_cities_by_matches) ? result.top_cities_by_matches : null;
+    const fallback = Array.isArray(result.top_cities) ? result.top_cities : [];
+    return mapCityRows(explicit ?? fallback).map(({ rateValue: _rateValue, ...row }) => row);
+  });
+
+  const topCityRowsByRate = computed<CityRow[]>(() => {
+    const result = (runResult.value as any) ?? {};
+    const explicit = Array.isArray(result.top_cities_by_rate) ? result.top_cities_by_rate : null;
+    const fallback = mapCityRows(Array.isArray(result.top_cities) ? result.top_cities : []);
+    const ranked = explicit
+      ? mapCityRows(explicit)
+      : rankRows(fallback, "rateValue", "city");
+    return ranked.map(({ rateValue: _rateValue, ...row }) => row);
+  });
+
+  const topZipRowsByMatches = computed<ZipRow[]>(() => {
+    const result = (runResult.value as any) ?? {};
+    const explicit = Array.isArray(result.top_zips_by_matches) ? result.top_zips_by_matches : null;
+    const fallback = Array.isArray(result.top_zips) ? result.top_zips : [];
+    return mapZipRows(explicit ?? fallback).map(({ rateValue: _rateValue, ...row }) => row);
+  });
+
+  const topZipRowsByRate = computed<ZipRow[]>(() => {
+    const result = (runResult.value as any) ?? {};
+    const explicit = Array.isArray(result.top_zips_by_rate) ? result.top_zips_by_rate : null;
+    const fallback = mapZipRows(Array.isArray(result.top_zips) ? result.top_zips : []);
+    const ranked = explicit
+      ? mapZipRows(explicit)
+      : rankRows(fallback, "rateValue", "zip");
+    return ranked.map(({ rateValue: _rateValue, ...row }) => row);
   });
 
   const summaryRows = computed<SummaryRow[]>(() => {
@@ -577,8 +624,10 @@ export function useRunData() {
     crmPrev,
     matchPrev,
     graphRawMonths,
-    topCityRows,
-    topZipRows,
+    topCityRowsByMatches,
+    topCityRowsByRate,
+    topZipRowsByMatches,
+    topZipRowsByRate,
     summaryRows,
   };
 }

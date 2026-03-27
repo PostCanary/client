@@ -15,6 +15,7 @@ import KpiSummaryCard from "@/components/dashboard/KpiSummaryCard.vue";
 import YoyChart from "@/components/dashboard/YoyChart.vue";
 import TopCitiesTable from "@/components/dashboard/TopCitiesTable.vue";
 import TopZipsTable from "@/components/dashboard/TopZipsTable.vue";
+import TopAreaRankingToggle from "@/components/dashboard/TopAreaRankingToggle.vue";
 import SummaryTable from "@/components/dashboard/SummaryTable.vue";
 import DemoFilterBar from "@/components/demographics/DemoFilterBar.vue";
 import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
@@ -33,7 +34,7 @@ import {
   type MappingBundle,
 } from "@/api/mapper";
 
-import { useRunData } from "@/composables/useRunData";
+import { useRunData, type TopAreaRanking } from "@/composables/useRunData";
 import { useLoader } from "@/stores/loader";
 import { useBilling } from "@/composables/useBilling";
 import { useRunStore } from "@/stores/useRunStore";
@@ -223,13 +224,23 @@ const {
   crmPrev,
   matchPrev,
   graphRawMonths,
-  topCityRows,
-  topZipRows,
+  topCityRowsByMatches,
+  topCityRowsByRate,
+  topZipRowsByMatches,
+  topZipRowsByRate,
   summaryRows,
 } = useRunData();
 
 const dashboardStart = ref<string | undefined>(undefined);
 const dashboardEnd = ref<string | undefined>(undefined);
+const topAreaRanking = ref<TopAreaRanking>("matches");
+
+const topCityRows = computed(() =>
+  topAreaRanking.value === "match_rate" ? topCityRowsByRate.value : topCityRowsByMatches.value,
+);
+const topZipRows = computed(() =>
+  topAreaRanking.value === "match_rate" ? topZipRowsByRate.value : topZipRowsByMatches.value,
+);
 
 /* ------------------------------------------------------------------
  * Helpers (missing labels + normalize response guards)
@@ -1068,6 +1079,13 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Row 4: Top Cities + Top ZIPs -->
+    <div class="top-ranking-toolbar">
+      <div class="top-ranking-copy">
+        <h3 class="top-ranking-title">Top Areas</h3>
+        <p class="top-ranking-subtitle">Switch between highest total matches and highest conversion rate.</p>
+      </div>
+      <TopAreaRankingToggle v-model="topAreaRanking" />
+    </div>
     <div id="cmp-top">
       <TopCitiesTable :rows="topCityRows" />
       <TopZipsTable :rows="topZipRows" />
@@ -1171,12 +1189,42 @@ onBeforeUnmount(() => {
   gap: 20px;
 }
 
+.top-ranking-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.top-ranking-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.top-ranking-title {
+  margin: 0;
+  color: var(--app-text, #0c2d50);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.top-ranking-subtitle {
+  margin: 0;
+  color: var(--app-text-muted, #64748b);
+  font-size: 14px;
+}
+
 @media (max-width: 1024px) {
   #cmp-action-row {
     grid-template-columns: 1fr;
   }
   #cmp-top {
     grid-template-columns: 1fr;
+  }
+  .top-ranking-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -1186,6 +1234,9 @@ onBeforeUnmount(() => {
   }
   #cmp-top {
     grid-template-columns: 1fr;
+  }
+  .top-ranking-toolbar {
+    align-items: stretch;
   }
   #cmp-summary {
     display: none;
