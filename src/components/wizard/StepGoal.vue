@@ -222,6 +222,10 @@ onMounted(() => {
         v-if="selectedGoal"
         :defaults="selectedGoal.defaults"
         :goal-type="selectedGoal.type"
+        :initial-sequence-length="sequenceConfig.sequenceLength"
+        :initial-spacing-weeks="sequenceConfig.spacingWeeks"
+        :initial-service-type="sequenceConfig.serviceType"
+        :initial-other-goal-text="sequenceConfig.otherGoalText"
         @update="onConfigUpdate"
       />
     </template>

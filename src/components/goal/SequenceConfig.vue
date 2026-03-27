@@ -6,6 +6,11 @@ import { useBrandKitStore } from "@/stores/useBrandKitStore";
 const props = defineProps<{
   defaults: CampaignGoalDefaults;
   goalType: string;
+  // Initial values from draft (take priority over defaults on mount)
+  initialSequenceLength?: number;
+  initialSpacingWeeks?: number;
+  initialServiceType?: string | null;
+  initialOtherGoalText?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -19,10 +24,11 @@ const emit = defineEmits<{
 
 const brandKitStore = useBrandKitStore();
 
-const sequenceLength = ref(props.defaults.defaultPostcards);
-const spacingWeeks = ref(props.defaults.spacingWeeks);
-const serviceType = ref<string | null>(null);
-const otherGoalText = ref("");
+// Prefer draft values over goal defaults (prevents reset on Step 1 revisit)
+const sequenceLength = ref(props.initialSequenceLength ?? props.defaults.defaultPostcards);
+const spacingWeeks = ref(props.initialSpacingWeeks ?? props.defaults.spacingWeeks);
+const serviceType = ref<string | null>(props.initialServiceType ?? null);
+const otherGoalText = ref(props.initialOtherGoalText ?? "");
 
 const showServicePicker = computed(
   () => props.goalType === "seasonal_tuneup" || props.goalType === "cross_service_promo",
