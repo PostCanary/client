@@ -150,7 +150,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: "campaigns",
         name: "Campaigns",
-        component: () => import("@/pages/CampaignsStub.vue"),
+        component: () => import("@/pages/Campaigns.vue"),
         meta: { title: `Campaigns • ${BRAND.name}`, navbarTitle: "Campaigns" },
       },
       {
