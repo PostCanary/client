@@ -6,6 +6,9 @@ export interface Org {
   name: string;
   slug: string;
   role: string;
+  business_name: string | null;
+  location: string | null;
+  service_types: string[] | null;
 }
 
 export interface OrgMember {
@@ -46,10 +49,20 @@ export async function getOrg(orgId: string): Promise<Org> {
   return get<Org>(`/api/orgs/${orgId}`);
 }
 
-export async function updateOrg(orgId: string, name: string): Promise<Org> {
+export interface UpdateOrgPayload {
+  name?: string;
+  business_name?: string;
+  location?: string;
+  service_types?: string[];
+}
+
+export async function updateOrg(
+  orgId: string,
+  data: UpdateOrgPayload,
+): Promise<Org> {
   return api<Org>(`/api/orgs/${orgId}`, {
     method: "PATCH",
-    data: { name },
+    data,
     headers: { "Content-Type": "application/json" },
   });
 }
