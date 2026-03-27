@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
-import type { CardDesign } from "@/types/campaign";
+import type { CardDesign, TemplateLayoutType } from "@/types/campaign";
 
 const props = defineProps<{
   cards: CardDesign[];
   brandColors?: string[];
+  businessName?: string;
+  businessAddress?: string;
+  logoUrl?: string | null;
 }>();
 
 const currentCardIndex = ref(0);
 
 const currentCard = computed(() => props.cards[currentCardIndex.value]);
 const totalCards = computed(() => props.cards.length);
+
+const currentLayout = computed((): TemplateLayoutType => {
+  const id = currentCard.value?.templateId ?? "";
+  // Template IDs are formatted as "layoutType-cardPurpose"
+  const layout = id.split("-")[0] as TemplateLayoutType;
+  return layout || "full-bleed";
+});
 
 function prevCard() {
   if (currentCardIndex.value > 0) currentCardIndex.value--;
@@ -52,9 +62,15 @@ function nextCard() {
       </button>
     </div>
 
-    <!-- Postcard preview -->
+    <!-- Postcard preview (real card data, not stubs) -->
     <PostcardPreview
+      v-if="currentCard"
+      :card="currentCard"
+      :layout-type="currentLayout"
       :brand-colors="brandColors"
+      :business-name="businessName"
+      :business-address="businessAddress"
+      :logo-url="logoUrl"
       size="large"
     />
 
