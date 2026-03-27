@@ -35,6 +35,13 @@ onMounted(async () => {
     return;
   }
 
+  // Org gate: API calls need a valid org
+  if (!auth.orgId) {
+    initError.value = true;
+    initializing.value = false;
+    return;
+  }
+
   try {
     const draftId = route.params.draftId as string | undefined;
     if (draftId) {

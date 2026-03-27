@@ -18,6 +18,7 @@ const goals: { type: CampaignGoalType; label: string }[] = [
   { type: "storm_response", label: "Storm Response" },
   { type: "win_back", label: "Win Back" },
   { type: "cross_service_promo", label: "Cross-Service Promo" },
+  { type: "new_mover", label: "New Mover" },
   { type: "other", label: "Other" },
 ];
 

@@ -38,9 +38,23 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   draftStore.saveNow();
 }
 
+// Intercept browser back — go to previous wizard step instead of leaving
+function handlePopstate() {
+  if (step.value > 1) {
+    // Push state back so we stay in the wizard
+    window.history.pushState(null, "", window.location.href);
+    goBack();
+  }
+}
+
 window.addEventListener("beforeunload", handleBeforeUnload);
+window.addEventListener("popstate", handlePopstate);
+// Push initial state so first back press triggers popstate instead of leaving
+window.history.pushState(null, "", window.location.href);
+
 onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  window.removeEventListener("popstate", handlePopstate);
 });
 
 // Save on route leave
