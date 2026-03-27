@@ -174,6 +174,9 @@ async function approve() {
       <ReviewSummary
         :cards="designCards"
         :brand-colors="brandKitStore.brandKit?.brandColors"
+        :business-name="brandKitStore.brandKit?.businessName"
+        :business-address="brandKitStore.brandKit?.address ?? ''"
+        :logo-url="brandKitStore.brandKit?.logoUrl"
       />
     </div>
 
