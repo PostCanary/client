@@ -3,10 +3,10 @@ import { computed, onBeforeUnmount } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import WizardProgress from "./WizardProgress.vue";
-import StepGoalStub from "./StepGoalStub.vue";
+import StepGoal from "./StepGoal.vue";
 import StepTargetingStub from "./StepTargetingStub.vue";
 import StepDesignStub from "./StepDesignStub.vue";
-import StepReviewStub from "./StepReviewStub.vue";
+import StepReview from "./StepReview.vue";
 import type { WizardStep } from "@/types/campaign";
 
 const draftStore = useCampaignDraftStore();
@@ -93,10 +93,10 @@ onBeforeRouteLeave(async () => {
 
     <!-- Step content -->
     <div class="flex-1 overflow-y-auto">
-      <StepGoalStub v-if="step === 1" />
+      <StepGoal v-if="step === 1" />
       <StepTargetingStub v-else-if="step === 2" />
       <StepDesignStub v-else-if="step === 3" />
-      <StepReviewStub v-else-if="step === 4" />
+      <StepReview v-else-if="step === 4" />
     </div>
 
     <!-- Navigation buttons -->
