@@ -4,7 +4,7 @@ import { onBeforeRouteLeave } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import WizardProgress from "./WizardProgress.vue";
 import StepGoal from "./StepGoal.vue";
-import StepTargetingStub from "./StepTargetingStub.vue";
+import StepTargeting from "./StepTargeting.vue";
 import StepDesignStub from "./StepDesignStub.vue";
 import StepReview from "./StepReview.vue";
 import type { WizardStep } from "@/types/campaign";
@@ -94,7 +94,7 @@ onBeforeRouteLeave(async () => {
     <!-- Step content -->
     <div class="flex-1 overflow-y-auto">
       <StepGoal v-if="step === 1" />
-      <StepTargetingStub v-else-if="step === 2" />
+      <StepTargeting v-else-if="step === 2" />
       <StepDesignStub v-else-if="step === 3" />
       <StepReview v-else-if="step === 4" />
     </div>
