@@ -186,7 +186,7 @@ watch(
         <span class="adv-stat-value">{{ fmtInt(basic.unique_mail_addresses) }}</span>
       </div>
       <div class="adv-stat">
-        <span class="adv-stat-label">Total Jobs</span>
+        <span class="adv-stat-label">Unique CRM Jobs</span>
         <span class="adv-stat-value">{{ fmtInt(basic.total_jobs) }}</span>
       </div>
       <div class="adv-stat">

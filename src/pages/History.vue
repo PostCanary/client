@@ -97,6 +97,26 @@ function formatDisplayName(batch: Batch): string {
   return `${sourceLabel} - ${dateStr}`;
 }
 
+function crmDuplicateCount(batch: Batch): number | null {
+  if (
+    batch.source !== "crm" ||
+    batch.raw_count === null ||
+    batch.deduped_count === null
+  ) {
+    return null;
+  }
+
+  return Math.max(batch.raw_count - batch.deduped_count, 0);
+}
+
+function crmDuplicateLabel(batch: Batch): string | null {
+  const duplicateCount = crmDuplicateCount(batch);
+  if (!duplicateCount) return null;
+  return `${duplicateCount.toLocaleString()} duplicate ${
+    duplicateCount === 1 ? "row" : "rows"
+  } removed`;
+}
+
 const isEmpty = computed(() => !loading.value && batches.value.length === 0);
 
 async function handleRefreshDashboard() {
@@ -230,8 +250,29 @@ async function handleRefreshDashboard() {
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-4 text-xs text-slate-500">
               <span v-if="batch.filename">{{ batch.filename }}</span>
-              <span v-if="batch.raw_count !== null">
+              <span
+                v-if="
+                  batch.source === 'crm' &&
+                  batch.raw_count !== null &&
+                  batch.deduped_count !== null
+                "
+              >
+                {{ batch.raw_count.toLocaleString() }} rows uploaded
+              </span>
+              <span v-else-if="batch.raw_count !== null">
                 {{ batch.raw_count.toLocaleString() }} rows
+              </span>
+              <span
+                v-if="batch.source === 'crm' && batch.deduped_count !== null"
+                class="text-slate-600"
+              >
+                {{ batch.deduped_count.toLocaleString() }} unique jobs
+              </span>
+              <span
+                v-if="crmDuplicateLabel(batch)"
+                class="text-amber-700"
+              >
+                {{ crmDuplicateLabel(batch) }}
               </span>
               <span
                 class="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
