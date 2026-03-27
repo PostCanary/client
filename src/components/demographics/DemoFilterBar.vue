@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const props = defineProps<{
   start?: string;
@@ -9,15 +9,23 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update:start", v: string | undefined): void;
   (e: "update:end", v: string | undefined): void;
+  (e: "apply", payload: { start?: string; end?: string }): void;
 }>();
 
 type Preset = "all" | "90d" | "6m" | "1y";
-const activePreset = ref<Preset>("all");
+const activePreset = ref<Preset | null>("all");
 const customOpen = ref(false);
+const isCustomActive = ref(false);
 const customFrom = ref(props.start || "2024-01-01");
 const customTo = ref(props.end || new Date().toISOString().split("T")[0]);
 
 const rangeLabel = computed(() => {
+  if (isCustomActive.value) {
+    if (customFrom.value && customTo.value) return `${customFrom.value} to ${customTo.value}`;
+    if (customFrom.value) return `From ${customFrom.value}`;
+    if (customTo.value) return `Through ${customTo.value}`;
+    return "Custom range";
+  }
   switch (activePreset.value) {
     case "90d": return "Last 90 days";
     case "6m": return "Last 6 months";
@@ -26,9 +34,36 @@ const rangeLabel = computed(() => {
   }
 });
 
+watch(
+  () => props.start,
+  (value) => {
+    customFrom.value = value || "";
+    if (!value && !props.end) {
+      activePreset.value = "all";
+      isCustomActive.value = false;
+    }
+  },
+);
+
+watch(
+  () => props.end,
+  (value) => {
+    customTo.value = value || new Date().toISOString().split("T")[0];
+    if (!props.start && !value) {
+      activePreset.value = "all";
+      isCustomActive.value = false;
+    }
+  },
+);
+
+function emitApplied(start?: string, end?: string) {
+  emit("apply", { start, end });
+}
+
 function selectPreset(preset: Preset) {
   activePreset.value = preset;
   customOpen.value = false;
+  isCustomActive.value = false;
 
   const today = new Date();
   const to = today.toISOString().split("T")[0];
@@ -36,6 +71,7 @@ function selectPreset(preset: Preset) {
   if (preset === "all") {
     emit("update:start", undefined);
     emit("update:end", undefined);
+    emitApplied(undefined, undefined);
     return;
   }
 
@@ -56,12 +92,15 @@ function selectPreset(preset: Preset) {
   customTo.value = to;
   emit("update:start", fromStr);
   emit("update:end", to);
+  emitApplied(fromStr, to);
 }
 
 function applyCustom() {
-  activePreset.value = "all"; // deselect presets
+  activePreset.value = null;
+  isCustomActive.value = true;
   emit("update:start", customFrom.value);
   emit("update:end", customTo.value);
+  emitApplied(customFrom.value || undefined, customTo.value || undefined);
 }
 
 const presets: { label: string; value: Preset }[] = [

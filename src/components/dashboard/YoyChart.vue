@@ -52,12 +52,35 @@ const MONTH_ABBR = [
   "DEC",
 ];
 
+function monthIndex(raw: string): number | null {
+  const [year, month] = raw.split("-");
+  const y = Number(year);
+  const m = Number(month);
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
+  return y * 12 + (m - 1);
+}
+
+const useQuarterTicks = computed(() => {
+  const rawMonths = props.rawMonths ?? [];
+  if (rawMonths.length < 2) return false;
+  const first = monthIndex(rawMonths[0] ?? "");
+  const last = monthIndex(rawMonths[rawMonths.length - 1] ?? "");
+  if (first == null || last == null) return false;
+  return last - first + 1 >= 36;
+});
+
 function formatTick(i: number): string {
   const raw = props.rawMonths?.[i];
   if (raw) {
     const [year, month] = raw.split("-");
     const mi = Number(month || "1") - 1;
     const mon = MONTH_ABBR[mi] ?? raw;
+    if (useQuarterTicks.value) {
+      const monthNum = Number(month || "1");
+      if (![1, 4, 7, 10].includes(monthNum)) return "";
+      const quarter = `Q${Math.floor((monthNum - 1) / 3) + 1}`;
+      return month === "01" && year ? `${quarter} ${year}` : quarter;
+    }
     if (month === "01" && year) {
       const shortYear = year.slice(-2);
       return `${mon} '${shortYear}`;

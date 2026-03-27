@@ -19,9 +19,23 @@ export type RunStep =
 
 export type RunRequirement = "done" | "any";
 
-/** Convert require option to query string */
-function asQuery(requirement: RunRequirement): string {
-  return requirement === "done" ? "?require=done" : "";
+export type RunDateRange = {
+  start?: string | null;
+  end?: string | null;
+};
+
+function buildLatestRunQuery(
+  requirement: RunRequirement,
+  campaignId?: string | null,
+  range?: RunDateRange,
+): string {
+  const params = new URLSearchParams();
+  if (requirement === "done") params.set("require", "done");
+  if (campaignId) params.set("campaign_id", campaignId);
+  if (range?.start) params.set("start", range.start);
+  if (range?.end) params.set("end", range.end);
+  const query = params.toString();
+  return query ? `?${query}` : "";
 }
 
 /**
@@ -173,11 +187,9 @@ export async function getLatestRunStatus(): Promise<RunStatus | null> {
 export async function getLatestRunResult(
   requirement: RunRequirement = "any",
   campaignId?: string | null,
+  range?: RunDateRange,
 ): Promise<RunResult | null> {
-  let url = `/api/runs/latest/result${asQuery(requirement)}`;
-  if (campaignId) {
-    url += url.includes("?") ? `&campaign_id=${campaignId}` : `?campaign_id=${campaignId}`;
-  }
+  const url = `/api/runs/latest/result${buildLatestRunQuery(requirement, campaignId, range)}`;
   const res = await getRaw<RunResult>(url);
   if (res.status === 204) return null;
   return res.data ?? null;
@@ -186,11 +198,9 @@ export async function getLatestRunResult(
 export async function getLatestRunMatches(
   requirement: RunRequirement = "any",
   campaignId?: string | null,
+  range?: RunDateRange,
 ): Promise<RunMatchesResponse | null> {
-  let url = `/api/runs/latest/matches${asQuery(requirement)}`;
-  if (campaignId) {
-    url += url.includes("?") ? `&campaign_id=${campaignId}` : `?campaign_id=${campaignId}`;
-  }
+  const url = `/api/runs/latest/matches${buildLatestRunQuery(requirement, campaignId, range)}`;
   const res = await getRaw<RunMatchesResponse>(url);
   if (res.status === 204) return null;
   return res.data ?? null;

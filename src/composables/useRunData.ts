@@ -9,6 +9,7 @@ import {
   getLatestRunMatches,
   type RunStatus,
   type RunRequirement,
+  type RunDateRange,
 } from "@/api/runs";
 import { useCampaignStore } from "@/stores/useCampaignStore";
 
@@ -185,6 +186,8 @@ export function useRunData() {
   const matchesLoading = ref(false);
   const polling = ref(false);
   const error = ref<string | null>(null);
+  const startDate = ref<string | undefined>(undefined);
+  const endDate = ref<string | undefined>(undefined);
 
   // for UI/debug only
   const activeRunId = ref<string | null>((status.value as any)?.run_id ?? null);
@@ -193,6 +196,11 @@ export function useRunData() {
 
   function setActiveRunId(runId: string | null) {
     activeRunId.value = runId || null;
+  }
+
+  function setDateRange(range: RunDateRange = {}) {
+    startDate.value = range.start ?? undefined;
+    endDate.value = range.end ?? undefined;
   }
 
   function setStatusIfChanged(s: RunStatus | null) {
@@ -212,10 +220,14 @@ export function useRunData() {
     const campaignStore = useCampaignStore();
     campaignStore.hydrate();
     const cid = campaignStore.activeCampaignId;
+    const range = {
+      start: startDate.value,
+      end: endDate.value,
+    };
 
     const [r, m] = await Promise.all([
-      getLatestRunResult(REQUIRE_DONE, cid).catch(() => null),
-      getLatestRunMatches(REQUIRE_DONE, cid).catch(() => null),
+      getLatestRunResult(REQUIRE_DONE, cid, range).catch(() => null),
+      getLatestRunMatches(REQUIRE_DONE, cid, range).catch(() => null),
     ]);
     return { r: r ?? null, m: m ?? null };
   }
@@ -549,6 +561,7 @@ export function useRunData() {
 
     // api
     setActiveRunId,
+    setDateRange,
     refreshOnce,
     refresh, // alias
     pollUntilTerminal,

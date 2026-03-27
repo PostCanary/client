@@ -16,6 +16,7 @@ import YoyChart from "@/components/dashboard/YoyChart.vue";
 import TopCitiesTable from "@/components/dashboard/TopCitiesTable.vue";
 import TopZipsTable from "@/components/dashboard/TopZipsTable.vue";
 import SummaryTable from "@/components/dashboard/SummaryTable.vue";
+import DemoFilterBar from "@/components/demographics/DemoFilterBar.vue";
 import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 
 import {
@@ -212,6 +213,7 @@ const {
   refreshOnce: refreshRunData,
   pollUntilTerminal,
   setActiveRunId,
+  setDateRange,
 
   graphLabels,
   graphMailNow,
@@ -225,6 +227,9 @@ const {
   topZipRows,
   summaryRows,
 } = useRunData();
+
+const dashboardStart = ref<string | undefined>(undefined);
+const dashboardEnd = ref<string | undefined>(undefined);
 
 /* ------------------------------------------------------------------
  * Helpers (missing labels + normalize response guards)
@@ -856,6 +861,7 @@ onMounted(() => {
   const init = async () => {
     console.log("[Dashboard] Component mounted");
     await maybeStartCheckoutFromQuery();
+    setDateRange({ start: dashboardStart.value, end: dashboardEnd.value });
     
     // Refresh auth state first to get current subscription status
     await auth.fetchMe();
@@ -956,6 +962,13 @@ onMounted(() => {
   void init();
 });
 
+async function onDashboardDateRangeApply(payload: { start?: string; end?: string }) {
+  dashboardStart.value = payload.start;
+  dashboardEnd.value = payload.end;
+  setDateRange(payload);
+  await refreshRunData();
+}
+
 function onCampaignChanged() {
   void refreshRunData();
 }
@@ -1001,6 +1014,16 @@ onBeforeUnmount(() => {
       class="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800"
     >
       {{ runDataError }}
+    </div>
+
+    <div class="mb-4">
+      <DemoFilterBar
+        :start="dashboardStart"
+        :end="dashboardEnd"
+        @update:start="dashboardStart = $event"
+        @update:end="dashboardEnd = $event"
+        @apply="onDashboardDateRangeApply"
+      />
     </div>
 
     <!-- Row 1: Hero KPI cards -->
