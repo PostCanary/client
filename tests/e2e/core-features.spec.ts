@@ -151,7 +151,12 @@ test("settings exposes billing controls for admins and removes delete account", 
   await page.getByTestId("confirm-pause-subscription").click();
 
   await expect.poll(() => state.requestLog.pauseCalls).toBe(1);
-  await expect(page.getByTestId("settings-subscription-status")).toContainText("Paused");
+  await expect(page.getByTestId("settings-subscription-status")).toContainText("Pause scheduled");
+  await expect(page.getByTestId("settings-change-plan")).toContainText("Resume current plan");
+
+  await page.getByTestId("settings-change-plan").click();
+  await expect.poll(() => state.requestLog.resumeCalls).toBe(1);
+  await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
 
   await page.getByTestId("settings-cancel-subscription").click();
   await expect(page.getByTestId("cancel-subscription-modal")).toBeVisible();

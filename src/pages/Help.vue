@@ -290,7 +290,7 @@ const sections: FaqSection[] = [
       },
       {
         q: "What happens when I pause my subscription?",
-        a: "Paused accounts move to a <strong>$20/month</strong> read-only mode. You can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.",
+        a: "Pausing schedules your account to move to a <strong>$20/month</strong> read-only mode at the end of the current billing period. Until that date, your paid plan stays active. Once the pause takes effect, you can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.",
       },
       {
         q: "What happens if my payment fails?",

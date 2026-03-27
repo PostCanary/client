@@ -10,6 +10,7 @@ import {
   createBillingPortalSession,
   createCheckoutSession,
   pauseSubscription,
+  resumeSubscription,
   type BillingState,
   type PlanCode,
 } from "@/api/billing";
@@ -51,6 +52,7 @@ const billingStatus = computed(() =>
   String(billing.value?.subscription_status || "none").toLowerCase()
 );
 const cancelAtPeriodEnd = computed(() => !!billing.value?.cancel_at_period_end);
+const pauseAtPeriodEnd = computed(() => !!billing.value?.pause_at_period_end);
 const canManageBilling = computed(() => !!auth.orgId && isOrgAdmin.value);
 const currentPlanCode = computed<PlanCode | null>(() => {
   const pc = (billing.value?.plan_code || billing.value?.resume_plan_code) as PlanCode | undefined;
@@ -65,7 +67,9 @@ const currentPlanLabel = computed(() => {
 const subscriptionStatusLabel = computed(() => {
   switch (billingStatus.value) {
     case "active":
-      return cancelAtPeriodEnd.value ? "Cancellation scheduled" : "Active";
+      if (cancelAtPeriodEnd.value) return "Cancellation scheduled";
+      if (pauseAtPeriodEnd.value) return "Pause scheduled";
+      return "Active";
     case "paused":
       return "Paused";
     case "past_due":
@@ -79,9 +83,10 @@ const subscriptionStatusLabel = computed(() => {
 const subscriptionStatusClasses = computed(() => {
   switch (billingStatus.value) {
     case "active":
-      return cancelAtPeriodEnd.value
-        ? "border-amber-300 bg-amber-50 text-amber-700"
-        : "border-emerald-300 bg-emerald-50 text-emerald-700";
+      if (cancelAtPeriodEnd.value || pauseAtPeriodEnd.value) {
+        return "border-amber-300 bg-amber-50 text-amber-700";
+      }
+      return "border-emerald-300 bg-emerald-50 text-emerald-700";
     case "paused":
       return "border-slate-300 bg-slate-100 text-slate-700";
     case "past_due":
@@ -128,15 +133,15 @@ async function onChangePlan() {
   billingBusy.value = true;
 
   try {
-    if (billingStatus.value === "paused" && currentPlanCode.value) {
-      const { url: checkoutUrl } = await createCheckoutSession(
-        currentPlanCode.value,
-        "settings_resume_subscription"
+    if (billingStatus.value === "paused" || pauseAtPeriodEnd.value) {
+      await resumeSubscription();
+      await auth.fetchMe();
+      message.success(
+        billingStatus.value === "paused"
+          ? "Subscription resumed on the existing paid plan."
+          : "Scheduled pause removed. The current plan will continue."
       );
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-        return;
-      }
+      return;
     }
 
     try {
@@ -187,7 +192,7 @@ async function onConfirmPauseSubscription() {
     await pauseSubscription();
     await auth.fetchMe();
     pauseModalOpen.value = false;
-    message.success("Subscription paused. The account is now read-only.");
+    message.success("Pause scheduled for the end of the current billing period.");
   } catch (err: any) {
     console.error("[Settings] Failed to pause subscription:", err);
     message.error(err?.message || "Failed to pause subscription.");
@@ -476,10 +481,16 @@ function onReplayTour() {
                 Your subscription remains active through the current billing period.
               </p>
               <p
+                v-else-if="pauseAtPeriodEnd"
+                class="mt-1 text-xs text-slate-500"
+              >
+                Your paid plan stays active until period end, then moves to the $20/month read-only plan.
+              </p>
+              <p
                 v-else-if="billingStatus === 'paused'"
                 class="mt-1 text-xs text-slate-500"
               >
-                Paused accounts are billed at $20/month and stay in read-only mode.
+                This organization is on the $20/month pause plan and is currently read-only.
               </p>
             </div>
           </div>
@@ -504,11 +515,17 @@ function onReplayTour() {
               data-testid="settings-change-plan"
               @click="onChangePlan"
             >
-              {{ billingStatus === "paused" ? "Resume subscription" : "Change plan" }}
+              {{
+                billingStatus === "paused"
+                  ? "Resume subscription"
+                  : pauseAtPeriodEnd
+                    ? "Resume current plan"
+                    : "Change plan"
+              }}
             </button>
 
             <button
-              v-if="billingStatus !== 'paused'"
+              v-if="billingStatus !== 'paused' && !pauseAtPeriodEnd"
               type="button"
               class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               :disabled="subscriptionActionBusy || cancelAtPeriodEnd"
@@ -562,10 +579,10 @@ function onReplayTour() {
       <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         <h3 class="text-lg font-semibold text-slate-900">Pause account</h3>
         <p class="mt-3 text-sm text-slate-600">
-          Pausing moves this organization to a $20/month read-only mode. Team members can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.
+          Pausing schedules this organization to move to the $20/month read-only plan at the end of the current billing period. Until then, the current paid plan stays active.
         </p>
         <p class="mt-2 text-sm text-slate-600">
-          Your existing data stays intact while the account is paused.
+          Once the pause takes effect, team members can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.
         </p>
 
         <div class="mt-6 flex flex-wrap justify-end gap-3">
@@ -584,7 +601,7 @@ function onReplayTour() {
             data-testid="confirm-pause-subscription"
             @click="onConfirmPauseSubscription"
           >
-            {{ subscriptionActionBusy ? "Pausing..." : "Pause for $20/month" }}
+            {{ subscriptionActionBusy ? "Scheduling..." : "Schedule $20 pause" }}
           </button>
         </div>
       </div>
@@ -598,7 +615,7 @@ function onReplayTour() {
       <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         <h3 class="text-lg font-semibold text-slate-900">Cancel subscription</h3>
         <p class="mt-3 text-sm text-slate-600">
-          Before canceling, consider pausing instead. Paused accounts keep full historical data access in a $20/month read-only mode.
+          Before canceling, consider pausing instead. Pausing lets the current paid plan run through period end before moving the account to the $20/month read-only plan.
         </p>
         <p class="mt-2 text-sm text-slate-600">
           If you continue, billing stays active through the current period and your historical data is retained after cancellation.

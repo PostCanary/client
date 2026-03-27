@@ -10,6 +10,7 @@ type RequestLog = {
   orgUpdates: Array<{ orgId: string; name: string }>;
   inviteEmails: string[];
   pauseCalls: number;
+  resumeCalls: number;
   cancelCalls: number;
 };
 
@@ -207,6 +208,7 @@ export function createMockAppState(): MockAppState {
         plan_code: "INSIGHT",
         resume_plan_code: null,
         cancel_at_period_end: false,
+        pause_at_period_end: false,
       },
       org_id: ORG_ALPHA.id,
       org_name: ORG_ALPHA.name,
@@ -715,16 +717,17 @@ export function createMockAppState(): MockAppState {
     mappingByBatchId: {},
     normalizeByBatchId: {},
     billingPortalUrl: "https://billing.example.test/portal",
-    requestLog: {
-      heatmapQueries: [],
-      normalizeCalls: [],
-      switches: [],
-      profileUpdates: [],
-      orgUpdates: [],
-      inviteEmails: [],
-      pauseCalls: 0,
-      cancelCalls: 0,
-    },
+      requestLog: {
+        heatmapQueries: [],
+        normalizeCalls: [],
+        switches: [],
+        profileUpdates: [],
+        orgUpdates: [],
+        inviteEmails: [],
+        pauseCalls: 0,
+        resumeCalls: 0,
+        cancelCalls: 0,
+      },
   };
 
   syncSession(state);
@@ -1188,19 +1191,31 @@ export async function installMockApi(page: Page, state: MockAppState) {
     if (pathname === "/api/billing/pause-subscription" && method === "POST") {
       state.requestLog.pauseCalls += 1;
       setBillingState(state, {
-        subscription_status: "paused",
-        is_subscribed: false,
-        can_run_matching: false,
-        needs_paywall: true,
+        subscription_status: "active",
+        is_subscribed: true,
+        can_run_matching: true,
+        needs_paywall: false,
         plan_code: state.authMe.billing?.plan_code ?? "INSIGHT",
         resume_plan_code: state.authMe.billing?.plan_code ?? "INSIGHT",
         cancel_at_period_end: false,
-        paywall_config: {
-          title: "Subscription paused",
-          body: "Your account is in read-only mode. Resume a paid plan to upload files and run matching again.",
-          primary_label: "Resume subscription",
-          default_plan_code: state.authMe.billing?.plan_code ?? "INSIGHT",
-        },
+        pause_at_period_end: true,
+        paywall_config: null,
+      });
+      return json(route, { billing: state.authMe.billing });
+    }
+
+    if (pathname === "/api/billing/resume-subscription" && method === "POST") {
+      state.requestLog.resumeCalls += 1;
+      setBillingState(state, {
+        subscription_status: "active",
+        is_subscribed: true,
+        can_run_matching: true,
+        needs_paywall: false,
+        plan_code: state.authMe.billing?.resume_plan_code ?? state.authMe.billing?.plan_code ?? "INSIGHT",
+        resume_plan_code: null,
+        cancel_at_period_end: false,
+        pause_at_period_end: false,
+        paywall_config: null,
       });
       return json(route, { billing: state.authMe.billing });
     }
@@ -1209,6 +1224,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
       state.requestLog.cancelCalls += 1;
       setBillingState(state, {
         cancel_at_period_end: true,
+        pause_at_period_end: false,
       });
       return json(route, { billing: state.authMe.billing });
     }

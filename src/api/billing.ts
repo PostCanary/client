@@ -44,6 +44,7 @@ export interface BillingState {
   plan_code?: PlanCode | null;
   resume_plan_code?: PlanCode | null;
   cancel_at_period_end?: boolean;
+  pause_at_period_end?: boolean;
 }
 
 /**
@@ -113,6 +114,13 @@ export async function createBillingPortalSession(): Promise<CheckoutSessionResul
 export async function pauseSubscription(): Promise<{ billing?: BillingState | null }> {
   return postJson<{ billing?: BillingState | null }>(
     "/api/billing/pause-subscription",
+    {}
+  );
+}
+
+export async function resumeSubscription(): Promise<{ billing?: BillingState | null }> {
+  return postJson<{ billing?: BillingState | null }>(
+    "/api/billing/resume-subscription",
     {}
   );
 }
