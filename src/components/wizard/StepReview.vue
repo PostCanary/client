@@ -8,6 +8,7 @@ import type { CardSchedule, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
+import { approveMailCampaign } from "@/api/mailCampaigns";
 
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
@@ -113,10 +114,15 @@ async function approve() {
   draftStore.setReview(review);
   await draftStore.saveNow();
 
-  // TODO: POST to /api/mail-campaigns to create MailCampaign from draft
-  // For now, just show confirmation
-  approved.value = true;
-  approving.value = false;
+  try {
+    // Create MailCampaign from draft (server deletes draft on success)
+    await approveMailCampaign(draftStore.draft!.id);
+    approved.value = true;
+  } catch (e: any) {
+    draftStore.error = "Failed to approve campaign. Please try again.";
+  } finally {
+    approving.value = false;
+  }
 }
 </script>
 
