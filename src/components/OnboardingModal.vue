@@ -46,6 +46,22 @@ const acceptedTerms = ref(false);
 
 const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
 
+const SERVICE_OPTIONS: Record<Industry, string[]> = {
+  hvac: ["AC Repair", "Heating", "Duct Cleaning", "Installation", "Maintenance"],
+  plumbing: ["Drain Cleaning", "Water Heater", "Pipe Repair", "Remodel", "Emergency"],
+  roofing: ["Repair", "Replacement", "Inspection", "Storm Damage", "Commercial"],
+  cleaning: ["House Cleaning", "Carpet Cleaning", "Pressure Washing", "Window Cleaning"],
+  electrical: ["Wiring", "Panel Upgrade", "Lighting", "Generator", "Emergency"],
+  pest_control: ["General Pest", "Termite", "Rodent", "Mosquito", "Wildlife"],
+  landscaping: ["Lawn Care", "Hardscape", "Tree Service", "Irrigation", "Design"],
+  other: ["General Service"],
+};
+
+const serviceOptionsForIndustry = computed(() => {
+  if (!selectedIndustry.value) return [];
+  return SERVICE_OPTIONS[selectedIndustry.value] ?? ["General Service"];
+});
+
 // Screen navigation
 function nextScreen() {
   if (currentScreen.value < totalScreens.value) {
@@ -191,6 +207,24 @@ function openTerms() {
                   >
                     {{ label }}
                   </button>
+                </div>
+              </div>
+              <div v-if="selectedIndustry" class="field">
+                <label>What services do you offer?</label>
+                <div class="service-checkboxes">
+                  <label
+                    v-for="svc in serviceOptionsForIndustry"
+                    :key="svc"
+                    class="service-check"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="svc"
+                      v-model="serviceTypes"
+                      class="terms-input"
+                    />
+                    <span class="text-sm text-gray-700">{{ svc }}</span>
+                  </label>
                 </div>
               </div>
             </template>
@@ -387,6 +421,20 @@ function openTerms() {
   border-color: #47bfa9;
   background: rgba(71, 191, 169, 0.08);
   color: #0f172a;
+}
+
+.service-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.service-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
 
 .skip-link {

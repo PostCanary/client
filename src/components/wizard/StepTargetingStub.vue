@@ -40,8 +40,8 @@ function apply() {
     finalHouseholdCount: householdCount.value,
     pastCustomersInArea: 30,
     recipientBreakdown: {
-      newProspects: householdCount.value - 30,
-      pastCustomers: 30,
+      newProspects: Math.round(householdCount.value * 0.93),
+      pastCustomers: Math.round(householdCount.value * 0.07),
       pastCustomersIncluded: false,
     },
     estimatedCostSingle: householdCount.value * perCard,
