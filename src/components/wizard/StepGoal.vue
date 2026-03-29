@@ -28,16 +28,20 @@ const savingSetup = ref(false);
 const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
 
 async function completeSetup() {
-  if (!setupLocation.value.trim() || !setupIndustry.value) return;
+  const hasLocation = setupLocation.value.trim() || brandKitStore.brandKit?.location;
+  const hasIndustry = setupIndustry.value || brandKitStore.brandKit?.industry;
+  if (!hasLocation || !hasIndustry) return;
   savingSetup.value = true;
   try {
-    if (auth.orgId) {
+    if (auth.orgId && setupLocation.value.trim()) {
       await updateOrg(auth.orgId, {
         location: setupLocation.value.trim(),
       });
     }
     // Save industry to brand kit
-    await brandKitStore.update({ industry: setupIndustry.value });
+    if (setupIndustry.value) {
+      await brandKitStore.update({ industry: setupIndustry.value });
+    }
     // Refresh brand kit to pick up changes
     await brandKitStore.fetch();
   } catch {
@@ -159,7 +163,7 @@ onMounted(() => {
 
         <button
           class="bg-[#47bfa9] text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-[#3aa893] transition-colors mt-2"
-          :disabled="!setupLocation.trim() && !brandKitStore.brandKit?.location"
+          :disabled="(!setupLocation.trim() && !brandKitStore.brandKit?.location) || (!setupIndustry && !brandKitStore.brandKit?.industry)"
           @click="completeSetup"
         >
           Continue
