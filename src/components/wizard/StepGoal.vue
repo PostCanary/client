@@ -36,6 +36,8 @@ async function completeSetup() {
         location: setupLocation.value.trim(),
       });
     }
+    // Save industry to brand kit
+    await brandKitStore.update({ industry: setupIndustry.value });
     // Refresh brand kit to pick up changes
     await brandKitStore.fetch();
   } catch {
