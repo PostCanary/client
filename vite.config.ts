@@ -65,6 +65,11 @@ export default defineConfig(({ mode }) => {
         "/billing": proxyOpts,
       },
     },
+    // Exclude leaflet-draw from pre-bundling so runtime monkey-patches work
+    // (fixes "radius is not defined" bug in leaflet-draw 1.0.4 + strict mode)
+    optimizeDeps: {
+      exclude: ["leaflet-draw"],
+    },
     build: {
       outDir: "dist",
       sourcemap: true,

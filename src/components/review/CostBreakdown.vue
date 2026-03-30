@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { PRICING } from "@/types/campaign";
 import type { PlanCode } from "@/api/billing";
+import { formatCurrency, formatNumber } from "@/utils/format";
 
 const props = defineProps<{
   householdCount: number;
@@ -37,17 +38,17 @@ const totalCost = computed(() =>
       >
         <span class="text-gray-500">
           Card {{ card.cardNumber }}:
-          {{ householdCount.toLocaleString() }} &times;
+          {{ formatNumber(householdCount) }} &times;
           ${{ perCardRate.toFixed(2) }}
         </span>
         <span class="font-medium text-[#0b2d50]">
-          ${{ card.cost.toFixed(2) }}
+          {{ formatCurrency(card.cost) }}
         </span>
       </div>
       <hr class="border-gray-200" />
       <div class="flex justify-between text-sm font-semibold">
         <span class="text-[#0b2d50]">Total</span>
-        <span class="text-[#0b2d50]">${{ totalCost.toFixed(2) }}</span>
+        <span class="text-[#0b2d50]">{{ formatCurrency(totalCost) }}</span>
       </div>
     </div>
     <p class="text-xs text-gray-400 mt-2">

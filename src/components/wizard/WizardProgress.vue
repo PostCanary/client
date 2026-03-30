@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from "vue";
 import type { WizardStep } from "@/types/campaign";
 
 const props = defineProps<{
@@ -18,15 +17,6 @@ const steps = [
   { num: 4 as WizardStep, label: "Review & Send", time: "1 min" },
 ];
 
-const progressPercent = computed(() => {
-  return (props.completedSteps.length / 4) * 100;
-});
-
-const encouragement = computed(() => {
-  if (progressPercent.value >= 75) return "Almost there!";
-  if (progressPercent.value >= 50) return "Halfway done";
-  return "";
-});
 
 function isCompleted(step: WizardStep): boolean {
   return props.completedSteps.includes(step);
@@ -83,13 +73,15 @@ function handleClick(step: WizardStep) {
           </svg>
           <span v-else>{{ step.num }}</span>
         </span>
-        <!-- Label (hidden on small screens) -->
-        <span class="hidden sm:inline whitespace-nowrap">{{ step.label }}</span>
-        <span
-          v-if="!isCompleted(step.num) && step.num === currentStep"
-          class="hidden lg:inline text-[10px] text-gray-400 ml-0.5"
-        >
-          ~{{ step.time }}
+        <!-- Label + time estimate (hidden on small screens) -->
+        <span class="hidden sm:flex flex-col items-start whitespace-nowrap">
+          <span>{{ step.label }}</span>
+          <span
+            v-if="!isCompleted(step.num) && step.num === currentStep"
+            class="text-[11px] text-gray-400 leading-tight"
+          >
+            ~{{ step.time }}
+          </span>
         </span>
       </button>
 
@@ -101,9 +93,6 @@ function handleClick(step: WizardStep) {
       />
     </template>
 
-    <!-- Encouragement text -->
-    <span v-if="encouragement" class="hidden md:inline text-xs text-[#47bfa9] ml-2 whitespace-nowrap">
-      {{ encouragement }}
-    </span>
+    <!-- Encouragement text removed — was overlapping close button on narrow viewports -->
   </div>
 </template>

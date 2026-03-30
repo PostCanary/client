@@ -70,6 +70,18 @@ defineExpose({ activeFilterCount });
       </select>
     </div>
 
+    <!-- Homeowner age (coming soon — needs data integration) -->
+    <div class="opacity-50">
+      <label class="text-xs text-gray-500">Homeowner age</label>
+      <select
+        disabled
+        class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
+      >
+        <option>Coming soon</option>
+      </select>
+      <p class="text-[11px] text-gray-400 mt-1">Age targeting available after data integration</p>
+    </div>
+
     <!-- Home value range -->
     <div>
       <label class="text-xs text-gray-500">Home value range</label>

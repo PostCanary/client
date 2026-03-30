@@ -4,6 +4,7 @@ import type { JobReference, TargetingFilters } from "@/types/campaign";
 import PanelTabTarget from "./PanelTabTarget.vue";
 import PanelTabFilters from "./PanelTabFilters.vue";
 import PanelTabSummary from "./PanelTabSummary.vue";
+import TargetingSummaryBar from "./TargetingSummaryBar.vue";
 
 defineProps<{
   jobs: JobReference[];
@@ -18,6 +19,8 @@ defineProps<{
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
   finalHouseholdCount: number;
+  estimatedCostSequence: number;
+  sequenceLength: number;
 }>();
 
 const emit = defineEmits<{
@@ -36,8 +39,8 @@ const collapsed = ref(false);
 const activeTab = ref<"target" | "filters" | "summary">("target");
 
 const tabs = [
-  { key: "target" as const, label: "Target" },
-  { key: "filters" as const, label: "Filters" },
+  { key: "target" as const, label: "Select Area" },
+  { key: "filters" as const, label: "Refine" },
   { key: "summary" as const, label: "Count & Cost" },
 ];
 </script>
@@ -117,5 +120,12 @@ const tabs = [
         :final-household-count="finalHouseholdCount"
       />
     </div>
+
+    <!-- Always-visible summary bar (Knaflic: data at the decision point) -->
+    <TargetingSummaryBar
+      :final-household-count="finalHouseholdCount"
+      :estimated-cost-sequence="estimatedCostSequence"
+      :sequence-length="sequenceLength"
+    />
   </div>
 </template>

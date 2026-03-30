@@ -5,7 +5,7 @@ const excludePast = defineModel<boolean>("excludePastCustomers", {
 const frequencyDays = defineModel<number | null>("excludeMailedWithinDays", {
   default: 30,
 });
-const doNotMailCount = defineProps<{
+const props = defineProps<{
   doNotMailCount: number;
 }>();
 </script>
@@ -43,7 +43,7 @@ const doNotMailCount = defineProps<{
 
     <!-- Do not mail -->
     <div class="text-xs text-gray-400">
-      {{ doNotMailCount }} addresses on your do-not-mail list
+      {{ props.doNotMailCount }} addresses on your do-not-mail list
     </div>
   </div>
 </template>

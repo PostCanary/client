@@ -20,20 +20,20 @@ async function handleClose() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white flex flex-col">
+  <div class="h-screen bg-white flex flex-col">
     <!-- Top bar -->
     <header class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
       <!-- Logo -->
       <div class="flex items-center gap-2">
-        <img :src="LogoUrl" alt="PostCanary" class="h-8" />
+        <img :src="LogoUrl" alt="PostCanary" class="h-20 sm:h-24 w-auto object-contain -my-4 sm:-my-5" />
       </div>
 
       <!-- Progress bar slot (WizardProgress rendered inside SendWizard) -->
-      <div id="wizard-progress-slot" class="flex-1 max-w-lg mx-8" />
+      <div id="wizard-progress-slot" class="flex-1 max-w-2xl mx-8" />
 
       <!-- Close button -->
       <button
-        class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-50"
+        class="shrink-0 text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-50"
         title="Save and exit"
         @click="handleClose"
       >
@@ -44,7 +44,7 @@ async function handleClose() {
     </header>
 
     <!-- Page content -->
-    <main class="flex-1">
+    <main class="flex-1 overflow-hidden">
       <RouterView />
     </main>
   </div>

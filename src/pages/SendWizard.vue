@@ -29,6 +29,35 @@ onMounted(async () => {
     return;
   }
 
+  // MOCK MODE: skip auth + API when VITE_SKIP_AUTH is set
+  const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
+
+  if (skipAuth) {
+    // Create a local mock draft without API call
+    draftStore.$patch({
+      draft: {
+        id: "mock-draft-001",
+        orgId: "mock-org",
+        currentStep: 1 as 1,
+        completedSteps: [] as (1 | 2 | 3 | 4)[],
+        needsReviewSteps: [] as (1 | 2 | 3 | 4)[],
+        goal: null,
+        targeting: null,
+        design: null,
+        review: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        schemaVersion: 1,
+      },
+      loading: false,
+      error: null,
+    });
+    // Hydrate brand kit with mock data so setup screen is skipped
+    await brandKitStore.fetch();
+    initializing.value = false;
+    return;
+  }
+
   // Onboarding gate: WizardLayout doesn't render OnboardingModal
   if (!auth.profileComplete) {
     router.replace("/app/dashboard");

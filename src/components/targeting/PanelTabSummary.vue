@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { PRICING } from "@/types/campaign";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
+import { formatCurrency, formatNumber } from "@/utils/format";
 
 const props = defineProps<{
   totalHouseholds: number;
@@ -28,24 +29,24 @@ const isSmall = computed(() => props.finalHouseholdCount < 100);
     <div class="space-y-1.5 text-sm">
       <div class="flex justify-between">
         <span class="text-gray-500">Total in area</span>
-        <span class="text-[#0b2d50]">{{ totalHouseholds.toLocaleString() }}</span>
+        <span class="text-[#0b2d50]">{{ formatNumber(totalHouseholds) }}</span>
       </div>
       <div v-if="excludedPastCustomers > 0" class="flex justify-between">
         <span class="text-gray-500">- Past customers</span>
-        <span class="text-red-400">-{{ excludedPastCustomers.toLocaleString() }}</span>
+        <span class="text-red-400">-{{ formatNumber(excludedPastCustomers) }}</span>
       </div>
       <div v-if="excludedRecentlyMailed > 0" class="flex justify-between">
         <span class="text-gray-500">- Recently mailed</span>
-        <span class="text-red-400">-{{ excludedRecentlyMailed.toLocaleString() }}</span>
+        <span class="text-red-400">-{{ formatNumber(excludedRecentlyMailed) }}</span>
       </div>
       <div v-if="excludedDoNotMail > 0" class="flex justify-between">
         <span class="text-gray-500">- Do not mail</span>
-        <span class="text-red-400">-{{ excludedDoNotMail.toLocaleString() }}</span>
+        <span class="text-red-400">-{{ formatNumber(excludedDoNotMail) }}</span>
       </div>
       <hr class="border-gray-200" />
       <div class="flex justify-between font-semibold">
         <span class="text-[#0b2d50]">Final count</span>
-        <span class="text-[#0b2d50]">{{ finalHouseholdCount.toLocaleString() }}</span>
+        <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
       </div>
     </div>
 
@@ -57,17 +58,17 @@ const isSmall = computed(() => props.finalHouseholdCount < 100);
         class="flex justify-between text-sm"
       >
         <span class="text-gray-500">
-          Card {{ n }}: {{ finalHouseholdCount.toLocaleString() }} &times;
+          Card {{ n }}: {{ formatNumber(finalHouseholdCount) }} &times;
           ${{ perCard.toFixed(2) }}
         </span>
         <span class="text-[#0b2d50] font-medium">
-          ${{ perCardCost.toFixed(2) }}
+          {{ formatCurrency(perCardCost) }}
         </span>
       </div>
       <hr class="border-gray-200" />
       <div class="flex justify-between font-semibold text-sm">
         <span class="text-[#0b2d50]">Total</span>
-        <span class="text-[#0b2d50]">${{ totalCost.toFixed(2) }}</span>
+        <span class="text-[#0b2d50]">{{ formatCurrency(totalCost) }}</span>
       </div>
     </div>
 

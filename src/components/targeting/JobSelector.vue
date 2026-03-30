@@ -75,7 +75,7 @@ function formatDate(iso: string): string {
           @change="emit('toggle', job.id)"
         />
         <div class="flex-1 min-w-0">
-          <div class="text-[#0b2d50] truncate">{{ job.address }}</div>
+          <div class="text-[#0b2d50] truncate" :title="job.address">{{ job.address }}</div>
           <div class="text-xs text-gray-400">
             {{ job.serviceType }} · {{ formatDate(job.jobDate) }}
           </div>
