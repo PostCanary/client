@@ -99,10 +99,11 @@ async function onSubmit() {
 
   submitting.value = true;
   try {
-    // Save user-level fields (full_name, industry)
+    // Save user-level fields (full_name, industry, website)
     if (selectedIndustry.value) {
       form.value.industry = selectedIndustry.value;
     }
+    form.value.website_url = websiteUrl.value.trim();
     await saveProfile();
 
     // Save org-level fields (not for invited users)
