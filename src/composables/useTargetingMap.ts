@@ -134,17 +134,20 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
 
   // Custom draw handlers — bypasses Leaflet-Draw's broken SimpleShape interaction
   let drawCleanup: (() => void) | null = null;
+  let activePolygonHandler: any = null;
 
   function startDrawing(type: "circle" | "rectangle" | "polygon") {
     if (!map) return;
-    // Cancel any active drawing
+    // Cancel any active drawing (circle/rectangle custom handlers)
     if (drawCleanup) { drawCleanup(); drawCleanup = null; }
+    // Cancel any active polygon handler
+    if (activePolygonHandler) { activePolygonHandler.disable(); activePolygonHandler = null; }
 
     if (type === "polygon") {
       // Polygons use Leaflet-Draw (multi-click, not drag-based)
       activeDrawTool.value = type;
-      const handler = new (L.Draw as any).Polygon(map, { shapeOptions: SHAPE_STYLE });
-      handler.enable();
+      activePolygonHandler = new (L.Draw as any).Polygon(map, { shapeOptions: SHAPE_STYLE });
+      activePolygonHandler.enable();
       return;
     }
 
@@ -195,21 +198,34 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
       cleanup();
     }
 
+    // Handle mouse release outside map bounds — prevents stuck draw state
+    function onDocMouseUp(e: MouseEvent) {
+      if (!startLatLng) return;
+      // Check if the release was outside the map container
+      const rect = container.getBoundingClientRect();
+      const inside = e.clientX >= rect.left && e.clientX <= rect.right &&
+                     e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (!inside) cleanup();
+    }
+
     function cleanup() {
       if (!map) return;
       map.off("mousedown", onMouseDown);
       map.off("mousemove", onMouseMove);
       map.off("mouseup", onMouseUp);
+      document.removeEventListener("mouseup", onDocMouseUp);
       map.dragging.enable();
       container.style.cursor = "";
       activeDrawTool.value = null;
       startLatLng = null;
+      if (preview && map) { map.removeLayer(preview); preview = null; }
       drawCleanup = null;
     }
 
     map.on("mousedown", onMouseDown);
     map.on("mousemove", onMouseMove);
     map.on("mouseup", onMouseUp);
+    document.addEventListener("mouseup", onDocMouseUp);
     drawCleanup = cleanup;
   }
 
@@ -365,6 +381,10 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
     if (drawCleanup) {
       drawCleanup();
       drawCleanup = null;
+    }
+    if (activePolygonHandler) {
+      activePolygonHandler.disable();
+      activePolygonHandler = null;
     }
     activeDrawTool.value = null;
     if (map) {
