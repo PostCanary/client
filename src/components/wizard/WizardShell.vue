@@ -30,14 +30,14 @@ function goNext() {
   }
 }
 
-// Force-save on browser close/refresh
+// Force-save on browser close/refresh using keepalive fetch (survives tab close)
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  // Always show "are you sure?" if draft has data — gives debounce timer
-  // a chance to fire while the user reads the prompt
   if (draftStore.draft && draftStore.draft.completedSteps.length > 0) {
     e.preventDefault();
   }
-  draftStore.saveNow();
+  // Use beaconSave (fetch+keepalive) instead of async saveNow — browsers don't
+  // wait for async requests during unload. beaconSave only fires if dirty.
+  draftStore.beaconSave();
 }
 
 // Intercept browser back — go to previous wizard step instead of leaving

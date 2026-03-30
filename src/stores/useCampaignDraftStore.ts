@@ -14,12 +14,15 @@ import {
   createDraft,
   deleteDraft,
 } from "@/api/campaignDrafts";
+import { API_BASE } from "@/api/http";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _pendingSave = false;
 let _retryCount = 0;
+let _dirty = false;
 const MAX_RETRIES = 3;
+const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
 
 export const useCampaignDraftStore = defineStore("campaignDraft", {
   state: () => ({
@@ -164,6 +167,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     _debounceSave() {
+      _dirty = true;
       if (_saveTimer) clearTimeout(_saveTimer);
       _saveTimer = setTimeout(() => this._save(), 5000);
     },
@@ -185,6 +189,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         this.lastSavedAt = new Date().toISOString();
         this.error = null;
         _retryCount = 0;
+        _dirty = false;
       } catch {
         if (_retryCount < MAX_RETRIES) {
           _retryCount++;
@@ -207,6 +212,44 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     async saveNow() {
       if (_saveTimer) clearTimeout(_saveTimer);
       await this._save();
+    },
+
+    /** Best-effort save that survives tab close via fetch keepalive. */
+    get isDirty() { return _dirty; },
+
+    beaconSave() {
+      if (!this.draft || !_dirty) return;
+      // Mirror _save() guards
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        this.lastSavedAt = new Date().toISOString();
+        _dirty = false;
+        return;
+      }
+      const payload = {
+        current_step: this.draft.currentStep,
+        completed_steps: this.draft.completedSteps,
+        needs_review_steps: this.draft.needsReviewSteps,
+        data: {
+          goal: this.draft.goal,
+          targeting: this.draft.targeting,
+          design: this.draft.design,
+          review: this.draft.review,
+        },
+      };
+      const body = JSON.stringify(payload);
+      // If payload exceeds keepalive limit, skip — debounce/route-leave covers most cases
+      if (body.length > KEEPALIVE_MAX_BYTES) return;
+      fetch(`${API_BASE}/api/campaign-drafts/${this.draft.id}`, {
+        method: "PUT",
+        keepalive: true,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body,
+      });
+      // Don't clear _dirty — no success confirmation from keepalive fetch
     },
   },
 });
