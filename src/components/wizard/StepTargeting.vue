@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { GOAL_DEFAULTS, PRICING } from "@/types/campaign";
@@ -64,8 +64,29 @@ const rawArea = computed(() => {
       area += circleAreaSqMiles(a.radiusMiles);
     } else if (a.type === "zip") {
       area += zipAreaSqMiles();
+    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates.length >= 2) {
+      // Calculate area from coordinates using lat/lng to miles conversion
+      const c = a.coordinates;
+      if (a.type === "rectangle" && c.length >= 2) {
+        const swLat = c[0]![0]!; const swLng = c[0]![1]!;
+        const neLat = c[1]![0]!; const neLng = c[1]![1]!;
+        const latMid = (swLat + neLat) / 2;
+        const h = Math.abs(neLat - swLat) * 69;
+        const w = Math.abs(neLng - swLng) * 69 * Math.cos(latMid * Math.PI / 180);
+        area += h * w;
+      } else {
+        // Shoelace formula for polygon area
+        const latMid = c.reduce((s, p) => s + p[0]!, 0) / c.length;
+        let pa = 0;
+        for (let i = 0; i < c.length; i++) {
+          const j = (i + 1) % c.length;
+          pa += c[i]![1]! * c[j]![0]! - c[j]![1]! * c[i]![0]!;
+        }
+        pa = Math.abs(pa) / 2;
+        area += pa * 69 * 69 * Math.cos(latMid * Math.PI / 180);
+      }
     } else {
-      area += 2; // rough estimate for drawn shapes
+      area += 2; // fallback for unknown shape types
     }
   }
   return area;
@@ -80,6 +101,10 @@ const excludedPast = computed(() => excludePastCustomers.value ? pastInArea.valu
 const excludedRecent = computed(() => Math.round(filteredHouseholds.value * 0.03));
 const finalHouseholdCount = computed(() =>
   Math.max(filteredHouseholds.value - excludedPast.value - excludedRecent.value - doNotMailCount, 0),
+);
+const sequenceLength = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
+const estimatedCostSequence = computed(
+  () => finalHouseholdCount.value * PRICING.payPerSend * sequenceLength.value,
 );
 
 // Debounced commit to draft store
@@ -140,6 +165,15 @@ watch(
   { deep: true },
 );
 
+// Watch map areas so drawing shapes triggers commitTargeting
+watch(
+  () => mapRef.value?.areas,
+  (newAreas) => {
+    if (newAreas !== undefined) commitTargeting();
+  },
+  { deep: true },
+);
+
 // Job actions
 function toggleJob(jobId: string) {
   const job = jobs.value.find((j) => j.id === jobId);
@@ -179,11 +213,30 @@ function onRadiusChange(miles: number) {
   updateMapJobs();
 }
 
+function handleMethodChosen(method: "draw" | "zip" | "around_jobs") {
+  if (method === "draw") {
+    nextTick(() => mapRef.value?.startDrawing("circle"));
+  }
+  // "around_jobs" — panel already shows jobs tab by default
+  // "zip" — panel shows target tab with ZIP input visible
+}
+
 onMounted(() => {
   if (!brandKitStore.hydrated) brandKitStore.fetch();
-  // Initial commit if resuming with data
   if (draftStore.draft?.targeting) {
-    // Already have targeting data — don't overwrite on mount
+    // Restore map state from draft (shapes + job radii lost on remount)
+    nextTick(() => {
+      if (draftStore.draft?.targeting?.areas?.length) {
+        mapRef.value?.restoreAreas(draftStore.draft.targeting.areas);
+      }
+      if (selectedJobs.value.length > 0) {
+        updateMapJobs();
+      }
+    });
+  } else if (selectedJobs.value.length > 0) {
+    // First mount with pre-selected jobs — render radii and commit
+    nextTick(() => updateMapJobs());
+    commitTargeting();
   }
 });
 </script>
@@ -195,6 +248,7 @@ onMounted(() => {
       <TargetingMap
         ref="mapRef"
         @areas-changed="commitTargeting"
+        @method-chosen="handleMethodChosen"
       />
     </div>
 
@@ -212,6 +266,8 @@ onMounted(() => {
       :excluded-recently-mailed="excludedRecent"
       :excluded-do-not-mail="doNotMailCount"
       :final-household-count="finalHouseholdCount"
+      :estimated-cost-sequence="estimatedCostSequence"
+      :sequence-length="sequenceLength"
       @toggle-job="toggleJob"
       @select-all-jobs="selectAllJobs"
       @deselect-all-jobs="deselectAllJobs"

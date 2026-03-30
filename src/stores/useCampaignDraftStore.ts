@@ -97,7 +97,8 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
       if (goalChanged && this.draft.completedSteps.length > 1) {
         // Flag later steps for review but DON'T wipe data
-        this.draft.needsReviewSteps = [2, 3].filter((s) =>
+        // Include step 4 (Review) — cost/schedule data depends on goal
+        this.draft.needsReviewSteps = [2, 3, 4].filter((s) =>
           this.draft!.completedSteps.includes(s as WizardStep),
         ) as WizardStep[];
       }
@@ -109,9 +110,12 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.draft.targeting = targeting;
       this._markComplete(2);
       this._clearReview(2);
-      if (this.draft.completedSteps.includes(3 as WizardStep)) {
-        if (!this.draft.needsReviewSteps.includes(3 as WizardStep)) {
-          this.draft.needsReviewSteps.push(3 as WizardStep);
+      // Flag steps 3 and 4 for review — cost/schedule data depends on targeting
+      for (const step of [3, 4] as WizardStep[]) {
+        if (this.draft.completedSteps.includes(step)) {
+          if (!this.draft.needsReviewSteps.includes(step)) {
+            this.draft.needsReviewSteps.push(step);
+          }
         }
       }
       this._debounceSave();
@@ -166,6 +170,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async _save() {
       if (!this.draft) return;
+      // MOCK MODE: skip API save
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        this.lastSavedAt = new Date().toISOString();
+        return;
+      }
       if (this.saving) {
         _pendingSave = true;
         return;
