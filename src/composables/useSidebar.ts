@@ -1,6 +1,7 @@
 // src/composables/useSidebar.ts
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { captureEvent } from '@/composables/usePostHog'
 
 const LS_KEY = 'pc:sidebar:collapsed'
 
@@ -56,6 +57,7 @@ export function useSidebar() {
   function toggle() {
     if (isAutoCollapsed.value) return // don't toggle when auto-collapsed
     isCollapsed.value = !isCollapsed.value
+    captureEvent('sidebar_toggled', { collapsed: isCollapsed.value, trigger: 'manual' })
     persistState()
   }
 
@@ -71,9 +73,15 @@ export function useSidebar() {
 
   function toggleMobile() {
     isMobileOpen.value = !isMobileOpen.value
+    if (isMobileOpen.value) {
+      captureEvent('sidebar_mobile_opened', {})
+    }
   }
 
-  function closeMobile() {
+  function closeMobile(trigger: 'navigation' | 'overlay' | 'hamburger' = 'navigation') {
+    if (isMobileOpen.value) {
+      captureEvent('sidebar_mobile_closed', { trigger })
+    }
     isMobileOpen.value = false
   }
 

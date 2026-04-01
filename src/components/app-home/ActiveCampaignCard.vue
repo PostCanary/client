@@ -3,6 +3,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { HomeCampaignSummary } from '@/types/home'
+import { captureEvent } from '@/composables/usePostHog'
 
 const props = defineProps<{
   campaign: HomeCampaignSummary
@@ -41,7 +42,7 @@ const nextEventText = computed(() => {
 <template>
   <button
     class="campaign-card"
-    @click="router.push(`/app/campaigns/${campaign.id}`)"
+    @click="() => { captureEvent('home_campaign_card_clicked', { campaignId: campaign.id }); router.push(`/app/campaigns/${campaign.id}`) }"
     type="button"
   >
     <div class="campaign-card-header">

@@ -3,6 +3,7 @@
 import { useRouter } from 'vue-router'
 import type { BestPracticeRecommendation } from '@/types/home'
 import { RocketOutline } from '@vicons/ionicons5'
+import { captureEvent } from '@/composables/usePostHog'
 
 const props = defineProps<{
   recommendation: BestPracticeRecommendation
@@ -15,8 +16,11 @@ function formatCurrency(amount: number): string {
 }
 
 function startCampaign() {
+  captureEvent('home_recommendation_clicked', { recommendationId: props.recommendation.id, goalType: props.recommendation.goalType })
   router.push('/app/send')
 }
+
+captureEvent('home_recommendation_viewed', { recommendationId: props.recommendation.id, goalType: props.recommendation.goalType })
 </script>
 
 <template>

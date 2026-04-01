@@ -3,6 +3,9 @@
 import { useRouter } from 'vue-router'
 import type { FirstResultData } from '@/types/home'
 import { CheckmarkCircleOutline } from '@vicons/ionicons5'
+import { captureEvent } from '@/composables/usePostHog'
+
+captureEvent('home_first_result_celebration_seen', { campaignId: props.result.campaignName })
 
 const props = defineProps<{
   result: FirstResultData

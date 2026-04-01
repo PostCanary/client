@@ -56,7 +56,7 @@
   background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
   background-size: 200% 100%;
   border-radius: 6px;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 .skeleton-line--sm {
@@ -114,7 +114,7 @@
   border-radius: 50%;
   background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
   background-size: 200% 100%;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 .skeleton-bar {
@@ -122,10 +122,10 @@
   background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
   background-size: 200% 100%;
   border-radius: 999px;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }

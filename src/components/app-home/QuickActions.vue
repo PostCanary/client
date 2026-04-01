@@ -1,6 +1,7 @@
 <!-- src/components/app-home/QuickActions.vue -->
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { captureEvent } from '@/composables/usePostHog'
 import type { QuickAction } from '@/types/home'
 import {
   MailOutline,
@@ -30,7 +31,7 @@ const iconMap: Record<string, any> = {
       :key="action.id"
       class="qa-card"
       :class="{ 'qa-card--primary': action.variant === 'primary' }"
-      @click="router.push(action.route)"
+      @click="() => { captureEvent('home_quick_action_clicked', { actionId: action.id }); router.push(action.route) }"
       type="button"
     >
       <component

@@ -73,13 +73,13 @@ function isActive(routeName: string): boolean {
 }
 
 /* ── Navigation ────────────────────────────────────────── */
-function navigate(path: string, label?: string) {
-  if (label) captureEvent('sidebar_item_clicked', { item: label, path })
+function navigate(path: string, label?: string, section?: string) {
+  if (label) captureEvent('sidebar_item_clicked', { item: label, section: section || '', collapsed: isCollapsed.value })
   router.push(path)
 }
 
 function onSendPostcardsClick() {
-  captureEvent('sidebar_send_postcards_clicked')
+  captureEvent('sidebar_send_postcards_clicked', { collapsed: isCollapsed.value })
   router.push('/app/send')
 }
 
@@ -119,7 +119,7 @@ async function onSignOut() {
           :aria-current="isActive(item.routeName) ? 'page' : undefined"
           :title="isCollapsed ? item.label : undefined"
           :aria-label="item.label"
-          @click="navigate(item.to, item.label)"
+          @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
           <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
@@ -162,7 +162,7 @@ async function onSignOut() {
           :aria-current="isActive(item.routeName) ? 'page' : undefined"
           :title="isCollapsed ? item.label : undefined"
           :aria-label="item.label"
-          @click="navigate(item.to, item.label)"
+          @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
           <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
@@ -183,7 +183,7 @@ async function onSignOut() {
           :aria-current="isActive(item.routeName) ? 'page' : undefined"
           :title="isCollapsed ? item.label : undefined"
           :aria-label="item.label"
-          @click="navigate(item.to, item.label)"
+          @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
           <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
@@ -206,7 +206,7 @@ async function onSignOut() {
           :aria-current="isActive(item.routeName) ? 'page' : undefined"
           :title="isCollapsed ? item.label : undefined"
           :aria-label="item.label"
-          @click="navigate(item.to, item.label)"
+          @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
           <img v-if="item.icon === 'svg'" :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />

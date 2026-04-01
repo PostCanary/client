@@ -87,6 +87,9 @@ const avatarBtnRef = ref<HTMLElement | null>(null)
 
 function toggleDropdown() {
   dropdownOpen.value = !dropdownOpen.value
+  if (dropdownOpen.value) {
+    captureEvent('topbar_user_dropdown_opened', {})
+  }
 }
 
 function closeDropdown() {
@@ -196,7 +199,7 @@ function onToggleClick() {
     <OrgSwitcher v-if="auth.hasMultipleOrgs" class="hidden sm:block ml-2" />
 
     <!-- Notification bell -->
-    <button class="topbar-icon-btn" type="button" aria-label="Notifications" title="Notifications">
+    <button class="topbar-icon-btn" type="button" aria-label="Notifications" title="Notifications" @click="captureEvent('topbar_notification_bell_clicked', {})">
       <component :is="NotificationsOutline" class="topbar-icon" />
       <span v-if="notificationCount > 0" class="notification-badge">{{ notificationCount }}</span>
     </button>

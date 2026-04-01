@@ -20,7 +20,7 @@ onMounted(() => {
 
     <div class="designs-grid">
       <!-- "Create New" card (always first) -->
-      <button class="design-card design-card--new" @click="router.push('/app/send')" type="button">
+      <button class="design-card design-card--new" @click="() => { captureEvent('designs_create_new_clicked', {}); router.push('/app/send') }" type="button">
         <div class="design-card__icon">+</div>
         <span class="design-card__label">Create New Design</span>
       </button>

@@ -8,7 +8,7 @@ const { isMobileOpen, closeMobile } = useSidebar()
 
 // Escape key closes drawer
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeMobile()
+  if (e.key === 'Escape') closeMobile('overlay')
 }
 
 // Body scroll lock + keyboard listener
@@ -37,7 +37,7 @@ onUnmounted(() => {
         role="dialog"
         aria-modal="true"
         aria-label="Navigation menu"
-        @click.self="closeMobile"
+        @click.self="() => closeMobile('overlay')"
       >
         <aside class="drawer-panel">
           <AppSidebar />
@@ -62,7 +62,7 @@ onUnmounted(() => {
   bottom: 0;
   width: 280px;
   background: var(--app-card-bg, #ffffff);
-  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
 }
 
