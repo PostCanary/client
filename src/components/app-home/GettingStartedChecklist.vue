@@ -251,4 +251,18 @@ function isCurrent(step: ChecklistStep, index: number): boolean {
   font-weight: 600;
   color: var(--app-teal, #47bfa9);
 }
+
+@media (max-width: 639px) {
+  .checklist-step {
+    gap: 10px;
+  }
+
+  .checklist-content {
+    padding: 12px;
+  }
+
+  .checklist-time {
+    display: none;
+  }
+}
 </style>

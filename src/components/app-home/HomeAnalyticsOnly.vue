@@ -294,4 +294,22 @@ function onCrossSellClick() {
   width: 16px;
   height: 16px;
 }
+
+@media (max-width: 639px) {
+  .summary-stats {
+    gap: 20px;
+  }
+
+  .summary-stat-value {
+    font-size: 20px;
+  }
+
+  .upload-meta {
+    gap: 10px;
+  }
+
+  .upload-date {
+    display: none;
+  }
+}
 </style>

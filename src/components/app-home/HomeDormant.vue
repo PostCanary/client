@@ -136,4 +136,14 @@ const urgentRecommendation = {
   color: var(--app-text, #0c2d50);
   font-weight: 600;
 }
+
+@media (max-width: 639px) {
+  .missed-card {
+    padding: 16px;
+  }
+
+  .missed-items {
+    gap: 10px;
+  }
+}
 </style>
