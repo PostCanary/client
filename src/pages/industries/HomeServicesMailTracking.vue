@@ -23,7 +23,7 @@ import type {
 const heroContent: IndustryHeroContent = {
   headline: "Know Exactly Which Mailers Drive Your Service Calls",
   subheadline:
-    "Roofers, HVAC techs, plumbers, electricians—if you send direct mail, PostCanary shows you which pieces actually generate jobs. Works with your current mail provider. No switching. No QR codes. Just real attribution.",
+    "If your business sends direct mail, PostCanary shows you which pieces actually generate jobs. Works with your current mail provider. No switching. No QR codes. Just real attribution.",
   steps: {
     step1: "Sign Up / Login",
     step2: "Upload Mail & Jobs",
