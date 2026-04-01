@@ -118,7 +118,7 @@ const faqContent: IndustryFAQContent = {
     <HomeVisualize />
     <HomeHowItWorks />
     <IndustryTestimonials />
-    <HomePricing />
+    <HomePricing hide-calculator />
     <IndustryFAQ :content="faqContent" />
   </div>
 </template>
