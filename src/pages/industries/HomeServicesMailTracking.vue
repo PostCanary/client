@@ -32,7 +32,7 @@ const heroContent: IndustryHeroContent = {
 };
 
 const painPointsContent: IndustryPainPointsContent = {
-  heading: "Your Mail Is Working. You Just Can't Prove It Yet.",
+  heading: "Is Your Mail Working? Now You'll Know.",
   subheading:
     "Home service companies spend thousands on direct mail every month—but without real attribution, you're flying blind on what's working.",
   cards: [
