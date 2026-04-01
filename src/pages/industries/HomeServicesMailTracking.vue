@@ -27,7 +27,7 @@ const heroContent: IndustryHeroContent = {
   steps: {
     step1: "Sign Up / Login",
     step2: "Upload Mail & Jobs",
-    step3: "See Your Real ROI",
+    step3: "See Your Real ROI in Minutes",
   },
 };
 
