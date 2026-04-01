@@ -78,6 +78,12 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
           >
             Real Estate
           </router-link>
+          <router-link
+            to="/home-services-direct-mail-tracking"
+            class="hover:text-white transition-colors"
+          >
+            Home Services
+          </router-link>
         </div>
 
         <!-- Company column -->

@@ -12,6 +12,10 @@ import { useRouter } from "vue-router";
 import { generateEventId, trackInitiateCheckout } from "@/composables/useMetaPixel";
 import PricingCalculator from "./PricingCalculator.vue";
 
+const props = withDefaults(defineProps<{ hideCalculator?: boolean }>(), {
+  hideCalculator: false,
+});
+
 const router = useRouter();
 const auth = useAuthStore();
 
@@ -126,7 +130,7 @@ const onGetStartedClick = async (tierId: PlanCode) => {
     />
 
     <!-- Calculator -->
-    <AnimatedEntry>
+    <AnimatedEntry v-if="!hideCalculator">
       <PricingCalculator @recommendations="onRecommendations" />
     </AnimatedEntry>
 

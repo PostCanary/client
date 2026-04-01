@@ -86,6 +86,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/industries/RealtorMailTracking.vue"),
         meta: seoMeta("/real-estate-direct-mail-tracking"),
       },
+      {
+        path: "home-services-direct-mail-tracking",
+        name: "HomeServicesMailTracking",
+        component: () => import("@/pages/industries/HomeServicesMailTracking.vue"),
+        meta: seoMeta("/home-services-direct-mail-tracking"),
+      },
     ],
   },
 
