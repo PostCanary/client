@@ -29,7 +29,7 @@ auth.fetchMe();
 
 // 401 => prompt login
 window.addEventListener(HTTP_EVENT_AUTH_REQUIRED, () => {
-  const next = router.currentRoute.value.fullPath || "/dashboard";
+  const next = router.currentRoute.value.fullPath || "/app/home";
   auth.openLoginModal(next, "login");
 });
 

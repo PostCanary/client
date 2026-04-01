@@ -103,6 +103,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/layouts/MainLayout.vue"),
     children: [
       {
+        path: "home",
+        name: "AppHome",
+        component: () => import("@/pages/AppHome.vue"),
+        meta: { title: `Home • ${BRAND.name}`, navbarTitle: "Home" },
+      },
+      {
         path: "dashboard",
         name: "Dashboard",
         alias: "/dashboard", // ✅ clean URL
@@ -114,21 +120,21 @@ const routes: RouteRecordRaw[] = [
         name: "Demographics",
         alias: "/demographics",
         component: () => import("@/pages/Demographics.vue"),
-        meta: { title: `Demographics • ${BRAND.name}`, navbarTitle: "Demographics" },
+        meta: { title: `Audience • ${BRAND.name}`, navbarTitle: "Audience" },
       },
       {
         path: "analytics",
         name: "Analytics",
         alias: "/analytics",
         component: () => import("@/pages/Analytics.vue"),
-        meta: { title: `AI Insights • ${BRAND.name}`, navbarTitle: "AI Insights" },
+        meta: { title: `Analysis • ${BRAND.name}`, navbarTitle: "Analysis" },
       },
       {
         path: "map",
         name: "Heatmap",
         alias: "/map", // ✅ clean URL
         component: () => import("@/pages/Heatmap.vue"),
-        meta: { title: `Heatmap • ${BRAND.name}`, navbarTitle: "Heatmap" },
+        meta: { title: `Map • ${BRAND.name}`, navbarTitle: "Map" },
       },
       {
         path: "settings",
@@ -166,8 +172,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign" },
       },
 
-      // /app -> /dashboard
-      { path: "", redirect: { name: "Dashboard" } },
+      // Designs page
+      {
+        path: "designs",
+        name: "Designs",
+        component: () => import("@/pages/Designs.vue"),
+        meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
+      },
+
+      // /app -> /app/home
+      { path: "", redirect: { name: "AppHome" } },
     ],
   },
 
