@@ -112,7 +112,7 @@ const faqContent: IndustryFAQContent = {
       badge="Limited Time Offer"
       headline="Unlimited Mail Uploads for 30 Days"
       body="Sign up today and upload as many mail lists as you want for your first 30 days—no volume caps, no overage charges. See your real ROI with your real data."
-      cta-label="Start Your Free Trial"
+      cta-label="Get Started"
     />
     <IndustryPainPoints :content="painPointsContent" />
     <HomeVisualize />
