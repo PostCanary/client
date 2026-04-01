@@ -13,7 +13,7 @@ const props = defineProps<{
 const router = useRouter()
 
 onMounted(() => {
-  captureEvent('home_first_result_celebration_seen', { campaignName: props.result.campaignName })
+  captureEvent('home_first_result_celebration_seen', { campaignId: props.result.campaignId })
 })
 </script>
 

@@ -125,6 +125,7 @@ export interface CommunityStats {
 // ============================================================
 
 export interface FirstResultData {
+  campaignId: string
   matchCount: number
   campaignName: string
   detectedDate: string
@@ -240,6 +241,7 @@ export const MOCK_COMMUNITY: CommunityStats = {
 }
 
 export const MOCK_FIRST_RESULT: FirstResultData = {
+  campaignId: 'camp-001',
   matchCount: 12,
   campaignName: 'Spring AC Tune-Up',
   detectedDate: '2026-03-28T09:15:00Z',

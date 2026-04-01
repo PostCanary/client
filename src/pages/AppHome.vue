@@ -6,6 +6,9 @@ import type { HomeUserType, HomeUserContext } from '@/types/home'
 import { MOCK_HOME_CONTEXT } from '@/types/home'
 
 import HomeReturning from '@/components/app-home/HomeReturning.vue'
+import HomeNew from '@/components/app-home/HomeNew.vue'
+import HomeAnalyticsOnly from '@/components/app-home/HomeAnalyticsOnly.vue'
+import HomeDormant from '@/components/app-home/HomeDormant.vue'
 import HomeSkeleton from '@/components/app-home/HomeSkeleton.vue'
 
 // Phase A: use mock data. Phase B: replace with real API call
@@ -29,10 +32,9 @@ onMounted(() => {
   <div class="app-home">
     <HomeSkeleton v-if="loading" />
     <HomeReturning v-else-if="userType === 'returning'" :context="context" />
-    <!-- Phase 8: HomeNew v-else-if="userType === 'new'" -->
-    <!-- Phase 9: HomeAnalyticsOnly v-else-if="userType === 'analytics_only'" -->
-    <!-- Phase 9: HomeDormant v-else-if="userType === 'dormant'" -->
-    <!-- Fallback to returning for now -->
+    <HomeNew v-else-if="userType === 'new'" :context="context" />
+    <HomeAnalyticsOnly v-else-if="userType === 'analytics_only'" :context="context" />
+    <HomeDormant v-else-if="userType === 'dormant'" :context="context" />
     <HomeReturning v-else :context="context" />
   </div>
 </template>
