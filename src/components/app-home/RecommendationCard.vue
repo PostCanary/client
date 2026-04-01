@@ -1,5 +1,6 @@
 <!-- src/components/app-home/RecommendationCard.vue -->
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { BestPracticeRecommendation } from '@/types/home'
 import { RocketOutline } from '@vicons/ionicons5'
@@ -20,7 +21,9 @@ function startCampaign() {
   router.push('/app/send')
 }
 
-captureEvent('home_recommendation_viewed', { recommendationId: props.recommendation.id, goalType: props.recommendation.goalType })
+onMounted(() => {
+  captureEvent('home_recommendation_viewed', { recommendationId: props.recommendation.id, goalType: props.recommendation.goalType })
+})
 </script>
 
 <template>
