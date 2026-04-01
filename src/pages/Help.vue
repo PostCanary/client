@@ -144,7 +144,7 @@ const sections: FaqSection[] = [
       },
       {
         q: "Is there a file size limit?",
-        a: "File size limits depend on your plan. The Starter plan supports up to 50,000 mailers per month, while higher-tier plans handle up to 1,000,000+ rows. Check your plan details for exact limits.",
+        a: "File size limits depend on your plan. The Starter plan supports up to 1,000 mailers per month, while the Ultimate plan handles up to 100,000. Check your plan details for exact limits.",
       },
       {
         q: "Can I upload just one file (mail only or CRM only)?",
@@ -274,11 +274,11 @@ const sections: FaqSection[] = [
     items: [
       {
         q: "What plans are available?",
-        a: `${BRAND.name} offers tiered plans starting at <strong>$99/month</strong> for smaller mailers and scaling up to <strong>$999/month</strong> for high-volume senders. Each plan includes a set number of mailers per month. Visit the pricing section on our home page for full details.`,
+        a: `${BRAND.name} offers tiered plans starting at <strong>$49/month</strong> for smaller mailers and scaling up to <strong>$499/month</strong> for high-volume senders. Each plan includes a set number of mailers per month. Visit the pricing section on our home page for full details.`,
       },
       {
         q: 'What does "mailers per month" mean?',
-        a: "It's the maximum number of mail-file rows you can process in a billing cycle. For example, a 50,000-mailer plan lets you upload and match up to 50,000 recipient records each month.",
+        a: "It's the maximum number of mail-file rows you can process in a billing cycle. For example, the Basic plan lets you upload and match up to 5,000 recipient records each month.",
       },
       {
         q: "How do I upgrade or downgrade my plan?",
