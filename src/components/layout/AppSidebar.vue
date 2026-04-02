@@ -6,8 +6,8 @@ import { useSidebar } from '@/composables/useSidebar'
 import { BRAND } from '@/config/brand'
 import { captureEvent } from '@/composables/usePostHog'
 
-/* Logo */
-import LogoUrl from '@/assets/source-logo-02.png'
+/* Logo — cropped version for sidebar, bird portion for collapsed */
+import LogoUrl from '@/assets/postcanary-logo.png'
 
 /* Existing SVG sidebar icons (imported with ?url) */
 import OverviewIcon from '@/assets/sidebar/overview-icon.svg?url'
@@ -266,14 +266,18 @@ async function onSignOut() {
 }
 
 .logo-img {
-  height: 40px;
+  height: 44px;
   width: auto;
   object-fit: contain;
-  transition: height 0.2s ease-out;
+  transition: all 0.2s ease-out;
 }
 
 .logo-img--collapsed {
-  height: 32px;
+  height: 44px;
+  width: 36px;
+  object-fit: cover;
+  object-position: 0% center;
+  clip-path: inset(0 0 0 0);
 }
 
 /* ── CTA Button ("+ Send Postcards") ─────────────────── */
