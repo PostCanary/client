@@ -64,13 +64,11 @@ onMounted(async () => {
     return;
   }
 
-  // Org gate: if no org yet, skip straight to mock fallback
-  // (the catch block below handles this gracefully)
-  if (!auth.orgId) {
-    throw new Error("no-org");
-  }
-
   try {
+    // Org gate: no org means API calls will fail — let catch handle it
+    if (!auth.orgId) {
+      throw new Error("no-org");
+    }
     const draftId = route.params.draftId as string | undefined;
     if (draftId) {
       await draftStore.resume(draftId);
