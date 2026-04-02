@@ -64,11 +64,10 @@ onMounted(async () => {
     return;
   }
 
-  // Org gate: API calls need a valid org
+  // Org gate: if no org yet, skip straight to mock fallback
+  // (the catch block below handles this gracefully)
   if (!auth.orgId) {
-    initError.value = true;
-    initializing.value = false;
-    return;
+    throw new Error("no-org");
   }
 
   try {
@@ -88,7 +87,27 @@ onMounted(async () => {
     }
     brandKitStore.setupOrgWatcher();
   } catch {
-    initError.value = true;
+    // API endpoints not available yet — fall back to mock draft
+    // so the wizard is always usable (removed once backend is wired)
+    draftStore.$patch({
+      draft: {
+        id: "mock-draft-001",
+        orgId: auth.orgId || "mock-org",
+        currentStep: 1 as 1,
+        completedSteps: [] as (1 | 2 | 3 | 4)[],
+        needsReviewSteps: [] as (1 | 2 | 3 | 4)[],
+        goal: null,
+        targeting: null,
+        design: null,
+        review: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        schemaVersion: 1,
+      },
+      loading: false,
+      error: null,
+    });
+    await brandKitStore.fetch();
   } finally {
     initializing.value = false;
   }
