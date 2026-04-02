@@ -188,11 +188,11 @@ const routes: RouteRecordRaw[] = [
   // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──
   {
     path: "/app/send/:draftId?",
-    name: "SendWizard",
     component: () => import("@/layouts/WizardLayout.vue"),
     children: [
       {
         path: "",
+        name: "SendWizard",
         component: () => import("@/pages/SendWizard.vue"),
       },
     ],
