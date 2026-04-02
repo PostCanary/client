@@ -53,6 +53,10 @@ export interface UpdateOrgPayload {
   name?: string;
   business_name?: string;
   location?: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   service_types?: string[];
 }
 
