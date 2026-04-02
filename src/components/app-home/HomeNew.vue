@@ -22,7 +22,8 @@ const newUserRecommendation = {
 <template>
   <div class="home-new">
     <!-- Welcome -->
-    <div class="welcome">
+    <div class="welcome welcome--new">
+      <div class="welcome-badge">Getting Started</div>
       <h1 class="welcome-title">Welcome to PostCanary, {{ context.firstName }}!</h1>
       <p class="welcome-subtitle">
         Let's get your first postcards in the mail. Most businesses see results within 2 weeks.
@@ -58,6 +59,27 @@ const newUserRecommendation = {
   font-weight: 700;
   color: var(--app-text, #0c2d50);
   margin: 0;
+}
+
+.welcome--new {
+  background: var(--app-card-bg, #ffffff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  border-top: 4px solid var(--app-teal, #47bfa9);
+}
+
+.welcome-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-teal, #47bfa9);
+  background: rgba(71, 191, 169, 0.1);
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
 }
 
 .welcome-subtitle {

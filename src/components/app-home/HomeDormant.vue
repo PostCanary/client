@@ -27,7 +27,8 @@ const urgentRecommendation = {
 <template>
   <div class="home-dormant">
     <!-- Welcome Back -->
-    <div class="welcome-back">
+    <div class="welcome-back welcome-back--dormant">
+      <div class="variant-badge variant-badge--amber">Welcome Back</div>
       <h1 class="welcome-title">Welcome back, {{ context.firstName }}!</h1>
       <p class="welcome-subtitle">
         It's been {{ context.daysSinceLastActivity }} days since your last campaign.
@@ -76,6 +77,30 @@ const urgentRecommendation = {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.welcome-back--dormant {
+  background: var(--app-card-bg, #ffffff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  border-top: 4px solid #f59e0b;
+}
+
+.variant-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.variant-badge--amber {
+  color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .welcome-title {

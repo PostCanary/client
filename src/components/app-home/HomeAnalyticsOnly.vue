@@ -31,7 +31,8 @@ function onCrossSellClick() {
 <template>
   <div class="home-analytics">
     <!-- Analytics Summary -->
-    <div class="summary-card">
+    <div class="summary-card summary-card--analytics">
+      <div class="variant-badge variant-badge--blue">Analytics Mode</div>
       <h3 class="summary-title">Your Analytics Summary</h3>
       <div class="summary-stats">
         <div class="summary-stat">
@@ -109,6 +110,26 @@ function onCrossSellClick() {
   border: 1px solid var(--app-border, #e2e8f0);
   border-radius: 12px;
   padding: 24px;
+}
+
+.summary-card--analytics {
+  border-top: 4px solid #3b82f6;
+}
+
+.variant-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.variant-badge--blue {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .summary-title {
