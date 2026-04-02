@@ -36,22 +36,22 @@ async function completeSetup() {
         location: setupLocation.value.trim(),
       });
     }
-    // Save industry to brand kit so needsSetup becomes false
     if (setupIndustry.value) {
       await brandKitStore.update({ industry: setupIndustry.value });
     }
-    // Refresh brand kit to pick up all changes
     await brandKitStore.fetch();
   } catch {
-    // API unavailable — patch brand kit locally so needsSetup resolves
+    // API failed — that's fine, local patch below handles it
+  } finally {
+    // Always patch locally so needsSetup resolves even if server
+    // didn't persist the data (backend columns may not exist yet)
     brandKitStore.$patch({
       brandKit: {
         ...brandKitStore.brandKit,
-        location: setupLocation.value.trim(),
+        location: setupLocation.value.trim() || brandKitStore.brandKit?.location,
         industry: setupIndustry.value || brandKitStore.brandKit?.industry,
       },
     });
-  } finally {
     savingSetup.value = false;
   }
 }
