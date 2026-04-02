@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useMessage } from "naive-ui";
 
 import MappingRequiredModal from "@/components/dashboard/MappingRequiredModal.vue";
 import MapperModal from "@/components/dashboard/MapperModal.vue";
@@ -36,7 +37,7 @@ import {
 
 import { useRunData, type TopAreaRanking } from "@/composables/useRunData";
 import { useLoader } from "@/stores/loader";
-import { useBilling } from "@/composables/useBilling";
+import { useBilling, type PaywallConfig as BillingPaywallConfig } from "@/composables/useBilling";
 import { useRunStore } from "@/stores/useRunStore";
 import { useAuthStore } from "@/stores/auth";
 import { useCampaignStore } from "@/stores/useCampaignStore";
@@ -50,6 +51,7 @@ declare global {
 
 const route = useRoute();
 const router = useRouter();
+const message = useMessage();
 const loader = useLoader();
 const runStore = useRunStore();
 const auth = useAuthStore();
@@ -169,6 +171,39 @@ const billingReadOnly = computed(
 
 // Store the run_id from preview mode uploads so we can verify we show the correct run after payment
 const PREVIEW_RUN_ID_KEY = "mt_preview_run_id";
+const paywallConfigOverride = ref<BillingPaywallConfig | null>(null);
+
+const effectivePaywallConfig = computed(
+  () => paywallConfigOverride.value ?? paywallConfig.value
+);
+
+function showSubscriptionPaywall() {
+  paywallConfigOverride.value = null;
+  onRequireSubscription();
+}
+
+function handlePaywallSecondary() {
+  paywallConfigOverride.value = null;
+  onPaywallSecondary();
+}
+
+function normalizePaywallConfig(
+  config: Record<string, any> | null | undefined
+): BillingPaywallConfig | null {
+  if (!config) return null;
+
+  return {
+    title: config.title,
+    body: config.body,
+    priceSummary: config.priceSummary ?? config.price_summary,
+    primaryLabel: config.primaryLabel ?? config.primary_label,
+    secondaryLabel: config.secondaryLabel ?? config.secondary_label,
+    bullets: Array.isArray(config.bullets) ? config.bullets : [],
+    tierPicker: Boolean(config.tierPicker ?? config.tier_picker),
+    defaultPlanCode: config.defaultPlanCode ?? config.default_plan_code,
+    tierHint: config.tierHint ?? config.tier_hint,
+  };
+}
 
 function onBatchIdsUpdated(payload: {
   mailBatchId?: string | null;
@@ -280,10 +315,30 @@ function isNormalizeGateDenied(r: NormalizeBatchRes): boolean {
   const d: any = r.data || {};
   const reason = normalizeReason(d);
   return (
+    reason === "usage_limit_exceeded" ||
     reason === "subscription_required" ||
     reason === "upgrade_required" ||
     reason === "paused_subscription"
   );
+}
+
+function openNormalizeGatePaywall(data: Record<string, any>) {
+  paywallConfigOverride.value = normalizePaywallConfig(data?.paywall_config);
+
+  const reason = normalizeReason(data);
+  if (reason === "usage_limit_exceeded") {
+    message.warning(
+      data?.message ||
+        "This upload would put you over your plan's mail limit. Upgrade to normalize and match these files."
+    );
+  } else if (reason === "paused_subscription") {
+    message.warning(
+      data?.message ||
+        "Uploads are paused until you resume a paid plan."
+    );
+  }
+
+  onRequireSubscription();
 }
 
 /* ------------------------------------------------------------------
@@ -408,6 +463,14 @@ async function onMappingConfirm(mapping: MapperMapping) {
   }
 }
 
+function autoMappingNeedsReview(
+  side: MappingBundle["mail"] | MappingBundle["crm"] | null | undefined,
+  batchId: string | null
+): boolean {
+  if (!batchId || !side?.from_auto) return false;
+  return Array.isArray(side.missing) && side.missing.length > 0;
+}
+
 /* ------------------------------------------------------------------
  * Upload commit → normalize + poll run + auto-populate results
  * ------------------------------------------------------------------ */
@@ -437,11 +500,11 @@ async function onUploadCommit(payload: {
       crmBatchId: crmId || undefined,
     });
 
-    const hasAutoMapping =
-      (mailId && mappingBundle.mail.from_auto) ||
-      (crmId && mappingBundle.crm.from_auto);
+    const hasAutoMappingReview =
+      autoMappingNeedsReview(mappingBundle.mail, mailId) ||
+      autoMappingNeedsReview(mappingBundle.crm, crmId);
 
-    if (hasAutoMapping) {
+    if (hasAutoMappingReview) {
       pendingNormalize.value = { mailBatchId: mailId, crmBatchId: crmId };
       await openMapper();
       return; // normalize will be triggered by onMappingConfirm
@@ -572,10 +635,13 @@ async function onUploadCommitNormalize(payload: {
       // ✅ Tier gate (402/400) — only block for usage_limit_exceeded
       // subscription_required now allows preview mode, so we handle it differently
       if (isNormalizeGateDenied(res) && !batchPreviewMode) {
-        // Only block if it's usage_limit_exceeded (not subscription_required)
-        console.log("[Dashboard] Blocked normalization (usage_limit_exceeded), showing paywall");
+        console.log("[Dashboard] Blocked normalization, showing paywall", {
+          batchId: id,
+          reason: data.reason,
+          status: res.status,
+        });
         loaderCloseForModal();
-        onRequireSubscription();
+        openNormalizeGatePaywall(data);
         return;
       }
 
@@ -602,7 +668,7 @@ async function onUploadCommitNormalize(payload: {
         // Show paywall modal but don't stop processing
         // Results will be blurred until payment
         // IMPORTANT: Processing continues in background - run will complete and results will be ready when user returns
-        onRequireSubscription();
+        showSubscriptionPaywall();
         console.log("[Dashboard] Paywall modal triggered, loader closed. Processing continues in background...");
       }
       
@@ -691,13 +757,14 @@ async function onUploadCommitNormalize(payload: {
     if (
       (status === 402 || status === 400) &&
       (
+        code === "usage_limit_exceeded" ||
         code === "subscription_required" ||
         code === "upgrade_required" ||
         code === "paused_subscription"
       )
     ) {
       loaderCloseForModal();
-      onRequireSubscription();
+      openNormalizeGatePaywall(data);
       return;
     }
 
@@ -796,12 +863,22 @@ watch(
       // Close paywall if still open
       if (showPaywall.value) {
         console.log("[Dashboard] Closing paywall modal");
+        paywallConfigOverride.value = null;
         showPaywall.value = false;
       }
       console.log("[Dashboard] ✅ Results should now be unblurred");
     }
   },
   { immediate: false }
+);
+
+watch(
+  () => showPaywall.value,
+  (open) => {
+    if (!open) {
+      paywallConfigOverride.value = null;
+    }
+  }
 );
 
 // Watch runResult for preview_mode flag from backend
@@ -823,7 +900,7 @@ watch(
         // If backend says preview mode is required, show paywall
         if (previewMode && !showPaywall.value) {
           console.log("[Dashboard] ⚠️ Backend requires payment - showing paywall");
-          onRequireSubscription();
+          showSubscriptionPaywall();
         }
       }
     }
@@ -890,7 +967,7 @@ onMounted(() => {
         isPreviewMode.value = true;
         // Show paywall if not already shown
         if (!showPaywall.value) {
-          onRequireSubscription();
+          showSubscriptionPaywall();
         }
       } else {
         console.log("[Dashboard] ✅ Backend indicates no preview mode required");
@@ -961,6 +1038,7 @@ onMounted(() => {
       // Close paywall if still open
       if (showPaywall.value) {
         console.log("[Dashboard] Closing paywall modal");
+        paywallConfigOverride.value = null;
         showPaywall.value = false;
       }
       console.log("[Dashboard] ✅ Setup complete - Results from pre-payment upload should now be visible and unblurred");
@@ -1136,10 +1214,10 @@ onBeforeUnmount(() => {
 
   <PaywallModal
     v-model="showPaywall"
-    :config="paywallConfig"
+    :config="effectivePaywallConfig"
     :loading="paywallBusy"
     @primary="onPaywallPrimary"
-    @secondary="onPaywallSecondary"
+    @secondary="handlePaywallSecondary"
   />
 
   <PaymentFailedModal

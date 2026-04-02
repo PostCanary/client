@@ -144,7 +144,16 @@ test("settings exposes billing controls for admins and removes delete account", 
   await expect(page.getByTestId("settings-change-plan")).toBeVisible();
   await expect(page.getByTestId("settings-pause-subscription")).toBeVisible();
   await expect(page.getByTestId("settings-cancel-subscription")).toBeVisible();
+  await expect(page.getByTestId("settings-manage-billing")).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete account" })).toHaveCount(0);
+
+  await page.getByTestId("settings-change-plan").click();
+  await expect(page.getByTestId("change-plan-modal")).toBeVisible();
+  await page.getByTestId("settings-plan-option-elite").click();
+  await page.getByTestId("confirm-change-plan").click();
+
+  await expect.poll(() => state.requestLog.changePlanCalls).toEqual(["ELITE"]);
+  await expect(page.getByTestId("settings-plan-label")).toContainText("Ultimate ($499/mo)");
 
   await page.getByTestId("settings-pause-subscription").click();
   await expect(page.getByTestId("pause-subscription-modal")).toBeVisible();
@@ -152,9 +161,9 @@ test("settings exposes billing controls for admins and removes delete account", 
 
   await expect.poll(() => state.requestLog.pauseCalls).toBe(1);
   await expect(page.getByTestId("settings-subscription-status")).toContainText("Pause scheduled");
-  await expect(page.getByTestId("settings-change-plan")).toContainText("Resume current plan");
+  await expect(page.getByTestId("settings-resume-subscription")).toContainText("Keep current plan");
 
-  await page.getByTestId("settings-change-plan").click();
+  await page.getByTestId("settings-resume-subscription").click();
   await expect.poll(() => state.requestLog.resumeCalls).toBe(1);
   await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
 
@@ -164,6 +173,11 @@ test("settings exposes billing controls for admins and removes delete account", 
 
   await expect.poll(() => state.requestLog.cancelCalls).toBe(1);
   await expect(page.getByTestId("settings-cancel-subscription")).toContainText("Cancellation scheduled");
+  await expect(page.getByTestId("settings-resume-subscription")).toContainText("Resume subscription");
+
+  await page.getByTestId("settings-resume-subscription").click();
+  await expect.poll(() => state.requestLog.resumeCalls).toBe(2);
+  await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
 });
 
 test("members can view billing status but not manage subscription actions", async ({ page }) => {
@@ -205,5 +219,5 @@ test("paused billing keeps history accessible while locking uploads", async ({ p
   await expect(page.getByTestId("upload-match-button")).toBeDisabled();
 
   await page.goto("/history");
-  await expect(page.getByTestId("history-batch-mail-batch-alpha")).toBeVisible();
+  await expect(page.getByText("alpha-mail.csv")).toBeVisible();
 });

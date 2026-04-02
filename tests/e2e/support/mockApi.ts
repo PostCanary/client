@@ -12,6 +12,7 @@ type RequestLog = {
   pauseCalls: number;
   resumeCalls: number;
   cancelCalls: number;
+  changePlanCalls: string[];
 };
 
 export type MockAppState = {
@@ -727,6 +728,7 @@ export function createMockAppState(): MockAppState {
         pauseCalls: 0,
         resumeCalls: 0,
         cancelCalls: 0,
+        changePlanCalls: [],
       },
   };
 
@@ -1199,6 +1201,24 @@ export async function installMockApi(page: Page, state: MockAppState) {
         resume_plan_code: state.authMe.billing?.plan_code ?? "INSIGHT",
         cancel_at_period_end: false,
         pause_at_period_end: true,
+        paywall_config: null,
+      });
+      return json(route, { billing: state.authMe.billing });
+    }
+
+    if (pathname === "/api/billing/change-plan" && method === "POST") {
+      const payload = parseJson(route);
+      const planCode = String(payload.plan_code ?? "INSIGHT").toUpperCase();
+      state.requestLog.changePlanCalls.push(planCode);
+      setBillingState(state, {
+        subscription_status: "active",
+        is_subscribed: true,
+        can_run_matching: true,
+        needs_paywall: false,
+        plan_code: planCode,
+        resume_plan_code: null,
+        cancel_at_period_end: false,
+        pause_at_period_end: false,
         paywall_config: null,
       });
       return json(route, { billing: state.authMe.billing });

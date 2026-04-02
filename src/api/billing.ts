@@ -118,6 +118,15 @@ export async function pauseSubscription(): Promise<{ billing?: BillingState | nu
   );
 }
 
+export async function changeSubscriptionPlan(
+  planCode: PlanCode
+): Promise<{ billing?: BillingState | null }> {
+  return postJson<{ billing?: BillingState | null }>(
+    "/api/billing/change-plan",
+    { plan_code: planCode }
+  );
+}
+
 export async function resumeSubscription(): Promise<{ billing?: BillingState | null }> {
   return postJson<{ billing?: BillingState | null }>(
     "/api/billing/resume-subscription",
