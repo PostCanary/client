@@ -7,6 +7,7 @@ import { useMessage } from "naive-ui";
 import { useUserProfile } from "@/composables/useUserProfile";
 import {
   cancelSubscription,
+  changeSubscriptionPlan,
   createBillingPortalSession,
   createCheckoutSession,
   pauseSubscription,
@@ -18,7 +19,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useOrgStore } from "@/stores/org";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
-import { PLAN_DISPLAY_DETAILS } from "@/config/plans";
+import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
 import { updateOrg } from "@/api/orgs";
 
 const {
@@ -34,8 +35,11 @@ const {
 
 const billingBusy = ref(false);
 const subscriptionActionBusy = ref(false);
+const planActionBusy = ref(false);
+const planModalOpen = ref(false);
 const pauseModalOpen = ref(false);
 const cancelModalOpen = ref(false);
+const selectedPlan = ref<PlanCode | null>(null);
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -64,6 +68,26 @@ const currentPlanLabel = computed(() => {
   const detail = PLAN_DISPLAY_DETAILS[code];
   return detail ? `${detail.name} (${detail.price})` : code;
 });
+const hasManagedSubscription = computed(
+  () => billingStatus.value === "active" || billingStatus.value === "paused" || !!currentPlanCode.value
+);
+const canResumeSubscription = computed(
+  () => billingStatus.value === "paused" || cancelAtPeriodEnd.value || pauseAtPeriodEnd.value
+);
+const resumeButtonLabel = computed(() => {
+  if (pauseAtPeriodEnd.value) return "Keep current plan";
+  return "Resume subscription";
+});
+const selectedPlanDetails = computed(() => {
+  const code = selectedPlan.value;
+  return code ? PLAN_DISPLAY_DETAILS[code] : null;
+});
+const planActionLabel = computed(() =>
+  hasManagedSubscription.value ? "Update plan" : "Start subscription"
+);
+const planOptions = PLAN_DISPLAY_ORDER.map((code) => ({
+  ...PLAN_DISPLAY_DETAILS[code],
+}));
 const subscriptionStatusLabel = computed(() => {
   switch (billingStatus.value) {
     case "active":
@@ -129,59 +153,101 @@ async function onSubmit() {
 }
 
 async function onChangePlan() {
+  selectedPlan.value = currentPlanCode.value ?? "INSIGHT";
+  planModalOpen.value = true;
+}
+
+async function onManageBilling() {
   if (billingBusy.value) return;
   billingBusy.value = true;
 
   try {
-    if (billingStatus.value === "paused" || pauseAtPeriodEnd.value) {
-      await resumeSubscription();
-      await auth.fetchMe();
-      message.success(
-        billingStatus.value === "paused"
-          ? "Subscription resumed on the existing paid plan."
-          : "Scheduled pause removed. The current plan will continue."
-      );
+    const { url } = await createBillingPortalSession();
+    if (url) {
+      window.location.href = url;
       return;
     }
-
-    try {
-      const { url } = await createBillingPortalSession();
-      if (url) {
-        window.location.href = url;
-        return;
-      }
-      console.warn(
-        "[Settings] Billing portal returned no URL; falling back to checkout/pricing"
-      );
-    } catch (err) {
-      console.warn(
-        "[Settings] Billing portal failed; falling back to checkout/pricing:",
-        err
-      );
-    }
-
-    if (!currentPlanCode.value) {
-      message.info("Choose a plan to start or resume your subscription.");
-      router.push({ path: "/", hash: "#pricing" });
-      return;
-    }
-
-    try {
-      const { url: checkoutUrl } = await createCheckoutSession(
-        currentPlanCode.value,
-        "settings_manage_subscription"
-      );
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-        return;
-      }
-      console.error("[Settings] No checkout URL returned from backend");
-    } catch (err) {
-      console.error("[Settings] Failed to start subscription checkout:", err);
-    }
+    console.error("[Settings] No billing portal URL returned from backend");
+    message.error("Unable to open the billing portal right now.");
+  } catch (err) {
+    console.error("[Settings] Failed to open billing portal:", err);
+    message.error("Unable to open the billing portal right now.");
   } finally {
     billingBusy.value = false;
   }
+}
+
+async function onResumeSubscription() {
+  if (billingBusy.value) return;
+  billingBusy.value = true;
+
+  const wasPaused = billingStatus.value === "paused";
+  const wasPauseScheduled = pauseAtPeriodEnd.value;
+  const wasCancellationScheduled = cancelAtPeriodEnd.value;
+
+  try {
+    await resumeSubscription();
+    await auth.fetchMe();
+    if (wasPaused) {
+      message.success("Subscription resumed on the existing paid plan.");
+    } else if (wasPauseScheduled) {
+      message.success("Scheduled pause removed. The current plan will continue.");
+    } else if (wasCancellationScheduled) {
+      message.success("Scheduled cancellation removed. The current plan will continue.");
+    } else {
+      message.success("Subscription updated.");
+    }
+  } catch (err: any) {
+    console.error("[Settings] Failed to resume subscription:", err);
+    message.error(err?.message || "Failed to resume subscription.");
+  } finally {
+    billingBusy.value = false;
+  }
+}
+
+async function onConfirmPlanChange() {
+  if (!selectedPlan.value || planActionBusy.value) return;
+  if (
+    hasManagedSubscription.value &&
+    selectedPlan.value === currentPlanCode.value &&
+    !canResumeSubscription.value
+  ) {
+    message.info("Choose a different plan to make a change.");
+    return;
+  }
+
+  const targetPlan = selectedPlan.value;
+  planActionBusy.value = true;
+
+  try {
+    if (hasManagedSubscription.value) {
+      await changeSubscriptionPlan(targetPlan);
+      await auth.fetchMe();
+      planModalOpen.value = false;
+      message.success(`Plan updated to ${PLAN_DISPLAY_DETAILS[targetPlan].name}.`);
+      return;
+    }
+
+    const { url } = await createCheckoutSession(targetPlan, "settings_change_plan");
+    if (url) {
+      window.location.href = url;
+      return;
+    }
+
+    console.error("[Settings] No checkout URL returned from backend");
+    message.error("Unable to start checkout right now.");
+  } catch (err: any) {
+    console.error("[Settings] Failed to change plan:", err);
+    message.error(err?.message || "Failed to change plan.");
+  } finally {
+    planActionBusy.value = false;
+  }
+}
+
+function closePlanModal() {
+  if (planActionBusy.value) return;
+  planModalOpen.value = false;
+  selectedPlan.value = currentPlanCode.value ?? "INSIGHT";
 }
 
 async function onConfirmPauseSubscription() {
@@ -481,6 +547,12 @@ function onReplayTour() {
                 Your subscription remains active through the current billing period.
               </p>
               <p
+                v-if="cancelAtPeriodEnd"
+                class="mt-2 text-xs font-medium text-amber-700"
+              >
+                Changed your mind? Resume the subscription to keep this plan active after period end.
+              </p>
+              <p
                 v-else-if="pauseAtPeriodEnd"
                 class="mt-1 text-xs text-slate-500"
               >
@@ -509,19 +581,35 @@ function onReplayTour() {
             data-testid="settings-billing-actions"
           >
             <button
+              v-if="canResumeSubscription"
+              type="button"
+              class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="billingBusy"
+              data-testid="settings-resume-subscription"
+              @click="onResumeSubscription"
+            >
+              {{ resumeButtonLabel }}
+            </button>
+
+            <button
               type="button"
               class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="billingBusy"
+              :disabled="billingBusy || planActionBusy"
               data-testid="settings-change-plan"
               @click="onChangePlan"
             >
-              {{
-                billingStatus === "paused"
-                  ? "Resume subscription"
-                  : pauseAtPeriodEnd
-                    ? "Resume current plan"
-                    : "Change plan"
-              }}
+              {{ hasManagedSubscription ? "Change plan" : "Choose plan" }}
+            </button>
+
+            <button
+              v-if="hasManagedSubscription"
+              type="button"
+              class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="billingBusy"
+              data-testid="settings-manage-billing"
+              @click="onManageBilling"
+            >
+              Payment methods &amp; invoices
             </button>
 
             <button
@@ -569,6 +657,89 @@ function onReplayTour() {
           </button>
         </div>
       </section>
+    </div>
+
+    <div
+      v-if="planModalOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+      data-testid="change-plan-modal"
+    >
+      <div class="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 class="text-lg font-semibold text-slate-900">
+          {{ hasManagedSubscription ? "Change plan" : "Choose a plan" }}
+        </h3>
+        <p class="mt-3 text-sm text-slate-600">
+          Plan changes happen here in-app. Use the billing portal only for payment methods,
+          invoices, and receipts.
+        </p>
+        <p
+          v-if="canResumeSubscription"
+          class="mt-2 text-sm text-slate-600"
+        >
+          Updating the plan will also clear any scheduled pause or cancellation.
+        </p>
+
+        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            v-for="plan in planOptions"
+            :key="plan.code"
+            type="button"
+            class="rounded-2xl border p-4 text-left transition hover:bg-slate-50"
+            :class="
+              selectedPlan === plan.code
+                ? 'border-emerald-400 ring-2 ring-emerald-100'
+                : 'border-slate-200'
+            "
+            :data-testid="`settings-plan-option-${plan.code.toLowerCase()}`"
+            :disabled="planActionBusy"
+            @click="selectedPlan = plan.code"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold text-slate-900">{{ plan.name }}</span>
+              <span class="text-sm font-semibold text-slate-700">{{ plan.price }}</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-500">
+              {{ plan.limitLabel }}
+            </p>
+          </button>
+        </div>
+
+        <p
+          v-if="selectedPlanDetails"
+          class="mt-4 text-xs text-slate-500"
+        >
+          Selected plan: {{ selectedPlanDetails.name }} includes
+          {{ selectedPlanDetails.limitLabel.toLowerCase() }}.
+        </p>
+
+        <div class="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            :disabled="planActionBusy"
+            @click="closePlanModal"
+          >
+            Keep current selection
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full bg-[#243b53] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d3145] disabled:opacity-60"
+            :disabled="
+              planActionBusy ||
+              !selectedPlan ||
+              (
+                hasManagedSubscription &&
+                selectedPlan === currentPlanCode &&
+                !canResumeSubscription
+              )
+            "
+            data-testid="confirm-change-plan"
+            @click="onConfirmPlanChange"
+          >
+            {{ planActionBusy ? "Saving..." : planActionLabel }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div

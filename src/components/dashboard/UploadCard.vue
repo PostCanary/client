@@ -61,6 +61,10 @@ const uploadingSource = ref<Source | null>(null);
 const lastMailFile = ref<string | null>(null);
 const lastCrmFile = ref<string | null>(null);
 
+function hasUploadedBatch(): boolean {
+  return !!(mailBatchId.value || crmBatchId.value);
+}
+
 /**
  * Reset drop-zones when Dashboard bumps resetKey (after successful normalize/run).
  */
@@ -434,12 +438,11 @@ function browseCrm() {
 
     <!-- ACTIONS -->
     <div class="upload-actions">
-      <!-- Edit Mapping button hidden - mapping popup opens automatically when required -->
       <button
-        v-if="false"
+        v-if="hasUploadedBatch()"
         type="button"
         class="btn btn-secondary"
-        :disabled="isUploading"
+        :disabled="isUploading || !!props.billingBlocked"
         @click="openMapper"
       >
         Edit Mapping

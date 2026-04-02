@@ -147,7 +147,7 @@ async function onAvatarFileChanged(e: Event) {
   display: block;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 900px) {
   .nav-desktop {
     display: block;
   }

@@ -113,6 +113,7 @@ onUnmounted(() => {
             'nav-link-mobile',
             { 'nav-link-mobile-active': isActive(item.path) }
           ]"
+          type="button"
         >
           {{ item.label }}
         </button>
@@ -160,6 +161,7 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   /* ribbon instead of pill */
   border-radius: 0;
   background: #ffffff;
@@ -187,8 +189,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-left: 16px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mt-nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-link-mobile {
@@ -201,6 +213,9 @@ onUnmounted(() => {
   padding: 4px 8px;
   transition: color 0.15s ease;
   white-space: nowrap;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-link-mobile:hover {
