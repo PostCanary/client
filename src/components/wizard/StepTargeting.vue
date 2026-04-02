@@ -198,8 +198,10 @@ function deselectAllJobs() {
 }
 
 function updateMapJobs() {
-  const selected = selectedJobs.value;
-  mapRef.value?.addJobRadii(selected, radiusMiles.value);
+  // For neighbor goals: show selected jobs with targeting radii
+  // For other goals: show toggled-on jobs as markers (no radii — context only)
+  const visibleJobs = jobs.value.filter((j) => j.selected);
+  mapRef.value?.addJobRadii(visibleJobs, isNeighborGoal.value ? radiusMiles.value : 0);
 }
 
 function addZips(newZips: string[]) {
