@@ -68,7 +68,7 @@ const rawArea = computed(() => {
       area += circleAreaSqMiles(a.radiusMiles);
     } else if (a.type === "zip") {
       area += zipAreaSqMiles();
-    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates.length >= 2) {
+    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates?.length >= 2) {
       // Calculate area from coordinates using lat/lng to miles conversion
       const c = a.coordinates;
       if (a.type === "rectangle" && c.length >= 2) {
