@@ -43,7 +43,14 @@ async function completeSetup() {
     // Refresh brand kit to pick up all changes
     await brandKitStore.fetch();
   } catch {
-    // Continue anyway — they can still use the wizard
+    // API unavailable — patch brand kit locally so needsSetup resolves
+    brandKitStore.$patch({
+      brandKit: {
+        ...brandKitStore.brandKit,
+        location: setupLocation.value.trim(),
+        industry: setupIndustry.value || brandKitStore.brandKit?.industry,
+      },
+    });
   } finally {
     savingSetup.value = false;
   }
