@@ -139,7 +139,7 @@ export interface JobReference {
 }
 
 export interface TargetingFilters {
-  homeowner: boolean | null            // null = any
+  homeowner: 'homeowner' | 'all' | 'investor' | null  // null = any
   homeValueMin: number | null
   homeValueMax: number | null
   yearBuiltMin: number | null
@@ -184,6 +184,9 @@ export interface TargetingSelection {
   // Cost (computed)
   estimatedCostSingle: number          // cost for one card
   estimatedCostSequence: number        // cost for full sequence
+
+  // Data source
+  countSource: 'melissa' | 'mock'
 
   // Save
   savedAudienceName: string | null

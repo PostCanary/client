@@ -46,6 +46,7 @@ function apply() {
     },
     estimatedCostSingle: householdCount.value * perCard,
     estimatedCostSequence: householdCount.value * perCard * seqLen,
+    countSource: 'mock',
     savedAudienceName: null,
   };
   draftStore.setTargeting(targeting);
