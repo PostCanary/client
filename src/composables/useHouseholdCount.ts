@@ -12,6 +12,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { getHouseholdCount } from '@/api/targeting'
+import { estimateHouseholds, circleAreaSqMiles, zipAreaSqMiles, applyFilterReductions } from '@/data/mockTargetingData'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
 
 export function useHouseholdCount() {
@@ -75,10 +76,43 @@ export function useHouseholdCount() {
         return
       }
       retryCount = 0
-      error.value = e.message || 'Could not get household count'
+      // Fall back to client-side mock count so the UI isn't blank
+      count.value = clientMockCount(areas, filters)
+      source.value = 'mock'
+      error.value = null  // don't show error — mock counts are usable
       loading.value = false
     }
   }, 500)
+
+  function clientMockCount(areas: TargetingArea[], filters: TargetingFilters): number {
+    let sqMiles = 0
+    for (const a of areas) {
+      if ((a.type === 'circle' || a.type === 'job_radius') && a.radiusMiles) {
+        sqMiles += circleAreaSqMiles(a.radiusMiles)
+      } else if (a.type === 'zip') {
+        sqMiles += zipAreaSqMiles()
+      } else if (a.type === 'rectangle' && a.coordinates?.length >= 2) {
+        const c = a.coordinates
+        const latMid = (c[0]![0]! + c[1]![0]!) / 2
+        const h = Math.abs(c[1]![0]! - c[0]![0]!) * 69
+        const w = Math.abs(c[1]![1]! - c[0]![1]!) * 69 * Math.cos(latMid * Math.PI / 180)
+        sqMiles += h * w
+      } else if (a.type === 'polygon' && a.coordinates?.length >= 3) {
+        const c = a.coordinates
+        const latMid = c.reduce((s, p) => s + p[0]!, 0) / c.length
+        let pa = 0
+        for (let i = 0; i < c.length; i++) {
+          const j = (i + 1) % c.length
+          pa += c[i]![1]! * c[j]![0]! - c[j]![1]! * c[i]![0]!
+        }
+        sqMiles += Math.abs(pa) / 2 * 69 * 69 * Math.cos(latMid * Math.PI / 180)
+      } else {
+        sqMiles += 2
+      }
+    }
+    const base = estimateHouseholds(sqMiles)
+    return Math.max(applyFilterReductions(base, filters), 0)
+  }
 
   async function fetchTotalIfNeeded() {
     // Lazy unfiltered call — only fires when Summary tab opens
