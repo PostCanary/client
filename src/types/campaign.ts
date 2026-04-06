@@ -239,6 +239,11 @@ export interface CardDesign {
     websiteUrl: string
     qrCodeUrl: string
   }
+  // AI generation metadata (populated when using server AI, empty for local fallback)
+  headlineCandidates: Array<{ text: string; formula: string; reason: string }>  // 3 options from AI
+  offerReason: string                  // why this offer was generated
+  reviewReason: string                 // why this review was selected
+  templateReason: string               // why this layout was recommended for this card position
 }
 
 export interface DesignSelection {

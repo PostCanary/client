@@ -148,6 +148,10 @@ export function generateCards(
         websiteUrl: brandKit.websiteUrl ?? "",
         qrCodeUrl: "",
       },
+      headlineCandidates: [],
+      offerReason: "",
+      reviewReason: "",
+      templateReason: "",
     };
   });
 }
