@@ -35,6 +35,7 @@ function toBrandKit(r: BrandKitResponse): BrandKit {
     industry: d.industry ?? null,
     serviceTypes: d.serviceTypes ?? [],
     scrapeStatus: (r.scrape_status ?? d.scrapeStatus ?? "pending") as BrandKit["scrapeStatus"],
+    scrapeProgress: d.scrapeProgress ?? null,
     completenessPercent: d.completenessPercent ?? 0,
     updatedAt: r.updated_at,
   };

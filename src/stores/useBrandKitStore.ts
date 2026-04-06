@@ -5,17 +5,24 @@ import type { BrandKit } from "@/types/campaign";
 import { getBrandKit, updateBrandKit, triggerScrape } from "@/api/brandKit";
 import { useAuthStore } from "@/stores/auth";
 
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLLS = 60; // 120s max polling time
+
 export const useBrandKitStore = defineStore("brandKit", {
   state: () => ({
     brandKit: null as BrandKit | null,
     loading: false,
     hydrated: false,
     error: null as string | null,
+    scraping: false,
   }),
 
   getters: {
     isComplete: (state): boolean => {
       return (state.brandKit?.completenessPercent ?? 0) >= 80;
+    },
+    isScraping: (state): boolean => {
+      return state.scraping;
     },
   },
 
@@ -66,12 +73,67 @@ export const useBrandKitStore = defineStore("brandKit", {
     },
 
     async triggerScrape(websiteUrl?: string) {
+      // MOCK MODE: simulate scrape locally
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        this.brandKit = {
+          ...this.brandKit,
+          scrapeStatus: "complete",
+          completenessPercent: 85,
+        } as any;
+        return;
+      }
+
       this.error = null;
       try {
         this.brandKit = await triggerScrape(websiteUrl);
       } catch (e: any) {
+        // 409 = already scraping
+        if (e?.response?.status === 409 || e?.status === 409) {
+          this.error = "A website scan is already running";
+          return;
+        }
         this.error = "Failed to start website scan";
+        return;
       }
+
+      // Start polling if scrape is in progress
+      if (this.brandKit?.scrapeStatus === "scraping") {
+        this._pollScrapeStatus();
+      }
+    },
+
+    async _pollScrapeStatus() {
+      this.scraping = true;
+      let polls = 0;
+
+      const poll = async () => {
+        if (polls >= MAX_POLLS) {
+          this.scraping = false;
+          this.error = "Website scan timed out — you can enter your info manually";
+          return;
+        }
+
+        try {
+          this.brandKit = await getBrandKit();
+        } catch {
+          // Network error during poll — keep trying
+        }
+
+        if (
+          this.brandKit?.scrapeStatus &&
+          this.brandKit.scrapeStatus !== "scraping"
+        ) {
+          // Scrape finished (complete, partial, or failed)
+          this.scraping = false;
+          return;
+        }
+
+        polls++;
+        setTimeout(poll, POLL_INTERVAL_MS);
+      };
+
+      // Start polling after first interval
+      setTimeout(poll, POLL_INTERVAL_MS);
     },
 
     /**

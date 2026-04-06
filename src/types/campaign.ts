@@ -335,7 +335,13 @@ export interface BrandKit {
   yearsInBusiness: number | null
   industry: string | null
   serviceTypes: string[]               // ["AC Repair", "Heating", "Duct Cleaning"]
-  scrapeStatus: 'pending' | 'complete' | 'partial' | 'failed' | 'skipped'
+  scrapeStatus: 'pending' | 'scraping' | 'complete' | 'partial' | 'failed' | 'skipped'
+  scrapeProgress: {
+    step: 'connecting' | 'reading' | 'analyzing' | 'downloading' | 'done' | 'failed'
+    message: string         // user-friendly: "Reading your website...", "Finding your photos..."
+    estimatedSecondsLeft: number | null
+    startedAt: string | null   // ISO datetime for stale detection
+  } | null
   completenessPercent: number          // 0-100
   updatedAt: string
 }
