@@ -64,14 +64,11 @@ onMounted(async () => {
     return;
   }
 
-  // Org gate: API calls need a valid org
-  if (!auth.orgId) {
-    initError.value = true;
-    initializing.value = false;
-    return;
-  }
-
   try {
+    // Org gate: no org means API calls will fail — let catch handle it
+    if (!auth.orgId) {
+      throw new Error("no-org");
+    }
     const draftId = route.params.draftId as string | undefined;
     if (draftId) {
       await draftStore.resume(draftId);
@@ -88,7 +85,27 @@ onMounted(async () => {
     }
     brandKitStore.setupOrgWatcher();
   } catch {
-    initError.value = true;
+    // API endpoints not available yet — fall back to mock draft
+    // so the wizard is always usable (removed once backend is wired)
+    draftStore.$patch({
+      draft: {
+        id: "mock-draft-001",
+        orgId: auth.orgId || "mock-org",
+        currentStep: 1 as 1,
+        completedSteps: [] as (1 | 2 | 3 | 4)[],
+        needsReviewSteps: [] as (1 | 2 | 3 | 4)[],
+        goal: null,
+        targeting: null,
+        design: null,
+        review: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        schemaVersion: 1,
+      },
+      loading: false,
+      error: null,
+    });
+    await brandKitStore.fetch();
   } finally {
     initializing.value = false;
   }

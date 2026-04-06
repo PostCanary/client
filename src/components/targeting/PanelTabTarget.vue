@@ -5,6 +5,7 @@ import ZipInput from "./ZipInput.vue";
 
 const props = defineProps<{
   jobs: JobReference[];
+  isNeighborGoal: boolean;
   radiusMiles: number;
   zips: string[];
 }>();
@@ -21,17 +22,33 @@ const emit = defineEmits<{
 
 <template>
   <div class="space-y-6 p-4">
-    <!-- Around My Jobs -->
-    <JobSelector
-      :jobs="jobs"
-      :radius-miles="radiusMiles"
-      @toggle="emit('toggle-job', $event)"
-      @select-all="emit('select-all-jobs')"
-      @deselect-all="emit('deselect-all-jobs')"
-      @radius-change="emit('radius-change', $event)"
-    />
+    <!-- Around My Jobs (full selection UI — neighbor marketing only) -->
+    <template v-if="isNeighborGoal">
+      <JobSelector
+        :jobs="jobs"
+        :radius-miles="radiusMiles"
+        @toggle="emit('toggle-job', $event)"
+        @select-all="emit('select-all-jobs')"
+        @deselect-all="emit('deselect-all-jobs')"
+        @radius-change="emit('radius-change', $event)"
+      />
+      <hr class="border-gray-100" />
+    </template>
 
-    <hr class="border-gray-100" />
+    <!-- Job markers toggle (non-neighbor goals — context only, not targeting) -->
+    <div v-else class="flex items-center justify-between">
+      <label class="text-sm text-gray-600">Show my jobs on map</label>
+      <button
+        class="relative w-9 h-5 rounded-full transition-colors"
+        :class="jobs.some(j => j.selected) ? 'bg-[#47bfa9]' : 'bg-gray-300'"
+        @click="jobs.some(j => j.selected) ? emit('deselect-all-jobs') : emit('select-all-jobs')"
+      >
+        <span
+          class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+          :class="jobs.some(j => j.selected) ? 'translate-x-4' : ''"
+        />
+      </button>
+    </div>
 
     <!-- Draw on Map -->
     <div>

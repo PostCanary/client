@@ -1,3 +1,4 @@
+<!-- DEPRECATED: Replaced by AppSidebar.vue in Round 2. Kept for reference only. Do not import. -->
 <script setup lang="ts">
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";

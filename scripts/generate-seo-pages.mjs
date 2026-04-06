@@ -57,6 +57,12 @@ const marketingRoutes = [
       "Track which Just Listed and farming postcards generate listings and closings. Match mailed addresses to clients automatically. No QR codes needed.",
   },
   {
+    path: "/home-services-direct-mail-tracking",
+    title: "Home Services Direct Mail Tracking | Prove Your Mail ROI - PostCanary",
+    description:
+      "Track which mailers drive jobs for roofers, HVAC, plumbers & home service companies. Match mailed addresses to booked jobs automatically. No QR codes needed.",
+  },
+  {
     path: "/terms",
     title: "Terms of Service - PostCanary",
     description: "",

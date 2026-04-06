@@ -51,6 +51,17 @@
   --app-border-medium: #dde3ea;
   --app-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
   --app-card-radius: 12px;
+
+  /* ── Sidebar + Top Bar ──────────────────────────────────── */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 56px;
+  --sidebar-border: var(--app-border);
+  --sidebar-section-text: var(--app-text-muted);
+  --sidebar-item-hover: #f4f5f7;
+  --sidebar-item-active-bg: rgba(71, 191, 169, 0.08);
+  --sidebar-item-active-text: var(--app-teal);
+  --sidebar-transition: 0.2s ease-out;
 }
 
 /* Give the page a little reserved space for the scrollbar */

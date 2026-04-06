@@ -18,7 +18,17 @@ if (Ledit?.Circle?.prototype?._move) {
     this._shape.fire("edit");
   };
 }
-// Patch 2: L.Draw.Circle._onMouseMove (tooltip radius display during draw + edit)
+// Patch 2: L.Edit.Circle._resize (circle resize handle dragging)
+// Same undeclared `radius` variable bug — assigns without var/let/const
+if (Ledit?.Circle?.prototype?._resize) {
+  Ledit.Circle.prototype._resize = function (latlng: any) {
+    const moveLatLng = this._moveMarker.getLatLng();
+    const r = this._map.distance(moveLatLng, latlng);
+    this._shape.setRadius(r);
+    this._map.fire(L.Draw.Event.EDITRESIZE, { layer: this._shape });
+  };
+}
+// Patch 3: L.Draw.Circle._onMouseMove (tooltip radius display during draw + edit)
 const Ldraw = (L as any).Draw;
 if (Ldraw?.Circle?.prototype?._onMouseMove) {
   const origOnMouseMove = Ldraw.Circle.prototype._onMouseMove;
@@ -44,6 +54,7 @@ declare module "leaflet" {
       CREATED: string;
       DELETED: string;
       EDITED: string;
+      EDITRESIZE: string;
     };
   }
 }

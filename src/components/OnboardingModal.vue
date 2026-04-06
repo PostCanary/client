@@ -38,7 +38,10 @@ const totalScreens = computed(() => (isInvitedUser.value ? 1 : 4));
 
 // New org-level fields
 const businessName = ref("");
-const location = ref("");
+const streetAddress = ref("");
+const city = ref("");
+const state = ref("");
+const zip = ref("");
 const selectedIndustry = ref<Industry | "">("");
 const serviceTypes = ref<string[]>([]);
 const websiteUrl = ref("");
@@ -84,7 +87,7 @@ const canProceed = computed(() => {
     case 1:
       return !!(form.value.full_name || "").trim() && !!businessName.value.trim();
     case 2:
-      return !!location.value.trim();
+      return !!streetAddress.value.trim() && !!city.value.trim() && !!state.value.trim() && !!zip.value.trim();
     case 3:
       return !!selectedIndustry.value;
     case 4:
@@ -108,9 +111,14 @@ async function onSubmit() {
 
     // Save org-level fields (not for invited users)
     if (!isInvitedUser.value && auth.orgId) {
+      const fullAddress = `${streetAddress.value.trim()}, ${city.value.trim()}, ${state.value.trim()} ${zip.value.trim()}`;
       await updateOrg(auth.orgId, {
         business_name: businessName.value.trim(),
-        location: location.value.trim(),
+        location: fullAddress,
+        street_address: streetAddress.value.trim(),
+        city: city.value.trim(),
+        state: state.value.trim(),
+        zip: zip.value.trim(),
         service_types: serviceTypes.value.length > 0 ? serviceTypes.value : undefined,
       });
 
@@ -184,12 +192,26 @@ function openTerms() {
               </div>
             </template>
 
-            <!-- Screen 2: Location -->
+            <!-- Screen 2: Business Address -->
             <template v-if="currentScreen === 2">
               <div class="field">
-                <label>Where's your business?</label>
-                <input v-model="location" type="text" placeholder="Scottsdale, AZ" required />
-                <span class="hint">City and state, or ZIP code</span>
+                <label>Business address</label>
+                <span class="hint">This will appear as the return address on your postcards.</span>
+                <input v-model="streetAddress" type="text" placeholder="123 Main St" required />
+              </div>
+              <div class="field-row">
+                <div class="field field--grow">
+                  <label>City</label>
+                  <input v-model="city" type="text" placeholder="Scottsdale" required />
+                </div>
+                <div class="field field--small">
+                  <label>State</label>
+                  <input v-model="state" type="text" placeholder="AZ" maxlength="2" required />
+                </div>
+                <div class="field field--small">
+                  <label>ZIP</label>
+                  <input v-model="zip" type="text" placeholder="85251" maxlength="10" required />
+                </div>
               </div>
             </template>
 
@@ -356,6 +378,19 @@ function openTerms() {
   padding: 8px 10px;
   font-size: 13px;
   color: #b91c1c;
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.field--grow {
+  flex: 1;
+}
+
+.field--small {
+  flex: 0 0 72px;
 }
 
 .field {

@@ -24,9 +24,11 @@ const mapRef = ref<InstanceType<typeof TargetingMap> | null>(null);
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
 const goalDefaults = computed(() => GOAL_DEFAULTS[goalType.value]);
 
-// State
+// State — only pre-select jobs for neighbor marketing goal
+const isNeighborGoal = computed(() => goalType.value === "neighbor_marketing");
 const jobs = ref<JobReference[]>(
-  draftStore.draft?.targeting?.jobsUsed ?? [...MOCK_JOBS],
+  draftStore.draft?.targeting?.jobsUsed ??
+    MOCK_JOBS.map((j) => ({ ...j, selected: goalType.value === "neighbor_marketing" })),
 );
 const radiusMiles = ref(draftStore.draft?.targeting?.jobRadiusMiles ?? 0.5);
 const zips = ref<string[]>([]);
@@ -48,8 +50,10 @@ const excludeMailedWithinDays = ref<number | null>(
 );
 const doNotMailCount = 7; // mock
 
-// Computed counts
-const selectedJobs = computed(() => jobs.value.filter((j) => j.selected));
+// Computed counts — only count jobs toward targeting for neighbor marketing
+const selectedJobs = computed(() =>
+  isNeighborGoal.value ? jobs.value.filter((j) => j.selected) : [],
+);
 
 const rawArea = computed(() => {
   let area = 0;
@@ -64,7 +68,7 @@ const rawArea = computed(() => {
       area += circleAreaSqMiles(a.radiusMiles);
     } else if (a.type === "zip") {
       area += zipAreaSqMiles();
-    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates.length >= 2) {
+    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates?.length >= 2) {
       // Calculate area from coordinates using lat/lng to miles conversion
       const c = a.coordinates;
       if (a.type === "rectangle" && c.length >= 2) {
@@ -194,8 +198,10 @@ function deselectAllJobs() {
 }
 
 function updateMapJobs() {
-  const selected = selectedJobs.value;
-  mapRef.value?.addJobRadii(selected, radiusMiles.value);
+  // For neighbor goals: show selected jobs with targeting radii
+  // For other goals: show toggled-on jobs as markers (no radii — context only)
+  const visibleJobs = jobs.value.filter((j) => j.selected);
+  mapRef.value?.addJobRadii(visibleJobs, isNeighborGoal.value ? radiusMiles.value : 0);
 }
 
 function addZips(newZips: string[]) {
@@ -255,6 +261,7 @@ onMounted(() => {
     <!-- Panel -->
     <TargetingPanel
       :jobs="jobs"
+      :is-neighbor-goal="isNeighborGoal"
       :radius-miles="radiusMiles"
       :zips="zips"
       :filters="filters"

@@ -8,6 +8,7 @@ import TargetingSummaryBar from "./TargetingSummaryBar.vue";
 
 defineProps<{
   jobs: JobReference[];
+  isNeighborGoal: boolean;
   radiusMiles: number;
   zips: string[];
   filters: TargetingFilters;
@@ -92,6 +93,7 @@ const tabs = [
       <PanelTabTarget
         v-if="activeTab === 'target'"
         :jobs="jobs"
+        :is-neighbor-goal="isNeighborGoal"
         :radius-miles="radiusMiles"
         :zips="zips"
         @toggle-job="emit('toggle-job', $event)"

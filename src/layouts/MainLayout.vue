@@ -1,100 +1,65 @@
 <!-- src/layouts/MainLayout.vue -->
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { RouterView, useRoute, useRouter } from "vue-router";
-import Navbar from "@/components/layout/Navbar.vue";
-import MobileNavbar from "@/components/layout/MobileNavbar.vue";
+import { computed } from "vue";
+import { RouterView, useRoute } from "vue-router";
+import AppSidebar from "@/components/layout/AppSidebar.vue";
+import AppTopBar from "@/components/layout/AppTopBar.vue";
+import MobileSidebarDrawer from "@/components/layout/MobileSidebarDrawer.vue";
 import OnboardingModal from "@/components/OnboardingModal.vue";
 import TourManager from "@/components/tour/TourManager.vue";
-// import SearchBar from "@/components/layout/SearchBar.vue";
 import { useAuthStore } from "@/stores/auth";
-import { useUserProfile } from "@/composables/useUserProfile";
+import { useSidebar } from "@/composables/useSidebar";
 
 const auth = useAuthStore();
-const { uploadAvatar } = useUserProfile();
+const { sidebarWidth, isMobile } = useSidebar();
 
 const route = useRoute();
-const router = useRouter();
 
-const search = ref("");
-
+/* Page title from route meta */
 const navbarTitle = computed(
   () =>
     (route.meta?.navbarTitle as string) ||
     (route.meta?.title as string) ||
-    "Dashboard"
+    "Home"
 );
 
-/* avatar upload */
-const fileInput = ref<HTMLInputElement | null>(null);
-const onAvatarClick = () => fileInput.value?.click();
-
-async function onAvatarFileChanged(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  await uploadAvatar(file);
-  input.value = "";
-}
+/* Campaign filter visibility — only on Results pages */
+const RESULTS_PAGES = ["Dashboard", "Heatmap", "Analytics", "Demographics", "History"];
+const showCampaignFilter = computed(() => {
+  const routeName = route.name as string;
+  return RESULTS_PAGES.includes(routeName);
+});
 </script>
 
 <template>
-  <div class="app-shell">
-    <!-- Everything that should blur/dim when onboarding is open -->
+  <div class="app-shell" :style="{ '--current-sidebar-width': sidebarWidth + 'px' }">
+    <!-- Sidebar is OUTSIDE the blur wrapper so it stays crisp during onboarding.
+         The sidebar is persistent chrome, not content. Onboarding modal blurs content only. -->
+    <aside class="app-sidebar hidden sm:block">
+      <AppSidebar />
+    </aside>
+
     <div
       class="app-shell-inner"
       :class="{ 'app-shell-inner--blurred': auth.onboardingOpen }"
     >
+      <!-- Top Bar -->
       <header class="app-topbar">
-        <!-- Desktop / tablet navbar -->
-        <div class="nav-desktop">
-          <Navbar
-            :title="(navbarTitle as string)"
-            :user-name="(auth.userName as string)"
-            :user-role="(auth.userRole as string)"
-            :avatar-url="(auth.avatarUrl as string)"
-            v-model="(search as string)"
-            @search="(v: string) => (search = v)"
-            @profile-click="onAvatarClick"
-            @settings-click="() => router.push('/app/settings')"
-          />
-        </div>
-
-        <!-- Phone navbar -->
-        <div class="nav-mobile">
-          <MobileNavbar
-            :title="(navbarTitle as string)"
-            :user-name="(auth.userName as string)"
-            :user-role="(auth.userRole as string)"
-            :avatar-url="(auth.avatarUrl as string)"
-            @profile-click="onAvatarClick"
-            @settings-click="() => router.push('/app/settings')"
-          />
-        </div>
+        <AppTopBar
+          :title="(navbarTitle as string)"
+          :show-campaign-filter="showCampaignFilter"
+        />
       </header>
 
-      <!-- Phone-only search pill (<640px) not using for now
-      <div class="app-search-row">
-        <div class="app-search-card">
-          <SearchBar v-model="search" @search="(v) => (search = v)" />
-        </div>
-      </div>
-      -->
-
+      <!-- Main Content -->
       <main class="app-main">
         <RouterView />
       </main>
 
-      <!-- shared hidden file input for avatar upload -->
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        class="hidden"
-        @change="onAvatarFileChanged"
-      />
     </div>
+
+    <!-- Mobile Sidebar Drawer -->
+    <MobileSidebarDrawer v-if="isMobile" />
 
     <TourManager />
 
@@ -108,15 +73,26 @@ async function onAvatarFileChanged(e: Event) {
 
 <style scoped>
 .app-shell {
+  display: grid;
+  grid-template-columns: var(--current-sidebar-width, 240px) 1fr;
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
   background: var(--app-bg, #f0f2f5);
-  padding: 16px 16px 20px;
   position: relative;
   z-index: 1;
 }
 
-/* Wraps the whole “normal app” chrome */
+.app-sidebar {
+  grid-row: 1 / -1;
+  grid-column: 1;
+}
+
 .app-shell-inner {
+  grid-row: 1 / -1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   transition: filter 0.18s ease-out, opacity 0.18s ease-out;
 }
 
@@ -124,76 +100,37 @@ async function onAvatarFileChanged(e: Event) {
 .app-shell-inner--blurred {
   filter: blur(10px);
   opacity: 0.4;
-  pointer-events: none; /* prevent clicks behind the modal */
+  pointer-events: none;
 }
 
 .app-topbar {
-  margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .app-main {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0;
-  color: #0c2d50; /* Ensure text is visible on light background */
+  padding: 16px 24px 24px;
+  color: var(--app-text, #0c2d50);
+  overflow-y: auto;
 }
 
-/* ---- nav breakpoint: desktop vs mobile ---- */
-.nav-desktop {
-  display: none;
-}
-.nav-mobile {
-  display: block;
-}
-
-@media (min-width: 640px) {
-  .nav-desktop {
-    display: block;
-  }
-  .nav-mobile {
-    display: none;
-  }
-}
-
-/* ---------- Mobile layout tweaks (<640px) ---------- */
-
+/* ── Mobile: sidebar is drawer, content spans full width ── */
 @media (max-width: 639px) {
   .app-shell {
-    padding: 0 0 16px;
+    grid-template-columns: 1fr;
   }
 
-  .app-topbar {
-    margin-bottom: 12px;
+  .app-sidebar {
+    display: none;
   }
 
   .app-main {
-    padding: 0 16px;
-  }
-
-  .app-search-row {
-    padding: 0 16px;
-  }
-}
-
-/* ---------- Mobile search row (<640px) ---------- */
-
-.app-search-row {
-  display: none;
-  margin-bottom: 12px;
-}
-
-.app-search-card {
-  border-radius: 12px;
-  background: #ffffff;
-  padding: 8px 12px;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
-    0 10px 24px rgba(12, 45, 80, 0.06);
-}
-
-@media (max-width: 639px) {
-  .app-search-row is {
-    display: block;
+    padding: 12px 16px 16px;
   }
 }
 </style>

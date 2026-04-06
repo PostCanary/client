@@ -167,10 +167,10 @@ function doSearch() {
   <!-- Same pill card as before -->
   <div
     data-tour="navbar"
-    class="mt-nav-root w-full rounded-xl bg-white shadow-[0_1px_3px_rgba(12,45,80,.08),0_10px_24px_rgba(12,45,80,.06)] px-5 py-3 flex items-center gap-4"
+    class="mt-nav-root w-full min-w-0 rounded-xl bg-white shadow-[0_1px_3px_rgba(12,45,80,.08),0_10px_24px_rgba(12,45,80,.06)] px-5 py-3 flex items-center gap-4"
   >
     <!-- Left: logo -->
-    <div class="flex items-center gap-3 whitespace-nowrap">
+    <div class="flex shrink-0 items-center gap-3 whitespace-nowrap">
       <img
         :src="LogoUrl"
         :alt="BRAND.name"
@@ -181,7 +181,7 @@ function doSearch() {
     </div>
 
     <!-- Navigation links -->
-    <nav class="flex items-center gap-6 ml-8">
+    <nav class="mt-nav-links" aria-label="Primary navigation">
       <button
         v-for="item in navItems"
         :key="item.path"
@@ -190,6 +190,7 @@ function doSearch() {
           'nav-link',
           { 'nav-link-active': isActive(item.path) }
         ]"
+        type="button"
       >
         {{ item.label }}
       </button>
@@ -241,11 +242,8 @@ function doSearch() {
     <!-- Org switcher (only shown for users in multiple orgs) -->
     <OrgSwitcher
       v-if="auth.hasMultipleOrgs"
-      class="hidden sm:block ml-2"
+      class="hidden shrink-0 sm:block ml-2"
     />
-
-    <!-- Spacer -->
-    <div class="grow"></div>
 
     <!-- 🔒 Inline search: commented out per client request -->
     <!--
@@ -281,7 +279,7 @@ function doSearch() {
     -->
 
     <!-- Right: user area -->
-    <div class="mt-nav-user hidden sm:flex items-center gap-3 pl-2 relative">
+    <div class="mt-nav-user hidden sm:flex items-center gap-3 pl-2 relative ml-auto">
       <div class="leading-tight" v-if="props.userName || props.userRole">
         <!-- 👇 full name with button style like Edit Mapping -->
         <button
@@ -328,6 +326,23 @@ function doSearch() {
 </template>
 
 <style scoped>
+.mt-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-left: 32px;
+  min-width: 0;
+  flex: 1 1 0%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mt-nav-links::-webkit-scrollbar {
+  display: none;
+}
+
 /* Navigation links */
 .nav-link {
   font-size: 16px;
@@ -339,6 +354,9 @@ function doSearch() {
   padding: 0;
   transition: color 0.15s ease;
   white-space: nowrap;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-link:hover {
@@ -356,6 +374,10 @@ function doSearch() {
 }
 
 /* Campaign selector */
+.campaign-selector-wrap {
+  flex-shrink: 0;
+}
+
 .campaign-select {
   padding: 6px 12px;
   border-radius: 8px;
@@ -399,6 +421,10 @@ function doSearch() {
 }
 
 /* User name button styled like Edit Mapping */
+.mt-nav-user {
+  flex-shrink: 0;
+}
+
 .mt-user-name-btn {
   border-radius: 999px;
   font-size: 13px;
