@@ -60,13 +60,14 @@ defineExpose({ activeFilterCount });
     <div>
       <label class="text-xs text-gray-500">Homeowner status</label>
       <select
-        :value="filters.homeowner === null ? '' : String(filters.homeowner)"
+        :value="filters.homeowner ?? ''"
         class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-        @change="filters.homeowner = ($event.target as HTMLSelectElement).value === '' ? null : ($event.target as HTMLSelectElement).value === 'true'"
+        @change="filters.homeowner = (($event.target as HTMLSelectElement).value || null) as TargetingFilters['homeowner']"
       >
         <option value="">Any</option>
-        <option value="true">Homeowners only</option>
-        <option value="false">Renters only</option>
+        <option value="homeowner">Homeowners</option>
+        <option value="all">All Residents</option>
+        <option value="investor">Property Investors</option>
       </select>
     </div>
 

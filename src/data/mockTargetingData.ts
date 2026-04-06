@@ -44,7 +44,8 @@ export function applyFilterReductions(
   filters: TargetingFilters,
 ): number {
   let count = baseCount;
-  if (filters.homeowner === true) count = Math.round(count * 0.65); // -35%
+  if (filters.homeowner === 'homeowner') count = Math.round(count * 0.65); // -35%
+  if (filters.homeowner === 'investor') count = Math.round(count * 0.5); // -50%
   if (filters.propertyTypes.length > 0 && filters.propertyTypes.length < 5)
     count = Math.round(count * 0.7); // -30%
   if (filters.homeValueMin !== null || filters.homeValueMax !== null)

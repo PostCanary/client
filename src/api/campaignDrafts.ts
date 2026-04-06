@@ -21,8 +21,24 @@ interface DraftListResponse {
   drafts: DraftResponse[];
 }
 
+function normalizeHomeowner(val: unknown): 'homeowner' | 'all' | 'investor' | null {
+  if (val === true || val === 'homeowner') return 'homeowner'
+  if (val === false || val === 'all') return 'all'
+  if (val === 'investor') return 'investor'
+  return null  // any unexpected type (1, "true", undefined, etc.) → null (safe default)
+}
+
 function toDraft(r: DraftResponse): CampaignDraft {
   const data = r.data || {};
+  // Normalize targeting.filters.homeowner for saved drafts with legacy boolean values
+  const targeting = data.targeting
+    ? {
+        ...data.targeting,
+        filters: data.targeting.filters
+          ? { ...data.targeting.filters, homeowner: normalizeHomeowner(data.targeting.filters?.homeowner) }
+          : data.targeting.filters,
+      }
+    : null;
   return {
     id: r.id,
     orgId: r.org_id,
@@ -30,7 +46,7 @@ function toDraft(r: DraftResponse): CampaignDraft {
     completedSteps: (r.completed_steps || []) as (1 | 2 | 3 | 4)[],
     needsReviewSteps: (r.needs_review_steps || []) as (1 | 2 | 3 | 4)[],
     goal: data.goal ?? null,
-    targeting: data.targeting ?? null,
+    targeting,
     design: data.design ?? null,
     review: data.review ?? null,
     createdAt: r.created_at,

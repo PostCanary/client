@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { ref, computed, watch, provide, onMounted, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { GOAL_DEFAULTS, PRICING } from "@/types/campaign";
 import type { TargetingSelection, TargetingFilters, JobReference } from "@/types/campaign";
 import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
+import { useHouseholdCount } from "@/composables/useHouseholdCount";
+import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 import {
   MOCK_JOBS,
-  estimateHouseholds,
-  circleAreaSqMiles,
-  zipAreaSqMiles,
-  applyFilterReductions,
   mockPastCustomersInArea,
   mockRecipientBreakdown,
 } from "@/data/mockTargetingData";
@@ -19,6 +17,25 @@ import {
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 const mapRef = ref<InstanceType<typeof TargetingMap> | null>(null);
+
+// Household count composable — replaces mock area-based estimation
+const {
+  count: apiCount,
+  totalCount: apiTotalCount,
+  loading: countLoading,
+  error: countError,
+  source: countSource,
+  fetchCount,
+  fetchTotalIfNeeded,
+} = useHouseholdCount();
+
+// Provide loading/error/source for child components via inject
+provide(HOUSEHOLD_COUNT_KEY, {
+  loading: countLoading,
+  error: countError,
+  source: countSource,
+  fetchTotalIfNeeded,
+});
 
 // Initialize from draft or defaults
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
@@ -55,60 +72,46 @@ const selectedJobs = computed(() =>
   isNeighborGoal.value ? jobs.value.filter((j) => j.selected) : [],
 );
 
-const rawArea = computed(() => {
-  let area = 0;
-  // Job radii areas
-  area += selectedJobs.value.length * circleAreaSqMiles(radiusMiles.value);
-  // ZIP areas
-  area += zips.value.length * zipAreaSqMiles();
-  // Drawn areas from map (approximate from composable)
-  const mapAreas = mapRef.value?.areas ?? [];
-  for (const a of mapAreas) {
-    if (a.type === "circle" && a.radiusMiles) {
-      area += circleAreaSqMiles(a.radiusMiles);
-    } else if (a.type === "zip") {
-      area += zipAreaSqMiles();
-    } else if ((a.type === "rectangle" || a.type === "polygon") && a.coordinates?.length >= 2) {
-      // Calculate area from coordinates using lat/lng to miles conversion
-      const c = a.coordinates;
-      if (a.type === "rectangle" && c.length >= 2) {
-        const swLat = c[0]![0]!; const swLng = c[0]![1]!;
-        const neLat = c[1]![0]!; const neLng = c[1]![1]!;
-        const latMid = (swLat + neLat) / 2;
-        const h = Math.abs(neLat - swLat) * 69;
-        const w = Math.abs(neLng - swLng) * 69 * Math.cos(latMid * Math.PI / 180);
-        area += h * w;
-      } else {
-        // Shoelace formula for polygon area
-        const latMid = c.reduce((s, p) => s + p[0]!, 0) / c.length;
-        let pa = 0;
-        for (let i = 0; i < c.length; i++) {
-          const j = (i + 1) % c.length;
-          pa += c[i]![1]! * c[j]![0]! - c[j]![1]! * c[i]![0]!;
-        }
-        pa = Math.abs(pa) / 2;
-        area += pa * 69 * 69 * Math.cos(latMid * Math.PI / 180);
-      }
-    } else {
-      area += 2; // fallback for unknown shape types
-    }
+// Collect all targeting areas (drawn + job radii + ZIPs) for API calls
+const allAreas = computed(() => {
+  const areas = [...(mapRef.value?.areas ?? [])];
+  // Add job radii as circle areas
+  for (const job of selectedJobs.value) {
+    areas.push({
+      type: 'job_radius' as const,
+      coordinates: [[job.lat, job.lng]],
+      radiusMiles: radiusMiles.value,
+    });
   }
-  return area;
+  // Add ZIPs
+  for (const zip of zips.value) {
+    areas.push({
+      type: 'zip' as const,
+      coordinates: [],
+      zipCode: zip,
+    });
+  }
+  return areas;
 });
 
-const totalHouseholds = computed(() => estimateHouseholds(rawArea.value));
-const filteredHouseholds = computed(() =>
-  applyFilterReductions(totalHouseholds.value, filters.value),
-);
-const pastInArea = computed(() => mockPastCustomersInArea(filteredHouseholds.value));
+// Use API count as the final household count
+const totalHouseholds = computed(() => apiTotalCount.value || apiCount.value);
+const finalHouseholdCount = computed(() => apiCount.value);
+const pastInArea = computed(() => mockPastCustomersInArea(finalHouseholdCount.value));
 const excludedPast = computed(() => excludePastCustomers.value ? pastInArea.value : 0);
-const excludedRecent = computed(() => Math.round(filteredHouseholds.value * 0.03));
-const finalHouseholdCount = computed(() =>
-  Math.max(filteredHouseholds.value - excludedPast.value - excludedRecent.value - doNotMailCount, 0),
-);
+const excludedRecent = computed(() => Math.round(finalHouseholdCount.value * 0.03));
 const sequenceLength = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
 const estimatedCostSequence = computed(
   () => finalHouseholdCount.value * PRICING.payPerSend * sequenceLength.value,
+);
+
+// Watch areas + filters and trigger API fetch
+watch(
+  [allAreas, filters],
+  () => {
+    fetchCount(allAreas.value, filters.value);
+  },
+  { deep: true },
 );
 
 // Debounced commit to draft store
@@ -145,6 +148,7 @@ function commitTargeting() {
       ),
       estimatedCostSingle: finalHouseholdCount.value * perCard,
       estimatedCostSequence: finalHouseholdCount.value * perCard * seqLen,
+      countSource: countSource.value,
       savedAudienceName: null,
     };
     draftStore.setTargeting(targeting);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
 import { formatCurrency, formatNumber } from "@/utils/format";
+import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 
 const props = defineProps<{
   finalHouseholdCount: number;
@@ -8,12 +9,18 @@ const props = defineProps<{
   sequenceLength: number;
 }>();
 
-const hasTargeting = computed(() => props.finalHouseholdCount > 0);
+const hc = inject(HOUSEHOLD_COUNT_KEY)!;
+const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.value);
 </script>
 
 <template>
   <div class="bg-[#f8fafb] border-t border-gray-200 px-4 py-3 shrink-0">
-    <template v-if="hasTargeting">
+    <template v-if="hc.loading.value">
+      <div class="text-sm font-semibold text-[#0b2d50] animate-pulse">
+        Counting households...
+      </div>
+    </template>
+    <template v-else-if="hasTargeting">
       <div class="text-sm font-semibold text-[#0b2d50]">
         {{ formatNumber(finalHouseholdCount) }} households
       </div>
