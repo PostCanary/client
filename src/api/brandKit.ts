@@ -1,5 +1,5 @@
 // src/api/brandKit.ts
-import { get, putJson, postJson } from "@/api/http";
+import { get, putJson, postJson, del_ } from "@/api/http";
 import type { BrandKit } from "@/types/campaign";
 
 interface BrandKitResponse {
@@ -59,5 +59,56 @@ export async function triggerScrape(
   const res = await postJson<BrandKitResponse>("/api/brand-kit/scrape", {
     website_url: websiteUrl,
   });
+  return toBrandKit(res);
+}
+
+// --- AI Generation ---
+
+export interface GenerateContentRequest {
+  goal_type: string;
+  card_purposes: string[];
+  recipient_type: string;
+}
+
+export interface GeneratedCardContent {
+  headlines: Array<{ text: string; formula: string; reason: string }>;
+  offer: { text: string; reason: string };
+  selectedReview: {
+    quote: string;
+    reviewerName: string;
+    rating: number;
+    reason: string;
+  } | null;
+  templateRecommendation: string;
+  templateReason: string;
+}
+
+export interface GeneratedContent {
+  cards: GeneratedCardContent[];
+}
+
+export async function generateContent(
+  data: GenerateContentRequest,
+): Promise<GeneratedContent> {
+  return postJson<GeneratedContent>("/api/brand-kit/generate", data);
+}
+
+// --- Manual Reviews ---
+
+export interface AddReviewRequest {
+  review_text: string;
+  reviewer_name: string;
+  rating: number;
+}
+
+export async function addManualReview(
+  data: AddReviewRequest,
+): Promise<BrandKit> {
+  const res = await postJson<BrandKitResponse>("/api/brand-kit/reviews", data);
+  return toBrandKit(res);
+}
+
+export async function removeReview(index: number): Promise<BrandKit> {
+  const res = await del_<BrandKitResponse>(`/api/brand-kit/reviews/${index}`);
   return toBrandKit(res);
 }

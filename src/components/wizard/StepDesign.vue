@@ -38,7 +38,7 @@ onMounted(() => {
   originalCards = cards.value.map((c) => ({ ...c }));
 });
 
-function generateNewCards() {
+async function generateNewCards() {
   if (!brandKit.value) return;
   const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
   const breakdown = draftStore.draft?.targeting?.recipientBreakdown ?? {
@@ -47,7 +47,7 @@ function generateNewCards() {
     pastCustomersIncluded: false,
   };
 
-  cards.value = generateCards(
+  cards.value = await generateCards(
     brandKit.value,
     goalType.value,
     seqLen,

@@ -1,14 +1,21 @@
 // src/composables/usePostcardGenerator.ts
-// Client-side content generation for Round 1 (no AI service needed)
+// Server-backed AI content generation with local fallback
 import type {
   BrandKit,
   CampaignGoalType,
   CardDesign,
   CardPurpose,
   RecipientBreakdown,
+  TemplateLayoutType,
 } from "@/types/campaign";
-import { getRecommendedTemplateSet } from "@/data/templates";
+import { getRecommendedTemplateSet, ALL_TEMPLATES } from "@/data/templates";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
+import { generateContent } from "@/api/brandKit";
+import type { GeneratedCardContent } from "@/api/brandKit";
+
+// ---------------------------------------------------------------------------
+// Local fallback content (used when API is unavailable)
+// ---------------------------------------------------------------------------
 
 const HEADLINES: Record<CardPurpose, Record<string, string[]>> = {
   offer: {
@@ -71,7 +78,11 @@ function fillTemplate(tmpl: string, vars: Record<string, string>): string {
   return result;
 }
 
-export function generateCards(
+// ---------------------------------------------------------------------------
+// Local fallback generator (same as Round 1)
+// ---------------------------------------------------------------------------
+
+function generateCardsLocal(
   brandKit: BrandKit,
   goalType: CampaignGoalType,
   sequenceLength: number,
@@ -94,7 +105,6 @@ export function generateCards(
     rating: String(brandKit.googleRating ?? 5),
   };
 
-  // Determine messaging tone from recipient breakdown
   const isWarm =
     recipientBreakdown.pastCustomersIncluded &&
     recipientBreakdown.pastCustomers > recipientBreakdown.newProspects * 0.5;
@@ -112,7 +122,9 @@ export function generateCards(
 
     const offerPool = OFFERS[goalType] ?? OFFERS.default ?? [];
     const offerText =
-      brandKit.currentOffers?.[0] ?? offerPool[i % Math.max(offerPool.length, 1)] ?? "";
+      brandKit.currentOffers?.[0] ??
+      offerPool[i % Math.max(offerPool.length, 1)] ??
+      "";
 
     const review = brandKit.reviews?.[0];
     const photo = photos[i % Math.max(photos.length, 1)];
@@ -125,9 +137,10 @@ export function generateCards(
       overrides: {},
       resolvedContent: {
         headline,
-        offerText: isWarm && purpose === "offer"
-          ? `Welcome back! ${offerText}`
-          : offerText,
+        offerText:
+          isWarm && purpose === "offer"
+            ? `Welcome back! ${offerText}`
+            : offerText,
         photoUrl: photo?.url ?? "",
         reviewQuote: review?.quote ?? "Professional, reliable service!",
         reviewerName: review?.reviewerName ?? "A Happy Customer",
@@ -154,4 +167,130 @@ export function generateCards(
       templateReason: "",
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Template lookup helper
+// ---------------------------------------------------------------------------
+
+function findTemplateByLayout(
+  layoutType: string,
+  cardPurpose: CardPurpose,
+): string {
+  const match = ALL_TEMPLATES.find(
+    (t) => t.layoutType === layoutType && t.cardPosition === cardPurpose,
+  );
+  return match?.id ?? `${layoutType}-${cardPurpose}`;
+}
+
+// ---------------------------------------------------------------------------
+// Map server response to CardDesign
+// ---------------------------------------------------------------------------
+
+function mapServerCardToDesign(
+  card: GeneratedCardContent,
+  index: number,
+  brandKit: BrandKit,
+  purpose: CardPurpose,
+  fallbackTemplateId: string,
+): CardDesign {
+  const photos = [
+    ...(brandKit.photos ?? []).sort((a, b) => b.qualityScore - a.qualityScore),
+    ...getPhotosForIndustry(brandKit.industry).map((p) => ({
+      url: p.url,
+      qualityScore: 50,
+      source: "stock" as const,
+      alt: p.description,
+    })),
+  ];
+  const photo = photos[index % Math.max(photos.length, 1)];
+
+  // Map templateRecommendation to a template ID
+  const templateId = card.templateRecommendation
+    ? findTemplateByLayout(card.templateRecommendation, purpose)
+    : fallbackTemplateId;
+
+  return {
+    cardNumber: index + 1,
+    cardPurpose: purpose,
+    templateId,
+    previewImageUrl: "",
+    overrides: {},
+    resolvedContent: {
+      headline: card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
+      offerText: card.offer.text,
+      photoUrl: photo?.url ?? "",
+      reviewQuote:
+        card.selectedReview?.quote ?? "Professional, reliable service!",
+      reviewerName:
+        card.selectedReview?.reviewerName ?? "A Happy Customer",
+      phoneNumber: brandKit.phone ?? "(555) 123-4567",
+      urgencyText: URGENCY[purpose],
+      riskReversal:
+        brandKit.guarantees?.[0] ?? "100% Satisfaction Guaranteed",
+      trustSignals: brandKit.certifications?.slice(0, 3) ?? [
+        "Licensed & Insured",
+      ],
+    },
+    backContent: {
+      guarantee:
+        brandKit.guarantees?.[0] ?? "100% Satisfaction Guaranteed",
+      certifications: brandKit.certifications ?? ["Licensed & Insured"],
+      licenseNumber: "",
+      companyAddress: brandKit.address ?? "",
+      websiteUrl: brandKit.websiteUrl ?? "",
+      qrCodeUrl: "",
+    },
+    headlineCandidates: card.headlines,
+    offerReason: card.offer.reason,
+    reviewReason: card.selectedReview?.reason ?? "",
+    templateReason: card.templateReason,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main export: async server-backed generation with local fallback
+// ---------------------------------------------------------------------------
+
+export async function generateCards(
+  brandKit: BrandKit,
+  goalType: CampaignGoalType,
+  sequenceLength: number,
+  recipientBreakdown: RecipientBreakdown,
+): Promise<CardDesign[]> {
+  const purposes: CardPurpose[] = ["offer", "proof", "last_chance"];
+  const cardPurposes = purposes.slice(0, sequenceLength);
+
+  // Skip API call in mock mode
+  if (import.meta.env.VITE_SKIP_AUTH === "true") {
+    return generateCardsLocal(brandKit, goalType, sequenceLength, recipientBreakdown);
+  }
+
+  try {
+    const response = await generateContent({
+      goal_type: goalType,
+      card_purposes: cardPurposes,
+      recipient_type: recipientBreakdown.pastCustomersIncluded ? "warm" : "cold",
+    });
+
+    const fallbackTemplates = getRecommendedTemplateSet(goalType);
+
+    return response.cards.map((card, i) =>
+      mapServerCardToDesign(
+        card,
+        i,
+        brandKit,
+        cardPurposes[i],
+        fallbackTemplates[i]?.id ?? fallbackTemplates[0]?.id ?? "full-bleed-offer",
+      ),
+    );
+  } catch (err) {
+    console.error("AI generation failed, using local fallback:", err);
+    return generateCardsLocal(
+      brandKit,
+      goalType,
+      sequenceLength,
+      recipientBreakdown,
+    );
+  }
 }

@@ -2,7 +2,13 @@
 import { defineStore } from "pinia";
 import { watch } from "vue";
 import type { BrandKit } from "@/types/campaign";
-import { getBrandKit, updateBrandKit, triggerScrape } from "@/api/brandKit";
+import {
+  getBrandKit,
+  updateBrandKit,
+  triggerScrape,
+  addManualReview,
+  removeReview as apiRemoveReview,
+} from "@/api/brandKit";
 import { useAuthStore } from "@/stores/auth";
 
 const POLL_INTERVAL_MS = 2000;
@@ -134,6 +140,59 @@ export const useBrandKitStore = defineStore("brandKit", {
 
       // Start polling after first interval
       setTimeout(poll, POLL_INTERVAL_MS);
+    },
+
+    // ----- Manual Review Management -----
+
+    async addReview(reviewText: string, reviewerName: string, rating: number) {
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        // Mock mode: add locally
+        const reviews = [...(this.brandKit?.reviews ?? [])];
+        reviews.push({
+          quote: reviewText.split(" ").slice(0, 35).join(" "),
+          fullText: reviewText,
+          reviewerName,
+          rating,
+          source: "manual",
+          reason: "",
+        });
+        this.brandKit = { ...this.brandKit, reviews } as any;
+        return;
+      }
+      this.error = null;
+      try {
+        this.brandKit = await addManualReview({
+          review_text: reviewText,
+          reviewer_name: reviewerName,
+          rating,
+        });
+      } catch {
+        this.error = "Failed to add review";
+      }
+    },
+
+    async removeReview(index: number) {
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        const reviews = [...(this.brandKit?.reviews ?? [])];
+        reviews.splice(index, 1);
+        this.brandKit = { ...this.brandKit, reviews } as any;
+        return;
+      }
+      this.error = null;
+      try {
+        this.brandKit = await apiRemoveReview(index);
+      } catch {
+        this.error = "Failed to remove review";
+      }
+    },
+
+    selectReview(index: number) {
+      if (!this.brandKit?.reviews?.length) return;
+      const reviews = [...this.brandKit.reviews];
+      if (index < 0 || index >= reviews.length) return;
+      const [selected] = reviews.splice(index, 1);
+      reviews.unshift(selected);
+      this.brandKit = { ...this.brandKit, reviews } as any;
     },
 
     /**
