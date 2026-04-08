@@ -304,11 +304,33 @@ export interface CampaignDraft {
 // BRAND KIT
 // ============================================================
 
+// Confidence tier for an extracted field.
+// HIGH = structured source (Google Places API, explicit HTML)
+// MEDIUM = inferred from page content (Firecrawl LLM extraction)
+// LOW = not found, ambiguous, or sourced from mock fallback
+export type ExtractionConfidence = 'high' | 'medium' | 'low'
+
+// Which source contributed to the merged brand kit.
+export type ExtractionSource = 'firecrawl' | 'google_places' | 'manual'
+
+// Trust badge surfaced from brand extraction (BBB, Angi, HomeAdvisor, etc.)
+export interface TrustBadge {
+  type: 'bbb' | 'angi' | 'homeadvisor' | 'yelp' | 'google' | 'nextdoor' | 'thumbtack' | 'porch' | 'custom'
+  label: string                        // "BBB A+" or "Angi Certified"
+  confidence: ExtractionConfidence
+}
+
 export interface BrandKitPhoto {
-  url: string
+  url: string                          // web-accessible URL (e.g., /api/media/brand-photos/{org}/{uuid}.jpg)
   qualityScore: number                 // 0-100
-  source: 'website' | 'upload' | 'stock'
+  source: 'website' | 'upload' | 'stock' | 'google_places'
   alt: string
+  // --- Extraction R2 additions (all optional for backwards compat) ---
+  path?: string                        // server filesystem path (for cleanup + re-scrape)
+  originalUrl?: string                 // where the photo was sourced from
+  width?: number
+  height?: number
+  printReady?: boolean                 // width >= 1200
 }
 
 export interface BrandKitReview {
@@ -318,6 +340,8 @@ export interface BrandKitReview {
   rating: number                       // 1-5
   source: string                       // "Google"
   reason: string                       // why this review was selected
+  // --- Extraction R2 additions ---
+  specificityScore?: number            // 0-50, used by AI to pick the strongest review
 }
 
 export interface BrandKit {
@@ -332,7 +356,7 @@ export interface BrandKit {
   logoQualityScore: number | null
   brandColors: string[]                // hex codes extracted from website (2-3)
   photos: BrandKitPhoto[]
-  googleRating: number | null          // 1.0-5.0
+  googleRating: number | null          // 1.0-5.0 (sourced from Google Places in R2)
   reviews: BrandKitReview[]
   certifications: string[]             // ["Licensed & Insured", "BBB A+", "NATE Certified"]
   currentOffers: string[]              // scraped from website
@@ -346,9 +370,19 @@ export interface BrandKit {
     message: string         // user-friendly: "Reading your website...", "Finding your photos..."
     estimatedSecondsLeft: number | null
     startedAt: string | null   // ISO datetime for stale detection
+    // --- Extraction R2 additions (optional for backwards compat) ---
+    completedSteps?: number    // 0-5, for progress bar
+    totalSteps?: number        // typically 5
   } | null
   completenessPercent: number          // 0-100
   updatedAt: string
+  // --- Extraction R2 additions (all optional for backwards compat) ---
+  reviewCount?: number | null          // total Google review count
+  trustBadges?: TrustBadge[]           // detected and confidence-scored
+  bbbDetected?: boolean                // explicit BBB badge presence
+  partnerBadges?: string[]             // normalized list: ["Angi", "HomeAdvisor", ...]
+  confidenceScores?: Partial<Record<keyof BrandKit, ExtractionConfidence>>
+  extractionSources?: ExtractionSource[]   // which sources contributed
 }
 
 // ============================================================
