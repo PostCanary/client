@@ -1,5 +1,23 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { CardDesign, TemplateLayoutType } from "@/types/campaign";
+import { ensureContrast, safeTextColor } from "@/utils/contrast";
+
+// Brief #6 Task 7 — PostcardFront rewrite.
+//
+// Design principles (from expert panel review + plan v2):
+// - Lob-style: absolute positioning, safe-zone aware, pt-based type scale
+// - Hero photo 60%+ of card area, edge-to-edge with bleed
+// - Headline in high-contrast overlay bar (Gendusa/Draplin)
+// - Logo top-left (0.75-1.5" wide), "Licensed & Insured" top-right
+// - Phone in a contrast bar at the bottom, 18-24pt bold
+// - Credibility line under headline, 12-14pt
+// - NO offer text on front — offer belongs on back (Gendusa fix)
+// - Headline must include city/neighborhood (AI prompt enforces — Halbert fix)
+// - All 6 layoutTypes share the SAME type scale + spacing. Variety comes from
+//   photo placement only (Draplin fix — unified visual language).
+// - All text-on-color pairs go through ensureContrast() so brand colors that
+//   fail 4.5:1 fall back to black/white (Draplin fix).
 
 const props = defineProps<{
   card: CardDesign;
@@ -7,147 +25,263 @@ const props = defineProps<{
   brandColors?: string[];
   businessName?: string;
   logoUrl?: string | null;
+  // Credibility line — passed from parent or derived from brandKit.
+  // "Licensed & Insured" | "Serving Phoenix since 2014" | "24/7 Emergency Service"
+  credibilityLine?: string;
 }>();
 
-const primary = props.brandColors?.[0] ?? "#47bfa9";
-const dark = props.brandColors?.[1] ?? "#0b2d50";
+// Brand color defaults (muted teal + navy). These are only used when the
+// customer has no extracted brand colors. Once Firecrawl lands, this is the
+// fallback, not the norm.
+const primary = computed(() => props.brandColors?.[0] ?? "#47bfa9");
+const dark = computed(() => props.brandColors?.[1] ?? "#0b2d50");
+
+// Safe text colors for each surface, computed once per render.
+// On a white/light card area (photo-top content zone, review-forward body),
+// text is black unless the brand primary passes contrast against white.
+const textOnLight = computed(() => ensureContrast(dark.value, "#FFFFFF"));
+const textOnDark = computed(() => ensureContrast("#FFFFFF", dark.value));
+const textOnPrimary = computed(() => safeTextColor(primary.value));
+
+const credibility = computed(
+  () => props.credibilityLine ?? "Licensed & Insured"
+);
+
+const hasPhoto = computed(() => !!props.card.resolvedContent.photoUrl);
 </script>
 
 <template>
+  <!-- .pc-card enforces bleed/trim frame + safe-zone inset from print-scale.css.
+       The aspectRatio inline style is the on-screen preview; print output uses
+       the physical pt dimensions from .pc-card. -->
   <div
-    class="relative rounded-lg overflow-hidden bg-white"
+    class="pc-card relative rounded-lg overflow-hidden bg-white"
     :style="{ aspectRatio: '9 / 6' }"
   >
-    <!-- Full-bleed layout -->
+    <!-- ============================================================
+         FULL-BLEED: photo fills the card, overlay bar at bottom holds
+         headline + credibility + phone. The most common layout.
+         ============================================================ -->
     <template v-if="layoutType === 'full-bleed'">
-      <div class="absolute inset-0">
+      <!-- Hero photo, edge-to-edge -->
+      <img
+        v-if="hasPhoto"
+        :src="card.resolvedContent.photoUrl"
+        class="absolute inset-0 w-full h-full object-cover"
+        alt=""
+      />
+      <!-- Gradient so bottom overlay bar stays readable on any photo -->
+      <div
+        class="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
+        style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)"
+      />
+      <!-- Top row: logo left, badge right -->
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
         <img
-          v-if="card.resolvedContent.photoUrl"
-          :src="card.resolvedContent.photoUrl"
-          class="w-full h-full object-cover"
+          v-if="logoUrl"
+          :src="logoUrl"
+          class="object-contain"
+          style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
           alt=""
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <span v-else class="pc-badge text-white/80">{{ businessName }}</span>
+        <span class="pc-badge text-white/90">{{ credibility }}</span>
       </div>
-      <div class="absolute inset-0 p-4 flex flex-col justify-between text-white">
-        <div class="flex justify-between items-start">
-          <span class="text-xs font-medium opacity-80">{{ businessName }}</span>
-          <span class="text-[10px] opacity-60">Licensed & Insured</span>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold leading-tight">{{ card.resolvedContent.headline }}</h3>
-          <p class="text-sm mt-1 opacity-90">{{ card.resolvedContent.offerText }}</p>
-          <div class="mt-2 text-sm font-bold">{{ card.resolvedContent.phoneNumber }}</div>
-        </div>
+      <!-- Bottom overlay bar: headline + phone -->
+      <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
+        <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
+        <div class="pc-phone-front mt-2">{{ card.resolvedContent.phoneNumber }}</div>
       </div>
     </template>
 
-    <!-- Side-split layout -->
+    <!-- ============================================================
+         SIDE-SPLIT: photo left half, content right half on brand color.
+         ============================================================ -->
     <template v-else-if="layoutType === 'side-split'">
       <div class="flex h-full">
         <div class="w-1/2 relative">
           <img
-            v-if="card.resolvedContent.photoUrl"
+            v-if="hasPhoto"
             :src="card.resolvedContent.photoUrl"
             class="w-full h-full object-cover"
             alt=""
           />
         </div>
-        <div class="w-1/2 p-3 flex flex-col justify-between" :style="{ backgroundColor: dark }">
-          <div>
-            <span class="text-[10px] text-white/60">{{ businessName }}</span>
-            <h3 class="text-sm font-bold text-white mt-1 leading-tight">{{ card.resolvedContent.headline }}</h3>
-            <p class="text-xs text-white/80 mt-1">{{ card.resolvedContent.offerText }}</p>
+        <div
+          class="w-1/2 flex flex-col justify-between px-4 py-4"
+          :style="{ backgroundColor: dark, color: textOnDark }"
+        >
+          <div class="flex justify-between items-start">
+            <img
+              v-if="logoUrl"
+              :src="logoUrl"
+              class="object-contain bg-white/10 rounded p-1"
+              style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+              alt=""
+            />
+            <span v-else class="pc-badge opacity-80">{{ businessName }}</span>
+            <span class="pc-badge opacity-80">{{ credibility }}</span>
           </div>
-          <div class="text-xs font-bold text-white">{{ card.resolvedContent.phoneNumber }}</div>
+          <div>
+            <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
+            <div class="pc-phone-front mt-3">{{ card.resolvedContent.phoneNumber }}</div>
+          </div>
         </div>
       </div>
     </template>
 
-    <!-- Photo-top layout -->
+    <!-- ============================================================
+         PHOTO-TOP: photo 60% top, content 40% bottom on light brand tint.
+         ============================================================ -->
     <template v-else-if="layoutType === 'photo-top'">
       <div class="flex flex-col h-full">
-        <div class="h-1/2 relative">
+        <div class="relative" style="height: 60%">
           <img
-            v-if="card.resolvedContent.photoUrl"
+            v-if="hasPhoto"
             :src="card.resolvedContent.photoUrl"
             class="w-full h-full object-cover"
             alt=""
           />
-        </div>
-        <div class="h-1/2 p-3 flex flex-col justify-between" :style="{ backgroundColor: primary + '10' }">
-          <div>
-            <h3 class="text-sm font-bold" :style="{ color: dark }">{{ card.resolvedContent.headline }}</h3>
-            <p class="text-xs mt-1" :style="{ color: dark + 'cc' }">{{ card.resolvedContent.offerText }}</p>
+          <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
+            <img
+              v-if="logoUrl"
+              :src="logoUrl"
+              class="object-contain bg-white/90 rounded p-1"
+              style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+              alt=""
+            />
+            <span v-else class="pc-badge text-white drop-shadow">{{ businessName }}</span>
+            <span class="pc-badge text-white drop-shadow">{{ credibility }}</span>
           </div>
-          <div class="flex justify-between items-end">
-            <span class="text-[10px]" :style="{ color: dark + '80' }">{{ businessName }}</span>
-            <span class="text-xs font-bold" :style="{ color: primary }">{{ card.resolvedContent.phoneNumber }}</span>
+        </div>
+        <div
+          class="flex flex-col justify-between px-4 py-4"
+          style="height: 40%"
+          :style="{ backgroundColor: '#FFFFFF', color: textOnLight }"
+        >
+          <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
+          <div
+            class="pc-phone-front self-start px-3 py-1 rounded"
+            :style="{ backgroundColor: primary, color: textOnPrimary }"
+          >
+            {{ card.resolvedContent.phoneNumber }}
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Bold-graphic layout -->
+    <!-- ============================================================
+         BOLD-GRAPHIC: no photo (last resort per Draplin). Solid color
+         background, centered content.
+         ============================================================ -->
     <template v-else-if="layoutType === 'bold-graphic'">
-      <div class="h-full p-4 flex flex-col justify-between" :style="{ backgroundColor: dark }">
+      <div
+        class="h-full flex flex-col justify-between px-4 py-4"
+        :style="{ backgroundColor: dark, color: textOnDark }"
+      >
         <div class="flex justify-between items-start">
-          <span class="text-[10px] text-white/60">{{ businessName }}</span>
-          <span class="text-[10px] text-white/40">Licensed & Insured</span>
+          <img
+            v-if="logoUrl"
+            :src="logoUrl"
+            class="object-contain bg-white/10 rounded p-1"
+            style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+            alt=""
+          />
+          <span v-else class="pc-badge opacity-80">{{ businessName }}</span>
+          <span class="pc-badge opacity-80">{{ credibility }}</span>
         </div>
         <div class="text-center">
-          <h3 class="text-xl font-black text-white leading-tight">{{ card.resolvedContent.headline }}</h3>
-          <p class="text-sm mt-2" :style="{ color: primary }">{{ card.resolvedContent.offerText }}</p>
+          <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
         </div>
         <div class="text-center">
-          <span class="text-sm font-bold" :style="{ color: primary }">{{ card.resolvedContent.phoneNumber }}</span>
+          <div
+            class="pc-phone-front inline-block px-4 py-1 rounded"
+            :style="{ backgroundColor: primary, color: textOnPrimary }"
+          >
+            {{ card.resolvedContent.phoneNumber }}
+          </div>
         </div>
       </div>
     </template>
 
-    <!-- Before-after layout -->
+    <!-- ============================================================
+         BEFORE-AFTER: two photo slots, overlay bar spans full width
+         at bottom with headline + phone.
+         ============================================================ -->
     <template v-else-if="layoutType === 'before-after'">
       <div class="flex h-full">
-        <div class="w-1/2 bg-gray-200 flex items-center justify-center text-xs text-gray-400">Before</div>
+        <div class="w-1/2 bg-gray-200 flex items-center justify-center">
+          <span class="pc-badge text-gray-400">BEFORE</span>
+        </div>
         <div class="w-1/2 relative">
           <img
-            v-if="card.resolvedContent.photoUrl"
+            v-if="hasPhoto"
             :src="card.resolvedContent.photoUrl"
             class="w-full h-full object-cover"
             alt=""
           />
-          <div class="absolute bottom-0 inset-x-0 bg-black/60 p-2">
-            <span class="text-xs text-white font-medium">After</span>
+          <div class="absolute top-2 right-2">
+            <span class="pc-badge bg-white/90 px-2 py-0.5 rounded">AFTER</span>
           </div>
         </div>
       </div>
-      <div class="absolute bottom-0 inset-x-0 p-2" :style="{ backgroundColor: primary }">
-        <div class="flex justify-between items-center text-white text-xs">
-          <span class="font-bold">{{ card.resolvedContent.headline }}</span>
-          <span>{{ card.resolvedContent.phoneNumber }}</span>
+      <!-- Shared overlay bar at bottom — same styling as full-bleed -->
+      <div
+        class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5"
+        style="background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 70%, transparent 100%)"
+      >
+        <div class="flex justify-between items-end text-white">
+          <h3 class="pc-headline flex-1">{{ card.resolvedContent.headline }}</h3>
+          <div class="pc-phone-front ml-4">{{ card.resolvedContent.phoneNumber }}</div>
         </div>
+      </div>
+      <!-- Top row: logo + credibility, above the photo split -->
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-2 pointer-events-none">
+        <img
+          v-if="logoUrl"
+          :src="logoUrl"
+          class="object-contain bg-white/95 rounded p-1"
+          style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+          alt=""
+        />
+        <span v-else class="pc-badge text-gray-700 bg-white/85 px-2 rounded">{{ businessName }}</span>
+        <span class="pc-badge text-gray-700 bg-white/85 px-2 rounded">{{ credibility }}</span>
       </div>
     </template>
 
-    <!-- Review-forward layout -->
+    <!-- ============================================================
+         REVIEW-FORWARD: photo 60%, review quote in overlay bar
+         replaces the credibility line under the headline.
+         ============================================================ -->
     <template v-else>
-      <div class="h-full p-4 flex flex-col justify-between bg-white">
-        <div class="flex justify-between items-start">
-          <span class="text-[10px]" :style="{ color: dark + '80' }">{{ businessName }}</span>
-          <div class="text-yellow-400 text-xs">★★★★★</div>
-        </div>
-        <div class="text-center px-2">
-          <p class="text-sm italic" :style="{ color: dark }">
-            "{{ card.resolvedContent.reviewQuote }}"
-          </p>
-          <span class="text-xs mt-1 block" :style="{ color: dark + '80' }">
-            — {{ card.resolvedContent.reviewerName }}
-          </span>
-        </div>
-        <div class="text-center">
-          <div class="text-xs" :style="{ color: primary }">{{ card.resolvedContent.offerText }}</div>
-          <div class="text-sm font-bold mt-1" :style="{ color: dark }">{{ card.resolvedContent.phoneNumber }}</div>
-        </div>
+      <img
+        v-if="hasPhoto"
+        :src="card.resolvedContent.photoUrl"
+        class="absolute inset-0 w-full h-full object-cover"
+        alt=""
+      />
+      <div
+        class="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
+        style="background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)"
+      />
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
+        <img
+          v-if="logoUrl"
+          :src="logoUrl"
+          class="object-contain"
+          style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+          alt=""
+        />
+        <span v-else class="pc-badge text-white/80">{{ businessName }}</span>
+        <span class="pc-badge text-white/90">★★★★★</span>
+      </div>
+      <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
+        <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
+        <p class="pc-review-quote mt-2 opacity-95">
+          "{{ card.resolvedContent.reviewQuote }}"
+          <span class="pc-credibility ml-1 opacity-80">— {{ card.resolvedContent.reviewerName }}</span>
+        </p>
+        <div class="pc-phone-front mt-2">{{ card.resolvedContent.phoneNumber }}</div>
       </div>
     </template>
   </div>

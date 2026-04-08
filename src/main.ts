@@ -5,6 +5,7 @@ import { MotionPlugin } from "@vueuse/motion";
 import App from "./App.vue";
 import router from "./router";
 import "@/styles/tour.css";
+import "@/styles/print-scale.css";
 
 import { initPostHog } from "@/composables/usePostHog";
 import { useAuthStore } from "@/stores/auth";
