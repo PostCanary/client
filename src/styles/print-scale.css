@@ -1,0 +1,173 @@
+/* src/styles/print-scale.css
+ *
+ * Print-first type scale and grid tokens for postcard templates.
+ *
+ * Draplin fix from expert review (06-design-studio-r2-expert-review.md §5):
+ * the existing Vue templates used Tailwind rem/px sizing, which means nothing
+ * in print — rem depends on root font size, and the printed output would
+ * depend on Chromium's assumed root. Physical print requires physical units.
+ *
+ * All sizes in pt (points, 1pt = 1/72 inch).
+ *
+ * Scope: these tokens are consumed by PostcardFront.vue, PostcardBack.vue,
+ * and the four trust-signal components (OfferBox, CTABox, RatingBadge,
+ * TrustBadges). All OTHER components continue to use Tailwind utilities
+ * normally — this file is print-only.
+ */
+
+:root {
+  /* ------------------------------------------------------------------
+   * POSTCARD DIMENSIONS (6x9 standard — USPS postcard rate)
+   * ------------------------------------------------------------------ */
+  --pc-bleed:          0.125in;   /* 1/8" bleed on all sides */
+  --pc-trim-w:         9in;
+  --pc-trim-h:         6in;
+  --pc-safe-inset:     0.25in;    /* All content inside safe zone */
+  --pc-safe-w:         8.5in;     /* trim-w - 2*safe-inset */
+  --pc-safe-h:         5.5in;     /* trim-h - 2*safe-inset */
+
+  /* Back layout is 2-column, forced by USPS locked zone on the right */
+  --pc-content-col-w:  4.25in;    /* Left content column */
+  --pc-usps-col-w:     4.25in;    /* Right USPS locked zone */
+
+  /* ------------------------------------------------------------------
+   * TYPE SCALE (all in pt — physical units for physical print)
+   * ------------------------------------------------------------------
+   * Draplin fix §5: minimum sizes are physical readability constraints
+   * at arm's length, not suggestions.
+   */
+
+  /* Front: the billboard */
+  --pc-headline-size:       32pt;   /* 28-36pt range */
+  --pc-headline-weight:     800;
+  --pc-credibility-size:    13pt;   /* 12-14pt range */
+  --pc-credibility-weight:  500;
+  --pc-phone-front-size:    22pt;   /* 18-24pt range */
+  --pc-phone-front-weight:  700;
+  --pc-badge-size:          11pt;   /* 10-12pt, Licensed & Insured etc */
+  --pc-badge-weight:        600;
+
+  /* Back: the closer */
+  --pc-offer-headline-size:   22pt;  /* 20-24pt range */
+  --pc-offer-headline-weight: 700;
+  --pc-offer-item-size:       12pt;  /* 11-13pt range */
+  --pc-offer-item-weight:     400;
+  --pc-phone-back-size:       26pt;  /* 20-28pt range (biggest element on back) */
+  --pc-phone-back-weight:     800;
+  --pc-review-quote-size:     12pt;  /* 11-12pt range */
+  --pc-review-quote-weight:   400;
+  --pc-review-quote-style:    italic;
+  --pc-body-size:             11pt;  /* 10-12pt range */
+  --pc-body-weight:           400;
+
+  /* Trust badges (image or text badge row) */
+  --pc-trust-badge-height:    0.625in;  /* 0.5-0.75" range */
+
+  /* Logo — front */
+  --pc-logo-min-w:            0.75in;
+  --pc-logo-max-w:            1.5in;
+
+  /* ------------------------------------------------------------------
+   * SPACING RHYTHM
+   * ------------------------------------------------------------------
+   * Consistent gutters and section gaps across all 6 template layouts,
+   * so variety comes from photo placement, not different paddings.
+   */
+  --pc-gutter:          0.125in;  /* Between elements within a block */
+  --pc-section-gap:     0.25in;   /* Between major blocks */
+  --pc-block-padding:   0.1875in; /* Inside bordered boxes (OfferBox, CTABox) */
+
+  /* ------------------------------------------------------------------
+   * COLOR APPLICATION DEFAULTS (brand-colors get injected at render time)
+   * ------------------------------------------------------------------ */
+  --pc-overlay-dark:    rgba(0, 0, 0, 0.78);   /* Headline overlay on hero photo */
+  --pc-overlay-light:   rgba(255, 255, 255, 0.92);
+  --pc-border-offer:    2pt solid;             /* Offer box border */
+  --pc-border-cta:      2pt solid;             /* CTA box border */
+}
+
+/* ---------------------------------------------------------------------
+ * UTILITY CLASSES
+ * ---------------------------------------------------------------------
+ * Only the postcard components use these. Other components use Tailwind.
+ */
+
+.pc-headline {
+  font-size: var(--pc-headline-size);
+  font-weight: var(--pc-headline-weight);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.pc-credibility {
+  font-size: var(--pc-credibility-size);
+  font-weight: var(--pc-credibility-weight);
+  line-height: 1.2;
+}
+
+.pc-phone-front {
+  font-size: var(--pc-phone-front-size);
+  font-weight: var(--pc-phone-front-weight);
+  letter-spacing: 0.01em;
+}
+
+.pc-phone-back {
+  font-size: var(--pc-phone-back-size);
+  font-weight: var(--pc-phone-back-weight);
+  letter-spacing: 0.01em;
+}
+
+.pc-badge {
+  font-size: var(--pc-badge-size);
+  font-weight: var(--pc-badge-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pc-offer-headline {
+  font-size: var(--pc-offer-headline-size);
+  font-weight: var(--pc-offer-headline-weight);
+  line-height: 1.1;
+}
+
+.pc-offer-item {
+  font-size: var(--pc-offer-item-size);
+  font-weight: var(--pc-offer-item-weight);
+  line-height: 1.35;
+}
+
+.pc-review-quote {
+  font-size: var(--pc-review-quote-size);
+  font-weight: var(--pc-review-quote-weight);
+  font-style: var(--pc-review-quote-style);
+  line-height: 1.35;
+}
+
+.pc-body {
+  font-size: var(--pc-body-size);
+  font-weight: var(--pc-body-weight);
+  line-height: 1.35;
+}
+
+/* ---------------------------------------------------------------------
+ * CARD FRAME
+ * ---------------------------------------------------------------------
+ * Applies the bleed/trim/safe structure to the card container. The card
+ * itself sizes to --pc-trim-w × --pc-trim-h; content blocks live within
+ * the safe zone.
+ */
+
+.pc-card {
+  position: relative;
+  width: var(--pc-trim-w);
+  height: var(--pc-trim-h);
+  overflow: hidden;
+}
+
+.pc-card__safe {
+  position: absolute;
+  top: var(--pc-safe-inset);
+  left: var(--pc-safe-inset);
+  right: var(--pc-safe-inset);
+  bottom: var(--pc-safe-inset);
+}
