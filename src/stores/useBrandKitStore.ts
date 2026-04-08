@@ -30,6 +30,43 @@ export const useBrandKitStore = defineStore("brandKit", {
     isScraping: (state): boolean => {
       return state.scraping;
     },
+
+    // --- Brief #6 Task 5c: scrape progress for the progressive-loading UI ---
+    // These read from the new orchestrator progress fields on scrapeProgress.
+    // All optional — return sensible defaults so existing components that don't
+    // read them continue to work.
+
+    /** Current step label from the extraction pipeline (connecting/reading/...) */
+    scrapeStep: (state): string | null => {
+      return state.brandKit?.scrapeProgress?.step ?? null;
+    },
+
+    /** Human-readable progress message — "Downloading your photos..." */
+    scrapeMessage: (state): string | null => {
+      return state.brandKit?.scrapeProgress?.message ?? null;
+    },
+
+    /** How many steps of the orchestrator have finished (0-5). */
+    scrapeCompletedSteps: (state): number => {
+      return state.brandKit?.scrapeProgress?.completedSteps ?? 0;
+    },
+
+    /** Total steps in the orchestrator pipeline (5). Falls back to 5 if unset. */
+    scrapeTotalSteps: (state): number => {
+      return state.brandKit?.scrapeProgress?.totalSteps ?? 5;
+    },
+
+    /** 0-100 percentage for the progress bar. */
+    scrapeProgressPercent(): number {
+      const total = this.scrapeTotalSteps;
+      if (total <= 0) return 0;
+      return Math.round((this.scrapeCompletedSteps / total) * 100);
+    },
+
+    /** Which sources contributed to the current brand kit (firecrawl, google_places). */
+    extractionSources: (state): string[] => {
+      return state.brandKit?.extractionSources ?? [];
+    },
   },
 
   actions: {
