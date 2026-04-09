@@ -27,18 +27,20 @@ const layoutTypes: TemplateLayoutType[] = [
 ];
 const selectedLayout = ref<TemplateLayoutType>("full-bleed");
 
-const businessName = ref("Martinez Plumbing");
+// Phase 2 (02-01-03): Desert Diamond HVAC demo defaults.
+// All values from CONTEXT.md §specifics + D-10/D-11/D-12.
+const businessName = ref("Desert Diamond HVAC");
 const city = ref("Phoenix");
 const state = ref("AZ");
-const streetAddress = ref("123 Main St");
-const zip = ref("85032");
-const phone = ref("(602) 555-1234");
+const streetAddress = ref("1234 E McDowell Rd"); // TODO: confirm real Desert Diamond street address
+const zip = ref("85008"); // TODO: confirm real Desert Diamond ZIP
+const phone = ref("(623) 246-2377");
 // NOTE: website field is editable below (P0-C fix 2026-04-10). The previous
 // hard-coded "martinezplumbing.com" default leaked onto Desert Diamond
 // renders during the session 32 smoke test because there was no form
 // control to override it — Playwright injection could only touch exposed
 // fields.
-const website = ref("martinezplumbing.com");
+const website = ref("desertdiamondhvac.com");
 const yearsInBusiness = ref(12);
 // P0-E fix 2026-04-10: expose a QR code URL field so the dev route renders
 // a real QR on the back instead of passing "" through to CTABox (which
@@ -94,7 +96,7 @@ const qrCodeUrl = ref(
   `data:image/svg+xml;utf8,${encodeURIComponent(DEV_QR_SVG)}`
 );
 
-const headline = ref("Phoenix Homeowners: Your AC Inspection Is Overdue");
+const headline = ref("Phoenix Homeowners: Your AC Tune-Up Is Due");
 const offerText = ref("$277 VALUE FOR JUST $79");
 const offerTeaser = ref("$79 TUNE-UP");
 const urgencyText = ref("Offer expires May 15, 2026");
@@ -118,15 +120,16 @@ const riskReversal = ref("Free estimate · Satisfaction guaranteed");
 const credibilityLine = ref("Serving Phoenix since 2014");
 
 const rating = ref(4.9);
-const reviewCount = ref(127);
+const reviewCount = ref(2423);
 
+// TODO D-11: replace with real scraped Desert Diamond worker photo before final demo render
 const photoUrl = ref(
-  "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=1200"
+  "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1200"
 );
 
-// Brand colors — amber + navy defaults
-const brandPrimary = ref("#F59E0B");
-const brandDark = ref("#1E3A8A");
+// Brand colors — Desert Diamond HVAC: blue (trust) + orange (urgency/warmth)
+const brandPrimary = ref("#0488F5");
+const brandDark = ref("#F97B22");
 
 // Preview scale (for fitting the 9in card into the viewport — pt units
 // are absolute so we scale the wrapper, not the content, to preview
