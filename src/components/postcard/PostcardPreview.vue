@@ -27,6 +27,13 @@ const props = defineProps<{
   // the truncation fix is actually exercised in the real wizard flow,
   // not just the dev /dev/postcard-preview route).
   credibilityLine?: string;
+  // P1-A 2026-04-10: hide the "John Doe / 123 Main Street" mock address
+  // placeholder in contexts where the placeholder is distracting (wizard
+  // preview, review summary, sequence thumbnails). Threaded through from
+  // callers like StepDesign.vue, ReviewSummary.vue, SequenceView.vue to
+  // PostcardBack. Defaults to undefined (PostcardBack shows placeholder),
+  // which preserves existing behavior for any caller that doesn't set it.
+  hideAddressPlaceholder?: boolean;
 }>();
 
 const showBack = ref(false);
@@ -135,6 +142,7 @@ const scaledHeight = computed(() => CARD_NATURAL_H * scale.value);
           :trust-badges="trustBadges"
           :years-in-business="yearsInBusiness"
           :city="city"
+          :hide-address-placeholder="hideAddressPlaceholder"
         />
       </template>
 

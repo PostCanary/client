@@ -87,6 +87,7 @@ function nextCard() {
       :years-in-business="yearsInBusiness"
       :city="city"
       :credibility-line="credibilityLine"
+      :hide-address-placeholder="true"
       size="large"
     />
 

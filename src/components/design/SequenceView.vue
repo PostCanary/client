@@ -62,6 +62,7 @@ const LABELS: Record<string, string> = {
             :years-in-business="yearsInBusiness"
             :city="city"
             :credibility-line="credibilityLine"
+            :hide-address-placeholder="true"
             size="thumbnail"
           />
         </div>

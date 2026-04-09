@@ -29,33 +29,67 @@
   /* Back layout — tuned to DMM 202 actual clear zones (2026-04-09 research
    * in ~/postcanary/client/research-usps-dmm-201-clear-zones-2026-04-09.md).
    *
-   * Before: content=4.25", usps=4.25". Locked the whole right half.
-   * After:  content=5.5",  usps=3.0".  Reclaims 1.25" for content.
+   * 2026-04-09 Session 32 pass: content=4.25→5.5", usps=4.25→3.0". Used
+   * standard §202.5.1 barcode clear zone in the bottom-right 4.75"×0.625".
+   *
+   * 2026-04-10 Session 33 partial pivot: §202.5.3 in-block IMb placement
+   * (drake-memory ID 116). The barcode moves INSIDE the address block,
+   * which eliminates the separate 4.75"×0.625" clear zone at the bottom-
+   * right. That reclaims ~0.625in of vertical space but — critically —
+   * does NOT reclaim the horizontal width of the address block itself.
+   *
+   * Why we stayed at 3.0in instead of dropping to 2.25in:
+   *
+   * Commercial USPS automation OCR requires the recipient address block
+   * to fit a standard address line ("CITY, STATE ZIP+4") at 11pt without
+   * wrapping. The longest common case ("SAN FRANCISCO, CA 94105-1234") is
+   * ~2.6in wide at 11pt. Lob / PrintingForLess / LettrLabs all reserve
+   * ≥4.0in for the address block commercially. Dropping `--pc-usps-col-w`
+   * below ~2.75in forces wrapping on long ZIPs/cities, which breaks
+   * automation scan rates.
+   *
+   * The real §202.5.3 win — reclaiming the bottom 0.625" strip width-wise
+   * to push the content column from 5.5in to 6.25in — requires an
+   * absolute-positioning refactor where the address block is anchored to
+   * the bottom-right and the content column flows AROUND it using CSS
+   * grid / absolute layout, not a flat flex split. See the USPS research
+   * §5 "Required PostcardBack.vue refactor" section for the approach.
+   * That refactor is deferred post-demo — too risky for the 2026-04-20
+   * window. For now we keep the 3.0in col width and capture the visible
+   * wins from P0-A/C/E/F/G instead.
+   *
+   * TRACKING: `--pc-content-col-w 5.5in` / `--pc-usps-col-w 3.0in` (same
+   * as session 32). The §202.5.3 pivot is only partially applied — barcode
+   * removal below + `--pc-usps-barcode-*` marked dead, but column widths
+   * unchanged from the session 32 post-reclaim values.
+   *
+   * CONTINGENT on print partner confirming §202.5.3 support on the
+   * 2026-04-20 demo call. If they say no, PostcardBack's in-block barcode
+   * simulation needs to revert to a standalone clear-zone div. The CSS
+   * token changes are orthogonal — they stay as-is either way.
    *
    * DMM basis (pe.usps.com/text/dmm300/202.htm, updated 11-3-25 / 1-18-26):
-   * - §202.5.1.1 Barcode clear zone: 4.75" W × 0.625" H bottom-right only.
+   * - §202.5.3 (in-block IMb): barcode inside address block, no clear zone
+   *   required. Address block itself must be ≥0.625" from bottom edge
+   *   and barcode rightmost bar ≥0.5" from right edge.
    * - §202.2.1 OCR read area: address can be anywhere 0.5" from L/R edges.
    * - §202.3 Permit indicia: 0.5" min, within ~1.5" square upper-right corner.
    * - Industry address block (Lob / PrintingForLess / LettrLabs): ~4.0" × 2.625".
-   *
-   * Three of four commercial mailers we triangulated against (Lob,
-   * PrintingForLess, LettrLabs) reserve ~4.0" horizontally and leave the
-   * top ~1.5" of the right column free for logo / headline. Wise Pelican
-   * is the conservative end at 4.5". We picked 3.0" for the hard column
-   * (well inside the content-column overlap zone) with the understanding
-   * that the address block and barcode clear zone still have their own
-   * sub-tokens below for precise rendering.
    */
-  --pc-content-col-w:  5.5in;     /* Left content column (was 4.25in) */
-  --pc-usps-col-w:     3.0in;     /* Right USPS locked zone (was 4.25in) */
+  --pc-content-col-w:  5.5in;     /* Left content column (session 32 value) */
+  --pc-usps-col-w:     3.0in;     /* Right USPS locked zone (session 32 value) */
 
-  /* USPS sub-zone dimensions (for precise placement inside PostcardBack) */
+  /* USPS sub-zone dimensions (for precise placement inside PostcardBack).
+   * --pc-usps-barcode-* tokens retained for fallback revert — not consumed
+   * by PostcardBack.vue after the §202.5.3 pivot. Removing them would
+   * break a revert; leaving them in as dead config is cheap.
+   */
   --pc-usps-addr-block-w:   4.0in;    /* DMM industry standard address block width */
   --pc-usps-addr-block-h:   2.625in;  /* Address block height (Lob / PrintingForLess) */
   --pc-usps-addr-offset-b:  0.75in;   /* Address block bottom offset from safe area */
 
-  --pc-usps-barcode-w:      4.75in;   /* DMM §202.5.1.1 clear zone width */
-  --pc-usps-barcode-h:      0.625in;  /* DMM §202.5.1.1 clear zone height */
+  --pc-usps-barcode-w:      4.75in;   /* §202.5.1.1 clear zone width (DEAD under §202.5.3) */
+  --pc-usps-barcode-h:      0.625in;  /* §202.5.1.1 clear zone height (DEAD under §202.5.3) */
 
   --pc-usps-indicia-w:      1.5in;    /* §202.3 permit indicia region (1.5" square UR corner) */
   --pc-usps-indicia-h:      1.5in;
@@ -82,7 +116,17 @@
   --pc-offer-headline-weight: 700;
   --pc-offer-item-size:       12pt;  /* 11-13pt range */
   --pc-offer-item-weight:     400;
-  --pc-phone-back-size:       26pt;  /* 20-28pt range (biggest element on back) */
+  --pc-phone-back-size:       32pt;  /* Upsized 26→32pt 2026-04-10 (P0-G). The
+                                      * 20-28pt range from Brief #6 was the
+                                      * Draplin conservative floor — reference
+                                      * pro postcards (Viking HVAC, Frank's
+                                      * Dry Cleaners, PostcardMania "IMPORTANT
+                                      * REMINDER") run the back phone at
+                                      * ~32-40pt. 32pt fits the session-32
+                                      * 5.5in content column with room to
+                                      * spare; if we ever land the absolute-
+                                      * layout refactor that pushes content to
+                                      * 6.25in, push to 36pt. */
   --pc-phone-back-weight:     800;
   --pc-review-quote-size:     12pt;  /* 11-12pt range */
   --pc-review-quote-weight:   400;

@@ -38,6 +38,14 @@ const props = defineProps<{
   trustBadges?: TrustBadge[];
   yearsInBusiness?: number | null;
   city?: string;                 // For "Serving {city} since {year}" local proof
+  // P1-A fix 2026-04-10: hide the "John Doe / 123 Main Street" placeholder
+  // in the address block when previewing (dev route + wizard preview). In
+  // production the address block is populated at mail-merge time by the
+  // print partner's automation from the Melissa Data list, so the preview
+  // placeholder is meaningless — and Drake flagged it as distracting
+  // during session 32 visual review. Defaults to showing the placeholder
+  // (real/print mode) to preserve existing behavior.
+  hideAddressPlaceholder?: boolean;
 }>();
 
 // Brand color defaults — muted teal + navy — same fallback as PostcardFront.
@@ -46,11 +54,16 @@ const accent = computed(() => props.brandColors?.[0] ?? "#47bfa9");
 
 const textOnWhite = computed(() => ensureContrast("#333333", "#FFFFFF"));
 
-// Offer items: V1 ships without structured item breakdowns because the
-// existing CardDesign shape doesn't have them. Task 10 (AI generation
-// updates) will populate structured items on the server. For V1, we pass
-// an empty items list and the OfferBox just renders the headline + deadline.
-const offerItems = computed(() => [] as { label: string; value?: string }[]);
+// Offer items: pulled directly from `card.resolvedContent.offerItems`,
+// which is populated by:
+//   1. Server AI generator (usePostcardGenerator.ts path) — TODO Task 10
+//   2. Dev route's mock CardDesign (for P0-F visual verification)
+//   3. Customer overrides via the Design Studio editor (V1.1)
+// Back-compat: if offerItems is missing or empty, the OfferBox renders
+// just the headline + deadline — same as before 2026-04-10.
+const offerItems = computed(
+  () => props.card.resolvedContent.offerItems ?? []
+);
 
 // Local proof line — "Serving {city} since {year}" when we have both,
 // otherwise fall back to whichever we have.
@@ -224,25 +237,62 @@ const hasRating = computed(
              the 6" card height at 1.0 scale. -->
       </div>
 
-      <!-- RIGHT: USPS locked zone (preserved) -->
+      <!-- RIGHT: USPS locked zone. Width reclaimed from 4.25in → 3.0in in
+           session 32 (P0 #2). A further reclaim to 2.25in was attempted in
+           session 33 as part of the §202.5.3 in-block IMb pivot but
+           reverted — OCR requires ≥2.75in for long addresses at 11pt, and
+           true 2.25in requires an absolute-layout refactor (see
+           print-scale.css comment). The §202.5.3 pivot DID land for the
+           barcode itself: the standalone bottom-right 4.75"×0.625" clear
+           zone is gone, replaced by an in-block IMb simulation directly
+           under the address lines (drake-memory ID 116). -->
       <div
         class="relative flex-1"
         :style="{ width: 'var(--pc-usps-col-w)' }"
       >
         <LockedZoneOverlay />
         <div class="p-3 flex flex-col justify-between h-full">
-          <!-- Recipient address block — centered vertically per USPS -->
+          <!-- Recipient address block — centered vertically. Includes a
+               single-line IMb barcode placeholder inside the block
+               (§202.5.3 in-block IMb). The 2pt horizontal rule simulates
+               the printed barcode bars for preview purposes; production
+               rendering uses an actual font-based or SVG IMb glyph. -->
+          <!-- Recipient address block + in-block IMb. The address text
+               placeholder hides via v-if under hideAddressPlaceholder (P1-A
+               fix — Drake flagged distracting mock names in preview mode).
+               The IMb bar block stays rendered either way so the §202.5.3
+               in-block barcode location is always visually present, which
+               is the point of the §202.5.3 pivot (drake-memory ID 116). -->
           <div
             class="pc-body text-gray-500 mt-auto"
             :style="{ lineHeight: 1.35, marginTop: '0.8in' }"
           >
-            <div>John Doe</div>
-            <div>123 Main Street</div>
-            <div>Scottsdale, AZ 85251</div>
-          </div>
-          <!-- IMb barcode placeholder — bottom-aligned -->
-          <div class="mt-2">
-            <div class="h-3 bg-gray-200 rounded-sm" />
+            <template v-if="!hideAddressPlaceholder">
+              <div>John Doe</div>
+              <div>123 Main Street</div>
+              <div>Scottsdale, AZ 85251</div>
+            </template>
+            <!-- Reserved vertical space for the real address when the
+                 placeholder is hidden, so the IMb bar position and the
+                 column height budget don't shift between dev preview and
+                 production render. -->
+            <div
+              v-else
+              :style="{ height: '0.6in' }"
+              aria-hidden="true"
+            />
+            <!-- In-block IMb (simulated): bars under the address line.
+                 Real IMb glyph is rendered at print time by the print
+                 partner's automation. DMM §202.5.3(d): bars ≥0.028"
+                 below the info lines, rightmost bar ≥0.5" from piece
+                 right edge, total barcode ≤10.5" from right edge. -->
+            <div
+              class="mt-1"
+              :style="{
+                height: '0.15in',
+                backgroundImage: 'repeating-linear-gradient(to right, #333 0, #333 1pt, transparent 1pt, transparent 3pt)',
+              }"
+            />
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ function approve() {
           headline: "Your Neighbors Trust Us",
           offerText: "$50 Off Your First Service",
           offerTeaser: "$50 OFF",
+          offerItems: [], // Stub fallback — real value stack comes from AI generator
           photoUrl: "",
           reviewQuote: "Great service, very professional!",
           reviewerName: "John D.",

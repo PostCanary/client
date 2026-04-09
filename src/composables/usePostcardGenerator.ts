@@ -328,6 +328,14 @@ function generateCardsLocal(
             ? `Welcome back! ${offerText}`
             : offerText,
         offerTeaser: deriveTeaser(offerText, goalType),
+        // P0-F content density 2026-04-10: local generator returns empty
+        // offerItems because deriving per-service dollar values without
+        // customer input risks fabricating prices (Kennedy/Halbert: use
+        // THEIR offer, don't invent). Server AI generator (Brief #6 Task 10)
+        // will populate real items from brandKit.serviceTypes crossed with
+        // their published pricing. Until then, empty = OfferBox renders
+        // headline + deadline only (same as pre-2026-04-10 behavior).
+        offerItems: [],
         photoUrl: photo?.url ?? "",
         reviewQuote: review?.quote ?? "Professional, reliable service!",
         reviewerName: review?.reviewerName ?? "A Happy Customer",
@@ -411,6 +419,14 @@ function mapServerCardToDesign(
       headline: card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
       offerText: card.offer.text,
       offerTeaser: deriveTeaser(card.offer.text, goalType),
+      // Server mapper for AI-generated cards. The server currently does
+      // not return structured offer stack items (Brief #6 Task 10 is
+      // where that gets wired — the Kennedy/Halbert "anchored value
+      // stack" work). Until the server emits items, mapServerCardToDesign
+      // falls back to empty, same as the local generator. When the server
+      // adds an `offer_stack` field, map it here:
+      //     offerItems: (card.offer.stack ?? []).map(...)
+      offerItems: [],
       photoUrl: photo?.url ?? "",
       reviewQuote:
         card.selectedReview?.quote ?? "Professional, reliable service!",

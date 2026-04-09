@@ -33,13 +33,83 @@ const state = ref("AZ");
 const streetAddress = ref("123 Main St");
 const zip = ref("85032");
 const phone = ref("(602) 555-1234");
+// NOTE: website field is editable below (P0-C fix 2026-04-10). The previous
+// hard-coded "martinezplumbing.com" default leaked onto Desert Diamond
+// renders during the session 32 smoke test because there was no form
+// control to override it — Playwright injection could only touch exposed
+// fields.
 const website = ref("martinezplumbing.com");
 const yearsInBusiness = ref(12);
+// P0-E fix 2026-04-10: expose a QR code URL field so the dev route renders
+// a real QR on the back instead of passing "" through to CTABox (which
+// then silently renders nothing). In production this comes from the
+// brand kit / mail-campaigns endpoint; in dev we want to verify the
+// CTABox's QR render path.
+//
+// Default is an inline data: SVG of a QR-shaped pattern, not a hosted
+// image. Codex LOW finding 2026-04-10: external URLs (api.qrserver.com)
+// make the dev preview nondeterministic under offline/CSP restrictions
+// right before a demo. The SVG below is a 21×21 module pattern that
+// *looks* like a QR code for visual QA purposes — it does NOT decode to
+// a real URL. Customers will never see this; production QRs come from
+// the server's qr_codes.py service.
+const DEV_QR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" shape-rendering="crispEdges">
+<rect width="21" height="21" fill="#fff"/>
+<g fill="#000">
+<rect x="0" y="0" width="7" height="1"/><rect x="0" y="6" width="7" height="1"/>
+<rect x="0" y="0" width="1" height="7"/><rect x="6" y="0" width="1" height="7"/>
+<rect x="2" y="2" width="3" height="3"/>
+<rect x="14" y="0" width="7" height="1"/><rect x="14" y="6" width="7" height="1"/>
+<rect x="14" y="0" width="1" height="7"/><rect x="20" y="0" width="1" height="7"/>
+<rect x="16" y="2" width="3" height="3"/>
+<rect x="0" y="14" width="7" height="1"/><rect x="0" y="20" width="7" height="1"/>
+<rect x="0" y="14" width="1" height="7"/><rect x="6" y="14" width="1" height="7"/>
+<rect x="2" y="16" width="3" height="3"/>
+<rect x="8" y="0" width="1" height="1"/><rect x="10" y="0" width="1" height="2"/>
+<rect x="12" y="0" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/>
+<rect x="11" y="3" width="2" height="1"/><rect x="8" y="4" width="1" height="2"/>
+<rect x="10" y="5" width="3" height="1"/><rect x="9" y="7" width="1" height="1"/>
+<rect x="11" y="7" width="1" height="1"/><rect x="13" y="7" width="1" height="1"/>
+<rect x="8" y="8" width="1" height="1"/><rect x="10" y="8" width="1" height="2"/>
+<rect x="12" y="9" width="1" height="1"/><rect x="14" y="8" width="1" height="1"/>
+<rect x="16" y="8" width="2" height="1"/><rect x="19" y="8" width="1" height="1"/>
+<rect x="8" y="10" width="2" height="1"/><rect x="11" y="10" width="1" height="2"/>
+<rect x="13" y="10" width="1" height="1"/><rect x="15" y="10" width="2" height="1"/>
+<rect x="18" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/>
+<rect x="9" y="12" width="1" height="1"/><rect x="12" y="12" width="1" height="2"/>
+<rect x="14" y="12" width="1" height="1"/><rect x="16" y="12" width="1" height="2"/>
+<rect x="19" y="12" width="2" height="1"/><rect x="8" y="14" width="1" height="1"/>
+<rect x="10" y="14" width="2" height="1"/><rect x="13" y="14" width="1" height="1"/>
+<rect x="15" y="14" width="1" height="2"/><rect x="17" y="14" width="1" height="1"/>
+<rect x="20" y="14" width="1" height="1"/><rect x="9" y="16" width="1" height="2"/>
+<rect x="11" y="16" width="1" height="1"/><rect x="13" y="16" width="2" height="1"/>
+<rect x="16" y="16" width="1" height="1"/><rect x="18" y="16" width="2" height="1"/>
+<rect x="8" y="18" width="1" height="1"/><rect x="10" y="18" width="3" height="1"/>
+<rect x="14" y="18" width="1" height="1"/><rect x="16" y="18" width="1" height="2"/>
+<rect x="19" y="18" width="1" height="1"/><rect x="8" y="20" width="1" height="1"/>
+<rect x="11" y="20" width="1" height="1"/><rect x="13" y="20" width="2" height="1"/>
+<rect x="17" y="20" width="2" height="1"/><rect x="20" y="20" width="1" height="1"/>
+</g></svg>`;
+const qrCodeUrl = ref(
+  `data:image/svg+xml;utf8,${encodeURIComponent(DEV_QR_SVG)}`
+);
 
 const headline = ref("Phoenix Homeowners: Your AC Inspection Is Overdue");
 const offerText = ref("$277 VALUE FOR JUST $79");
 const offerTeaser = ref("$79 TUNE-UP");
 const urgencyText = ref("Offer expires May 15, 2026");
+// P0-F content density 2026-04-10: populate a sample value stack so the
+// OfferBox renders with ✓ items on every dev-route preview. Previously
+// PostcardBack was hardcoded to pass `[]`, which meant every preview
+// showed only the offer headline + deadline with zero body content —
+// reading as "corporate SaaS" next to Mail Shark references that pack
+// 3-5 checkmarked value items into the same vertical space.
+const offerItemsText = ref(
+  "23-Point Safety Check | $49 value\n" +
+    "Condenser Coil Cleaning | $79 value\n" +
+    "Refrigerant Level Check | $59 value\n" +
+    "Free Estimate on Any Repair | priceless"
+);
 const reviewQuote = ref(
   "Fixed our AC in under an hour on a 108-degree day. John was professional and saved us $500."
 );
@@ -70,6 +140,23 @@ const businessAddress = computed(
   () => `${streetAddress.value}, ${city.value}, ${state.value} ${zip.value}`
 );
 
+// Parse the textarea-formatted offer items. One per line, split on "|".
+// "Service Name | $49 value" → { label: "Service Name", value: "$49 value" }
+// Lines without "|" become label-only items (no right-aligned value).
+// Empty lines + whitespace are filtered out.
+const offerItems = computed(() =>
+  offerItemsText.value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [labelRaw, valueRaw] = line.split("|").map((s) => s.trim());
+      return valueRaw
+        ? { label: labelRaw, value: valueRaw }
+        : { label: labelRaw };
+    })
+);
+
 const trustBadges = computed<TrustBadge[]>(() => [
   { type: "bbb", label: "BBB A+", confidence: "high" },
   { type: "angi", label: "Angi Certified", confidence: "high" },
@@ -86,6 +173,7 @@ const mockCard = computed<CardDesign>(() => ({
     headline: headline.value,
     offerText: offerText.value,
     offerTeaser: offerTeaser.value,
+    offerItems: offerItems.value,
     photoUrl: photoUrl.value,
     reviewQuote: reviewQuote.value,
     reviewerName: reviewerName.value,
@@ -100,7 +188,7 @@ const mockCard = computed<CardDesign>(() => ({
     licenseNumber: "ROC #123456",
     companyAddress: businessAddress.value,
     websiteUrl: website.value,
-    qrCodeUrl: "",
+    qrCodeUrl: qrCodeUrl.value,
   },
   headlineCandidates: [],
   offerReason: "",
@@ -168,6 +256,16 @@ const mockCard = computed<CardDesign>(() => ({
           <input v-model="urgencyText" class="border rounded px-2 py-1" />
         </label>
         <label class="flex flex-col col-span-2 md:col-span-4">
+          <span class="text-gray-600 text-xs mb-0.5">
+            Offer value stack (one per line, format: "Label | $value")
+          </span>
+          <textarea
+            v-model="offerItemsText"
+            rows="5"
+            class="border rounded px-2 py-1 font-mono text-xs"
+          />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-4">
           <span class="text-gray-600 text-xs mb-0.5">Review quote</span>
           <input v-model="reviewQuote" class="border rounded px-2 py-1" />
         </label>
@@ -215,6 +313,14 @@ const mockCard = computed<CardDesign>(() => ({
         <label class="flex flex-col col-span-2">
           <span class="text-gray-600 text-xs mb-0.5">Hero photo URL</span>
           <input v-model="photoUrl" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Website URL (back CTA)</span>
+          <input v-model="website" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-4">
+          <span class="text-gray-600 text-xs mb-0.5">QR code image URL (back)</span>
+          <input v-model="qrCodeUrl" class="border rounded px-2 py-1" />
         </label>
         <label class="flex flex-col col-span-2 md:col-span-4">
           <span class="text-gray-600 text-xs mb-0.5">Preview scale — {{ previewScale.toFixed(2) }}x (print output is always at physical size)</span>
@@ -290,6 +396,7 @@ const mockCard = computed<CardDesign>(() => ({
               :trust-badges="trustBadges"
               :years-in-business="yearsInBusiness"
               :city="city"
+              :hide-address-placeholder="true"
             />
           </div>
         </div>

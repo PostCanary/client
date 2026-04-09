@@ -202,6 +202,7 @@ watch(
             :years-in-business="brandKit?.yearsInBusiness ?? null"
             :city="brandKitCity"
             :credibility-line="brandKitCredibility"
+            :hide-address-placeholder="true"
             size="large"
           />
         </div>

@@ -206,6 +206,18 @@ export type TemplateLayoutType =
 
 export type CardPurpose = 'offer' | 'proof' | 'last_chance'
 
+// Value-stack item for the OfferBox. One checkmarked line like
+// "✓ 23-Point Safety Check  $49 value". The `value` field is the
+// right-aligned dollar value; the label is the service description.
+// NEW 2026-04-10 (P0-F content density): the OfferBox component has
+// accepted items[] since Session 31, but nothing was populating them —
+// PostcardBack was passing `[]` unconditionally. Persisting items on
+// CardDesign lets the generator or manual overrides fill them.
+export interface OfferStackItem {
+  label: string
+  value?: string
+}
+
 export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
@@ -215,6 +227,7 @@ export interface CardDesign {
     headline?: string
     offerText?: string
     offerTeaser?: string               // NEW 2026-04-09: short (≤4 word) front-of-card teaser
+    offerItems?: OfferStackItem[]      // NEW 2026-04-10: stacked value items on back OfferBox
     reviewQuote?: string
     reviewerName?: string
     urgencyText?: string
@@ -225,6 +238,7 @@ export interface CardDesign {
     headline: string
     offerText: string                  // full stacked offer (back)
     offerTeaser: string                // short front-of-card teaser, e.g. "$79 TUNE-UP"
+    offerItems: OfferStackItem[]       // stacked value items (≥0, usually 3-5)
     photoUrl: string
     reviewQuote: string
     reviewerName: string

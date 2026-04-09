@@ -72,6 +72,19 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
   if (props.offerBadgeVariant) return props.offerBadgeVariant;
   return props.layoutType === "bold-graphic" ? "burst" : "ribbon";
 });
+
+// P0-A fix 2026-04-10: when the ribbon variant is active, it self-positions
+// in the top-right corner — the same zone where most layouts put the
+// credibility badge (or the star rating on review-forward). They collide,
+// and the ribbon has z-index priority, so the credibility becomes invisible
+// to the customer. Drake caught this at end of session 32 ("credibility
+// hidden behind ribbon"). Fix: hide the top-right slot on layouts where it
+// collides. The burst variant positions mid-right and does NOT collide, so
+// bold-graphic keeps its credibility badge. The business-name/logo slot on
+// the top-LEFT is untouched (it doesn't collide with the ribbon).
+const hideTopRightBadge = computed(
+  () => hasOfferTeaser.value && badgeVariant.value === "ribbon"
+);
 </script>
 
 <template>
@@ -129,7 +142,9 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
       />
       <!-- Top row: logo left, badge right. Credibility truncates with
            ellipsis when the extracted string is too long for the space
-           (P0 #4 fix — was clipping at the card edge). -->
+           (P0 #4 fix — was clipping at the card edge). Top-right badge
+           hides when OfferBadge ribbon is rendered to avoid z-order
+           collision (P0-A fix 2026-04-10). -->
       <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3 gap-2">
         <img
           v-if="logoUrl"
@@ -140,6 +155,7 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
         />
         <span v-else class="pc-badge text-white/80 flex-none">{{ businessName }}</span>
         <span
+          v-if="!hideTopRightBadge"
           class="pc-badge text-white/90 truncate"
           :style="{ maxWidth: '45%', display: 'inline-block' }"
         >
@@ -187,6 +203,7 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
             />
             <span v-else class="pc-badge opacity-80 flex-none">{{ businessName }}</span>
             <span
+              v-if="!hideTopRightBadge"
               class="pc-badge opacity-80 truncate"
               :style="{ maxWidth: '55%', display: 'inline-block' }"
             >
@@ -228,6 +245,7 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
             />
             <span v-else class="pc-badge text-white drop-shadow flex-none">{{ businessName }}</span>
             <span
+              v-if="!hideTopRightBadge"
               class="pc-badge text-white drop-shadow truncate"
               :style="{ maxWidth: '45%', display: 'inline-block' }"
             >
@@ -338,6 +356,7 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
         />
         <span v-else class="pc-badge text-gray-700 bg-white/85 px-2 rounded flex-none">{{ businessName }}</span>
         <span
+          v-if="!hideTopRightBadge"
           class="pc-badge text-gray-700 bg-white/85 px-2 rounded truncate"
           :style="{ maxWidth: '45%', display: 'inline-block' }"
         >
@@ -370,7 +389,10 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
           alt=""
         />
         <span v-else class="pc-badge text-white/80 flex-none">{{ businessName }}</span>
-        <span class="pc-badge text-white/90 flex-none">★★★★★</span>
+        <span
+          v-if="!hideTopRightBadge"
+          class="pc-badge text-white/90 flex-none"
+        >★★★★★</span>
       </div>
       <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
         <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>

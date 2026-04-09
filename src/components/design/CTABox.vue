@@ -5,8 +5,9 @@ import { safeTextColor } from "@/utils/contrast";
 // Brief #6 Task 8 + P0 #3 — CTABox.
 //
 // High-contrast "THIS IS HOW YOU RESPOND" block (Gendusa fix §3). Phone
-// number is the biggest element on the back at --pc-phone-back-size (26pt).
-// Website is secondary.
+// number is the biggest element on the back at --pc-phone-back-size (32pt
+// after session-33 P0-G upsize from 26pt — pro postcards run 32-40pt on
+// the back phone). Website is secondary.
 //
 // qrCodeUrl is REQUIRED (P0 #3, V1 spec line 1008: "QR code minimum: 0.75"
 // × 0.75" on printed card. Enforced by template."). The server generates
