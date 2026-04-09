@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
-import { generateCards } from "@/composables/usePostcardGenerator";
+import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
 import { getRecommendedTemplateSet } from "@/data/templates";
 import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 import SequenceView from "@/components/design/SequenceView.vue";
@@ -65,6 +65,15 @@ function updateCardField(field: string, value: string) {
   (activeCard.value.overrides as Record<string, string>)[field] = value;
   // Update resolved content
   (activeCard.value.resolvedContent as Record<string, any>)[field] = value;
+  // When offerText changes, keep offerTeaser in sync so the front-of-card
+  // badge doesn't show a stale teaser after the user edits the back offer.
+  // (Fixes Codex Pass 2 HIGH finding — demo-visible contradiction.)
+  if (field === "offerText") {
+    activeCard.value.resolvedContent.offerTeaser = deriveTeaser(
+      value,
+      goalType.value,
+    );
+  }
   commitDesign();
 }
 

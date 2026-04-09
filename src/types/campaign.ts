@@ -214,6 +214,7 @@ export interface CardDesign {
   overrides: {                         // only what customer CHANGED from auto-generated
     headline?: string
     offerText?: string
+    offerTeaser?: string               // NEW 2026-04-09: short (≤4 word) front-of-card teaser
     reviewQuote?: string
     reviewerName?: string
     urgencyText?: string
@@ -222,7 +223,8 @@ export interface CardDesign {
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
-    offerText: string
+    offerText: string                  // full stacked offer (back)
+    offerTeaser: string                // short front-of-card teaser, e.g. "$79 TUNE-UP"
     photoUrl: string
     reviewQuote: string
     reviewerName: string

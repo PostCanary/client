@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { CardDesign, TemplateLayoutType } from "@/types/campaign";
 import { ensureContrast, safeTextColor } from "@/utils/contrast";
+import OfferBadge from "@/components/design/OfferBadge.vue";
 
 // Brief #6 Task 7 — PostcardFront rewrite.
 //
@@ -12,7 +13,11 @@ import { ensureContrast, safeTextColor } from "@/utils/contrast";
 // - Logo top-left (0.75-1.5" wide), "Licensed & Insured" top-right
 // - Phone in a contrast bar at the bottom, 18-24pt bold
 // - Credibility line under headline, 12-14pt
-// - NO offer text on front — offer belongs on back (Gendusa fix)
+// - Single short offer teaser on front (OfferBadge — ribbon by default).
+//   The STACKED value-stack offer still lives on the back OfferBox.
+//   (Reverses the 2026-04-03 "no offer on front" decision per visual taste
+//   audit 2026-04-09 — reference corpus showed front-offer teaser in ~100%
+//   of PostcardMania HVAC / ~90% of Mail Shark oversized samples.)
 // - Headline must include city/neighborhood (AI prompt enforces — Halbert fix)
 // - All 6 layoutTypes share the SAME type scale + spacing. Variety comes from
 //   photo placement only (Draplin fix — unified visual language).
@@ -28,6 +33,11 @@ const props = defineProps<{
   // Credibility line — passed from parent or derived from brandKit.
   // "Licensed & Insured" | "Serving Phoenix since 2014" | "24/7 Emergency Service"
   credibilityLine?: string;
+  // OfferBadge variant — "ribbon" by default for all layouts with a photo
+  // (ribbon sits diagonally across the top-right corner, doesn't fight
+  // the top-row content). "burst" works better on bold-graphic which has
+  // no photo to compete with. Override per-layout via template picker.
+  offerBadgeVariant?: "burst" | "ribbon";
 }>();
 
 // Brand color defaults (muted teal + navy). These are only used when the
@@ -48,6 +58,20 @@ const credibility = computed(
 );
 
 const hasPhoto = computed(() => !!props.card.resolvedContent.photoUrl);
+
+// Offer teaser — empty string / whitespace-only hides the badge entirely.
+const offerTeaser = computed(
+  () => props.card.resolvedContent.offerTeaser ?? ""
+);
+const hasOfferTeaser = computed(() => offerTeaser.value.trim().length > 0);
+
+// Badge variant: explicit prop wins; otherwise bold-graphic (no photo) gets
+// burst (centered, eye-catching), every other layout gets ribbon (doesn't
+// fight existing top-row content).
+const badgeVariant = computed<"burst" | "ribbon">(() => {
+  if (props.offerBadgeVariant) return props.offerBadgeVariant;
+  return props.layoutType === "bold-graphic" ? "burst" : "ribbon";
+});
 </script>
 
 <template>
@@ -58,6 +82,34 @@ const hasPhoto = computed(() => !!props.card.resolvedContent.photoUrl);
     class="pc-card relative rounded-lg overflow-hidden bg-white"
     :style="{ aspectRatio: '9 / 6' }"
   >
+    <!-- ============================================================
+         OFFER BADGE — single shared element, rendered above all layout
+         content via absolute positioning + z-index 5. Ribbon variant
+         self-positions in the top-right corner. Burst variant needs
+         a wrapper to control its position on the card.
+         ============================================================ -->
+    <template v-if="hasOfferTeaser">
+      <OfferBadge
+        v-if="badgeVariant === 'ribbon'"
+        :text="offerTeaser"
+        variant="ribbon"
+        :primary-color="primary"
+        :dark-color="dark"
+      />
+      <div
+        v-else
+        class="absolute z-10"
+        :style="{ top: '1.6in', right: '0.5in' }"
+      >
+        <OfferBadge
+          :text="offerTeaser"
+          variant="burst"
+          :primary-color="primary"
+          :dark-color="dark"
+        />
+      </div>
+    </template>
+
     <!-- ============================================================
          FULL-BLEED: photo fills the card, overlay bar at bottom holds
          headline + credibility + phone. The most common layout.

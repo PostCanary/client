@@ -38,6 +38,7 @@ const yearsInBusiness = ref(12);
 
 const headline = ref("Phoenix Homeowners: Your AC Inspection Is Overdue");
 const offerText = ref("$277 VALUE FOR JUST $79");
+const offerTeaser = ref("$79 TUNE-UP");
 const urgencyText = ref("Offer expires May 15, 2026");
 const reviewQuote = ref(
   "Fixed our AC in under an hour on a 108-degree day. John was professional and saved us $500."
@@ -84,6 +85,7 @@ const mockCard = computed<CardDesign>(() => ({
   resolvedContent: {
     headline: headline.value,
     offerText: offerText.value,
+    offerTeaser: offerTeaser.value,
     photoUrl: photoUrl.value,
     reviewQuote: reviewQuote.value,
     reviewerName: reviewerName.value,
@@ -156,6 +158,10 @@ const mockCard = computed<CardDesign>(() => ({
         <label class="flex flex-col col-span-2 md:col-span-2">
           <span class="text-gray-600 text-xs mb-0.5">Offer text (back)</span>
           <input v-model="offerText" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Offer teaser (front badge, ≤4 words)</span>
+          <input v-model="offerTeaser" class="border rounded px-2 py-1" maxlength="24" />
         </label>
         <label class="flex flex-col col-span-2 md:col-span-2">
           <span class="text-gray-600 text-xs mb-0.5">Offer deadline</span>
