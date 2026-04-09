@@ -208,6 +208,16 @@ const routes: RouteRecordRaw[] = [
     meta: { title: `Accept Invitation • ${BRAND.name}`, marketing: true },
   },
 
+  // ── Dev-only preview routes ───────
+  // Not linked from navigation. Used for visual verification of postcard
+  // templates without running the full wizard or hitting the backend.
+  {
+    path: "/dev/postcard-preview",
+    name: "DevPostcardPreview",
+    component: () => import("@/pages/dev/PostcardPreview.vue"),
+    meta: { title: "Postcard Preview (dev)", marketing: false },
+  },
+
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 

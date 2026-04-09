@@ -1,0 +1,300 @@
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import PostcardFront from "@/components/postcard/PostcardFront.vue";
+import PostcardBack from "@/components/postcard/PostcardBack.vue";
+import type {
+  CardDesign,
+  TemplateLayoutType,
+  TrustBadge,
+} from "@/types/campaign";
+
+// Brief #6 Phase 2 dev-only preview route.
+// Renders PostcardFront + PostcardBack with editable mock props so Drake
+// can visually verify template changes without running the wizard or
+// booting a real backend. Not linked from navigation — open via URL:
+//     http://localhost:5173/dev/postcard-preview
+// (or whichever port Vite is on — 5175 right now)
+
+// --- Editable state ---
+
+const layoutTypes: TemplateLayoutType[] = [
+  "full-bleed",
+  "side-split",
+  "photo-top",
+  "bold-graphic",
+  "before-after",
+  "review-forward",
+];
+const selectedLayout = ref<TemplateLayoutType>("full-bleed");
+
+const businessName = ref("Martinez Plumbing");
+const city = ref("Phoenix");
+const state = ref("AZ");
+const streetAddress = ref("123 Main St");
+const zip = ref("85032");
+const phone = ref("(602) 555-1234");
+const website = ref("martinezplumbing.com");
+const yearsInBusiness = ref(12);
+
+const headline = ref("Phoenix Homeowners: Your AC Inspection Is Overdue");
+const offerText = ref("$277 VALUE FOR JUST $79");
+const urgencyText = ref("Offer expires May 15, 2026");
+const reviewQuote = ref(
+  "Fixed our AC in under an hour on a 108-degree day. John was professional and saved us $500."
+);
+const reviewerName = ref("Sarah M.");
+const riskReversal = ref("Free estimate · Satisfaction guaranteed");
+const credibilityLine = ref("Serving Phoenix since 2014");
+
+const rating = ref(4.9);
+const reviewCount = ref(127);
+
+const photoUrl = ref(
+  "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=1200"
+);
+
+// Brand colors — amber + navy defaults
+const brandPrimary = ref("#F59E0B");
+const brandDark = ref("#1E3A8A");
+
+// Preview scale (for fitting the 9in card into the viewport — pt units
+// are absolute so we scale the wrapper, not the content, to preview
+// smaller than physical print size)
+const previewScale = ref(1.0);
+
+// --- Derived ---
+
+const brandColors = computed(() => [brandPrimary.value, brandDark.value]);
+const businessAddress = computed(
+  () => `${streetAddress.value}, ${city.value}, ${state.value} ${zip.value}`
+);
+
+const trustBadges = computed<TrustBadge[]>(() => [
+  { type: "bbb", label: "BBB A+", confidence: "high" },
+  { type: "angi", label: "Angi Certified", confidence: "high" },
+  { type: "homeadvisor", label: "HomeAdvisor Top Rated", confidence: "medium" },
+]);
+
+const mockCard = computed<CardDesign>(() => ({
+  cardNumber: 1,
+  cardPurpose: "offer",
+  templateId: `${selectedLayout.value}-preview`,
+  previewImageUrl: "",
+  overrides: {},
+  resolvedContent: {
+    headline: headline.value,
+    offerText: offerText.value,
+    photoUrl: photoUrl.value,
+    reviewQuote: reviewQuote.value,
+    reviewerName: reviewerName.value,
+    phoneNumber: phone.value,
+    urgencyText: urgencyText.value,
+    riskReversal: riskReversal.value,
+    trustSignals: [],
+  },
+  backContent: {
+    guarantee: "100% Satisfaction Guaranteed",
+    certifications: ["Licensed", "Insured", "Bonded"],
+    licenseNumber: "ROC #123456",
+    companyAddress: businessAddress.value,
+    websiteUrl: website.value,
+    qrCodeUrl: "",
+  },
+  headlineCandidates: [],
+  offerReason: "",
+  reviewReason: "",
+  templateReason: "",
+}));
+</script>
+
+<template>
+  <div class="min-h-screen bg-gray-100 p-6 font-sans">
+    <div class="max-w-6xl mx-auto">
+      <header class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+          Postcard Preview — Brief #6 Phase 2
+        </h1>
+        <p class="text-sm text-gray-600 mt-1">
+          Dev-only route. Live mock data. Edit any field below to see the
+          templates update.
+        </p>
+        <p class="text-xs text-gray-500 mt-2">
+          Print size is 9×6&quot; (864×576px at 96dpi). Use the scale slider
+          below to shrink the preview without distorting the pt-based type
+          scale.
+        </p>
+      </header>
+
+      <!-- Controls -->
+      <div class="bg-white rounded-lg shadow-sm p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Layout</span>
+          <select v-model="selectedLayout" class="border rounded px-2 py-1">
+            <option v-for="l in layoutTypes" :key="l" :value="l">{{ l }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Business name</span>
+          <input v-model="businessName" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">City</span>
+          <input v-model="city" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Phone</span>
+          <input v-model="phone" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Headline</span>
+          <input v-model="headline" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Credibility line (front badge)</span>
+          <input v-model="credibilityLine" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Offer text (back)</span>
+          <input v-model="offerText" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Offer deadline</span>
+          <input v-model="urgencyText" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-4">
+          <span class="text-gray-600 text-xs mb-0.5">Review quote</span>
+          <input v-model="reviewQuote" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Reviewer name</span>
+          <input v-model="reviewerName" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Rating</span>
+          <input
+            v-model.number="rating"
+            type="number"
+            step="0.1"
+            min="0"
+            max="5"
+            class="border rounded px-2 py-1"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Review count</span>
+          <input
+            v-model.number="reviewCount"
+            type="number"
+            min="0"
+            class="border rounded px-2 py-1"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Years in business</span>
+          <input
+            v-model.number="yearsInBusiness"
+            type="number"
+            min="0"
+            class="border rounded px-2 py-1"
+          />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Primary color (accent)</span>
+          <input v-model="brandPrimary" type="color" class="border rounded px-2 py-1 h-9" />
+        </label>
+        <label class="flex flex-col">
+          <span class="text-gray-600 text-xs mb-0.5">Dark brand color</span>
+          <input v-model="brandDark" type="color" class="border rounded px-2 py-1 h-9" />
+        </label>
+        <label class="flex flex-col col-span-2">
+          <span class="text-gray-600 text-xs mb-0.5">Hero photo URL</span>
+          <input v-model="photoUrl" class="border rounded px-2 py-1" />
+        </label>
+        <label class="flex flex-col col-span-2 md:col-span-4">
+          <span class="text-gray-600 text-xs mb-0.5">Preview scale — {{ previewScale.toFixed(2) }}x (print output is always at physical size)</span>
+          <input
+            v-model.number="previewScale"
+            type="range"
+            min="0.4"
+            max="1.2"
+            step="0.05"
+          />
+        </label>
+      </div>
+
+      <!-- Front card -->
+      <section class="mb-8">
+        <h2 class="text-sm font-bold text-gray-700 mb-2">
+          PostcardFront — {{ selectedLayout }}
+        </h2>
+        <div
+          class="bg-white rounded-lg shadow-md overflow-hidden"
+          :style="{
+            width: `${864 * previewScale}px`,
+            height: `${576 * previewScale}px`,
+          }"
+        >
+          <div
+            :style="{
+              transform: `scale(${previewScale})`,
+              transformOrigin: 'top left',
+              width: '864px',
+              height: '576px',
+            }"
+          >
+            <PostcardFront
+              :card="mockCard"
+              :layout-type="selectedLayout"
+              :brand-colors="brandColors"
+              :business-name="businessName"
+              :logo-url="null"
+              :credibility-line="credibilityLine"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Back card -->
+      <section>
+        <h2 class="text-sm font-bold text-gray-700 mb-2">
+          PostcardBack — 6-block layout
+        </h2>
+        <div
+          class="bg-white rounded-lg shadow-md overflow-hidden"
+          :style="{
+            width: `${864 * previewScale}px`,
+            height: `${576 * previewScale}px`,
+          }"
+        >
+          <div
+            :style="{
+              transform: `scale(${previewScale})`,
+              transformOrigin: 'top left',
+              width: '864px',
+              height: '576px',
+            }"
+          >
+            <PostcardBack
+              :card="mockCard"
+              :brand-colors="brandColors"
+              :business-name="businessName"
+              :business-address="businessAddress"
+              :rating="rating"
+              :review-count="reviewCount"
+              :trust-badges="trustBadges"
+              :years-in-business="yearsInBusiness"
+              :city="city"
+            />
+          </div>
+        </div>
+      </section>
+
+      <footer class="mt-8 text-xs text-gray-500">
+        <p>
+          This route is dev-only and not linked from navigation. Not built into
+          production bundles (see router.ts meta.dev guard).
+        </p>
+      </footer>
+    </div>
+  </div>
+</template>
