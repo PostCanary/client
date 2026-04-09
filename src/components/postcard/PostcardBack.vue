@@ -191,7 +191,18 @@ const hasRating = computed(
           :primary-color="primary"
         />
 
-        <!-- Block 3: Rating + one review quote -->
+        <!-- Block 3: Rating + compact review quote (1 line, truncated
+             at column width via nowrap + ellipsis). The Brief #6 locked
+             spec requires the review quote on the back (F-pattern:
+             offer → value stack → review → phone → QR → trust → urgency,
+             postcanary-v1-build-decisions.md §881). Removing it entirely
+             would be a spec violation. The full 2-line italic paragraph
+             from Brief #6 Phase 2 was ~55px which — after P0-F added
+             value-stack items — pushed trust badges off the 6" card.
+             Compromise: compact to a single line, drop the reviewer
+             name on the back (name + first sentence still render on
+             the front in the review-forward layout), use the tight end
+             of the 11-12pt spec range. ~18px block height. -->
         <div v-if="hasRating || card.resolvedContent.reviewQuote" class="flex flex-col" :style="{ gap: 'var(--pc-gutter)' }">
           <RatingBadge
             v-if="hasRating && reviewCount"
@@ -202,19 +213,26 @@ const hasRating = computed(
           <p
             v-if="card.resolvedContent.reviewQuote"
             class="pc-review-quote"
-            :style="{ color: textOnWhite }"
+            :style="{
+              color: textOnWhite,
+              fontSize: '11pt',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              margin: 0,
+            }"
           >
             "{{ card.resolvedContent.reviewQuote }}"
-            <span
-              class="pc-credibility"
-              :style="{ fontStyle: 'normal', marginLeft: '0.06in', opacity: 0.8 }"
-            >
-              — {{ card.resolvedContent.reviewerName }}
-            </span>
           </p>
         </div>
 
-        <!-- Block 4: Trust badges row -->
+        <!-- Block 4: Trust badges row. `show-licensed-insured` adds the
+             "Licensed & Insured" text badge into this row, which is why
+             the separate risk-reversal Block 5 (below) was removed
+             2026-04-10 — it was duplicating the same credibility signal
+             the trust badge row already carries, and its vertical cost
+             was pushing the trust badges off the 6" card height after
+             P0-F added the OfferBox value stack. -->
         <TrustBadges
           v-if="(trustBadges && trustBadges.length) || true"
           :badges="trustBadges ?? []"
@@ -222,19 +240,25 @@ const hasRating = computed(
           :primary-color="primary"
         />
 
-        <!-- Block 5: Risk reversal -->
-        <p
-          v-if="card.resolvedContent.riskReversal"
-          class="pc-body"
-          :style="{ color: textOnWhite, fontWeight: 600 }"
-        >
-          {{ card.resolvedContent.riskReversal }}
-        </p>
-
-        <!-- Block 6 (local proof) removed 2026-04-09 — merged into the
-             top-strip return address as "Serving [city] since [year]" per
-             visual audit P1 #6. Keeping it as a separate block overflowed
-             the 6" card height at 1.0 scale. -->
+        <!-- Block 5 (risk reversal) removed 2026-04-10 (P0-F follow-up).
+             The specific text ("Free estimate · Satisfaction guaranteed")
+             is redundant with the Licensed & Insured text badge already
+             emitted by TrustBadges above, which carries the same
+             risk-reversal function for the recipient. Removing saved
+             ~25px of vertical space which — combined with the Block 3
+             review-quote compression and the tightened CSS spacing
+             tokens — is what let the value-stack items in OfferBox fit
+             inside the content budget.
+             NOTE: resolvedContent.riskReversal is still populated by
+             usePostcardGenerator and is still part of the CardDesign
+             type, but NO component currently renders it as a visible
+             element on either side of the card. It's effectively dead
+             data until one of the layouts surfaces it. Not removing
+             the field from the type to avoid a larger breaking change
+             during the demo crunch — revisit post-demo.
+             Block 6 (local proof) removed 2026-04-09 — merged into the
+             top-strip return address as "Serving [city] since [year]"
+             per visual audit P1 #6. -->
       </div>
 
       <!-- RIGHT: USPS locked zone. Width reclaimed from 4.25in → 3.0in in

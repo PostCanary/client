@@ -114,7 +114,10 @@
   /* Back: the closer */
   --pc-offer-headline-size:   22pt;  /* 20-24pt range */
   --pc-offer-headline-weight: 700;
-  --pc-offer-item-size:       12pt;  /* 11-13pt range */
+  --pc-offer-item-size:       11pt;  /* 11-13pt range — was 12pt; dropped
+                                      * 2026-04-10 to shave ~5px across 3
+                                      * value-stack rows (P0-F follow-up,
+                                      * fits the tightened content budget). */
   --pc-offer-item-weight:     400;
   --pc-phone-back-size:       32pt;  /* Upsized 26→32pt 2026-04-10 (P0-G). The
                                       * 20-28pt range from Brief #6 was the
@@ -146,10 +149,21 @@
    * ------------------------------------------------------------------
    * Consistent gutters and section gaps across all 6 template layouts,
    * so variety comes from photo placement, not different paddings.
+   *
+   * Tightened 2026-04-10 (P0-F follow-up): the previous values wasted
+   * ~50px of vertical space on the back, which pushed the trust badges
+   * off the 6" card after P0-F added the value-stack items. New values
+   * match Mail Shark's reference density (they pack 6-8 content blocks
+   * in the same space where we had 4).
+   *
+   * Before → After:
+   *   --pc-gutter:        0.125in (12px) → 0.075in (7.2px)
+   *   --pc-section-gap:   0.25in (24px) → 0.16in (15.4px)
+   *   --pc-block-padding: 0.1875in (18px) → 0.1in (9.6px)
    */
-  --pc-gutter:          0.125in;  /* Between elements within a block */
-  --pc-section-gap:     0.25in;   /* Between major blocks */
-  --pc-block-padding:   0.1875in; /* Inside bordered boxes (OfferBox, CTABox) */
+  --pc-gutter:          0.075in;  /* Between elements within a block */
+  --pc-section-gap:     0.16in;   /* Between major blocks */
+  --pc-block-padding:   0.1in;    /* Inside bordered boxes (OfferBox, CTABox) */
 
   /* ------------------------------------------------------------------
    * COLOR APPLICATION DEFAULTS (brand-colors get injected at render time)
