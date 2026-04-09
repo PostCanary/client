@@ -29,6 +29,23 @@ const brandKitCity = computed(() => {
   return loc.split(",")[0]?.trim() ?? "";
 });
 
+// Credibility line for the front of the card. Prefers "Serving {city}
+// since {year}" when we have both, falls back to certifications[0], then
+// to a neutral default. Kept short so the top-row badge truncation
+// (P0 #4) rarely needs to fire.
+const brandKitCredibility = computed(() => {
+  const bk = brandKit.value;
+  if (!bk) return "Licensed & Insured";
+  if (brandKitCity.value && bk.yearsInBusiness && bk.yearsInBusiness > 0) {
+    const year = new Date().getFullYear() - bk.yearsInBusiness;
+    return `Serving ${brandKitCity.value} since ${year}`;
+  }
+  if (bk.certifications && bk.certifications.length > 0) {
+    return bk.certifications[0]!;
+  }
+  return "Licensed & Insured";
+});
+
 // Original cards for reset
 let originalCards: CardDesign[] = [];
 
@@ -161,6 +178,7 @@ watch(
       :trust-badges="brandKit?.trustBadges ?? []"
       :years-in-business="brandKit?.yearsInBusiness ?? null"
       :city="brandKitCity"
+      :credibility-line="brandKitCredibility"
       class="px-4 pt-4"
       @select="activeCardIndex = $event"
     />
@@ -183,6 +201,7 @@ watch(
             :trust-badges="brandKit?.trustBadges ?? []"
             :years-in-business="brandKit?.yearsInBusiness ?? null"
             :city="brandKitCity"
+            :credibility-line="brandKitCredibility"
             size="large"
           />
         </div>

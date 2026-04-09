@@ -18,6 +18,7 @@ const props = defineProps<{
   trustBadges?: TrustBadge[];
   yearsInBusiness?: number | null;
   city?: string;
+  credibilityLine?: string;
 }>();
 
 const currentCardIndex = ref(0);
@@ -85,6 +86,7 @@ function nextCard() {
       :trust-badges="trustBadges"
       :years-in-business="yearsInBusiness"
       :city="city"
+      :credibility-line="credibilityLine"
       size="large"
     />
 

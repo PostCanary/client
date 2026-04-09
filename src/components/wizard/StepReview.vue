@@ -51,6 +51,22 @@ const brandKitCity = computed(() => {
   return loc.split(",")[0]?.trim() ?? "";
 });
 
+// Credibility line for the front of the card. Same derivation as
+// StepDesign.vue — prefer "Serving {city} since {year}", else first
+// certification, else neutral default.
+const brandKitCredibility = computed(() => {
+  const bk = brandKitStore.brandKit;
+  if (!bk) return "Licensed & Insured";
+  if (brandKitCity.value && bk.yearsInBusiness && bk.yearsInBusiness > 0) {
+    const year = new Date().getFullYear() - bk.yearsInBusiness;
+    return `Serving ${brandKitCity.value} since ${year}`;
+  }
+  if (bk.certifications && bk.certifications.length > 0) {
+    return bk.certifications[0]!;
+  }
+  return "Licensed & Insured";
+});
+
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
 onMounted(() => {
@@ -210,6 +226,7 @@ async function approve() {
         :trust-badges="brandKitStore.brandKit?.trustBadges ?? []"
         :years-in-business="brandKitStore.brandKit?.yearsInBusiness ?? null"
         :city="brandKitCity"
+        :credibility-line="brandKitCredibility"
       />
     </div>
 

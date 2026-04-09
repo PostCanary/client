@@ -17,6 +17,7 @@ const props = defineProps<{
   trustBadges?: TrustBadge[];
   yearsInBusiness?: number | null;
   city?: string;
+  credibilityLine?: string;
 }>();
 
 const emit = defineEmits<{
@@ -60,6 +61,7 @@ const LABELS: Record<string, string> = {
             :trust-badges="trustBadges"
             :years-in-business="yearsInBusiness"
             :city="city"
+            :credibility-line="credibilityLine"
             size="thumbnail"
           />
         </div>

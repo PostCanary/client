@@ -127,22 +127,36 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
         class="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
         style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)"
       />
-      <!-- Top row: logo left, badge right -->
-      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
+      <!-- Top row: logo left, badge right. Credibility truncates with
+           ellipsis when the extracted string is too long for the space
+           (P0 #4 fix — was clipping at the card edge). -->
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3 gap-2">
         <img
           v-if="logoUrl"
           :src="logoUrl"
-          class="object-contain"
+          class="object-contain flex-none"
           style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
           alt=""
         />
-        <span v-else class="pc-badge text-white/80">{{ businessName }}</span>
-        <span class="pc-badge text-white/90">{{ credibility }}</span>
+        <span v-else class="pc-badge text-white/80 flex-none">{{ businessName }}</span>
+        <span
+          class="pc-badge text-white/90 truncate"
+          :style="{ maxWidth: '45%', display: 'inline-block' }"
+        >
+          {{ credibility }}
+        </span>
       </div>
-      <!-- Bottom overlay bar: headline + phone -->
+      <!-- Bottom overlay bar: headline + phone in contrasting container.
+           Phone sits in a brand-primary pill (P0 #3 fix — was bare text
+           on gradient, no visual weight). -->
       <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
         <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
-        <div class="pc-phone-front mt-2">{{ card.resolvedContent.phoneNumber }}</div>
+        <div
+          class="pc-phone-front inline-block mt-2 px-3 py-1 rounded"
+          :style="{ backgroundColor: primary, color: textOnPrimary }"
+        >
+          {{ card.resolvedContent.phoneNumber }}
+        </div>
       </div>
     </template>
 
@@ -163,20 +177,30 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
           class="w-1/2 flex flex-col justify-between px-4 py-4"
           :style="{ backgroundColor: dark, color: textOnDark }"
         >
-          <div class="flex justify-between items-start">
+          <div class="flex justify-between items-start gap-2">
             <img
               v-if="logoUrl"
               :src="logoUrl"
-              class="object-contain bg-white/10 rounded p-1"
+              class="object-contain bg-white/10 rounded p-1 flex-none"
               style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
               alt=""
             />
-            <span v-else class="pc-badge opacity-80">{{ businessName }}</span>
-            <span class="pc-badge opacity-80">{{ credibility }}</span>
+            <span v-else class="pc-badge opacity-80 flex-none">{{ businessName }}</span>
+            <span
+              class="pc-badge opacity-80 truncate"
+              :style="{ maxWidth: '55%', display: 'inline-block' }"
+            >
+              {{ credibility }}
+            </span>
           </div>
           <div>
             <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
-            <div class="pc-phone-front mt-3">{{ card.resolvedContent.phoneNumber }}</div>
+            <div
+              class="pc-phone-front inline-block mt-3 px-3 py-1 rounded"
+              :style="{ backgroundColor: primary, color: textOnPrimary }"
+            >
+              {{ card.resolvedContent.phoneNumber }}
+            </div>
           </div>
         </div>
       </div>
@@ -194,16 +218,21 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
             class="w-full h-full object-cover"
             alt=""
           />
-          <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
+          <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3 gap-2">
             <img
               v-if="logoUrl"
               :src="logoUrl"
-              class="object-contain bg-white/90 rounded p-1"
+              class="object-contain bg-white/90 rounded p-1 flex-none"
               style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
               alt=""
             />
-            <span v-else class="pc-badge text-white drop-shadow">{{ businessName }}</span>
-            <span class="pc-badge text-white drop-shadow">{{ credibility }}</span>
+            <span v-else class="pc-badge text-white drop-shadow flex-none">{{ businessName }}</span>
+            <span
+              class="pc-badge text-white drop-shadow truncate"
+              :style="{ maxWidth: '45%', display: 'inline-block' }"
+            >
+              {{ credibility }}
+            </span>
           </div>
         </div>
         <div
@@ -231,16 +260,21 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
         class="h-full flex flex-col justify-between px-4 py-4"
         :style="{ backgroundColor: dark, color: textOnDark }"
       >
-        <div class="flex justify-between items-start">
+        <div class="flex justify-between items-start gap-2">
           <img
             v-if="logoUrl"
             :src="logoUrl"
-            class="object-contain bg-white/10 rounded p-1"
+            class="object-contain bg-white/10 rounded p-1 flex-none"
             style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
             alt=""
           />
-          <span v-else class="pc-badge opacity-80">{{ businessName }}</span>
-          <span class="pc-badge opacity-80">{{ credibility }}</span>
+          <span v-else class="pc-badge opacity-80 flex-none">{{ businessName }}</span>
+          <span
+            class="pc-badge opacity-80 truncate"
+            :style="{ maxWidth: '45%', display: 'inline-block' }"
+          >
+            {{ credibility }}
+          </span>
         </div>
         <div class="text-center">
           <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
@@ -277,27 +311,38 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
           </div>
         </div>
       </div>
-      <!-- Shared overlay bar at bottom — same styling as full-bleed -->
+      <!-- Shared overlay bar at bottom — same styling as full-bleed. Phone
+           wrapped in brand-primary pill for visual weight (P0 #3). -->
       <div
         class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5"
         style="background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 70%, transparent 100%)"
       >
-        <div class="flex justify-between items-end text-white">
+        <div class="flex justify-between items-end text-white gap-3">
           <h3 class="pc-headline flex-1">{{ card.resolvedContent.headline }}</h3>
-          <div class="pc-phone-front ml-4">{{ card.resolvedContent.phoneNumber }}</div>
+          <div
+            class="pc-phone-front px-3 py-1 rounded flex-none"
+            :style="{ backgroundColor: primary, color: textOnPrimary }"
+          >
+            {{ card.resolvedContent.phoneNumber }}
+          </div>
         </div>
       </div>
       <!-- Top row: logo + credibility, above the photo split -->
-      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-2 pointer-events-none">
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-2 pointer-events-none gap-2">
         <img
           v-if="logoUrl"
           :src="logoUrl"
-          class="object-contain bg-white/95 rounded p-1"
+          class="object-contain bg-white/95 rounded p-1 flex-none"
           style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
           alt=""
         />
-        <span v-else class="pc-badge text-gray-700 bg-white/85 px-2 rounded">{{ businessName }}</span>
-        <span class="pc-badge text-gray-700 bg-white/85 px-2 rounded">{{ credibility }}</span>
+        <span v-else class="pc-badge text-gray-700 bg-white/85 px-2 rounded flex-none">{{ businessName }}</span>
+        <span
+          class="pc-badge text-gray-700 bg-white/85 px-2 rounded truncate"
+          :style="{ maxWidth: '45%', display: 'inline-block' }"
+        >
+          {{ credibility }}
+        </span>
       </div>
     </template>
 
@@ -316,16 +361,16 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
         class="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
         style="background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 100%)"
       />
-      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3">
+      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3 gap-2">
         <img
           v-if="logoUrl"
           :src="logoUrl"
-          class="object-contain"
+          class="object-contain flex-none"
           style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
           alt=""
         />
-        <span v-else class="pc-badge text-white/80">{{ businessName }}</span>
-        <span class="pc-badge text-white/90">★★★★★</span>
+        <span v-else class="pc-badge text-white/80 flex-none">{{ businessName }}</span>
+        <span class="pc-badge text-white/90 flex-none">★★★★★</span>
       </div>
       <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
         <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
@@ -333,7 +378,12 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
           "{{ card.resolvedContent.reviewQuote }}"
           <span class="pc-credibility ml-1 opacity-80">— {{ card.resolvedContent.reviewerName }}</span>
         </p>
-        <div class="pc-phone-front mt-2">{{ card.resolvedContent.phoneNumber }}</div>
+        <div
+          class="pc-phone-front inline-block mt-2 px-3 py-1 rounded"
+          :style="{ backgroundColor: primary, color: textOnPrimary }"
+        >
+          {{ card.resolvedContent.phoneNumber }}
+        </div>
       </div>
     </template>
   </div>
