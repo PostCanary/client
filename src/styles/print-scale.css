@@ -26,9 +26,39 @@
   --pc-safe-w:         8.5in;     /* trim-w - 2*safe-inset */
   --pc-safe-h:         5.5in;     /* trim-h - 2*safe-inset */
 
-  /* Back layout is 2-column, forced by USPS locked zone on the right */
-  --pc-content-col-w:  4.25in;    /* Left content column */
-  --pc-usps-col-w:     4.25in;    /* Right USPS locked zone */
+  /* Back layout — tuned to DMM 202 actual clear zones (2026-04-09 research
+   * in ~/postcanary/client/research-usps-dmm-201-clear-zones-2026-04-09.md).
+   *
+   * Before: content=4.25", usps=4.25". Locked the whole right half.
+   * After:  content=5.5",  usps=3.0".  Reclaims 1.25" for content.
+   *
+   * DMM basis (pe.usps.com/text/dmm300/202.htm, updated 11-3-25 / 1-18-26):
+   * - §202.5.1.1 Barcode clear zone: 4.75" W × 0.625" H bottom-right only.
+   * - §202.2.1 OCR read area: address can be anywhere 0.5" from L/R edges.
+   * - §202.3 Permit indicia: 0.5" min, within ~1.5" square upper-right corner.
+   * - Industry address block (Lob / PrintingForLess / LettrLabs): ~4.0" × 2.625".
+   *
+   * Three of four commercial mailers we triangulated against (Lob,
+   * PrintingForLess, LettrLabs) reserve ~4.0" horizontally and leave the
+   * top ~1.5" of the right column free for logo / headline. Wise Pelican
+   * is the conservative end at 4.5". We picked 3.0" for the hard column
+   * (well inside the content-column overlap zone) with the understanding
+   * that the address block and barcode clear zone still have their own
+   * sub-tokens below for precise rendering.
+   */
+  --pc-content-col-w:  5.5in;     /* Left content column (was 4.25in) */
+  --pc-usps-col-w:     3.0in;     /* Right USPS locked zone (was 4.25in) */
+
+  /* USPS sub-zone dimensions (for precise placement inside PostcardBack) */
+  --pc-usps-addr-block-w:   4.0in;    /* DMM industry standard address block width */
+  --pc-usps-addr-block-h:   2.625in;  /* Address block height (Lob / PrintingForLess) */
+  --pc-usps-addr-offset-b:  0.75in;   /* Address block bottom offset from safe area */
+
+  --pc-usps-barcode-w:      4.75in;   /* DMM §202.5.1.1 clear zone width */
+  --pc-usps-barcode-h:      0.625in;  /* DMM §202.5.1.1 clear zone height */
+
+  --pc-usps-indicia-w:      1.5in;    /* §202.3 permit indicia region (1.5" square UR corner) */
+  --pc-usps-indicia-h:      1.5in;
 
   /* ------------------------------------------------------------------
    * TYPE SCALE (all in pt — physical units for physical print)

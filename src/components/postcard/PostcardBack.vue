@@ -75,31 +75,84 @@ const hasRating = computed(
     class="pc-card relative rounded-lg overflow-hidden bg-white border border-gray-200"
     :style="{ aspectRatio: '9 / 6' }"
   >
-    <!-- Top strip: return address (left) + indicia (right) -->
+    <!-- Top strip: absolute-positioned along top edge. Natural flex-flow was
+         tried in an earlier pass but made the content column shrink by ~35px
+         (PRSRT STD indicia forces the strip to ~75px tall), causing Block 5
+         (risk reversal) to fall off the bottom of the 6" card at default.
+         Absolute positioning with `pt-14` clearance on the main content flex
+         lets the content col use the full card height minus a fixed 56px
+         strip allowance. Long businessName is truncated via nowrap + ellipsis
+         below so the strip never actually wraps. -->
     <div
       class="absolute top-0 inset-x-0 flex justify-between items-start px-3 pt-2 pb-1 border-b border-gray-100 z-20"
       :style="{ color: textOnWhite }"
     >
-      <div class="pc-body" :style="{ lineHeight: 1.2 }">
-        <div :style="{ fontWeight: 600 }">{{ businessName }}</div>
-        <div :style="{ opacity: 0.75 }">{{ businessAddress }}</div>
-      </div>
-      <div
-        class="pc-badge text-right"
-        :style="{
-          border: '0.5pt solid #999',
-          padding: '0.03in 0.08in',
-          color: '#666',
-          lineHeight: 1.25,
-        }"
-      >
-        PRSRT STD<br />
-        U.S. POSTAGE<br />
-        PAID
-      </div>
+        <!-- Return address block — constrained to 2 lines via nowrap +
+             max-width so a long businessName truncates with ellipsis
+             instead of wrapping and pushing content below down off the
+             6" card height (Codex Pass 2 HIGH finding). -->
+        <div
+          class="pc-body"
+          :style="{
+            lineHeight: 1.2,
+            maxWidth: '5.5in',
+            overflow: 'hidden',
+          }"
+        >
+          <div
+            :style="{
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }"
+          >
+            {{ businessName }}
+            <span
+              v-if="localProof"
+              :style="{
+                opacity: 0.65,
+                fontStyle: 'italic',
+                fontWeight: 400,
+                marginLeft: '0.1in',
+              }"
+            >
+              · {{ localProof }}
+            </span>
+          </div>
+          <div
+            :style="{
+              opacity: 0.75,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }"
+          >
+            {{ businessAddress }}
+          </div>
+        </div>
+        <div
+          class="pc-badge text-right"
+          :style="{
+            border: '0.5pt solid #999',
+            padding: '0.03in 0.08in',
+            color: '#666',
+            lineHeight: 1.25,
+          }"
+        >
+          PRSRT STD<br />
+          U.S. POSTAGE<br />
+          PAID
+        </div>
     </div>
 
-    <div class="flex h-full pt-10">
+    <!-- Main 2-col layout. pt-14 = 56px clears the absolute top strip
+         (typically ~50px tall: 2 lines of pc-body + border + padding,
+         plus the 3-line PRSRT STD indicia on the right — items-start
+         means both sides are top-aligned so the strip as a whole takes
+         the max child height, but content only needs to clear the
+         visible strip area ~50px). -->
+    <div class="flex h-full pt-14">
       <!-- LEFT: 6-block content column -->
       <div
         class="flex flex-col"
@@ -165,14 +218,10 @@ const hasRating = computed(
           {{ card.resolvedContent.riskReversal }}
         </p>
 
-        <!-- Block 6: Local proof -->
-        <p
-          v-if="localProof"
-          class="pc-body"
-          :style="{ color: textOnWhite, opacity: 0.75, marginTop: 'auto' }"
-        >
-          {{ localProof }}
-        </p>
+        <!-- Block 6 (local proof) removed 2026-04-09 — merged into the
+             top-strip return address as "Serving [city] since [year]" per
+             visual audit P1 #6. Keeping it as a separate block overflowed
+             the 6" card height at 1.0 scale. -->
       </div>
 
       <!-- RIGHT: USPS locked zone (preserved) -->

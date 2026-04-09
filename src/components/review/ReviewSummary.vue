@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
-import type { CardDesign, TemplateLayoutType } from "@/types/campaign";
+import type { CardDesign, TemplateLayoutType, TrustBadge } from "@/types/campaign";
 
 const props = defineProps<{
   cards: CardDesign[];
@@ -9,6 +9,15 @@ const props = defineProps<{
   businessName?: string;
   businessAddress?: string;
   logoUrl?: string | null;
+  // Brief #6 Phase 2 props threaded through 2026-04-09 — without these
+  // the wizard/review flow would render PostcardBack without rating,
+  // reviewCount, trustBadges, yearsInBusiness, city (dead-prop bug
+  // caught by Codex Pass 1 on P0 #2).
+  rating?: number | null;
+  reviewCount?: number | null;
+  trustBadges?: TrustBadge[];
+  yearsInBusiness?: number | null;
+  city?: string;
 }>();
 
 const currentCardIndex = ref(0);
@@ -71,6 +80,11 @@ function nextCard() {
       :business-name="businessName"
       :business-address="businessAddress"
       :logo-url="logoUrl"
+      :rating="rating"
+      :review-count="reviewCount"
+      :trust-badges="trustBadges"
+      :years-in-business="yearsInBusiness"
+      :city="city"
       size="large"
     />
 

@@ -44,6 +44,12 @@ const targeting = computed(() => draftStore.draft?.targeting);
 const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []);
 const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
+// City extracted from brandKit.location ("City, ST") — used for
+// PostcardBack's "Serving {city} since {year}" local-proof line.
+const brandKitCity = computed(() => {
+  const loc = brandKitStore.brandKit?.location ?? "";
+  return loc.split(",")[0]?.trim() ?? "";
+});
 
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
@@ -199,6 +205,11 @@ async function approve() {
         :business-name="brandKitStore.brandKit?.businessName"
         :business-address="brandKitStore.brandKit?.address ?? ''"
         :logo-url="brandKitStore.brandKit?.logoUrl"
+        :rating="brandKitStore.brandKit?.googleRating ?? null"
+        :review-count="brandKitStore.brandKit?.reviewCount ?? null"
+        :trust-badges="brandKitStore.brandKit?.trustBadges ?? []"
+        :years-in-business="brandKitStore.brandKit?.yearsInBusiness ?? null"
+        :city="brandKitCity"
       />
     </div>
 

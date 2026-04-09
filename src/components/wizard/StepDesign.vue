@@ -21,6 +21,13 @@ const currentLayout = ref<TemplateLayoutType>("full-bleed");
 const activeCard = computed(() => cards.value[activeCardIndex.value]);
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
 const brandKit = computed(() => brandKitStore.brandKit);
+// City is derived from brandKit.location which is "City, ST" — split on
+// comma and take the first part. Used by PostcardBack for the "Serving
+// {city} since {year}" local-proof line in the return-address strip.
+const brandKitCity = computed(() => {
+  const loc = brandKit.value?.location ?? "";
+  return loc.split(",")[0]?.trim() ?? "";
+});
 
 // Original cards for reset
 let originalCards: CardDesign[] = [];
@@ -147,6 +154,13 @@ watch(
       :active-card-index="activeCardIndex"
       :brand-colors="brandKit?.brandColors"
       :business-name="brandKit?.businessName"
+      :business-address="brandKit?.address ?? ''"
+      :logo-url="brandKit?.logoUrl"
+      :rating="brandKit?.googleRating ?? null"
+      :review-count="brandKit?.reviewCount ?? null"
+      :trust-badges="brandKit?.trustBadges ?? []"
+      :years-in-business="brandKit?.yearsInBusiness ?? null"
+      :city="brandKitCity"
       class="px-4 pt-4"
       @select="activeCardIndex = $event"
     />
@@ -164,6 +178,11 @@ watch(
             :business-name="brandKit?.businessName"
             :business-address="brandKit?.address ?? ''"
             :logo-url="brandKit?.logoUrl"
+            :rating="brandKit?.googleRating ?? null"
+            :review-count="brandKit?.reviewCount ?? null"
+            :trust-badges="brandKit?.trustBadges ?? []"
+            :years-in-business="brandKit?.yearsInBusiness ?? null"
+            :city="brandKitCity"
             size="large"
           />
         </div>

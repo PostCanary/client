@@ -6,6 +6,8 @@ import PostcardBack from "./PostcardBack.vue";
 import PostcardFrontStub from "./PostcardFrontStub.vue";
 import PostcardBackStub from "./PostcardBackStub.vue";
 
+import type { TrustBadge } from "@/types/campaign";
+
 const props = defineProps<{
   brandColors?: string[];
   size?: "thumbnail" | "large";
@@ -14,6 +16,15 @@ const props = defineProps<{
   businessName?: string;
   businessAddress?: string;
   logoUrl?: string | null;
+  // Brief #6 Phase 2 props (added here 2026-04-09 after Codex Pass 1 on
+  // P0 #2 caught that StepDesign/ReviewSummary/StepReview never threaded
+  // these through to PostcardBack — rating, reviewCount, trustBadges,
+  // yearsInBusiness, city were dead props in the wizard/review flow).
+  rating?: number | null;
+  reviewCount?: number | null;
+  trustBadges?: TrustBadge[];
+  yearsInBusiness?: number | null;
+  city?: string;
 }>();
 
 const showBack = ref(false);
@@ -46,6 +57,11 @@ function flip() {
         :brand-colors="brandColors"
         :business-name="businessName"
         :business-address="businessAddress"
+        :rating="rating"
+        :review-count="reviewCount"
+        :trust-badges="trustBadges"
+        :years-in-business="yearsInBusiness"
+        :city="city"
       />
     </template>
 

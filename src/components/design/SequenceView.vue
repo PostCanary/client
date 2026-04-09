@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CardDesign } from "@/types/campaign";
+import type { CardDesign, TrustBadge } from "@/types/campaign";
 import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 
 const props = defineProps<{
@@ -7,6 +7,16 @@ const props = defineProps<{
   activeCardIndex: number;
   brandColors?: string[];
   businessName?: string;
+  // Brief #6 Phase 2 back-card props threaded through 2026-04-09.
+  // PostcardPreview thumbnails are clickable and can flip to the back —
+  // without these props the back would render missing rating/trust/city.
+  businessAddress?: string;
+  logoUrl?: string | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  trustBadges?: TrustBadge[];
+  yearsInBusiness?: number | null;
+  city?: string;
 }>();
 
 const emit = defineEmits<{
@@ -43,6 +53,13 @@ const LABELS: Record<string, string> = {
             :layout-type="card.templateId.split('-')[0] as any"
             :brand-colors="brandColors"
             :business-name="businessName"
+            :business-address="businessAddress"
+            :logo-url="logoUrl"
+            :rating="rating"
+            :review-count="reviewCount"
+            :trust-badges="trustBadges"
+            :years-in-business="yearsInBusiness"
+            :city="city"
             size="thumbnail"
           />
         </div>
