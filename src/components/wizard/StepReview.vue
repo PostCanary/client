@@ -17,6 +17,27 @@ const brandKitStore = useBrandKitStore();
 const approving = ref(false);
 const approved = ref(false);
 
+// Brief #6 P0 #4: Consolidated accuracy + rights confirmation before
+// Approve is enabled. V1 spec line 989: "Mandatory confirmation checkboxes
+// before approval: accuracy of info, image rights, PostCanary not
+// responsible for accuracy". Consolidated into one checkbox per Krug —
+// multiple checkboxes fragment attention and users click them without
+// reading. One checkbox with a clear combined statement has more weight.
+//
+// INTENTIONAL: this ref is NOT hydrated from draftStore.draft.review on
+// mount, even though every other Step 4 field is. An acknowledgement is
+// a point-in-time act, not persisted state. If the customer resumes a
+// draft 3 days later they should re-read and re-check. `agreedToTerms`
+// in the persisted review schema remains the value captured at the
+// moment the customer actually clicks Approve.
+//
+// SPEC DEVIATION: V1 spec also has per-asset checkboxes (lines 763-764:
+// "Confirm you have rights to use this image in print" and "Confirm this
+// is a real customer review") near the photo/review pickers. Drake's
+// explicit direction for P0 #4 was consolidation per Krug. Per-asset
+// confirmations are deferred to V1.1 — tracked in postcanary-todo.md.
+const acknowledgedAccuracy = ref(false);
+
 // Data from earlier steps
 const goal = computed(() => draftStore.draft?.goal);
 const targeting = computed(() => draftStore.draft?.targeting);
@@ -89,12 +110,13 @@ const seedAddress = computed(
   () => brandKitStore.brandKit?.address ?? "Your address on file",
 );
 
-// Approve
+// Approve — gated on P0 #4 consolidated confirmation
 const canApprove = computed(
   () =>
     !approving.value &&
     campaignName.value.trim() &&
-    schedules.value.length > 0,
+    schedules.value.length > 0 &&
+    acknowledgedAccuracy.value,
 );
 
 async function approve() {
@@ -114,7 +136,7 @@ async function approve() {
     perCardCosts: Array(seqLen.value).fill(
       householdCount.value * perCardRate,
     ),
-    agreedToTerms: true,
+    agreedToTerms: acknowledgedAccuracy.value,
   };
   draftStore.setReview(review);
   await draftStore.saveNow();
@@ -241,9 +263,32 @@ async function approve() {
         <button class="text-xs text-[#47bfa9] mt-1">Change</button>
       </div>
 
+      <!-- P0 #4: consolidated accuracy + rights acknowledgement.
+           Blocks Approve until checked. Single combined statement per Krug —
+           multiple checkboxes fragment attention; one high-weight checkbox
+           is more likely to be read. -->
+      <div
+        class="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+      >
+        <label class="flex items-start gap-2 cursor-pointer">
+          <input
+            id="accuracy-ack"
+            v-model="acknowledgedAccuracy"
+            type="checkbox"
+            class="accent-[#47bfa9] mt-0.5 flex-shrink-0"
+          />
+          <span class="text-xs text-[#0b2d50] leading-snug">
+            I confirm all information on this postcard is accurate and
+            I have the rights to use the photos, logos, and reviews
+            shown. PostCanary is not responsible for the accuracy of
+            customer-supplied content.
+          </span>
+        </label>
+      </div>
+
       <!-- Approve button -->
       <button
-        class="mt-6 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
+        class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
         :disabled="!canApprove"
         @click="approve"
       >
