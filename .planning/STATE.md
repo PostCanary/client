@@ -1,8 +1,11 @@
 # PostCanary — GSD Project State
 
+> 🛑 **READ THIS FIRST:** Before running any tool, read `.planning/phases/02-template-upgrades-ux-polish-google-reviews-oauth/.continue-here.md` **in full**. It contains BLOCKING anti-patterns from Session 33 that you MUST acknowledge before proceeding. Drake's main concern at the end of Session 33 was that things would fall through the cracks on session handoff. The `.continue-here.md` file is the structural defense against that.
+
 **Project:** PostCanary Design Studio Round 2
 **Last Activity:** 2026-04-09 (Session 33)
 **Current Phase:** 2 — Template Upgrades + UX Polish + Google Reviews OAuth
+**Next Command:** `/gsd-execute-phase 2` — BUT read `.continue-here.md` first
 
 ---
 
