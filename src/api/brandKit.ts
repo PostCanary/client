@@ -38,6 +38,16 @@ function toBrandKit(r: BrandKitResponse): BrandKit {
     scrapeProgress: d.scrapeProgress ?? null,
     completenessPercent: d.completenessPercent ?? 0,
     updatedAt: r.updated_at,
+    // --- Brief #6 Extraction R2 + P0 #3 additions (all optional) ---
+    reviewCount: d.reviewCount ?? null,
+    trustBadges: d.trustBadges ?? [],
+    bbbDetected: d.bbbDetected ?? false,
+    partnerBadges: d.partnerBadges ?? [],
+    confidenceScores: d.confidenceScores ?? {},
+    extractionSources: d.extractionSources ?? [],
+    // P0 #3: server-generated QR image URL. Without this mapping the
+    // server's QR generation would be invisible to the client (Codex HIGH).
+    qrCodeImageUrl: d.qrCodeImageUrl ?? null,
   };
 }
 

@@ -159,7 +159,10 @@ function generateCardsLocal(
         licenseNumber: "",
         companyAddress: brandKit.address ?? "",
         websiteUrl: brandKit.websiteUrl ?? "",
-        qrCodeUrl: "",
+        // Brief #6 P0 #3: QR image is server-generated at brand kit save
+        // (brand_kit._scrape_job / update_brand_kit). Null when neither
+        // websiteUrl nor phone yields a target; CTABox handles empty string.
+        qrCodeUrl: brandKit.qrCodeImageUrl ?? "",
       },
       headlineCandidates: [],
       offerReason: "",
@@ -239,7 +242,9 @@ function mapServerCardToDesign(
       licenseNumber: "",
       companyAddress: brandKit.address ?? "",
       websiteUrl: brandKit.websiteUrl ?? "",
-      qrCodeUrl: "",
+      // Brief #6 P0 #3: QR from brand kit (server-generated). See note
+      // in generateCardsLocal above for rationale.
+      qrCodeUrl: brandKit.qrCodeImageUrl ?? "",
     },
     headlineCandidates: card.headlines,
     offerReason: card.offer.reason,

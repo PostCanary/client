@@ -121,7 +121,7 @@ const hasRating = computed(
         <CTABox
           :phone="card.resolvedContent.phoneNumber"
           :website="card.backContent.websiteUrl"
-          :qr-code-url="card.backContent.qrCodeUrl || undefined"
+          :qr-code-url="card.backContent.qrCodeUrl"
           :primary-color="primary"
         />
 

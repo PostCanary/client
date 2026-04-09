@@ -383,6 +383,13 @@ export interface BrandKit {
   partnerBadges?: string[]             // normalized list: ["Angi", "HomeAdvisor", ...]
   confidenceScores?: Partial<Record<keyof BrandKit, ExtractionConfidence>>
   extractionSources?: ExtractionSource[]   // which sources contributed
+  // --- Brief #6 P0 #3: server-generated QR code image ---
+  // Populated by brand_kit._scrape_job / update_brand_kit / mock_scrape
+  // whenever websiteUrl or phone is present. Null when neither yields a
+  // usable QR target (very rare — phone is a required brand kit field).
+  // Filename is content-hashed (qr-<sha256[:12]>.png) so prior QRs remain
+  // on disk when the brand kit changes.
+  qrCodeImageUrl?: string | null           // e.g. "/media/brand-photos/{orgId}/qr-<hash>.png"
 }
 
 // ============================================================
