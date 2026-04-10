@@ -20,9 +20,11 @@ const props = defineProps<{
   savings?: string; // e.g., "You save $198"
   deadline?: string; // e.g., "Offer expires May 15, 2026" — inside the box
   primaryColor?: string; // Brand accent for border + headline bg
+  accentColor?: string; // P-43 urgency color for deadline (defaults to primary)
 }>();
 
 const primary = computed(() => props.primaryColor ?? "#0b2d50");
+const accent = computed(() => props.accentColor ?? primary.value);
 const textOnPrimary = computed(() => safeTextColor(primary.value));
 const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
 </script>
@@ -34,6 +36,7 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
       border: `var(--pc-border-offer) ${primary}`,
       padding: 'var(--pc-block-padding)',
       backgroundColor: '#FFFFFF',
+      borderRadius: 'var(--pc-radius)',
     }"
   >
     <!-- Headline bar — strong visual anchor, brand color background -->
@@ -95,16 +98,24 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
       {{ customerPrice }}
     </div>
 
-    <!-- Deadline — inside the box (Halbert fix §4), not a footnote -->
+    <!-- Deadline — P-13/P-43 urgency treatment: bold accent-color bar,
+         not italic fine print. Full-width inside the Johnson Box. -->
     <div
       v-if="deadline"
-      class="pc-body text-center"
+      class="pc-badge text-center"
       :style="{
         marginTop: 'var(--pc-gutter)',
-        paddingTop: 'var(--pc-gutter)',
-        borderTop: `1pt dashed ${primary}`,
-        color: textOnWhite,
-        fontWeight: 600,
+        padding: '0.05in 0.08in',
+        backgroundColor: accent,
+        color: '#FFFFFF',
+        fontWeight: 800,
+        fontSize: '12pt',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+        borderRadius: 'var(--pc-radius)',
+        marginLeft: 'calc(-1 * var(--pc-block-padding))',
+        marginRight: 'calc(-1 * var(--pc-block-padding))',
+        marginBottom: 'calc(-1 * var(--pc-block-padding))',
       }"
     >
       {{ deadline }}
