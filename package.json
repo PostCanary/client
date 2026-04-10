@@ -9,7 +9,8 @@
     "figma:summarize": "node ./scripts/summarize-figma.mjs",
     "dev": "vite",
     "build": "vue-tsc -b && vite build && node scripts/generate-seo-pages.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "render-postcard-preview": "node scripts/render-postcard-preview.mjs"
   },
   "dependencies": {
     "@vicons/ionicons5": "0.13.0",
@@ -42,8 +43,10 @@
     "@vue/tsconfig": "^0.8.1",
     "autoprefixer": "10.4.21",
     "dotenv": "17.2.3",
+    "playwright": "^1.59.1",
+    "playwright-core": "^1.59.1",
     "postcss": "8.5.6",
-    "tailwindcss": "4.1.16",
+    "tailwindcss": "^4.1.16",
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
     "vite-svg-loader": "5.1.0",
