@@ -2,6 +2,9 @@
 import { computed } from "vue";
 import { ensureContrast } from "@/utils/contrast";
 
+// Phase 2 (Draplin gate): audited — no rounded corners, no shadows,
+// inline flex rendering in the back content column. No changes needed.
+//
 // Brief #6 Task 8 — RatingBadge.
 //
 // Google Places TOS workaround (Hunt fix §6, plan v2 §Security):
