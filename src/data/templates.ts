@@ -53,6 +53,18 @@ const LAYOUTS: {
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
 
+// D-02 (Phase 2, 2026-04-09): Only the Full-Bleed Photo layout is rebuilt
+// to Draplin standard for the 2026-04-20 demo. The other 5 layouts
+// (side-split, photo-top, bold-graphic, before-after, review-forward)
+// stay in the file so PostcardFront.vue's conditional chain still compiles
+// and the dev route layout selector still works — but they're filtered
+// out of the customer-facing template browser so demo viewers can't
+// accidentally pick an unfinished layout.
+//
+// Remove this constant (and revert the filter in getTemplateSetsForGoal)
+// as each additional layout gets rebuilt to Draplin standard post-demo.
+export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = ["full-bleed"];
+
 // 18 templates: 6 layouts × 3 card positions
 export const ALL_TEMPLATES: TemplateDefinition[] = LAYOUTS.flatMap((layout) =>
   POSITIONS.map((pos) =>
@@ -94,15 +106,20 @@ export function getTemplateSetsForGoal(
   goalType: CampaignGoalType,
 ): { layout: TemplateLayoutType; name: string; templates: TemplateDefinition[]; recommended: boolean }[] {
   const recommended = GOAL_TEMPLATE_MAP[goalType];
-  return LAYOUTS.map((layout) => ({
-    layout: layout.type,
-    name: layout.name,
-    templates: POSITIONS.map(
-      (pos) =>
-        ALL_TEMPLATES.find(
-          (t) => t.layoutType === layout.type && t.cardPosition === pos,
-        )!,
-    ),
-    recommended: layout.type === recommended,
-  }));
+  // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
+  // layouts in ALL_TEMPLATES (so code that references them still works)
+  // but hides them from the customer browser.
+  return LAYOUTS
+    .filter((layout) => DEMO_VISIBLE_LAYOUTS.includes(layout.type))
+    .map((layout) => ({
+      layout: layout.type,
+      name: layout.name,
+      templates: POSITIONS.map(
+        (pos) =>
+          ALL_TEMPLATES.find(
+            (t) => t.layoutType === layout.type && t.cardPosition === pos,
+          )!,
+      ),
+      recommended: layout.type === recommended,
+    }));
 }
