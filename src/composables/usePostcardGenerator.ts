@@ -14,6 +14,19 @@ import { generateContent } from "@/api/brandKit";
 import type { GeneratedCardContent } from "@/api/brandKit";
 
 // ---------------------------------------------------------------------------
+// D-09 (Phase 2): normalize logoUrl so empty strings and undefined both
+// become null, triggering the wordmark fallback in PostcardFront.vue.
+// Firecrawl returns empty logoUrl when scraping misses a CSS background-
+// image logo (RISK-02 in research). The wordmark is the production
+// safety net for every such business.
+// ---------------------------------------------------------------------------
+export function normalizeLogoUrl(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+// ---------------------------------------------------------------------------
 // Local fallback content (used when API is unavailable)
 // ---------------------------------------------------------------------------
 
