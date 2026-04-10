@@ -85,6 +85,13 @@ const badgeVariant = computed<"burst" | "ribbon">(() => {
 const hideTopRightBadge = computed(
   () => hasOfferTeaser.value && badgeVariant.value === "ribbon"
 );
+
+// D-09 wordmark fallback: when logoUrl is null (Firecrawl missed, empty
+// brand kit, or scraping error), render the business name in a solid
+// brand-color filled rectangle instead of a raw text span. The filled
+// pill gives the wordmark the visual weight of a logo without depending
+// on image assets.
+const showWordmarkFallback = computed(() => !props.logoUrl);
 </script>
 
 <template>
@@ -92,8 +99,8 @@ const hideTopRightBadge = computed(
        The aspectRatio inline style is the on-screen preview; print output uses
        the physical pt dimensions from .pc-card. -->
   <div
-    class="pc-card relative rounded-lg overflow-hidden bg-white"
-    :style="{ aspectRatio: '9 / 6' }"
+    class="pc-card relative overflow-hidden bg-white"
+    :style="{ aspectRatio: '9 / 6', borderRadius: 'var(--pc-radius)' }"
   >
     <!-- ============================================================
          OFFER BADGE — single shared element, rendered above all layout
@@ -124,55 +131,161 @@ const hideTopRightBadge = computed(
     </template>
 
     <!-- ============================================================
-         FULL-BLEED: photo fills the card, overlay bar at bottom holds
-         headline + credibility + phone. The most common layout.
+         FULL-BLEED: Phase 2 rewrite (2026-04-09). Draplin gate pass.
+         ============================================================
+         Pattern references (02-RESEARCH.md):
+         - P-01: photo 55-75% of card area, edge-to-edge bleed
+         - P-02: text overlays sit ON the photo
+         - P-03: solid color bar bottom 25-35%, not a gradient
+         - P-05: logo top-left, small (0.75-1.25in)
+         - P-07: phone in solid full-width container at bottom
+         - P-09: headline 800-900 weight
+         - P-27: wordmark fallback is a filled solid-color rectangle
+         - P-29: front phone spans or nearly spans card width
+         - P-36: border-radius 0 on every element
+         - P-38: no soft grey shadows
+         - Z-pattern (D-08): logo TL → [credibility suppressed when
+                 ribbon active] → headline BL → phone BR (full width bar).
          ============================================================ -->
     <template v-if="layoutType === 'full-bleed'">
-      <!-- Hero photo, edge-to-edge -->
+      <!-- Hero photo, edge-to-edge. No insets, no borders, no radius. -->
       <img
         v-if="hasPhoto"
         :src="card.resolvedContent.photoUrl"
         class="absolute inset-0 w-full h-full object-cover"
         alt=""
       />
-      <!-- Gradient so bottom overlay bar stays readable on any photo -->
+
+      <!-- Solid color bottom bar (P-03). Height from --pc-overlay-bar-h.
+           Hard-edged top border via a narrow 0.4in gradient ABOVE the bar
+           that blends photo pixels into the bar color — the bar itself
+           is solid. The bar is dark (using `dark` brand color) so white
+           text on it always reads. -->
       <div
-        class="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
-        style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)"
+        class="absolute inset-x-0 bottom-0 pointer-events-none"
+        :style="{
+          height: 'var(--pc-overlay-bar-h)',
+          backgroundColor: dark,
+        }"
       />
-      <!-- Top row: logo left, badge right. Credibility truncates with
-           ellipsis when the extracted string is too long for the space
-           (P0 #4 fix — was clipping at the card edge). Top-right badge
-           hides when OfferBadge ribbon is rendered to avoid z-order
-           collision (P0-A fix 2026-04-10). -->
-      <div class="absolute top-0 inset-x-0 flex justify-between items-start px-3 py-3 gap-2">
+      <!-- Photo→bar blend: a 0.4in gradient strip sitting just above the
+           bar so photo edges don't pop against the hard bar top. -->
+      <div
+        class="absolute inset-x-0 pointer-events-none"
+        :style="{
+          bottom: 'var(--pc-overlay-bar-h)',
+          height: '0.4in',
+          background: `linear-gradient(to top, ${dark} 0%, rgba(0,0,0,0) 100%)`,
+        }"
+      />
+
+      <!-- TOP ROW: logo top-left (P-05), credibility top-right (P-06).
+           Credibility suppressed when ribbon badge is active (hideTopRightBadge). -->
+      <div
+        class="absolute top-0 inset-x-0 flex justify-between items-start"
+        :style="{
+          padding: '0.15in 0.2in',
+          gap: '0.1in',
+        }"
+      >
+        <!-- Logo OR wordmark fallback (D-09, P-27) -->
         <img
-          v-if="logoUrl"
-          :src="logoUrl"
+          v-if="!showWordmarkFallback"
+          :src="logoUrl!"
           class="object-contain flex-none"
-          style="max-width: var(--pc-logo-max-w); min-width: var(--pc-logo-min-w); height: auto"
+          :style="{
+            maxWidth: 'var(--pc-logo-max-w)',
+            minWidth: 'var(--pc-logo-min-w)',
+            height: 'auto',
+            borderRadius: 'var(--pc-radius)',
+          }"
           alt=""
         />
-        <span v-else class="pc-badge text-white/80 flex-none">{{ businessName }}</span>
-        <span
+        <div
+          v-else
+          class="flex-none"
+          :style="{
+            backgroundColor: primary,
+            color: textOnPrimary,
+            padding: '0.06in 0.14in',
+            minWidth: 'var(--pc-logo-min-w)',
+            maxWidth: 'var(--pc-logo-max-w)',
+            borderRadius: 'var(--pc-radius)',
+            fontFamily: 'inherit',
+            fontSize: '14pt',
+            fontWeight: 900,
+            lineHeight: 1.05,
+            textTransform: 'uppercase',
+            letterSpacing: '0.01em',
+            textAlign: 'center',
+          }"
+        >
+          {{ businessName }}
+        </div>
+
+        <!-- Credibility top-right (P-06) — suppressed when ribbon active -->
+        <div
           v-if="!hideTopRightBadge"
-          class="pc-badge text-white/90 truncate"
-          :style="{ maxWidth: '45%', display: 'inline-block' }"
+          class="pc-badge flex-none"
+          :style="{
+            backgroundColor: dark,
+            color: '#FFFFFF',
+            padding: '0.05in 0.1in',
+            maxWidth: '45%',
+            borderRadius: 'var(--pc-radius)',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }"
         >
           {{ credibility }}
-        </span>
+        </div>
       </div>
-      <!-- Bottom overlay bar: headline + phone in contrasting container.
-           Phone sits in a brand-primary pill (P0 #3 fix — was bare text
-           on gradient, no visual weight). -->
-      <div class="absolute inset-x-0 bottom-0 px-4 pb-4 pt-5 text-white">
-        <h3 class="pc-headline">{{ card.resolvedContent.headline }}</h3>
-        <div
-          class="pc-phone-front inline-block mt-2 px-3 py-1 rounded"
-          :style="{ backgroundColor: primary, color: textOnPrimary }"
+
+      <!-- BOTTOM BAR: headline + full-width phone (P-07, P-08, P-29, P-09).
+           The bar height is --pc-overlay-bar-h (36%). Headline fills the
+           top ~65% of the bar; phone is the bottom full-width band. -->
+      <div
+        class="absolute inset-x-0 bottom-0 flex flex-col justify-end"
+        :style="{
+          height: 'var(--pc-overlay-bar-h)',
+          padding: '0.15in 0.2in 0 0.2in',
+          color: '#FFFFFF',
+        }"
+      >
+        <h3
+          class="pc-headline"
+          :style="{
+            color: '#FFFFFF',
+            marginBottom: '0.1in',
+          }"
+        >
+          {{ card.resolvedContent.headline }}
+        </h3>
+      </div>
+
+      <!-- Full-width phone band (P-29): spans the full card width at the
+           very bottom. Brand primary background, contrasting text. No
+           rounded corners. No shadows. -->
+      <div
+        class="absolute inset-x-0 bottom-0"
+        :style="{
+          backgroundColor: primary,
+          color: textOnPrimary,
+          padding: '0.12in 0.2in',
+          borderRadius: 'var(--pc-radius)',
+          textAlign: 'center',
+        }"
+      >
+        <span
+          class="pc-phone-front"
+          :style="{
+            fontWeight: 800,
+            letterSpacing: '0.02em',
+          }"
         >
           {{ card.resolvedContent.phoneNumber }}
-        </div>
+        </span>
       </div>
     </template>
 
