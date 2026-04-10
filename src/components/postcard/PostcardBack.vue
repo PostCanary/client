@@ -85,8 +85,8 @@ const hasRating = computed(
 
 <template>
   <div
-    class="pc-card relative rounded-lg overflow-hidden bg-white border border-gray-200"
-    :style="{ aspectRatio: '9 / 6' }"
+    class="pc-card relative overflow-hidden bg-white"
+    :style="{ aspectRatio: '9 / 6', borderRadius: 'var(--pc-radius)' }"
   >
     <!-- Top strip: absolute-positioned along top edge. Natural flex-flow was
          tried in an earlier pass but made the content column shrink by ~35px
@@ -97,7 +97,7 @@ const hasRating = computed(
          strip allowance. Long businessName is truncated via nowrap + ellipsis
          below so the strip never actually wraps. -->
     <div
-      class="absolute top-0 inset-x-0 flex justify-between items-start px-3 pt-2 pb-1 border-b border-gray-100 z-20"
+      class="absolute top-0 inset-x-0 flex justify-between items-start px-3 pt-2 pb-1 z-20"
       :style="{ color: textOnWhite }"
     >
         <!-- Return address block — constrained to 2 lines via nowrap +
@@ -147,10 +147,11 @@ const hasRating = computed(
         <div
           class="pc-badge text-right"
           :style="{
-            border: '0.5pt solid #999',
+            border: `1pt solid ${primary}`,
             padding: '0.03in 0.08in',
-            color: '#666',
+            color: primary,
             lineHeight: 1.25,
+            borderRadius: 'var(--pc-radius)',
           }"
         >
           PRSRT STD<br />
@@ -181,6 +182,7 @@ const hasRating = computed(
           :items="offerItems"
           :deadline="card.resolvedContent.urgencyText || undefined"
           :primary-color="primary"
+          :accent-color="accent"
         />
 
         <!-- Block 2: CTA -->
