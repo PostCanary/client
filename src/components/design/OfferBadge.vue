@@ -71,7 +71,7 @@ const hasText = computed(() => !!(props.text && props.text.trim().length > 0));
       backgroundColor: burstBg,
       color: burstText,
       border: `3pt solid ${burstRing}`,
-      boxShadow: '0 0.04in 0.12in rgba(0,0,0,0.35)',
+      boxShadow: 'var(--pc-shadow-brand)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -110,7 +110,7 @@ const hasText = computed(() => !!(props.text && props.text.trim().length > 0));
       color: ribbonText,
       textAlign: 'center',
       padding: '0.08in 0',
-      boxShadow: '0 0.02in 0.08in rgba(0,0,0,0.3)',
+      boxShadow: 'var(--pc-shadow-brand)',
       pointerEvents: 'none',
       zIndex: 5,
     }"
