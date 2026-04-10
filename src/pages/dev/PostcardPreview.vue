@@ -123,8 +123,9 @@ const rating = ref(4.9);
 const reviewCount = ref(2423);
 
 // TODO D-11: replace with real scraped Desert Diamond worker photo before final demo render
+// Pexels photo 5463576: technician performing maintenance on outdoor AC unit (free commercial use)
 const photoUrl = ref(
-  "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1200"
+  "https://images.pexels.com/photos/5463576/pexels-photo-5463576.jpeg?auto=compress&cs=tinysrgb&w=1200"
 );
 
 // Brand colors — Desert Diamond HVAC: blue (trust) + orange (urgency/warmth)
@@ -162,8 +163,8 @@ const offerItems = computed(() =>
 
 const trustBadges = computed<TrustBadge[]>(() => [
   { type: "bbb", label: "BBB A+", confidence: "high" },
-  { type: "angi", label: "Angi Certified", confidence: "high" },
-  { type: "homeadvisor", label: "HomeAdvisor Top Rated", confidence: "medium" },
+  { type: "angi", label: "ANGI", confidence: "high" },
+  { type: "homeadvisor", label: "HOME ADV.", confidence: "medium" },
 ]);
 
 const mockCard = computed<CardDesign>(() => ({

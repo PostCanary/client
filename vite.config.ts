@@ -39,6 +39,10 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
+    test: {
+      exclude: ["tests/e2e/**", "node_modules/**"],
+      passWithNoTests: true,
+    },
     plugins: [vue(), svgLoader()],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

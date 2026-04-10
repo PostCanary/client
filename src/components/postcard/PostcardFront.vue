@@ -131,24 +131,29 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
     </template>
 
     <!-- ============================================================
-         FULL-BLEED: Phase 2 rewrite (2026-04-09). Draplin gate pass.
+         FULL-BLEED: Phase 2 Session 35 — 3-zone layout.
          ============================================================
-         Pattern references (02-RESEARCH.md):
-         - P-01: photo 55-75% of card area, edge-to-edge bleed
-         - P-02: text overlays sit ON the photo
-         - P-03: solid color bar bottom 25-35%, not a gradient
-         - P-05: logo top-left, small (0.75-1.25in)
-         - P-07: phone in solid full-width container at bottom
-         - P-09: headline 800-900 weight
-         - P-27: wordmark fallback is a filled solid-color rectangle
-         - P-29: front phone spans or nearly spans card width
-         - P-36: border-radius 0 on every element
-         - P-38: no soft grey shadows
-         - Z-pattern (D-08): logo TL → [credibility suppressed when
-                 ribbon active] → headline BL → phone BR (full width bar).
+         Expert rules applied:
+         - Gendusa: 3 distinct color zones, headline 15-25% of card,
+           CTA in non-matching color, offer teaser on front
+         - Draplin: border-radius 0, no soft shadows, color blocks
+           dominate, thick type, physical-object DNA
+         - Whitman: Z-pattern (logo TL → ribbon TR → headline on photo
+           left → phone at bottom-right exit point), Ogilvy 2/3-1/3
+         - Halbert: multi-color headline (RED attention + bridge +
+           brand-color action = problem→solution), value stack anchor
+         - Caples: self-interest headline with location, specific numbers
+         - Wathan: all values from CSS custom properties, zero magic numbers
+         - Drasner: all zones absolute-positioned (one layout mode),
+           flex inside each zone for internal alignment
+         ============================================================
+         3-zone structure (HAC-1000 reference):
+         Zone 1: Photo + headline text  — top 60%
+         Zone 2: Offer strip            — middle 14%, bright GREEN
+         Zone 3: Info bar (phone/brand) — bottom 26%, deep NAVY
          ============================================================ -->
     <template v-if="layoutType === 'full-bleed'">
-      <!-- Hero photo, edge-to-edge. No insets, no borders, no radius. -->
+      <!-- ZONE 1: Hero photo, edge-to-edge bleed (P-01, P-02) -->
       <img
         v-if="hasPhoto"
         :src="card.resolvedContent.photoUrl"
@@ -156,137 +161,209 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
         alt=""
       />
 
-      <!-- Solid color bottom bar (P-03). Height from --pc-overlay-bar-h.
-           Hard-edged top border via a narrow 0.4in gradient ABOVE the bar
-           that blends photo pixels into the bar color — the bar itself
-           is solid. The bar is dark (using `dark` brand color) so white
-           text on it always reads. -->
-      <div
-        class="absolute inset-x-0 bottom-0 pointer-events-none"
-        :style="{
-          height: 'var(--pc-overlay-bar-h)',
-          backgroundColor: dark,
-        }"
-      />
-      <!-- Photo→bar blend: a 0.4in gradient strip sitting just above the
-           bar so photo edges don't pop against the hard bar top. -->
+      <!-- Photo→offer blend: gradient strip above Zone 2 so
+           photo edges aren't visible behind the offer strip -->
       <div
         class="absolute inset-x-0 pointer-events-none"
         :style="{
-          bottom: 'var(--pc-overlay-bar-h)',
-          height: '0.4in',
-          background: `linear-gradient(to top, ${dark} 0%, rgba(0,0,0,0) 100%)`,
+          bottom: `calc(var(--pc-front-offer-h) + var(--pc-front-info-h))`,
+          height: 'var(--pc-front-blend-h)',
+          background: `linear-gradient(to top, var(--pc-front-offer-bg) 0%, rgba(0,0,0,0) 100%)`,
+          borderRadius: 'var(--pc-radius)',
         }"
       />
 
-      <!-- TOP ROW: logo top-left (P-05), credibility top-right (P-06).
-           Credibility suppressed when ribbon badge is active (hideTopRightBadge). -->
+      <!-- ZONE 2: Offer strip — bright GREEN, non-matching color (Gendusa)
+           Spans full width. Contains offer text centered. -->
       <div
-        class="absolute top-0 inset-x-0 flex justify-between items-start"
+        class="absolute inset-x-0 flex items-center justify-center"
         :style="{
-          padding: '0.15in 0.2in',
-          gap: '0.1in',
+          bottom: 'var(--pc-front-info-h)',
+          height: 'var(--pc-front-offer-h)',
+          backgroundColor: 'var(--pc-front-offer-bg)',
+          padding: '0 0.25in',
+          color: '#FFFFFF',
+          textAlign: 'center',
+          borderRadius: 'var(--pc-radius)',
         }"
       >
-        <!-- Logo OR wordmark fallback (D-09, P-27) -->
-        <img
-          v-if="!showWordmarkFallback"
-          :src="logoUrl!"
-          class="object-contain flex-none"
-          :style="{
-            maxWidth: 'var(--pc-logo-max-w)',
-            minWidth: 'var(--pc-logo-min-w)',
-            height: 'auto',
-            borderRadius: 'var(--pc-radius)',
-          }"
-          alt=""
-        />
+        <div class="flex items-center justify-center gap-1" :style="{ flexWrap: 'wrap' }">
+          <span :style="{ fontSize: 'var(--pc-front-offer-size)', fontWeight: 400 }">
+            Get
+          </span>
+          <span :style="{
+            fontSize: 'var(--pc-front-offer-bold)',
+            fontWeight: 800,
+            fontFamily: 'var(--pc-headline-family)',
+          }">
+            {{ offerTeaser }}
+          </span>
+          <span :style="{ fontSize: 'var(--pc-front-offer-size)', fontWeight: 400 }">
+            — Call Today!
+          </span>
+        </div>
+        <!-- Fine print line -->
         <div
-          v-else
-          class="flex-none"
           :style="{
-            backgroundColor: primary,
-            color: textOnPrimary,
-            padding: '0.06in 0.14in',
-            minWidth: 'var(--pc-logo-min-w)',
-            maxWidth: 'var(--pc-logo-max-w)',
-            borderRadius: 'var(--pc-radius)',
-            fontFamily: 'inherit',
-            fontSize: '14pt',
-            fontWeight: 900,
-            lineHeight: 1.05,
-            textTransform: 'uppercase',
-            letterSpacing: '0.01em',
+            fontSize: '8pt',
+            fontWeight: 400,
+            opacity: 0.85,
+            position: 'absolute',
+            bottom: '0.04in',
+            left: 0,
+            right: 0,
             textAlign: 'center',
           }"
         >
-          {{ businessName }}
-        </div>
-
-        <!-- Credibility top-right (P-06) — suppressed when ribbon active -->
-        <div
-          v-if="!hideTopRightBadge"
-          class="pc-badge flex-none"
-          :style="{
-            backgroundColor: dark,
-            color: '#FFFFFF',
-            padding: '0.05in 0.1in',
-            maxWidth: '45%',
-            borderRadius: 'var(--pc-radius)',
-            textOverflow: 'ellipsis',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-          }"
-        >
-          {{ credibility }}
+          With this card. Limited time offer.
         </div>
       </div>
 
-      <!-- BOTTOM BAR: headline + full-width phone (P-07, P-08, P-29, P-09).
-           The bar height is --pc-overlay-bar-h (36%). Headline fills the
-           top ~65% of the bar; phone is the bottom full-width band. -->
+      <!-- ZONE 3: Info bar — deep NAVY, brand + phone + services
+           Whitman: CTA at Z-pattern exit point (bottom-right) -->
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col justify-end"
+        class="absolute inset-x-0 bottom-0 flex items-center justify-between"
         :style="{
-          height: 'var(--pc-overlay-bar-h)',
-          padding: '0.15in 0.2in 0 0.2in',
+          height: 'var(--pc-front-info-h)',
+          backgroundColor: 'var(--pc-front-info-bg)',
+          padding: '0.1in 0.25in',
           color: '#FFFFFF',
+          borderRadius: 'var(--pc-radius)',
         }"
       >
-        <h3
-          class="pc-headline"
+        <!-- Left: wordmark/logo in the info bar (HAC-1000 pattern) -->
+        <div class="flex flex-col flex-none" :style="{ maxWidth: '2.2in' }">
+          <!-- Services micro-strip (Gendusa: all services in one scannable line) -->
+          <div :style="{
+            fontSize: 'var(--pc-front-services-size)',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            opacity: 0.8,
+            marginBottom: '0.04in',
+          }">
+            AC · FURNACE · REPAIR · REPLACE · MAINTENANCE
+          </div>
+          <!-- Logo OR wordmark fallback (D-09, P-27) -->
+          <img
+            v-if="!showWordmarkFallback"
+            :src="logoUrl!"
+            class="object-contain flex-none"
+            :style="{
+              maxWidth: '1.6in',
+              minWidth: '0.8in',
+              height: 'auto',
+              borderRadius: 'var(--pc-radius)',
+            }"
+            alt=""
+          />
+          <div
+            v-else
+            class="flex-none"
+            :style="{
+              backgroundColor: primary,
+              color: textOnPrimary,
+              padding: '0.06in 0.12in',
+              borderRadius: 'var(--pc-radius)',
+              fontFamily: 'var(--pc-headline-family)',
+              lineHeight: 1.0,
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
+              textAlign: 'center',
+            }"
+          >
+            <div :style="{ fontSize: '14pt', fontWeight: 700 }">
+              {{ businessName?.replace(/\s+(HVAC|LLC|INC|CO)\.?$/i, '') }}
+            </div>
+            <div
+              v-if="businessName && /\s+(HVAC|LLC|INC|CO)\.?$/i.test(businessName)"
+              :style="{ fontSize: '10pt', fontWeight: 600, marginTop: '0.02in', opacity: 0.9 }"
+            >
+              {{ businessName.match(/\s+(HVAC|LLC|INC|CO)\.?$/i)?.[1]?.toUpperCase() }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: phone number (Whitman: Z-pattern exit = CTA) -->
+        <div :style="{ textAlign: 'right' }">
+          <div :style="{
+            fontSize: '10pt',
+            fontWeight: 400,
+            opacity: 0.9,
+            marginBottom: '0.03in',
+          }">
+            Call today to schedule your service!
+          </div>
+          <div :style="{
+            fontFamily: 'var(--pc-headline-family)',
+            fontSize: 'var(--pc-front-info-phone)',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+          }">
+            {{ card.resolvedContent.phoneNumber }}
+          </div>
+        </div>
+      </div>
+
+      <!-- HEADLINE on the photo zone — multi-color, multi-tier
+           Halbert: RED = attention/problem, bridge = transition,
+           brand-color = action/solution
+           Positioned on LEFT side of photo (Whitman: Z-pattern start) -->
+      <div
+        class="absolute flex flex-col justify-center"
+        :style="{
+          top: '8%',
+          left: '5%',
+          bottom: `calc(var(--pc-front-offer-h) + var(--pc-front-info-h) + 2%)`,
+          maxWidth: '55%',
+        }"
+      >
+        <!-- RED attention line — the HOOK (Halbert: problem trigger) -->
+        <div
+          v-if="card.resolvedContent.headline.includes(':')"
           :style="{
-            color: '#FFFFFF',
-            marginBottom: '0.1in',
+            fontFamily: 'var(--pc-headline-family)',
+            fontSize: 'var(--pc-headline-hero-size)',
+            fontWeight: 700,
+            color: 'var(--pc-front-headline-color)',
+            lineHeight: 1.0,
+            textTransform: 'uppercase',
+            textShadow: '0 1pt 3pt rgba(0,0,0,0.4)',
           }"
         >
-          {{ card.resolvedContent.headline }}
+          {{ card.resolvedContent.headline.split(':')[0] + ':' }}
+        </div>
+        <!-- Bridge line — the TRANSITION (Halbert: why it matters) -->
+        <div :style="{
+          fontSize: 'var(--pc-headline-lead-size)',
+          fontWeight: 400,
+          color: '#FFFFFF',
+          lineHeight: 1.3,
+          marginTop: '0.04in',
+          marginBottom: '0.04in',
+          textShadow: '0 1pt 2pt rgba(0,0,0,0.5)',
+        }">
+          — stay comfortable with
+        </div>
+        <!-- Brand-color ACTION line — the SOLUTION (Halbert: what to do) -->
+        <h3 :style="{
+          fontFamily: 'var(--pc-headline-family)',
+          fontSize: 'var(--pc-headline-action-size)',
+          fontWeight: 700,
+          color: primary,
+          lineHeight: 0.95,
+          textTransform: 'uppercase',
+          textShadow: '0 1pt 3pt rgba(0,0,0,0.4)',
+          margin: 0,
+        }">
+          {{ card.resolvedContent.headline.includes(':')
+            ? card.resolvedContent.headline.split(':').slice(1).join(':').trim()
+            : card.resolvedContent.headline }}
         </h3>
       </div>
 
-      <!-- Full-width phone band (P-29): spans the full card width at the
-           very bottom. Brand primary background, contrasting text. No
-           rounded corners. No shadows. -->
-      <div
-        class="absolute inset-x-0 bottom-0"
-        :style="{
-          backgroundColor: primary,
-          color: textOnPrimary,
-          padding: '0.12in 0.2in',
-          borderRadius: 'var(--pc-radius)',
-          textAlign: 'center',
-        }"
-      >
-        <span
-          class="pc-phone-front"
-          :style="{
-            fontWeight: 800,
-            letterSpacing: '0.02em',
-          }"
-        >
-          {{ card.resolvedContent.phoneNumber }}
-        </span>
-      </div>
+      <!-- Offer badge (ribbon/burst) stays in its original position
+           above all zones via z-index -->
     </template>
 
     <!-- ============================================================

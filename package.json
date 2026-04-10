@@ -46,7 +46,7 @@
     "playwright": "^1.59.1",
     "playwright-core": "^1.59.1",
     "postcss": "8.5.6",
-    "tailwindcss": "^4.1.16",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
     "vite-svg-loader": "5.1.0",

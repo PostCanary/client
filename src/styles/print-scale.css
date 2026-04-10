@@ -215,7 +215,51 @@
    * photo edges aren't visible behind the text, but the bar itself is a
    * hard-edged solid region.
    */
-  --pc-overlay-bar-h:       36%;
+  /* ------------------------------------------------------------------
+   * FRONT 3-ZONE LAYOUT (Wathan: all values as tokens, no magic numbers)
+   * ------------------------------------------------------------------
+   * HAC-1000 reference: photo 60% / offer strip 14% / info bar 26%.
+   * Each zone is absolutely positioned with these height percentages.
+   * Gendusa: THREE distinct color zones = three distinct messages.
+   * The gradient blend sits ABOVE zone 1's bottom edge, not inside it.
+   */
+  --pc-front-photo-h:       60%;
+  --pc-front-offer-h:       14%;
+  --pc-front-info-h:        26%;
+  --pc-front-blend-h:       0.4in;
+
+  /* Zone colors — each zone has its own color, never shared.
+   * Gendusa: CTA in a "bright NON-MATCHING color."
+   * The offer strip color appears NOWHERE else on the card. */
+  --pc-front-offer-bg:      #43A047;  /* Bright green — non-matching CTA color */
+  --pc-front-info-bg:       #0D2B4B;  /* Deep navy — trust/brand */
+  --pc-front-headline-color: #E53935; /* Bright red — attention/hook */
+
+  /* Headline hero size — Gendusa: headline fills 15-25% of card area.
+   * At 36pt in Oswald condensed on a 9x6 card, the headline block
+   * fills roughly 20% of the card. */
+  --pc-headline-hero-size:  36pt;
+  --pc-headline-lead-size:  14pt;
+  --pc-headline-action-size: 44pt;
+
+  /* Offer strip text — Gendusa: offer in a NON-MATCHING color zone.
+   * Two tiers: regular context text + bold price callout. */
+  --pc-front-offer-size:    13pt;
+  --pc-front-offer-bold:    18pt;
+
+  /* Info bar — phone is largest element in this zone (Whitman: CTA at
+   * Z-pattern exit point). Services micro-strip is smallest. */
+  --pc-front-info-phone:    24pt;
+  --pc-front-services-size: 7pt;
+
+  /* Legacy single-bar height (kept for back-compat, unused on new front) */
+  --pc-overlay-bar-h:       42%;
+
+  /* Condensed headline font — Oswald from Google Fonts.
+   * Packs 30-40% more characters per line than regular sans-serif.
+   * PostcardMania/Mail Shark references use condensed grotesques
+   * for their headlines (Impact, Bebas Neue, etc). */
+  --pc-headline-family:     'Oswald', 'Impact', 'Arial Narrow', sans-serif;
 
   /* Trust badge fills — real brand colors for BBB, Angi, HomeAdvisor.
    * Consumed by TrustBadges.vue (Plan 03). Values cross-referenced with
@@ -244,10 +288,12 @@
  */
 
 .pc-headline {
+  font-family: var(--pc-headline-family);
   font-size: var(--pc-headline-size);
   font-weight: var(--pc-headline-weight);
   line-height: 1.05;
   letter-spacing: -0.01em;
+  text-transform: uppercase;
 }
 
 .pc-credibility {
