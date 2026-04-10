@@ -172,6 +172,69 @@
   --pc-overlay-light:   rgba(255, 255, 255, 0.92);
   --pc-border-offer:    2pt solid;             /* Offer box border */
   --pc-border-cta:      2pt solid;             /* CTA box border */
+
+  /* ------------------------------------------------------------------
+   * DRAPLIN AESTHETIC TOKENS — Phase 2 (D-04 / D-05 / D-06)
+   * ------------------------------------------------------------------
+   * Hard rules baked into CSS variables so every postcard component
+   * consumes the same values. Per CONTEXT.md decisions D-04 through D-06:
+   *
+   *   D-04: border-radius: 0 on every card element. Exceptions below.
+   *   D-05: No soft grey drop shadows. Brand-color hard shadows allowed.
+   *   D-06: Color blocks > whitespace. Enforced via component-level color
+   *         block coverage, not directly tokenized.
+   *
+   * Components MUST reference these tokens by name — never hardcode a
+   * border-radius or shadow value. A future token tweak should propagate
+   * by changing a single variable.
+   */
+
+  /* D-04 hard rule: border-radius is 0 everywhere. The only exceptions
+   * documented in 02-RESEARCH.md P-36 are:
+   *   - QR code white background pad: 2pt (CTABox.vue inline)
+   *   - Circular offer burst badge: 50% (OfferBadge.vue 'burst' variant)
+   * Those two cases do NOT use this token — they set their own radius
+   * inline with an explicit comment. All other components reference
+   * var(--pc-radius) OR set borderRadius: 0 explicitly.
+   */
+  --pc-radius:              0;
+
+  /* D-05: soft grey shadows (the SaaS tell) are banned. Components that
+   * previously used box-shadow: 0 Xpx Ypx rgba(0,0,0,0.Z) must reference
+   * --pc-shadow-soft which is 'none'. When visual depth is needed, use
+   * --pc-shadow-brand which is a hard-offset no-blur shadow in a dark
+   * brand color (Draplin's preferred "poster" shadow style).
+   */
+  --pc-shadow-soft:         none;
+  --pc-shadow-brand:        3pt 3pt 0 rgba(0, 0, 0, 0.4);
+
+  /* Full-bleed bottom overlay bar — solid color block, not a gradient.
+   * Consumers use this as the height of the solid bar that carries the
+   * headline + phone at the bottom of the full-bleed front. The photo
+   * area above gets a short (8-12%) gradient transition into the bar so
+   * photo edges aren't visible behind the text, but the bar itself is a
+   * hard-edged solid region.
+   */
+  --pc-overlay-bar-h:       36%;
+
+  /* Trust badge fills — real brand colors for BBB, Angi, HomeAdvisor.
+   * Consumed by TrustBadges.vue (Plan 03). Values cross-referenced with
+   * each org's published brand guide per CONTEXT.md D-13 and the legal
+   * rationale in src/assets/trust-badges/README.md.
+   *
+   *   BBB navy        #003087
+   *   Angi orange     #F26B2C
+   *   HomeAdvisor     #F7931E   (post-Angi-merger orange)
+   *
+   * The generic fallback is brand-primary so a customer with an
+   * unrecognized trust badge still renders as a filled color block
+   * (not an outlined pill — that fails P-14).
+   */
+  --pc-trust-badge-fill-bbb:      #003087;
+  --pc-trust-badge-fill-angi:     #F26B2C;
+  --pc-trust-badge-fill-ha:       #F7931E;
+  --pc-trust-badge-fill-generic:  var(--pc-primary, #0b2d50);
+  --pc-trust-badge-text:          #FFFFFF;
 }
 
 /* ---------------------------------------------------------------------
