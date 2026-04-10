@@ -39,26 +39,37 @@ const hasQrCode = computed(() => !!props.qrCodeUrl && props.qrCodeUrl.length > 0
     }"
   >
     <div :style="{ display: 'flex', alignItems: 'center', gap: 'var(--pc-section-gap)' }">
-      <!-- Left column: label + phone integrated (P-28) + website (secondary) -->
+      <!-- Left column: label + phone integrated (P-28) + website -->
       <div :style="{ flex: 1, minWidth: 0 }">
         <div
-          class="pc-badge"
           :style="{
-            opacity: 1,
-            marginBottom: 0,
-            paddingBottom: '0.02in',
-            borderBottom: `1pt solid ${textOnPrimary}`,
-            display: 'inline-block',
-            fontWeight: 700,
+            fontSize: '13pt',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            opacity: 0.9,
+            marginBottom: '0.02in',
           }"
         >
           {{ label }}
         </div>
-        <div class="pc-phone-back" :style="{ marginTop: '0.03in' }">{{ phone }}</div>
+        <div :style="{
+          fontFamily: `'Oswald', 'Impact', 'Arial Narrow', sans-serif`,
+          fontSize: 'var(--pc-phone-back-size)',
+          fontWeight: 800,
+          letterSpacing: '0.01em',
+          lineHeight: 1.0,
+        }">
+          {{ phone }}
+        </div>
         <div
           v-if="website"
-          class="pc-credibility"
-          :style="{ opacity: 0.9, marginTop: '0.04in' }"
+          :style="{
+            opacity: 0.85,
+            marginTop: '0.04in',
+            fontSize: '11pt',
+            fontWeight: 500,
+          }"
         >
           {{ website }}
         </div>

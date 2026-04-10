@@ -108,7 +108,7 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
          self-positions in the top-right corner. Burst variant needs
          a wrapper to control its position on the card.
          ============================================================ -->
-    <template v-if="hasOfferTeaser">
+    <template v-if="hasOfferTeaser && layoutType !== 'full-bleed'">
       <OfferBadge
         v-if="badgeVariant === 'ribbon'"
         :text="offerTeaser"
@@ -161,8 +161,7 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
         alt=""
       />
 
-      <!-- Photo→offer blend: gradient strip above Zone 2 so
-           photo edges aren't visible behind the offer strip -->
+      <!-- Photo→offer blend: gradient strip above Zone 2 -->
       <div
         class="absolute inset-x-0 pointer-events-none"
         :style="{
@@ -173,8 +172,45 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
         }"
       />
 
+      <!-- TOP ROW: logo top-left (P-05, Whitman Z-pattern start) -->
+      <div
+        class="absolute top-0 inset-x-0 flex justify-between items-start"
+        :style="{ padding: '0.15in 0.2in', gap: '0.1in' }"
+      >
+        <img
+          v-if="!showWordmarkFallback"
+          :src="logoUrl!"
+          class="object-contain flex-none"
+          :style="{
+            maxWidth: '1.8in',
+            minWidth: '1.0in',
+            height: 'auto',
+            borderRadius: 'var(--pc-radius)',
+          }"
+          alt=""
+        />
+        <div
+          v-else
+          class="flex-none"
+          :style="{
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            color: '#FFFFFF',
+            padding: '0.08in 0.14in',
+            borderRadius: 'var(--pc-radius)',
+            fontFamily: 'var(--pc-headline-family)',
+            lineHeight: 1.0,
+            textTransform: 'uppercase',
+            letterSpacing: '0.02em',
+            fontSize: '14pt',
+            fontWeight: 700,
+          }"
+        >
+          {{ businessName }}
+        </div>
+      </div>
+
       <!-- ZONE 2: Offer strip — bright GREEN, non-matching color (Gendusa)
-           Spans full width. Contains offer text centered. -->
+           Full width, bold text, scannable at arm's length -->
       <div
         class="absolute inset-x-0 flex items-center justify-center"
         :style="{
@@ -187,29 +223,30 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
           borderRadius: 'var(--pc-radius)',
         }"
       >
-        <div class="flex items-center justify-center gap-1" :style="{ flexWrap: 'wrap' }">
-          <span :style="{ fontSize: 'var(--pc-front-offer-size)', fontWeight: 400 }">
-            Get
+        <div class="flex items-center justify-center" :style="{ gap: '0.12in' }">
+          <span :style="{
+            fontFamily: 'var(--pc-headline-family)',
+            fontSize: '22pt',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+          }">
+            Get {{ offerTeaser }}
           </span>
           <span :style="{
-            fontSize: 'var(--pc-front-offer-bold)',
-            fontWeight: 800,
-            fontFamily: 'var(--pc-headline-family)',
+            fontSize: '14pt',
+            fontWeight: 600,
+            opacity: 0.95,
           }">
-            {{ offerTeaser }}
-          </span>
-          <span :style="{ fontSize: 'var(--pc-front-offer-size)', fontWeight: 400 }">
             — Call Today!
           </span>
         </div>
-        <!-- Fine print line -->
         <div
           :style="{
             fontSize: '8pt',
             fontWeight: 400,
-            opacity: 0.85,
+            opacity: 0.8,
             position: 'absolute',
-            bottom: '0.04in',
+            bottom: '0.03in',
             left: 0,
             right: 0,
             textAlign: 'center',
@@ -226,61 +263,47 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
         :style="{
           height: 'var(--pc-front-info-h)',
           backgroundColor: 'var(--pc-front-info-bg)',
-          padding: '0.1in 0.25in',
+          padding: '0.08in 0.25in',
           color: '#FFFFFF',
           borderRadius: 'var(--pc-radius)',
         }"
       >
-        <!-- Left: wordmark/logo in the info bar (HAC-1000 pattern) -->
-        <div class="flex flex-col flex-none" :style="{ maxWidth: '2.2in' }">
-          <!-- Services micro-strip (Gendusa: all services in one scannable line) -->
+        <!-- Left: brand identity in info bar -->
+        <div class="flex flex-col flex-none" :style="{ maxWidth: '3in' }">
+          <!-- Services strip (Gendusa: services in scannable line) -->
           <div :style="{
-            fontSize: 'var(--pc-front-services-size)',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
+            fontSize: '8pt',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            opacity: 0.8,
-            marginBottom: '0.04in',
+            opacity: 0.75,
+            marginBottom: '0.03in',
           }">
-            AC · FURNACE · REPAIR · REPLACE · MAINTENANCE
+            AC · HEATING · REPAIR · MAINTENANCE
           </div>
-          <!-- Logo OR wordmark fallback (D-09, P-27) -->
-          <img
-            v-if="!showWordmarkFallback"
-            :src="logoUrl!"
-            class="object-contain flex-none"
-            :style="{
-              maxWidth: '1.6in',
-              minWidth: '0.8in',
-              height: 'auto',
-              borderRadius: 'var(--pc-radius)',
-            }"
-            alt=""
-          />
+          <!-- Wordmark — thick, bold, impossible to miss (Draplin) -->
+          <div :style="{
+            fontFamily: 'var(--pc-headline-family)',
+            fontSize: '28pt',
+            fontWeight: 800,
+            lineHeight: 0.95,
+            textTransform: 'uppercase',
+            letterSpacing: '-0.01em',
+          }">
+            {{ businessName?.replace(/\s+(HVAC|LLC|INC|CO)\.?$/i, '') }}
+          </div>
           <div
-            v-else
-            class="flex-none"
+            v-if="businessName && /\s+(HVAC|LLC|INC|CO)\.?$/i.test(businessName)"
             :style="{
-              backgroundColor: primary,
-              color: textOnPrimary,
-              padding: '0.06in 0.12in',
-              borderRadius: 'var(--pc-radius)',
               fontFamily: 'var(--pc-headline-family)',
-              lineHeight: 1.0,
+              fontSize: '16pt',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
               textTransform: 'uppercase',
-              letterSpacing: '0.02em',
-              textAlign: 'center',
+              opacity: 0.9,
             }"
           >
-            <div :style="{ fontSize: '14pt', fontWeight: 700 }">
-              {{ businessName?.replace(/\s+(HVAC|LLC|INC|CO)\.?$/i, '') }}
-            </div>
-            <div
-              v-if="businessName && /\s+(HVAC|LLC|INC|CO)\.?$/i.test(businessName)"
-              :style="{ fontSize: '10pt', fontWeight: 600, marginTop: '0.02in', opacity: 0.9 }"
-            >
-              {{ businessName.match(/\s+(HVAC|LLC|INC|CO)\.?$/i)?.[1]?.toUpperCase() }}
-            </div>
+            {{ businessName.match(/\s+(HVAC|LLC|INC|CO)\.?$/i)?.[1]?.toUpperCase() }}
           </div>
         </div>
 
@@ -288,16 +311,18 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
         <div :style="{ textAlign: 'right' }">
           <div :style="{
             fontSize: '10pt',
-            fontWeight: 400,
-            opacity: 0.9,
-            marginBottom: '0.03in',
+            fontWeight: 600,
+            opacity: 0.85,
+            marginBottom: '0.02in',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
           }">
-            Call today to schedule your service!
+            Call Now!
           </div>
           <div :style="{
             fontFamily: 'var(--pc-headline-family)',
-            fontSize: 'var(--pc-front-info-phone)',
-            fontWeight: 700,
+            fontSize: '28pt',
+            fontWeight: 800,
             letterSpacing: '0.02em',
           }">
             {{ card.resolvedContent.phoneNumber }}
@@ -307,53 +332,52 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
 
       <!-- HEADLINE on the photo zone — multi-color, multi-tier
            Halbert: RED = attention/problem, bridge = transition,
-           brand-color = action/solution
-           Positioned on LEFT side of photo (Whitman: Z-pattern start) -->
+           brand-color = action/solution -->
       <div
-        class="absolute flex flex-col justify-center"
+        class="absolute flex flex-col justify-end"
         :style="{
-          top: '8%',
-          left: '5%',
-          bottom: `calc(var(--pc-front-offer-h) + var(--pc-front-info-h) + 2%)`,
-          maxWidth: '55%',
+          top: '12%',
+          left: '4%',
+          bottom: `calc(var(--pc-front-offer-h) + var(--pc-front-info-h) + 3%)`,
+          maxWidth: '58%',
         }"
       >
-        <!-- RED attention line — the HOOK (Halbert: problem trigger) -->
+        <!-- RED attention line — the HOOK -->
         <div
           v-if="card.resolvedContent.headline.includes(':')"
           :style="{
             fontFamily: 'var(--pc-headline-family)',
             fontSize: 'var(--pc-headline-hero-size)',
-            fontWeight: 700,
+            fontWeight: 800,
             color: 'var(--pc-front-headline-color)',
             lineHeight: 1.0,
             textTransform: 'uppercase',
-            textShadow: '0 1pt 3pt rgba(0,0,0,0.4)',
+            textShadow: '2pt 2pt 0 rgba(0,0,0,0.5)',
           }"
         >
           {{ card.resolvedContent.headline.split(':')[0] + ':' }}
         </div>
-        <!-- Bridge line — the TRANSITION (Halbert: why it matters) -->
+        <!-- Bridge line with stakes (Halbert) -->
         <div :style="{
-          fontSize: 'var(--pc-headline-lead-size)',
-          fontWeight: 400,
+          fontSize: '15pt',
+          fontWeight: 500,
           color: '#FFFFFF',
-          lineHeight: 1.3,
-          marginTop: '0.04in',
-          marginBottom: '0.04in',
-          textShadow: '0 1pt 2pt rgba(0,0,0,0.5)',
+          lineHeight: 1.2,
+          marginTop: '0.03in',
+          marginBottom: '0.03in',
+          textShadow: '1pt 1pt 0 rgba(0,0,0,0.6)',
         }">
-          — stay comfortable with
+          — don't wait until it breaks —
         </div>
-        <!-- Brand-color ACTION line — the SOLUTION (Halbert: what to do) -->
+        <!-- Brand-color ACTION line — the SOLUTION -->
         <h3 :style="{
           fontFamily: 'var(--pc-headline-family)',
           fontSize: 'var(--pc-headline-action-size)',
-          fontWeight: 700,
+          fontWeight: 800,
           color: primary,
-          lineHeight: 0.95,
+          lineHeight: 0.92,
           textTransform: 'uppercase',
-          textShadow: '0 1pt 3pt rgba(0,0,0,0.4)',
+          textShadow: '2pt 2pt 0 rgba(0,0,0,0.5)',
           margin: 0,
         }">
           {{ card.resolvedContent.headline.includes(':')
@@ -361,9 +385,6 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
             : card.resolvedContent.headline }}
         </h3>
       </div>
-
-      <!-- Offer badge (ribbon/burst) stays in its original position
-           above all zones via z-index -->
     </template>
 
     <!-- ============================================================

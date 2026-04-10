@@ -39,48 +39,64 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
       borderRadius: 'var(--pc-radius)',
     }"
   >
-    <!-- Headline bar — strong visual anchor, brand color background -->
+    <!-- Headline bar — DOMINANT, brand color background, biggest text
+         in the offer box. Pro postcards: this bar is impossible to miss. -->
     <div
-      class="pc-offer-headline text-center"
+      class="text-center"
       :style="{
         backgroundColor: primary,
         color: textOnPrimary,
-        padding: '0.1in 0.125in',
+        padding: '0.12in 0.15in',
         marginLeft: 'calc(-1 * var(--pc-block-padding))',
         marginRight: 'calc(-1 * var(--pc-block-padding))',
         marginTop: 'calc(-1 * var(--pc-block-padding))',
         marginBottom: 'var(--pc-gutter)',
+        fontFamily: `'Oswald', 'Impact', 'Arial Narrow', sans-serif`,
+        fontSize: '22pt',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        letterSpacing: '0.02em',
+        lineHeight: 1.1,
+        borderRadius: 'var(--pc-radius)',
       }"
     >
       {{ headline }}
     </div>
 
-    <!-- Itemized value stack — checkmark list -->
-    <ul class="pc-offer-items" :style="{ listStyle: 'none', padding: 0, margin: 0 }">
+    <!-- Itemized value stack — checkmark list, BOLD values right-aligned -->
+    <ul :style="{ listStyle: 'none', padding: 0, margin: 0 }">
       <li
         v-for="(item, i) in items"
         :key="i"
-        class="pc-offer-item"
-        :style="{ color: textOnWhite, display: 'flex', justifyContent: 'space-between', gap: 'var(--pc-gutter)' }"
+        :style="{
+          color: textOnWhite,
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 'var(--pc-gutter)',
+          fontSize: '12pt',
+          fontWeight: 500,
+          lineHeight: 1.5,
+        }"
       >
         <span>
-          <span :style="{ color: primary, fontWeight: 700, marginRight: '0.06in' }">✓</span>
+          <span :style="{ color: primary, fontWeight: 800, marginRight: '0.06in' }">✓</span>
           {{ item.label }}
         </span>
-        <span v-if="item.value" class="pc-offer-item-value" :style="{ fontWeight: 600 }">
+        <span v-if="item.value" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">
           {{ item.value }}
         </span>
       </li>
     </ul>
 
-    <!-- Savings callout — right-aligned, brand color text -->
+    <!-- Savings callout — right-aligned, brand color, bold -->
     <div
       v-if="savings"
-      class="pc-offer-item text-right"
+      class="text-right"
       :style="{
         marginTop: 'var(--pc-gutter)',
         color: primary,
-        fontWeight: 700,
+        fontWeight: 800,
+        fontSize: '13pt',
       }"
     >
       {{ savings }}
@@ -89,10 +105,13 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
     <!-- Customer price (optional, if not already in headline) -->
     <div
       v-if="customerPrice"
-      class="pc-offer-headline text-center"
+      class="text-center"
       :style="{
         marginTop: 'var(--pc-gutter)',
         color: primary,
+        fontFamily: `'Oswald', 'Impact', 'Arial Narrow', sans-serif`,
+        fontSize: '18pt',
+        fontWeight: 700,
       }"
     >
       {{ customerPrice }}
