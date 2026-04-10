@@ -9,12 +9,9 @@ import { safeTextColor } from "@/utils/contrast";
 // after session-33 P0-G upsize from 26pt — pro postcards run 32-40pt on
 // the back phone). Website is secondary.
 //
-// qrCodeUrl is REQUIRED (P0 #3, V1 spec line 1008: "QR code minimum: 0.75"
-// × 0.75" on printed card. Enforced by template."). The server generates
-// the image from brand kit data at scrape/update time. Callers must pass
-// a string — empty string is allowed for the rare case where neither a
-// website URL nor a phone number is available, in which case the QR block
-// is hidden rather than shown as a broken image.
+// Phase 2 (02-03-04): P-28 CTA label integration — "CALL NOW" is part of
+// the phone block, not a separate floating element. Label + phone read as
+// one integrated CTA unit. border-radius: var(--pc-radius) = 0.
 
 const props = defineProps<{
   phone: string;
@@ -38,15 +35,26 @@ const hasQrCode = computed(() => !!props.qrCodeUrl && props.qrCodeUrl.length > 0
       color: textOnPrimary,
       border: `var(--pc-border-cta) ${primary}`,
       padding: 'var(--pc-block-padding)',
+      borderRadius: 'var(--pc-radius)',
     }"
   >
     <div :style="{ display: 'flex', alignItems: 'center', gap: 'var(--pc-section-gap)' }">
-      <!-- Left column: label + phone (primary) + website (secondary) -->
+      <!-- Left column: label + phone integrated (P-28) + website (secondary) -->
       <div :style="{ flex: 1, minWidth: 0 }">
-        <div class="pc-badge" :style="{ opacity: 0.85, marginBottom: '0.04in' }">
+        <div
+          class="pc-badge"
+          :style="{
+            opacity: 1,
+            marginBottom: 0,
+            paddingBottom: '0.02in',
+            borderBottom: `1pt solid ${textOnPrimary}`,
+            display: 'inline-block',
+            fontWeight: 700,
+          }"
+        >
           {{ label }}
         </div>
-        <div class="pc-phone-back">{{ phone }}</div>
+        <div class="pc-phone-back" :style="{ marginTop: '0.03in' }">{{ phone }}</div>
         <div
           v-if="website"
           class="pc-credibility"
@@ -65,7 +73,7 @@ const hasQrCode = computed(() => !!props.qrCodeUrl && props.qrCodeUrl.length > 0
           height: '0.85in',
           backgroundColor: '#FFFFFF',
           padding: '0.05in',
-          borderRadius: '2pt',
+          borderRadius: 'var(--pc-radius)',
         }"
       >
         <img
