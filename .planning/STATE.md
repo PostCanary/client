@@ -16,12 +16,28 @@ progress:
 
 # PostCanary — GSD Project State
 
+> ⚠️ **THIS FILE IS STALE AS OF SESSION 50 (2026-04-14).** The authoritative
+> source of truth for "what's done / what's next" is the live handoff at
+> `~/postcanary/sessions/handoff-session-next.md` — specifically the
+> **STATE-OF-PLAY** section inside it. Read that FIRST.
+>
+> STATE.md below reflects the Design Studio R2 GSD milestone (Phases 1-3)
+> last touched 2026-04-09. Since then the project has shipped Phase 03
+> (Figma plugin, Session 44) and Phase 04 4A (render pipeline, Sessions
+> 49-50) via the `/build` skill — neither updates this file. Phase 02 is
+> IN-FLIGHT with uncommitted client work; Phase 04 is the active priority.
+>
+> If you need to execute Phase 02: the `.continue-here.md` in phase 02
+> directory below is STILL mandatory reading — Session 33 anti-patterns
+> BA-01/02/03 remain load-bearing. But DO NOT trust the "current_phase"
+> field at the top of this file.
+
 > 🛑 **READ THIS FIRST:** Before running any tool, read `.planning/phases/02-template-upgrades-ux-polish-google-reviews-oauth/.continue-here.md` **in full**. It contains BLOCKING anti-patterns from Session 33 that you MUST acknowledge before proceeding. Drake's main concern at the end of Session 33 was that things would fall through the cracks on session handoff. The `.continue-here.md` file is the structural defense against that.
 
-**Project:** PostCanary Design Studio Round 2
-**Last Activity:** 2026-04-09
-**Current Phase:** 02
-**Next Command:** `/gsd-execute-phase 2` — BUT read `.continue-here.md` first
+**Project:** PostCanary Design Studio Round 2 (historical GSD milestone — superseded)
+**Last Activity:** 2026-04-09 (Phase 02 Wave 2) — see live handoff for current
+**Current Phase (per this file):** 02 — STALE, reality is Phase 04 4A complete
+**Next Command:** Read `~/postcanary/sessions/handoff-session-next.md` STATE-OF-PLAY section, then follow its NEXT ACTION.
 
 ---
 
