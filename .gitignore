@@ -10,3 +10,10 @@ dist
 # vue-tsc --build emit artifacts
 *.tsbuildinfo
 src/**/*.js
+
+# Working / demo / audit artifacts — local output, not source
+screenshots/
+demo-smoke-test-*/
+visual-audit-*/
+.planning/phases/*/spikes/*/output/
+
