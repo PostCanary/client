@@ -55,10 +55,18 @@ This is the IP firewall between the reference corpus and our original templates.
 - **D-18:** `PATTERNS.md` is the **legal abstraction layer** between source references and PostCanary-original output. Pattern extraction (legal) vs. layout cloning (illegal) per V1 spec lines 968-973: "Templates are PostCanary ORIGINALS based on universal design principles. NOT copied from PostcardMania, Modern Postcard, or any competitor."
 - **D-19:** Lawyer test before any commit: "Could a Mail Shark / PostcardMania lawyer credibly say 'that's our card with different colors'?" If yes → infringement → don't commit. If "that's a postcard that uses universal direct-mail patterns but is clearly its own design" → safe.
 
-### Architecture (Carried Forward — Locked)
-- **D-20:** Vue 3 + Pinia + Tailwind. **No Fabric.js** (DHH override, V1 spec line 716). Templates are pre-built Vue components with editable text fields, not blank canvas.
+### Architecture (UPDATED Session 37 — SVG → Figma Pivot)
+- **D-20:** ~~Vue 3 + Pinia + Tailwind~~ **SUPERSEDED Session 37.** CSS-coded Vue postcard templates FAILED (Sessions 31-36 = 5 sessions of thrown-away work). New approach: **SVG templates** built at print dimensions (648×432pt = 9×6"), imported into **Figma** for visual review and iteration. Variable data layers marked with element IDs (`{{headline}}`, `{{phone}}`, etc.). Production rendering pipeline TBD based on demo call with 1 Vision print partner (April 20).
 - **D-21:** Brand kit consistency enforced — customer cannot break consistency across sequence cards. Locked elements remain locked (USPS zones, logo placement, brand color application).
-- **D-22:** Branch: `feat/design-studio-r2`. Working tree has 2 unpushed Session 33 commits (b6cdbe9 + 06568d3). Phase 2 work continues on the same branch.
+- **D-22:** Branch: `feat/design-studio-r2`. Phase 2 work continues on the same branch.
+
+### SVG Template Design Process (NEW — Session 37)
+- **D-32:** **Stock photo prerequisite** — find HVAC photo on Pexels/Unsplash with composition matching HAC-1000: subject RIGHT (AC unit or technician), open sky LEFT for text overlay zone. Must be minimum 2700×1800px (300 DPI at 9×6"). This is a prerequisite before Zone 1 design.
+- **D-33:** **Dan Mall zone-by-zone methodology** — deconstruct HAC-1000 into visual DECISIONS (not measurements), build SVG zone by zone, show Drake each zone for approval before proceeding to the next. Zone 1 (photo+headline) → Zone 2 (offer strip) → Zone 3 (info bar) → full front → back card.
+- **D-34:** **3-zone structure from POSTCARD-DEEP-SPEC.md** — Zone 1: Photo + Headline (~63%), Zone 2: Green Offer Strip (~14%), Zone 3: Navy Info Bar (~23%). Zero gaps between zones. Full-bleed photo background.
+- **D-35:** **HAC-1000 color hierarchy** — headline lines 1-2 in RED (#E53935), bridge text in BLACK, sub-headline lines 4-5 in NAVY (#0D2B4B matching info bar), offer strip GREEN (#43A047), info bar NAVY. Three distinct zone colors, never crossing zones.
+- **D-36:** **Figma token** stored at `~/.claude/.env.personal` (FIGMA_PERSONAL_ACCESS_TOKEN). Figma REST API is read-only for design content. SVG files are imported into Figma manually by Drake for review. Iteration happens via SVG edits → re-import.
+- **D-37:** **Expert review before Drake** — every SVG version gets expert panel review (Gendusa elements, Draplin aesthetics, Whitman eye flow, Heath stickiness) BEFORE showing to Drake. Fix issues found by experts before asking for Drake's feedback.
 
 ### Active Expert Roster (Validates Each Build Decision)
 - **D-23:** Lead designer: Joy Gendusa (PostcardMania) — postcard strategy authority, validates output against the quality bar her own company sets
@@ -72,12 +80,12 @@ This is the IP firewall between the reference corpus and our original templates.
 - **D-31:** IP / copyright: Troy Hunt + V1 spec — pattern extraction discipline at D-15-D-19, PATTERNS.md as legal audit trail
 
 ### Claude's Discretion
-- Specific CSS units, tokens, and class names within the Draplin rules
-- Exact font choices from existing Tailwind setup
+- SVG element naming and structure within the zone rules
+- Exact font choices (Oswald/Bebas Neue/Impact for condensed headlines, Open Sans/Instrument Sans for body)
 - Specific anchor points within Z-pattern enforcement (so long as the order holds)
 - Exact `PATTERNS.md` schema and format
-- Test approach for the SUCCESs gate (Claude designs the gating logic — could be a manual checklist, could be a test fixture)
-- Whether to write tests for the visual changes (no client test runner currently exists; vue-tsc only — Claude decides whether to wire Vitest as part of this phase or defer)
+- Test approach for the SUCCESs gate (manual checklist is fine for demo)
+- SVG optimization for Figma import compatibility
 
 </decisions>
 

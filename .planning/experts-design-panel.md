@@ -5,13 +5,23 @@
 > **Load alongside:** `experts-implementation-bridge.md` (Wathan/Drasner/Comeau — how to translate these rules into code)
 >
 > **Research depth:** Read depth (3 Exa searches + 1 primary source scrape per expert, per phase). Not study depth.
+>
+> **Writing format rules** (from `research-prompt-engineering-experts.md` — 7 principles):
+> 1. Behavioral descriptions over expertise claims — describe operational context, not "you are an expert"
+> 2. Positive framing — "do X" outperforms "don't do Y"
+> 3. Specific on constraints, general on reasoning — precise WHAT, flexible HOW
+> 4. Examples beat rules for format/tone calibration
+> 5. Explicit failure modes — "when this fails, the result is Y" for every capability
+> 6. Priority ordering — most critical rules at top and bottom (U-shaped attention)
+> 7. Concise — every sentence earns its place, no filler
 
 ---
 
 ## How This File Works
 
-Six experts, each owning a specific domain. Rules are if/then format. When domains overlap, the expert listed first takes precedence unless noted.
+Nine experts across two groups. Rules are if/then format. When domains overlap, the expert listed first takes precedence unless noted.
 
+**Group A: Content & Messaging** — what goes on the card
 | Expert | Domain | Activation |
 |--------|--------|------------|
 | **Joy Gendusa** | Element checklist — what must be on the card | Every postcard, every time |
@@ -20,6 +30,13 @@ Six experts, each owning a specific domain. Rules are if/then format. When domai
 | **Gary Halbert** | Copy structure — what the words say and how they're ordered | Headline, offer, CTA copy |
 | **John Caples** | Headline formulas — which headline type for which situation | Headline generation |
 | **Heath Brothers** | Stickiness scoring — does the message stick in 2 seconds | Post-design verification |
+
+**Group B: Visual Craft** — how the card looks (added Session 44)
+| Expert | Domain | Activation |
+|--------|--------|------------|
+| **Erik Spiekermann** | Print typography — type hierarchy, sizing, spacing for physical media | Type selection, sizing, hierarchy decisions |
+| **Josef Albers** | Color interaction — how colors change perception in context | Brand color adaptation, zone color pairing |
+| **Josef Müller-Brockmann** | Grid proportions — mathematical basis for layout structure | Layout construction, zone proportions, spacing |
 
 ---
 
@@ -232,21 +249,123 @@ Every business owner writing postcard copy is a "tapper" — they hear the full 
 
 ---
 
+---
+
+## 7. SPIEKERMANN RULES — Print Typography
+
+**Source:** Erik Spiekermann (b. 1947). Typographer, information architect. Founded MetaDesign and FontShop. Designed typefaces for Deutsche Bundespost, Deutsche Bahn, Nokia, The Economist. His Bundespost project (1985) is the closest precedent to our postcard challenge: type that works on rough paper, small sizes, variable content. Rules extracted from Bundespost case study PDFs, Typographic Rules blog post, and secondary analysis.
+
+### Type Hierarchy
+
+- If designing a 4-tier hierarchy for print at arm's length (18-24"), then separate display tiers (headlines/offers) from text tiers (body/fine print) — they need different optical treatments, not just different sizes.
+- If the hierarchy gap between tiers is not perceptible at a glance, then the gap is too small. The reader must instantly see what's most important without reading.
+- If choosing between a condensed version of a wide face and a natively narrow face, choose the natively narrow face. Electronic condensing degrades the original design.
+- If figures/numbers (prices, phone numbers) appear on the card, then set them somewhat smaller than caps to avoid groups of figures "sticking out and looking bigger than type."
+
+### Spacing & Legibility
+
+- If text is under 12pt, then increase tracking by at least 2 units. Do NOT use default tracking for small text.
+- If increasing tracking makes copy too long, then reduce type size by 0.1-0.2pt rather than tightening. Slightly smaller + properly tracked > larger + cramped.
+- If setting unjustified text, then set optimum wordspace to 80% or less of default. Text is usually set with too much wordspace.
+- If line length exceeds ~10 words per line at the chosen size, the column is too wide.
+- If using reverse type (light on dark), limit to headlines and short labels. Reverse type depresses readership for body copy. (Converges with Whitman.)
+
+### Typeface Selection
+
+- If choosing a typeface for postcards, select based on: (1) legibility at the smallest size used, (2) clearly distinguishable weights, (3) high x-height, (4) open counters, (5) distinct numerals.
+- If the face needs to work across variable content (different business names, headline lengths), then use a narrow-but-not-condensed proportion — space-efficient without looking squeezed.
+- If choosing between a "neutral" face and one with brand character, prefer character. Neutral faces fail to distinguish the brand.
+
+### Failure Modes
+
+- Fails to provide specific point-size tables for our exact use case. We need to derive sizes empirically: test at actual print size, arm's length distance.
+- Fails for attention-grabbing — his rules optimize legibility and clarity, not visual excitement. Pair with Draplin (bold aesthetic) and Gendusa (element checklist).
+- Fails when print quality is much higher than his Bundespost constraints. On coated card stock at 300 DPI, some of his extreme legibility measures (extra-heavy strokes, ultra-open counters) may be unnecessary.
+
+---
+
+## 8. ALBERS RULES — Color Interaction
+
+**Source:** Josef Albers (1888-1976). Color theorist, Bauhaus/Yale educator. "Interaction of Color" (1963) is the foundational work on color relativity. His rules are framed as PHENOMENA TO CHECK FOR, not algorithmic rules — he philosophically refused formulas. Pair with CIELAB/WCAG for quantified thresholds.
+
+### Color Phenomena Checklist
+
+- If a brand color sits on a zone color with SIMILAR LIGHTNESS, then check for **vanishing boundaries** — the edge will blur and elements merge visually. Programmatic check: CIELAB |ΔL*| < 15 = risk.
+- If a brand color sits on a zone color that is its COMPLEMENT (opposite hue), then check for **vibrating boundaries** — edges shimmer, text becomes unreadable. Programmatic check: hue angle difference 150-210° AND both chroma > 40 = risk.
+- If the SAME brand color appears in TWO zones with different backgrounds, then it will appear as TWO DIFFERENT COLORS (**simultaneous contrast**). Perceptual consistency requires adjusting the hex code per zone.
+- If a warm brand color (red/orange/yellow) is placed on a cool zone (navy/blue), the brand color will ADVANCE (pop forward). Cool on warm recedes. This affects visual hierarchy.
+- If the template swaps ONE zone color (e.g., offer strip from green to brand primary), then ALL adjacent colors shift in appearance (**Bezold Effect**). Re-evaluate every zone boundary, not just the changed one.
+- If both adjacent colors have very high saturation, then check for afterimage-induced phantom colors. At least one color in any pair should have reduced saturation.
+- If text in brand color sits on a zone color, then verify contrast ratio: WCAG 4.5:1 minimum for body text, 3:1 for large text/headlines.
+
+### Color Adaptation Process
+
+1. Extract brand colors (primary, secondary, accent)
+2. For each brand color × zone color pair, check: vanishing boundary? vibrating boundary? adequate contrast?
+3. If any check fails, adjust the brand color for that specific zone (different hex, same perceived intent)
+4. After all adjustments, verify the Bezold cascade — changes propagate
+
+### Failure Modes
+
+- Fails to provide algorithmic rules. Albers explicitly rejected formulas. MITIGATION: use CIELAB delta-E and WCAG contrast ratios as quantified proxies for his qualitative observations.
+- Fails for digital-only color (his work assumes physical pigments on paper). MITIGATION: our postcards ARE physical print, so his observations apply more directly than for screen design.
+- Fails when the goal is emotional impact over perceptual accuracy. Sometimes vibrating boundaries or high-contrast complementaries are WANTED for attention. Treat Albers' phenomena as a diagnostic checklist, not a ban list.
+
+---
+
+## 9. BROCKMANN RULES — Grid Proportions
+
+**Source:** Josef Müller-Brockmann (1914-1996). Swiss graphic designer, codified the modular grid system. "Grid Systems in Graphic Design" (1981) is the canonical reference. His methodology makes layout "capable of analysis and reproduction" — exactly what programmatic template generation needs. Rules extracted from book text, philosophy essay, and Rune Madsen's programming-focused analysis.
+
+### Grid Construction
+
+- If designing a postcard layout, first define content zones by importance. The most important zone gets the most grid fields (rows).
+- If the postcard has 3 horizontal zones, use a row-based grid. For a 9" card height: a 12-row grid = 0.75"/row. Hero = 8 rows (67%), Offer = 2 rows (17%), Info = 2 rows (17%). Adjust to taste — the HAC-1000 is closer to 9:2:3 (64%/14%/21%).
+- If constructing margins, use a proportional system (Golden Section 1:1.618 or simpler ratios). Start with 0.25" margins on a 6×9" card.
+- If setting column width, derive from type size: at 9-10pt body, optimal line = 7-10 words ≈ 45-75 characters. This determines column count for text-heavy zones.
+- If elements need vertical alignment, lock ALL text to a baseline grid. Baseline increment = type size × line-height (e.g., 10pt/14pt → 14pt grid). ALL vertical spacing = multiples of this increment.
+
+### Proportion Rules
+
+- If the HAC-1000 uses 63/14/23, this approximates a Golden Section derivative: the hero zone is ~φ/(1+φ) ≈ 62% of the total height. Use ratio-based proportions (9:2:3 or similar), not strict equal-module grids.
+- If the postcard format changes (4×6 vs 6×9), the grid RATIOS stay the same but absolute measurements change. Define proportions as ratios, not fixed units.
+- If gutters between zones are needed, set vertical gutter = 1 baseline grid unit, horizontal gutter = 1em of body text.
+
+### Variable Content Adaptation
+
+- If business name length varies, define overflow rules: >24 chars → reduce from 14pt to 12pt. >36 chars → truncate with "..." or reflow to 2 lines.
+- If headline length varies, the hero zone height stays FIXED. Use vertical alignment (center or bottom-align) within the zone rather than resizing.
+- If an image doesn't fill complete grid fields, crop to fit. Elements that break the grid break the system.
+
+### Failure Modes
+
+- Fails for direct mail's attention needs. His aesthetic is "valid but deadly boring" (his own words). Use his STRUCTURE (grid, proportions, baseline alignment) with Draplin's ENERGY (bold color blocks, saturated palettes).
+- Fails when content volume varies dramatically. His system assumes designer-controlled content. MITIGATION: define adaptation rules (text overflow, size reduction) that Brockmann doesn't provide.
+- Fails if applied dogmatically. "The grid system is an aid, not a guarantee." Treat as a coordinate system for the plugin, not an aesthetic prescription.
+- Conflicts with Draplin on visual quietness vs. loudness. Resolution: Brockmann governs STRUCTURE (where things go), Draplin governs ENERGY (how things look).
+
+---
+
 ## Expert Convergence (where 2+ experts agree)
 
 These findings carry the highest confidence because they emerge from independent expert domains:
 
 | Finding | Experts Who Agree | Confidence |
 |---------|------------------|------------|
-| Headline is the #1 element — 50–80% of readers see only it | Gendusa, Whitman, Caples, Halbert | HIGH |
+| Headline is the #1 element — 50–80% of readers see only it | Gendusa, Whitman, Caples, Halbert, Spiekermann (hierarchy) | HIGH |
 | Benefits over features in all prospect-facing copy | Gendusa, Halbert, Caples | HIGH |
 | One offer per card — multiple offers split attention | Gendusa, Halbert, Heath (Simple) | HIGH |
 | Specific numbers beat vague claims ($79 > "affordable") | Gendusa, Caples, Heath (Concrete) | HIGH |
 | Social proof (reviews, ratings) materially increases trust | Gendusa, Halbert, Heath (Credible) | HIGH |
 | Deadline/urgency drives action | Gendusa, Halbert, Caples | HIGH |
 | Photo with human face outperforms equipment/abstract | Whitman (Guillotine), Gendusa, Heath (Emotional) | HIGH |
-| CTA in a contrasting color that appears nowhere else on the card | Gendusa (explicit rule), Draplin (color block principle) | MEDIUM-HIGH |
-| Card must work at arm's length / 2-second scan | Gendusa (3-second test), Heath (SUCCESs), Caples (headline-is-the-ad) | HIGH |
+| CTA in a contrasting color that appears nowhere else on the card | Gendusa (explicit), Draplin (color block), Albers (contrast) | HIGH |
+| Card must work at arm's length / 2-second scan | Gendusa, Heath, Caples, Spiekermann (viewing distance) | HIGH |
+| Reverse type (light on dark) depresses body readership | Whitman (explicit), Spiekermann (explicit) | HIGH |
+| Proportions should follow mathematical ratios, not eyeballing | Brockmann (grid system), Whitman (Ogilvy 60-67% photo) | MEDIUM-HIGH |
+| Color context changes everything — test combinations, not isolates | Albers (color relativity), Draplin (bold contrast), Gendusa (CTA contrast) | HIGH |
+| Start from constraints, not aesthetics | Spiekermann (Bundespost method), Brockmann (grid-from-content) | HIGH |
+| Small text needs more tracking/spacing than default | Spiekermann (explicit rule), Brockmann (baseline grid) | HIGH |
 
 ## Expert Conflicts (where experts disagree)
 
@@ -256,6 +375,10 @@ These findings carry the highest confidence because they emerge from independent
 | Headline length | Caples: long headlines that say something outpull short ones | Modern data: first 2 words carry 80% of weight | Front-load the benefit in the first 2–3 words, then extend if needed. |
 | White space | Whitman: white space boosts attention by 76% | Draplin: color blocks dominate, minimal whitespace | For postcards, Draplin wins. Pro direct mail is dense. Whitman's white-space rule is for magazine ads, not postcards. |
 | Curiosity headlines | Caples: curiosity alone consistently fails | BuzzFeed era proved curiosity can work | Caples is right for direct mail postcards — pair curiosity with self-interest. |
+| Visual quietness vs. loudness | Brockmann: "fewer size differences = quieter impression" | Draplin: bold, saturated, maximal contrast | Brockmann governs STRUCTURE (proportions, alignment, grid). Draplin governs ENERGY (color, weight, contrast). Use both — grid discipline with visual punch. |
+| Symmetry | Brockmann: rejected symmetry (ideological) | HAC-1000 reference: uses centered elements effectively | Use symmetry when it serves the communication (centered headline, balanced offer strip). Brockmann's rejection was political, not perceptual. |
+| Color rules vs. color experience | Albers: "no color system can develop sensitivity" — rules are insufficient | WCAG/CIELAB: quantified thresholds that algorithms can check | Use Albers' phenomena catalog (WHAT to check for) + WCAG/CIELAB (HOW to check). Neither alone is sufficient. |
+| Type design vs. type usage | Spiekermann: designing FROM constraints | Draplin: choosing type by feel/heritage | Spiekermann's constraint-based approach governs SELECTION (which face for which job). Draplin's aesthetic governs EXPRESSION (bold weight, saturated color, no rounded corners). |
 
 ---
 
@@ -263,28 +386,48 @@ These findings carry the highest confidence because they emerge from independent
 
 - No expert addresses **USPS compliance** as a design variable. Compliance rules come from DMM research, not these experts.
 - No expert provides **platform-specific postcard rules** (standard vs. oversized, 4x6 vs. 6x9). Gendusa says oversized stands out; no other expert addresses size.
-- No expert provides **variable data personalization** rules. Halbert's personalization was envelope-based; modern VDP on postcards is unaddressed.
+- ~~No expert provides variable data personalization rules.~~ **PARTIALLY ADDRESSED:** Brockmann's variable content adaptation rules + Spiekermann's type-at-size rules provide a framework. Full VDP template system rules still need practical testing.
 - No expert provides rules for **multi-card sequences** (Card 1 vs. Card 2 vs. Card 3 in a series). Kennedy's escalation framework in `postcanary-v1-build-decisions.md` covers this.
-- Whitman's eye-flow research is **thin** — his Z-pattern and F-pattern coverage is brief, not a deep treatment. Treat as starting defaults.
+- ~~Whitman's eye-flow research is thin.~~ **SUPPLEMENTED:** Brockmann's grid construction + Spiekermann's hierarchy rules provide structural backing for layout flow.
 - All experts have **survivorship bias** in their evidence. No controlled experiments exist for any of these design rules.
+- No expert provides **specific point-size tables** for 6×9" postcards at arm's length. Spiekermann provides the methodology (measure constraints → derive specs), but we need to do the empirical testing ourselves.
+- Albers' color phenomena need **quantified thresholds** to become programmable. CIELAB delta-E and WCAG contrast ratios are the bridge — not currently codified in this panel.
+- **Karl Gerstner** ("Designing Programmes") was identified as a strong candidate for programmatic design rules but was not researched due to agent budget constraints. Consider for future batch.
+- **Dan Mall** was scanned (Medium-Low relevance) — his Content/Display pattern separation is useful conceptually (variable data = content patterns, visual treatments = display patterns) but his work is org-level design systems, not visual craft. Transferable concept noted, full pipeline skipped.
 
 ---
 
 ## Quality Checks
 
-**Application check:** These rules were applied to the 44 universal patterns in `02-RESEARCH.md` and the HAC-1000 reference analysis in `POSTCARD-DEEP-SPEC.md`. All 44 patterns trace back to at least one expert's rules.
+**Application check:** Original 6 experts applied to 44 universal patterns in `02-RESEARCH.md` and HAC-1000 reference in `POSTCARD-DEEP-SPEC.md`. New 3 experts specifically applied to the Figma plugin problem: Spiekermann's hierarchy rules map to the 4-tier headline system, Albers' color phenomena map to the brand color adaptation challenge, Brockmann's grid rules map to the 63/14/23 zone proportions.
 
 **Taleb check (when rules fail):**
-1. Rules fail for digital-only contexts (Draplin, Whitman rules assume physical media)
+1. Rules fail for digital-only contexts (Draplin, Whitman, Spiekermann rules assume physical media)
 2. Rules fail for luxury/sophisticated brands (Draplin's bold aesthetic, Halbert's aggressive copy)
+3. Rules fail when applied dogmatically without creative judgment (Brockmann's own admission: "valid but deadly boring")
+4. Albers' rules fail when the goal IS visual disruption (sometimes vibrating boundaries are wanted)
 
 **Munger check (connections):**
 - Reinforces: `experts-implementation-bridge.md` (Wathan tokens implement Draplin's color rules; Comeau measures Whitman's proportions)
+- Reinforces: `experts-template-pipeline.md` (Figma Plugin API + VDP patterns)
 - Conflicts with: Generic SaaS UI design principles (rounded corners, soft shadows, whitespace-heavy layouts)
+- Internal conflict resolution: Brockmann's structure + Draplin's energy — documented in conflicts table above
+
+**Naming-vs-Knowing check (Feynman):**
+- Can I apply Spiekermann to a NOVEL situation? Yes: "given a 4×6" postcard at 4-foot viewing distance (rack display), Spiekermann says increase all sizes — the hierarchy gaps must be perceptible from further away. Body text needs even more tracking. High x-height faces become mandatory."
+- Can I apply Albers to a NOVEL situation? Yes: "if a pest control company has bright yellow branding on our green offer strip, Albers predicts vibrating boundaries (complementary + similar value). Mitigation: reduce saturation of the green strip or add a dark separator line."
+- Can I apply Brockmann to a NOVEL situation? Yes: "for a horizontal 9×6" postcard (landscape), the grid ratios stay the same but rotate — hero is now the left 64%, with offer strip and info bar stacked vertically on the right 36%."
+
+**Graham check (practitioners):**
+- Spiekermann: Deutsche Bahn (German Railways) system — won Gold at German Federal Design Prize. Long-term production deployment.
+- Brockmann: IBM European identity system — international production use for decades. Web adaptation by Khoi Vinh at New York Times (2004-2013).
+- Albers: No direct commercial deployment of his methodology as rules. His influence is indirect — through trained designers, not through codified systems. This is the weakest practitioner link.
 
 ---
 
-*Synthesized: 2026-04-10 Session 35*
-*Research: 18 files (6 scans + 6 deep + 6 critics) via expert-research pipeline v5.1*
+*Synthesized: 2026-04-13 Session 44 (expanded from Session 35 base)*
+*Research: 27 files (9 scans + 9 deep + 9 critics) via expert-research pipeline v5.2*
 *Research depth: Read depth (~12 Exa searches + 1 Firecrawl scrape per expert)*
-*Experts: Gendusa, Draplin, Whitman, Halbert, Caples, Heath Brothers*
+*Group A experts (Session 35): Gendusa, Draplin, Whitman, Halbert, Caples, Heath Brothers*
+*Group B experts (Session 44): Spiekermann, Albers, Müller-Brockmann*
+*Deferred: Karl Gerstner (scan-only), Dan Mall (scan-only, Medium-Low relevance)*

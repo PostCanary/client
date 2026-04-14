@@ -27,15 +27,15 @@ const primary = computed(() => props.primaryColor ?? "#0b2d50");
 const accent = computed(() => props.accentColor ?? primary.value);
 const textOnPrimary = computed(() => safeTextColor(primary.value));
 const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
+// B-01: when on a dark background, items and text are white
+const itemColor = computed(() => "#FFFFFF");
 </script>
 
 <template>
   <div
     class="pc-offer-box"
     :style="{
-      border: `var(--pc-border-offer) ${primary}`,
       padding: 'var(--pc-block-padding)',
-      backgroundColor: '#FFFFFF',
       borderRadius: 'var(--pc-radius)',
     }"
   >
@@ -69,7 +69,7 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
         v-for="(item, i) in items"
         :key="i"
         :style="{
-          color: textOnWhite,
+          color: itemColor,
           display: 'flex',
           justifyContent: 'space-between',
           gap: 'var(--pc-gutter)',
@@ -79,7 +79,7 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
         }"
       >
         <span>
-          <span :style="{ color: primary, fontWeight: 800, marginRight: '0.06in' }">✓</span>
+          <span :style="{ color: accent, fontWeight: 800, marginRight: '0.06in' }">✓</span>
           {{ item.label }}
         </span>
         <span v-if="item.value" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">
@@ -94,7 +94,7 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
       class="text-right"
       :style="{
         marginTop: 'var(--pc-gutter)',
-        color: primary,
+        color: accent,
         fontWeight: 800,
         fontSize: '13pt',
       }"
@@ -108,7 +108,7 @@ const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
       class="text-center"
       :style="{
         marginTop: 'var(--pc-gutter)',
-        color: primary,
+        color: accent,
         fontFamily: `'Oswald', 'Impact', 'Arial Narrow', sans-serif`,
         fontSize: '18pt',
         fontWeight: 700,

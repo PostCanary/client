@@ -96,7 +96,7 @@ const qrCodeUrl = ref(
   `data:image/svg+xml;utf8,${encodeURIComponent(DEV_QR_SVG)}`
 );
 
-const headline = ref("Phoenix Homeowners: Your AC Tune-Up Is Due");
+const headline = ref("Phoenix Homeowners: $79 AC Tune-Up");
 const offerText = ref("$277 VALUE FOR JUST $79");
 const offerTeaser = ref("$79 TUNE-UP");
 const urgencyText = ref("Offer expires May 15, 2026");

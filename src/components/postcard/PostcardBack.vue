@@ -167,13 +167,19 @@ const hasRating = computed(
          the max child height, but content only needs to clear the
          visible strip area ~50px). -->
     <div class="flex h-full pt-14">
-      <!-- LEFT: 6-block content column -->
+      <!-- LEFT: 6-block content column — DARK BACKGROUND (B-01)
+           Pro postcard backs use the brand's dark color as background
+           for the entire content column. White text on dark. This is
+           the single biggest visual difference between "pro postcard"
+           and "SaaS dashboard with stacked cards." -->
       <div
         class="flex flex-col"
         :style="{
           width: 'var(--pc-content-col-w)',
           padding: 'var(--pc-section-gap)',
           gap: 'var(--pc-gutter)',
+          backgroundColor: primary,
+          color: '#FFFFFF',
         }"
       >
         <!-- Block 1: Offer (Johnson Box) -->

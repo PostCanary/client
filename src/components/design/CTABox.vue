@@ -31,9 +31,7 @@ const hasQrCode = computed(() => !!props.qrCodeUrl && props.qrCodeUrl.length > 0
   <div
     class="pc-cta-box"
     :style="{
-      backgroundColor: primary,
-      color: textOnPrimary,
-      border: `var(--pc-border-cta) ${primary}`,
+      color: '#FFFFFF',
       padding: 'var(--pc-block-padding)',
       borderRadius: 'var(--pc-radius)',
     }"

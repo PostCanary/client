@@ -223,19 +223,24 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
           borderRadius: 'var(--pc-radius)',
         }"
       >
-        <div class="flex items-center justify-center" :style="{ gap: '0.12in' }">
+        <div class="flex items-center justify-center" :style="{ gap: '0.06in' }">
+          <span :style="{
+            fontSize: '14pt',
+            fontWeight: 400,
+          }">
+            Get
+          </span>
           <span :style="{
             fontFamily: 'var(--pc-headline-family)',
             fontSize: '22pt',
-            fontWeight: 700,
+            fontWeight: 800,
             textTransform: 'uppercase',
           }">
-            Get {{ offerTeaser }}
+            {{ offerTeaser }}
           </span>
           <span :style="{
-            fontSize: '14pt',
-            fontWeight: 600,
-            opacity: 0.95,
+            fontSize: '13pt',
+            fontWeight: 400,
           }">
             — Call Today!
           </span>
@@ -352,7 +357,6 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
             color: 'var(--pc-front-headline-color)',
             lineHeight: 1.0,
             textTransform: 'uppercase',
-            textShadow: '2pt 2pt 0 rgba(0,0,0,0.5)',
           }"
         >
           {{ card.resolvedContent.headline.split(':')[0] + ':' }}
@@ -365,7 +369,6 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
           lineHeight: 1.2,
           marginTop: '0.03in',
           marginBottom: '0.03in',
-          textShadow: '1pt 1pt 0 rgba(0,0,0,0.6)',
         }">
           — don't wait until it breaks —
         </div>
@@ -377,7 +380,6 @@ const showWordmarkFallback = computed(() => !props.logoUrl);
           color: primary,
           lineHeight: 0.92,
           textTransform: 'uppercase',
-          textShadow: '2pt 2pt 0 rgba(0,0,0,0.5)',
           margin: 0,
         }">
           {{ card.resolvedContent.headline.includes(':')

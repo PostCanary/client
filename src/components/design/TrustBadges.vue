@@ -47,7 +47,7 @@ function badgeFill(kind: BadgeKind, primary: string): string {
 
 const primary = computed(() => props.primaryColor ?? "#0b2d50");
 const showLI = computed(() => props.showLicensedInsured !== false);
-const liText = computed(() => props.licensedInsuredText ?? "Licensed & Insured");
+const liText = computed(() => props.licensedInsuredText ?? "LIC. & INS.");
 
 const needsLI = computed(() => {
   if (!showLI.value) return false;
@@ -99,6 +99,7 @@ const renderBadges = computed<RenderBadge[]>(() => {
         color: 'var(--pc-trust-badge-text)',
         padding: '0.05in 0.08in',
         borderRadius: 'var(--pc-radius)',
+        border: '1pt solid rgba(255,255,255,0.5)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
       }"

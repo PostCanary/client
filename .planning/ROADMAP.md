@@ -43,9 +43,9 @@ Plans:
 | Phase | Name | Status | Plans |
 |-------|------|--------|-------|
 | 1 | AI Generation + Scraping | Planning (revised per reviews) | 2 |
-| 2 | Template Upgrades + UX Polish + Google Reviews | Pending | 0 |
+| 2 | Template Upgrades (SVG → Figma) | Planned | 3 |
 | 3 | Designs Library + Custom Upload | Pending | 0 |
 
 ---
 *Roadmap created: 2026-04-06*
-*Last updated: 2026-04-06 (revised per cross-AI review feedback)*
+*Last updated: 2026-04-10 (Phase 2 replanned: SVG → Figma pivot, 3 new plans replace 4 stale CSS plans)*
