@@ -9,10 +9,27 @@ import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
 import { approveMailCampaign } from "@/api/mailCampaigns";
+import { useRenderJob } from "@/composables/useRenderJob";
 
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
+
+// Phase 4D task 29: print-ready PDF preview at the final review step.
+// Customer clicks "View Print Proof" to see the actual rendered output
+// before approval. NOT auto-triggered on mount — every render burns a
+// rate-limit slot (10/hr/org) and may collide with a job customer
+// kicked off in StepDesign that's still in flight.
+const { phase: renderPhase, progress: renderProgress, cards: renderedCards,
+        error: renderError, start: startRender } = useRenderJob();
+const showProofPanel = ref(false);
+
+async function handleGenerateProof() {
+  if (!draftStore.draft) return;
+  showProofPanel.value = true;
+  await draftStore.saveNow();
+  await startRender(draftStore.draft.id);
+}
 
 const approving = ref(false);
 const approved = ref(false);
@@ -213,21 +230,106 @@ async function approve() {
 
   <!-- Review screen -->
   <div v-else class="flex h-full">
-    <!-- Left: Postcard previews -->
-    <div class="flex-1 flex items-center justify-center p-8 bg-gray-50">
-      <ReviewSummary
-        :cards="designCards"
-        :brand-colors="brandKitStore.brandKit?.brandColors"
-        :business-name="brandKitStore.brandKit?.businessName"
-        :business-address="brandKitStore.brandKit?.address ?? ''"
-        :logo-url="brandKitStore.brandKit?.logoUrl"
-        :rating="brandKitStore.brandKit?.googleRating ?? null"
-        :review-count="brandKitStore.brandKit?.reviewCount ?? null"
-        :trust-badges="brandKitStore.brandKit?.trustBadges ?? []"
-        :years-in-business="brandKitStore.brandKit?.yearsInBusiness ?? null"
-        :city="brandKitCity"
-        :credibility-line="brandKitCredibility"
-      />
+    <!-- Left: Postcard previews + print-proof panel -->
+    <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
+      <div class="flex-1 flex items-center justify-center p-8">
+        <ReviewSummary
+          :cards="designCards"
+          :brand-colors="brandKitStore.brandKit?.brandColors"
+          :business-name="brandKitStore.brandKit?.businessName"
+          :business-address="brandKitStore.brandKit?.address ?? ''"
+          :logo-url="brandKitStore.brandKit?.logoUrl"
+          :rating="brandKitStore.brandKit?.googleRating ?? null"
+          :review-count="brandKitStore.brandKit?.reviewCount ?? null"
+          :trust-badges="brandKitStore.brandKit?.trustBadges ?? []"
+          :years-in-business="brandKitStore.brandKit?.yearsInBusiness ?? null"
+          :city="brandKitCity"
+          :credibility-line="brandKitCredibility"
+        />
+      </div>
+
+      <!-- Print proof bar — Phase 4D task 29. Same flow as StepDesign's
+           Generate Proof but framed as final pre-approval verification. -->
+      <div
+        class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
+      >
+        <div class="text-sm text-gray-500">
+          <template v-if="renderPhase === 'idle'">
+            Want to see exactly what the printer will produce?
+          </template>
+          <template v-else-if="renderPhase === 'starting' || renderPhase === 'queued'">
+            Queueing render…
+          </template>
+          <template v-else-if="renderPhase === 'rendering'">
+            Rendering print-ready PDF…
+            <span v-if="renderProgress" class="text-gray-400">
+              ({{ renderProgress.completed }}/{{ renderProgress.total }})
+            </span>
+          </template>
+          <template v-else-if="renderPhase === 'done'">
+            Print proof ready below.
+          </template>
+          <template v-else-if="renderPhase === 'failed'">
+            <span class="text-red-600">
+              {{ renderError?.message }}
+            </span>
+          </template>
+        </div>
+        <button
+          class="border border-[#47bfa9] text-[#47bfa9] font-semibold px-4 py-2 rounded-lg hover:bg-[#47bfa9] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          :disabled="
+            renderPhase === 'starting' ||
+            renderPhase === 'queued' ||
+            renderPhase === 'rendering' ||
+            !draftStore.draft
+          "
+          @click="handleGenerateProof"
+        >
+          <template v-if="renderPhase === 'starting' || renderPhase === 'queued' || renderPhase === 'rendering'">
+            Generating…
+          </template>
+          <template v-else-if="renderPhase === 'done'">
+            Regenerate Print Proof
+          </template>
+          <template v-else>
+            View Print Proof
+          </template>
+        </button>
+      </div>
+
+      <div
+        v-if="showProofPanel"
+        class="border-t border-gray-200 bg-gray-50 px-6 py-4"
+      >
+        <div v-if="renderPhase === 'done' && renderedCards.length > 0" class="space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="card in renderedCards"
+              :key="card.cardNumber"
+              class="bg-white border border-gray-200 rounded-lg overflow-hidden"
+            >
+              <div class="text-xs text-gray-400 px-3 pt-2">
+                Card {{ card.cardNumber }} — print PDF
+              </div>
+              <iframe
+                :src="card.downloadUrl"
+                class="w-full"
+                style="height: 380px; border: 0;"
+                :title="`Print proof for card ${card.cardNumber}`"
+              />
+            </div>
+          </div>
+        </div>
+        <div v-else-if="renderPhase === 'failed'" class="text-sm text-red-600">
+          {{ renderError?.message }}
+          <button
+            class="ml-2 text-[#47bfa9] underline"
+            @click="handleGenerateProof"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Right: Details panel -->

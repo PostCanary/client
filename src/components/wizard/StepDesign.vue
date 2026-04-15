@@ -9,9 +9,31 @@ import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
+import { useRenderJob } from "@/composables/useRenderJob";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
+
+// Phase 4D task 28: Generate Proof PDF via render-worker pipeline.
+// Triggered after the customer is happy with the Vue preview — shows
+// the actual print-ready PDF the renderer will produce. Lives below the
+// editing surface so the iterate→preview→commit→render cycle stays in
+// one screen.
+const { phase: renderPhase, progress: renderProgress, cards: renderedCards,
+        error: renderError, start: startRender } = useRenderJob();
+const showProofPanel = ref(false);
+
+async function handleGenerateProof() {
+  // Persist any unsaved edits BEFORE kicking off the render — the
+  // server reads from `draft.data.design.sequenceCards`, not from a
+  // request payload. Without this, the render uses the last
+  // debounced-saved version and the customer's recent tweaks don't
+  // appear.
+  if (!draftStore.draft) return;
+  showProofPanel.value = true;
+  await draftStore.saveNow();
+  await startRender(draftStore.draft.id);
+}
 
 const cards = ref<CardDesign[]>([]);
 const activeCardIndex = ref(0);
@@ -218,6 +240,100 @@ watch(
         @open-template-browser="showTemplateBrowser = true"
         @reset="resetCard"
       />
+    </div>
+
+    <!-- Generate Proof bar (Phase 4D task 28) — sits between the
+         editing surface and the render panel so it's visible after the
+         customer has done their pass on the Vue preview. -->
+    <div
+      class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
+    >
+      <div class="text-sm text-gray-500">
+        <template v-if="renderPhase === 'idle'">
+          Happy with the design? See the print-ready proof.
+        </template>
+        <template v-else-if="renderPhase === 'starting' || renderPhase === 'queued'">
+          Queueing render…
+        </template>
+        <template v-else-if="renderPhase === 'rendering'">
+          Rendering postcard{{ renderProgress && renderProgress.total > 1 ? "s" : "" }}…
+          <span v-if="renderProgress" class="text-gray-400">
+            ({{ renderProgress.completed }}/{{ renderProgress.total }})
+          </span>
+        </template>
+        <template v-else-if="renderPhase === 'done'">
+          Proof ready — review below.
+        </template>
+        <template v-else-if="renderPhase === 'failed'">
+          <span class="text-red-600">
+            Render failed: {{ renderError?.message }}
+          </span>
+        </template>
+      </div>
+      <button
+        class="bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        :disabled="
+          renderPhase === 'starting' ||
+          renderPhase === 'queued' ||
+          renderPhase === 'rendering' ||
+          !draftStore.draft
+        "
+        @click="handleGenerateProof"
+      >
+        <template v-if="renderPhase === 'starting' || renderPhase === 'queued' || renderPhase === 'rendering'">
+          <span
+            class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-2"
+          />
+          Generating…
+        </template>
+        <template v-else-if="renderPhase === 'done'">
+          Regenerate Proof
+        </template>
+        <template v-else>
+          Generate Proof
+        </template>
+      </button>
+    </div>
+
+    <!-- Proof panel — collapses until first render attempt. PDF embedded
+         via <iframe> with the signed download URL (10-min TTL); cookie
+         auth on the iframe request is automatic for same-origin. -->
+    <div
+      v-if="showProofPanel"
+      class="border-t border-gray-200 bg-gray-50 px-6 py-4"
+    >
+      <div v-if="renderPhase === 'done' && renderedCards.length > 0" class="space-y-3">
+        <div class="text-sm font-semibold text-[#0b2d50]">
+          Print-ready proof ({{ renderedCards.length }} card{{ renderedCards.length > 1 ? "s" : "" }})
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="card in renderedCards"
+            :key="card.cardNumber"
+            class="bg-white border border-gray-200 rounded-lg overflow-hidden"
+          >
+            <div class="text-xs text-gray-400 px-3 pt-2">Card {{ card.cardNumber }}</div>
+            <iframe
+              :src="card.downloadUrl"
+              class="w-full"
+              style="height: 360px; border: 0;"
+              :title="`Proof for card ${card.cardNumber}`"
+            />
+          </div>
+        </div>
+      </div>
+      <div v-else-if="renderPhase === 'failed'" class="text-sm text-red-600">
+        {{ renderError?.message }}
+        <button
+          class="ml-2 text-[#47bfa9] underline"
+          @click="handleGenerateProof"
+        >
+          Retry
+        </button>
+      </div>
+      <div v-else class="text-sm text-gray-400">
+        Proof will appear here once rendering finishes.
+      </div>
     </div>
 
     <!-- Template browser overlay -->
