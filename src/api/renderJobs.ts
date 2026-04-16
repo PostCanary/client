@@ -26,7 +26,7 @@
 // browser's existing withCredentials axios setup carries the cookie
 // automatically.
 
-import { get, postJson } from "@/api/http";
+import { get, postJson, http } from "@/api/http";
 
 // ---------------------------------------------------------------------------
 // Server response shapes (snake_case — match the Flask endpoints exactly).
@@ -148,4 +148,21 @@ export async function generatePreview(
 export async function getRenderJob(jobId: string): Promise<RenderJobStatus> {
   const res = await get<RenderJobResponse>(`/api/render-jobs/${jobId}`);
   return toRenderJobStatus(res);
+}
+
+/**
+ * Fetch a single-card PNG preview rendered by the actual print template.
+ * Returns a Blob that can be displayed via URL.createObjectURL().
+ * Synchronous server call — no job queue, no polling.
+ */
+export async function previewCard(
+  draftId: string,
+  cardNumber: number,
+): Promise<Blob> {
+  const res = await http.post(
+    `/api/campaign-drafts/${draftId}/preview-card/${cardNumber}`,
+    {},
+    { responseType: "blob" },
+  );
+  return res.data as Blob;
 }

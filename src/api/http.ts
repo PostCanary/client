@@ -134,11 +134,22 @@ http.interceptors.response.use(
       });
     }
 
-    // Normalize to Error with status/data for call-sites that do try/catch
+    // Normalize to Error with status/data for call-sites that do try/catch.
+    // Flask's error handlers return `{error: {code, message}}` — interpolating
+    // the object directly produces "[object Object]" and hides the real reason.
     let msg = "Network error";
     if (status) msg = `${status} ${err.response?.statusText || ""}`.trim();
-    if (data?.error) msg = `${msg}: ${data.error}`;
-    if (data?.message) msg = `${msg} — ${data.message}`;
+    const errField = data?.error;
+    const errStr =
+      typeof errField === "string"
+        ? errField
+        : errField && typeof errField === "object"
+          ? (errField.message ?? errField.code ?? "")
+          : "";
+    if (errStr) msg = `${msg}: ${errStr}`;
+    if (typeof data?.message === "string" && data.message) {
+      msg = `${msg} — ${data.message}`;
+    }
 
     const e = new Error(msg) as Error & { status?: number; data?: any };
     e.status = status;

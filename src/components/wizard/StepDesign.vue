@@ -5,11 +5,12 @@ import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
 import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
 import { getRecommendedTemplateSet } from "@/data/templates";
-import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
 import { useRenderJob } from "@/composables/useRenderJob";
+import { useCardPreview } from "@/composables/useCardPreview";
+import { previewCard } from "@/api/renderJobs";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -22,16 +23,30 @@ const brandKitStore = useBrandKitStore();
 const { phase: renderPhase, progress: renderProgress, cards: renderedCards,
         error: renderError, start: startRender } = useRenderJob();
 const showProofPanel = ref(false);
+const proofImages = ref<string[]>([]);
 
 async function handleGenerateProof() {
-  // Persist any unsaved edits BEFORE kicking off the render — the
-  // server reads from `draft.data.design.sequenceCards`, not from a
-  // request payload. Without this, the render uses the last
-  // debounced-saved version and the customer's recent tweaks don't
-  // appear.
   if (!draftStore.draft) return;
   showProofPanel.value = true;
   await draftStore.saveNow();
+
+  // Fetch PNG previews for ALL cards using the same preview-card endpoint
+  // that the editing surface uses (ONE RENDERING RULE).
+  const totalCards = cards.value.length || 1;
+  proofImages.value = [];
+  const urls: string[] = [];
+
+  for (let i = 1; i <= totalCards; i++) {
+    try {
+      const blob = await previewCard(draftStore.draft.id, i);
+      urls.push(URL.createObjectURL(blob));
+    } catch {
+      urls.push("");
+    }
+  }
+  proofImages.value = urls;
+
+  // Also kick off the PDF render for the download link
   await startRender(draftStore.draft.id);
 }
 
@@ -40,7 +55,14 @@ const activeCardIndex = ref(0);
 const showTemplateBrowser = ref(false);
 const currentLayout = ref<TemplateLayoutType>("full-bleed");
 
+const draftIdRef = computed(() => draftStore.draft?.id);
+const cardNumberRef = computed(() => activeCardIndex.value + 1);
 const activeCard = computed(() => cards.value[activeCardIndex.value]);
+const { previewUrl, loading: previewLoading, error: previewError, refresh: refreshPreview } = useCardPreview(
+  draftIdRef,
+  cardNumberRef,
+  activeCard,
+);
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
 const brandKit = computed(() => brandKitStore.brandKit);
 // City is derived from brandKit.location which is "City, ST" — split on
@@ -71,15 +93,14 @@ const brandKitCredibility = computed(() => {
 // Original cards for reset
 let originalCards: CardDesign[] = [];
 
+const cardsReady = computed(() => cards.value.length > 0);
+
 onMounted(() => {
   if (!brandKitStore.hydrated) brandKitStore.fetch();
 
-  // Load existing design or generate new cards
   if (draftStore.draft?.design?.sequenceCards?.length) {
     cards.value = [...draftStore.draft.design.sequenceCards];
     currentLayout.value = draftStore.draft.design.templateLayoutType;
-  } else {
-    generateNewCards();
   }
   originalCards = cards.value.map((c) => ({ ...c }));
 });
@@ -165,12 +186,24 @@ function commitDesign() {
   draftStore.setDesign(design);
 }
 
-// Regenerate if brand kit loads after mount
+// Sync cards from store when async generation completes (fired by setGoal in Step 1)
+watch(
+  () => draftStore.draft?.design?.sequenceCards,
+  (storeCards) => {
+    if (storeCards?.length && cards.value.length === 0) {
+      cards.value = [...storeCards];
+      currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
+      originalCards = cards.value.map((c) => ({ ...c }));
+    }
+  },
+);
+
+// If brand kit loads after Step 1 fired (guard skipped it), retry generation
 watch(
   () => brandKitStore.hydrated,
   (hydrated) => {
     if (hydrated && cards.value.length === 0) {
-      generateNewCards();
+      draftStore.generateCardsForDraft();
     }
   },
 );
@@ -207,26 +240,26 @@ watch(
 
     <!-- Main content: preview + edit panel -->
     <div class="flex flex-1 min-h-0">
-      <!-- Left: Postcard preview -->
+      <!-- Left: Server-rendered postcard preview (actual print template) -->
       <div class="flex-1 flex items-center justify-center p-8 bg-gray-50">
         <div class="max-w-lg w-full">
-          <PostcardPreview
-            v-if="activeCard"
-            :card="activeCard"
-            :layout-type="currentLayout"
-            :brand-colors="brandKit?.brandColors"
-            :business-name="brandKit?.businessName"
-            :business-address="brandKit?.address ?? ''"
-            :logo-url="brandKit?.logoUrl"
-            :rating="brandKit?.googleRating ?? null"
-            :review-count="brandKit?.reviewCount ?? null"
-            :trust-badges="brandKit?.trustBadges ?? []"
-            :years-in-business="brandKit?.yearsInBusiness ?? null"
-            :city="brandKitCity"
-            :credibility-line="brandKitCredibility"
-            :hide-address-placeholder="true"
-            size="large"
+          <div v-if="previewLoading && !previewUrl" class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
+            <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <img
+            v-else-if="previewUrl"
+            :src="previewUrl"
+            alt="Postcard preview"
+            class="w-full rounded shadow-sm"
+            :class="{ 'opacity-60': previewLoading }"
           />
+          <div v-else-if="previewError" class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
+            Preview unavailable.
+            <button class="ml-2 text-[#47bfa9] underline" @click="refreshPreview">Retry</button>
+          </div>
+          <div v-else class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
+            Waiting for card data…
+          </div>
         </div>
       </div>
 
@@ -249,7 +282,11 @@ watch(
       class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
     >
       <div class="text-sm text-gray-500">
-        <template v-if="renderPhase === 'idle'">
+        <template v-if="!cardsReady">
+          <span class="inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin align-middle mr-2" />
+          Generating your postcards…
+        </template>
+        <template v-else-if="renderPhase === 'idle'">
           Happy with the design? See the print-ready proof.
         </template>
         <template v-else-if="renderPhase === 'starting' || renderPhase === 'queued'">
@@ -276,7 +313,8 @@ watch(
           renderPhase === 'starting' ||
           renderPhase === 'queued' ||
           renderPhase === 'rendering' ||
-          !draftStore.draft
+          !draftStore.draft ||
+          !cardsReady
         "
         @click="handleGenerateProof"
       >
@@ -295,29 +333,36 @@ watch(
       </button>
     </div>
 
-    <!-- Proof panel — collapses until first render attempt. PDF embedded
-         via <iframe> with the signed download URL (10-min TTL); cookie
-         auth on the iframe request is automatic for same-origin. -->
+    <!-- Proof panel — shows PNG previews of all cards from the same
+         preview-card endpoint (ONE RENDERING RULE: on-screen = PNG,
+         PDF = download only). -->
     <div
       v-if="showProofPanel"
       class="border-t border-gray-200 bg-gray-50 px-6 py-4"
     >
-      <div v-if="renderPhase === 'done' && renderedCards.length > 0" class="space-y-3">
-        <div class="text-sm font-semibold text-[#0b2d50]">
-          Print-ready proof ({{ renderedCards.length }} card{{ renderedCards.length > 1 ? "s" : "" }})
+      <div v-if="proofImages.length > 0" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-semibold text-[#0b2d50]">
+            Print-ready proof ({{ proofImages.length }} card{{ proofImages.length > 1 ? "s" : "" }})
+          </div>
+          <a
+            v-if="renderPhase === 'done' && renderedCards.length > 0"
+            :href="renderedCards[0]?.downloadUrl"
+            target="_blank"
+            class="text-sm text-[#47bfa9] underline"
+          >Download PDF</a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
-            v-for="card in renderedCards"
-            :key="card.cardNumber"
+            v-for="(imgUrl, idx) in proofImages"
+            :key="idx"
             class="bg-white border border-gray-200 rounded-lg overflow-hidden"
           >
-            <div class="text-xs text-gray-400 px-3 pt-2">Card {{ card.cardNumber }}</div>
-            <iframe
-              :src="card.downloadUrl"
+            <div class="text-xs text-gray-400 px-3 pt-2">Card {{ idx + 1 }}</div>
+            <img
+              :src="imgUrl"
+              :alt="`Proof for card ${idx + 1}`"
               class="w-full"
-              style="height: 360px; border: 0;"
-              :title="`Proof for card ${card.cardNumber}`"
             />
           </div>
         </div>

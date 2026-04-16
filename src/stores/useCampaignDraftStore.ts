@@ -15,12 +15,16 @@ import {
   deleteDraft,
 } from "@/api/campaignDrafts";
 import { API_BASE } from "@/api/http";
+import { generateCards } from "@/composables/usePostcardGenerator";
+import { getRecommendedTemplateSet } from "@/data/templates";
+import type { CampaignGoalType } from "@/types/campaign";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 let _pendingSave = false;
 let _retryCount = 0;
 let _dirty = false;
+let _generatingCards = false;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
 
@@ -106,6 +110,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         ) as WizardStep[];
       }
       this._debounceSave();
+      this.generateCardsForDraft();
     },
 
     setTargeting(targeting: TargetingSelection) {
@@ -212,6 +217,45 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     async saveNow() {
       if (_saveTimer) clearTimeout(_saveTimer);
       await this._save();
+    },
+
+    async generateCardsForDraft() {
+      if (!this.draft || _generatingCards) return;
+
+      const { useBrandKitStore } = await import("@/stores/useBrandKitStore");
+      const brandKitStore = useBrandKitStore();
+      if (!brandKitStore.hydrated || !brandKitStore.brandKit) return;
+
+      _generatingCards = true;
+      try {
+        const goalType = (this.draft.goal?.goalType ?? "neighbor_marketing") as CampaignGoalType;
+        const seqLen = this.draft.goal?.sequenceLength ?? 3;
+        const breakdown = this.draft.targeting?.recipientBreakdown ?? {
+          newProspects: 400,
+          pastCustomers: 30,
+          pastCustomersIncluded: false,
+        };
+
+        const cards = await generateCards(
+          brandKitStore.brandKit,
+          goalType,
+          seqLen,
+          breakdown,
+        );
+
+        const templates = getRecommendedTemplateSet(goalType);
+        this.setDesign({
+          templateId: cards[0]?.templateId ?? "",
+          templateLayoutType: templates[0]?.layoutType ?? "full-bleed",
+          isCustomUpload: false,
+          customUploadUrl: null,
+          sequenceCards: cards,
+        });
+      } catch (err) {
+        console.error("Card generation failed in store:", err);
+      } finally {
+        _generatingCards = false;
+      }
     },
 
     /** Best-effort save that survives tab close via fetch keepalive. */
