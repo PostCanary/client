@@ -150,19 +150,38 @@ export async function getRenderJob(jobId: string): Promise<RenderJobStatus> {
   return toRenderJobStatus(res);
 }
 
+export interface PreviewCardResult {
+  blob: Blob;
+  /**
+   * Session 54 Codex CRITICAL 2: warnings from the render-worker
+   * surface through the api as an `X-Render-Warnings` header. The
+   * composable logs these to the console for demo-stage visibility;
+   * post-demo these drive a "regenerate on overlong" retry UI.
+   * Values are the WARNING_* constants from postcard_renderer.py
+   * (PHOTO_UNREACHABLE, CONTENT_OVERLONG_REGENERATE, etc.).
+   */
+  warnings: string[];
+}
+
 /**
  * Fetch a single-card PNG preview rendered by the actual print template.
- * Returns a Blob that can be displayed via URL.createObjectURL().
+ * Returns the blob plus any per-render warnings surfaced by the worker
+ * (e.g. photo fell back to stock, content overflowed at ladder floor).
  * Synchronous server call — no job queue, no polling.
  */
 export async function previewCard(
   draftId: string,
   cardNumber: number,
-): Promise<Blob> {
+): Promise<PreviewCardResult> {
   const res = await http.post(
     `/api/campaign-drafts/${draftId}/preview-card/${cardNumber}`,
     {},
     { responseType: "blob" },
   );
-  return res.data as Blob;
+  const warningsHeader = (res.headers?.["x-render-warnings"] ?? "") as string;
+  const warnings = warningsHeader
+    .split(",")
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  return { blob: res.data as Blob, warnings };
 }

@@ -44,10 +44,21 @@ export function useCardPreview(
     error.value = null;
 
     try {
-      const blob = await previewCard(id, num);
+      const result = await previewCard(id, num);
       cleanup();
-      currentObjectUrl = URL.createObjectURL(blob);
+      currentObjectUrl = URL.createObjectURL(result.blob);
       previewUrl.value = currentObjectUrl;
+      // Session 54 Codex CRITICAL 2: surface worker render warnings.
+      // For now we log them — post-demo these drive a regenerate-on-
+      // overlong UI prompt. CONTENT_OVERLONG_REGENERATE signals the AI
+      // ignored its per-slot char budgets and the cascade hit ladder
+      // floor; PHOTO_UNREACHABLE signals upstream brand-photo 404.
+      if (result.warnings.length > 0) {
+        console.warn(
+          `[useCardPreview] card ${num} render warnings:`,
+          result.warnings,
+        );
+      }
     } catch (e: any) {
       if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
       // 400 typically means cards not yet saved to server (race with auto-populate).

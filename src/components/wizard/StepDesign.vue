@@ -38,8 +38,17 @@ async function handleGenerateProof() {
 
   for (let i = 1; i <= totalCards; i++) {
     try {
-      const blob = await previewCard(draftStore.draft.id, i);
-      urls.push(URL.createObjectURL(blob));
+      // Session 54 Codex: previewCard now returns { blob, warnings } so
+      // the composable/caller can surface render warnings. Proof panel
+      // just needs the blob; log warnings for QA visibility.
+      const result = await previewCard(draftStore.draft.id, i);
+      urls.push(URL.createObjectURL(result.blob));
+      if (result.warnings.length > 0) {
+        console.warn(
+          `[StepDesign] proof card ${i} render warnings:`,
+          result.warnings,
+        );
+      }
     } catch {
       urls.push("");
     }
