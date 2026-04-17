@@ -289,7 +289,9 @@ function generateCardsLocal(
 ): CardDesign[] {
   const templates = getRecommendedTemplateSet(goalType);
   const photos = [
-    ...(brandKit.photos ?? []).sort((a, b) => b.qualityScore - a.qualityScore),
+    ...(brandKit.photos ?? [])
+      .filter((p) => p.printReady !== false)
+      .sort((a, b) => b.qualityScore - a.qualityScore),
     ...getPhotosForIndustry(brandKit.industry).map((p) => ({
       url: p.url,
       qualityScore: 50,
@@ -407,7 +409,9 @@ function mapServerCardToDesign(
   goalType: string,
 ): CardDesign {
   const photos = [
-    ...(brandKit.photos ?? []).sort((a, b) => b.qualityScore - a.qualityScore),
+    ...(brandKit.photos ?? [])
+      .filter((p) => p.printReady !== false)
+      .sort((a, b) => b.qualityScore - a.qualityScore),
     ...getPhotosForIndustry(brandKit.industry).map((p) => ({
       url: p.url,
       qualityScore: 50,
