@@ -42,6 +42,7 @@ const LABELS: Record<string, string> = {
         :key="card.cardNumber"
         class="flex flex-col items-center gap-1 transition-all"
         :class="idx === activeCardIndex ? 'scale-105' : 'opacity-60 hover:opacity-80'"
+        :data-testid="`card-select-${card.cardNumber}`"
         @click="emit('select', idx)"
       >
         <div

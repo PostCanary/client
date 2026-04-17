@@ -21,4 +21,7 @@ visual-audit-*/
 test-results/
 playwright-report/
 blob-report/
+test-results-live/
+playwright-report-live/
+.auth/
 
