@@ -17,3 +17,8 @@ demo-smoke-test-*/
 visual-audit-*/
 .planning/phases/*/spikes/*/output/
 
+# Playwright CLI output
+test-results/
+playwright-report/
+blob-report/
+

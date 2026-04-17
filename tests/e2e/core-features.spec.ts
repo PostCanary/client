@@ -40,6 +40,9 @@ test("dashboard upload-and-match flow hydrates KPI results", async ({ page }) =>
 
   await page.getByRole("button", { name: "Upload & Match" }).click();
 
+  // Campaign prompt modal intercepts the flow; dismiss it to let normalize fire.
+  await page.getByRole("button", { name: "No thanks" }).click();
+
   await expect.poll(() => state.requestLog.normalizeCalls.length).toBe(2);
   await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("42");
   await expect(page.locator(".adv-stat", { has: page.getByText("Total Mail") })).toContainText("2,500");

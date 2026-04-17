@@ -61,6 +61,7 @@ onUnmounted(() => {
       ref="triggerRef"
       type="button"
       class="org-switcher-btn"
+      data-testid="org-switcher-trigger"
       @click.stop="toggle"
     >
       <svg
