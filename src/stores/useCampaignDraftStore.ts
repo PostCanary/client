@@ -174,7 +174,12 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     _debounceSave() {
       _dirty = true;
       if (_saveTimer) clearTimeout(_saveTimer);
-      _saveTimer = setTimeout(() => this._save(), 5000);
+      // 500ms < useCardPreview's 1500ms preview debounce so the server
+      // has the latest card content before `preview-card` fetches. Prior
+      // value (5000ms) caused the preview endpoint to render stale DB
+      // rows after edits (Session 57 — edit headline did not propagate
+      // to the rendered PNG until the component remounted).
+      _saveTimer = setTimeout(() => this._save(), 500);
     },
 
     async _save() {
