@@ -221,6 +221,7 @@ function applyReview(review: BrandKitReview) {
 
       <!-- Reset -->
       <button
+        data-testid="reset-to-original"
         class="w-full text-center text-xs text-gray-400 hover:text-gray-600 mt-2"
         @click="emit('reset')"
       >

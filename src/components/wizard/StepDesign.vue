@@ -111,7 +111,7 @@ onMounted(() => {
     cards.value = [...draftStore.draft.design.sequenceCards];
     currentLayout.value = draftStore.draft.design.templateLayoutType;
   }
-  originalCards = cards.value.map((c) => ({ ...c }));
+  originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
 });
 
 async function generateNewCards() {
@@ -179,7 +179,7 @@ function selectTemplate(layout: TemplateLayoutType) {
 function resetCard() {
   const orig = originalCards[activeCardIndex.value];
   if (orig) {
-    cards.value[activeCardIndex.value] = { ...orig, overrides: {} };
+    cards.value[activeCardIndex.value] = { ...(JSON.parse(JSON.stringify(orig)) as CardDesign), overrides: {} };
     commitDesign();
   }
 }
@@ -202,7 +202,7 @@ watch(
     if (storeCards?.length && cards.value.length === 0) {
       cards.value = [...storeCards];
       currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
-      originalCards = cards.value.map((c) => ({ ...c }));
+      originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
     }
   },
 );
