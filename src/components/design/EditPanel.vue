@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import type { CardDesign, BrandKit } from "@/types/campaign";
+import { computed, ref } from "vue";
+import type {
+  CardDesign,
+  BrandKit,
+  BrandKitPhoto,
+  BrandKitReview,
+} from "@/types/campaign";
+import { getPhotosForIndustry } from "@/data/stockPhotos";
 
 const props = defineProps<{
   card: CardDesign;
@@ -30,6 +36,53 @@ function applyHeadline() {
 
 function applyOffer() {
   emit("update-field", "offerText", editableOffer.value);
+}
+
+// --- Photo picker ---------------------------------------------------------
+// Brand photos first (mirrors the printReady filter from usePostcardGenerator
+// so operators never see low-quality scraped icons as pickable options).
+// Stock photos from the industry fallback are appended so customers with a
+// photo-poor brand kit still have options beyond their own library.
+type PickerPhoto = { url: string; alt: string; source: "brand" | "stock" };
+
+const pickerPhotos = computed<PickerPhoto[]>(() => {
+  const bk = props.brandKit;
+  if (!bk) return [];
+  const brand: PickerPhoto[] = (bk.photos ?? [])
+    .filter((p: BrandKitPhoto) => p.printReady !== false)
+    .sort((a, b) => b.qualityScore - a.qualityScore)
+    .map((p) => ({ url: p.url, alt: p.alt, source: "brand" as const }));
+  const stock: PickerPhoto[] = getPhotosForIndustry(bk.industry).map((p) => ({
+    url: p.url,
+    alt: p.description,
+    source: "stock" as const,
+  }));
+  return [...brand, ...stock];
+});
+
+const currentPhotoUrl = computed(
+  () =>
+    (props.card.overrides.photoUrl as string | undefined) ??
+    props.card.resolvedContent.photoUrl ??
+    "",
+);
+
+function applyPhoto(url: string) {
+  emit("update-photo", url);
+}
+
+// --- Review picker --------------------------------------------------------
+const pickerReviews = computed<BrandKitReview[]>(
+  () => props.brandKit?.reviews ?? [],
+);
+
+const currentReviewQuote = computed(
+  () => props.card.resolvedContent.reviewQuote ?? "",
+);
+
+function applyReview(review: BrandKitReview) {
+  emit("update-field", "reviewQuote", review.quote);
+  emit("update-field", "reviewerName", review.reviewerName);
 }
 </script>
 
@@ -82,19 +135,66 @@ function applyOffer() {
 
       <!-- Change Photo -->
       <button
-        class="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 hover:border-gray-300 text-sm transition-colors"
+        data-testid="edit-photo-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'photo' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('photo')"
       >
         📷 Change Photo
       </button>
+      <div v-if="activeEditor === 'photo'" class="px-3 pb-3">
+        <div v-if="pickerPhotos.length === 0" class="text-xs text-gray-400 py-2">
+          No photos available. Add brand photos in onboarding.
+        </div>
+        <div v-else class="grid grid-cols-3 gap-2">
+          <button
+            v-for="photo in pickerPhotos"
+            :key="photo.url"
+            :data-testid="`photo-option-${photo.source}`"
+            class="relative aspect-square rounded-md overflow-hidden border-2 transition-colors"
+            :class="photo.url === currentPhotoUrl ? 'border-[#47bfa9]' : 'border-transparent hover:border-gray-300'"
+            :title="photo.alt"
+            @click="applyPhoto(photo.url)"
+          >
+            <img :src="photo.url" :alt="photo.alt" class="w-full h-full object-cover" />
+            <span
+              v-if="photo.source === 'stock'"
+              class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
+            >Stock</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Change Review -->
       <button
-        class="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 hover:border-gray-300 text-sm transition-colors"
+        data-testid="edit-review-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'review' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('review')"
       >
         ⭐ Change Review
       </button>
+      <div v-if="activeEditor === 'review'" class="px-3 pb-3">
+        <div v-if="pickerReviews.length === 0" class="text-xs text-gray-400 py-2">
+          No reviews available. Add reviews in brand kit.
+        </div>
+        <div v-else class="space-y-2">
+          <button
+            v-for="(review, i) in pickerReviews"
+            :key="i"
+            :data-testid="`review-option-${i}`"
+            class="w-full text-left p-2 rounded-md border text-xs transition-colors"
+            :class="review.quote === currentReviewQuote ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+            @click="applyReview(review)"
+          >
+            <div class="font-medium text-[#0b2d50] mb-0.5">
+              {{ "★".repeat(Math.max(0, Math.min(5, Math.round(review.rating ?? 5)))) }}
+              <span class="text-gray-500 font-normal">— {{ review.reviewerName || "Anon" }}</span>
+            </div>
+            <div class="text-gray-600 line-clamp-2">"{{ review.quote }}"</div>
+          </button>
+        </div>
+      </div>
 
       <!-- Template browser -->
       <button
