@@ -91,11 +91,11 @@ test.describe("pickers — live stack", () => {
     const count = await options.count();
     test.skip(count < 2, "brand kit has fewer than 2 photo options — picker swap cannot be proved");
 
-    // Find an option NOT currently selected (border-[#47bfa9] marks active).
+    // Find an option NOT currently selected via data-active="false".
     let targetIndex = -1;
     for (let i = 0; i < count; i++) {
-      const cls = (await options.nth(i).getAttribute("class")) ?? "";
-      if (!cls.includes("border-[#47bfa9]")) {
+      const active = await options.nth(i).getAttribute("data-active");
+      if (active === "false") {
         targetIndex = i;
         break;
       }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type {
   CardDesign,
   BrandKit,
@@ -29,6 +29,18 @@ function toggleEditor(editor: EditorType) {
 
 const editableHeadline = ref(props.card.resolvedContent.headline);
 const editableOffer = ref(props.card.resolvedContent.offerText);
+
+// Re-sync inline editor buffers when the active card changes. Without
+// this, opening Edit Headline on Card 2 shows Card 1's text and typing
+// overwrites Card 2's resolvedContent with stale data. Codex Session 57
+// HIGH 1 — pre-existing bug that pickers would inherit.
+watch(
+  () => props.card.cardNumber,
+  () => {
+    editableHeadline.value = props.card.resolvedContent.headline;
+    editableOffer.value = props.card.resolvedContent.offerText;
+  },
+);
 
 function applyHeadline() {
   emit("update-field", "headline", editableHeadline.value);
@@ -148,9 +160,11 @@ function applyReview(review: BrandKitReview) {
         </div>
         <div v-else class="grid grid-cols-3 gap-2">
           <button
-            v-for="photo in pickerPhotos"
+            v-for="(photo, i) in pickerPhotos"
             :key="photo.url"
-            :data-testid="`photo-option-${photo.source}`"
+            :data-testid="`photo-option-${i}`"
+            :data-source="photo.source"
+            :data-active="photo.url === currentPhotoUrl ? 'true' : 'false'"
             class="relative aspect-square rounded-md overflow-hidden border-2 transition-colors"
             :class="photo.url === currentPhotoUrl ? 'border-[#47bfa9]' : 'border-transparent hover:border-gray-300'"
             :title="photo.alt"
@@ -183,6 +197,7 @@ function applyReview(review: BrandKitReview) {
             v-for="(review, i) in pickerReviews"
             :key="i"
             :data-testid="`review-option-${i}`"
+            :data-active="review.quote === currentReviewQuote ? 'true' : 'false'"
             class="w-full text-left p-2 rounded-md border text-xs transition-colors"
             :class="review.quote === currentReviewQuote ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
             @click="applyReview(review)"
