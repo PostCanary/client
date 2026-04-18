@@ -64,6 +64,7 @@ const LABELS: Record<string, string> = {
             :city="city"
             :credibility-line="credibilityLine"
             :hide-address-placeholder="true"
+            :disable-flip="true"
             size="thumbnail"
           />
         </div>

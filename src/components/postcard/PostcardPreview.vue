@@ -34,6 +34,13 @@ const props = defineProps<{
   // PostcardBack. Defaults to undefined (PostcardBack shows placeholder),
   // which preserves existing behavior for any caller that doesn't set it.
   hideAddressPlaceholder?: boolean;
+  // S61 Bug #5: disable flip entirely (both outer-container click AND
+  // inner Flip-card button). Used by SequenceView thumbnails where the
+  // outer <button @click="select"> already exists — nested <button>
+  // HTML is invalid and the wrapper div's @click="flip" competed with
+  // the parent button's @click="select". Defaults to false (existing
+  // callers like ReviewSummary keep flip behavior).
+  disableFlip?: boolean;
 }>();
 
 const showBack = ref(false);
@@ -104,10 +111,13 @@ const scaledHeight = computed(() => CARD_NATURAL_H * scale.value);
        dynamic scale computed via ResizeObserver. -->
   <div
     ref="containerRef"
-    class="relative cursor-pointer"
-    :class="size === 'thumbnail' ? 'max-w-[240px]' : 'max-w-[480px]'"
+    class="relative"
+    :class="[
+      size === 'thumbnail' ? 'max-w-[240px]' : 'max-w-[480px]',
+      disableFlip ? '' : 'cursor-pointer',
+    ]"
     :style="{ height: `${scaledHeight}px` }"
-    @click="flip"
+    @click="disableFlip ? undefined : flip()"
   >
     <!-- Physical-size card wrapper. Inner div renders at natural 864×576
          so pt-based typography is correct; transform: scale() shrinks it
@@ -154,6 +164,7 @@ const scaledHeight = computed(() => CARD_NATURAL_H * scale.value);
     </div>
 
     <button
+      v-if="!disableFlip"
       class="absolute bottom-2 right-2 bg-white/80 text-xs px-2 py-1 rounded shadow hover:bg-white transition-colors z-30"
       @click.stop="flip"
     >

@@ -69,14 +69,11 @@ test.describe("wizard demo flow — live stack", () => {
 
       // Anthropic generation can take 20-30s per card and the client debounces
       // save-race 400s for up to ~20s before retrying. Give each card 120s.
-      // Thumbnail is a <button> that nests a PostcardPreview containing a
-      // "Flip card" inner button — invalid-HTML nested buttons. Normal
-      // Playwright click() gets routed to the inner flip button; fire the
-      // outer button's native click() directly instead.
+      // S61 Bug #5 fix: PostcardPreview now accepts `disable-flip` which
+      // SequenceView passes for thumbnails. The outer <button> no longer
+      // nests a flip <button>, so normal Playwright click() works.
       for (const cardN of [1, 2, 3]) {
-        await page
-          .getByTestId(`card-select-${cardN}`)
-          .evaluate((el) => (el as HTMLButtonElement).click());
+        await page.getByTestId(`card-select-${cardN}`).click();
         await expect
           .poll(
             () =>
