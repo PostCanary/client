@@ -30,6 +30,7 @@ export function useCardPreview(
   }
 
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryCount = 0;
 
   async function fetchPreview() {
     const id = draftId.value;
@@ -55,6 +56,7 @@ export function useCardPreview(
       cleanup();
       currentObjectUrl = URL.createObjectURL(result.blob);
       previewUrl.value = currentObjectUrl;
+      retryCount = 0; // reset on success
       // Session 54 Codex CRITICAL 2: surface worker render warnings.
       // For now we log them — post-demo these drive a regenerate-on-
       // overlong UI prompt. CONTENT_OVERLONG_REGENERATE signals the AI
@@ -67,10 +69,25 @@ export function useCardPreview(
         );
       }
     } catch (e: any) {
-      if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
-      // 400 typically means cards not yet saved to server (race with auto-populate).
-      // Auto-retry after a short delay instead of showing error state.
-      if (e?.status === 400 && cardData.value) {
+      // Aborted by a subsequent fetch — the new fetch will populate the
+      // UI, so do nothing here. Check multiple shapes axios/fetch can use.
+      if (
+        e?.name === "CanceledError" ||
+        e?.name === "AbortError" ||
+        e?.code === "ERR_CANCELED" ||
+        e?.message === "canceled"
+      ) return;
+      // Transient error retry. Covers:
+      //   - 400 race with auto-populate (cards exist client-side but
+      //     server hasn't finished persisting yet; original reason for this branch)
+      //   - 5xx/network blips during initial Step 3 mount
+      //   - abort-mid-flight shapes that don't match the canceled-check above
+      // One retry only; reset on success. Session 62 fix: Drake observed
+      // "Preview unavailable. Retry" firing even though server logs showed
+      // 200 responses — this is the fallback that catches the race the
+      // 400-only branch missed.
+      if (cardData.value && retryCount < 1) {
+        retryCount++;
         retryTimer = setTimeout(fetchPreview, 2000);
         return;
       }
