@@ -35,6 +35,13 @@ export function useCardPreview(
     const id = draftId.value;
     const num = cardNumber.value;
     if (!id || num < 1) return;
+    // S62 rehearsal fix: skip fetch when no card data exists yet (user
+    // reached Step 3 before auto-populate finished). Previously we fired
+    // the fetch anyway, got a 400 from the server, and fell through to
+    // error.value = "Preview unavailable" because the 400-retry branch
+    // below requires cardData.value to be present. The watch on cardData
+    // re-fires this fetch once cards arrive.
+    if (!cardData.value) return;
 
     if (abortController) abortController.abort();
     abortController = new AbortController();

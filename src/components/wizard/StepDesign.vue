@@ -255,7 +255,21 @@ watch(
           @select="activeCardIndex = $event"
         />
         <div class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden">
-          <div v-if="previewLoading && !previewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
+          <!-- Pre-generation loading state. User reached Step 3 before
+               auto-populate finished (fires from Step 1 goal commit in
+               useCampaignDraftStore.setGoal → generateCardsForDraft).
+               Warm treatment matches footer's "Generating your postcards…"
+               copy; replaces previous "Preview unavailable" that fired
+               when useCardPreview called the server before cards existed.
+               S62 rehearsal fix. -->
+          <div v-if="!cardsReady" class="w-full max-w-lg aspect-[3/2] bg-white border border-gray-200 rounded flex items-center justify-center">
+            <div class="text-center space-y-3 px-6">
+              <span class="inline-block w-8 h-8 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin" />
+              <div class="text-sm text-gray-700 font-medium">Designing your postcards…</div>
+              <div class="text-xs text-gray-500">This usually takes about a minute.</div>
+            </div>
+          </div>
+          <div v-else-if="previewLoading && !previewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
           <img
