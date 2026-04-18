@@ -219,7 +219,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="grid grid-rows-[auto_1fr_auto_auto] min-h-full">
     <!-- No brand kit warning -->
     <div
       v-if="!brandKit"
@@ -228,51 +228,54 @@ watch(
       Brand info is loading... Postcard will be generated with placeholder content.
     </div>
 
-    <!-- Sequence view (top) -->
-    <SequenceView
-      v-if="cards.length > 1"
-      :cards="cards"
-      :active-card-index="activeCardIndex"
-      :brand-colors="brandKit?.brandColors"
-      :business-name="brandKit?.businessName"
-      :business-address="brandKit?.address ?? ''"
-      :logo-url="brandKit?.logoUrl"
-      :rating="brandKit?.googleRating ?? null"
-      :review-count="brandKit?.reviewCount ?? null"
-      :trust-badges="brandKit?.trustBadges ?? []"
-      :years-in-business="brandKit?.yearsInBusiness ?? null"
-      :city="brandKitCity"
-      :credibility-line="brandKitCredibility"
-      class="px-4 pt-4"
-      @select="activeCardIndex = $event"
-    />
-
-    <!-- Main content: preview + edit panel -->
-    <div class="flex flex-1 min-h-0">
-      <!-- Left: Server-rendered postcard preview (actual print template) -->
-      <div class="flex-1 flex items-center justify-center p-8 bg-gray-50">
-        <div class="max-w-lg w-full">
-          <div v-if="previewLoading && !previewUrl" class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
+    <!-- Main content: 2-column grid. SequenceView lives INSIDE the left
+         column above the preview so the carousel and the preview share
+         the same horizontal center axis — fixes the ~160px misalignment
+         caused by SequenceView being centered on the full page width
+         while the preview was centered in the left-of-sidebar column
+         (Session 59 layout polish). -->
+    <div class="grid grid-cols-[1fr_20rem] min-h-0">
+      <!-- Left column: SequenceView (top) + Preview (fills remaining) -->
+      <div class="flex flex-col min-w-0">
+        <SequenceView
+          v-if="cards.length > 1"
+          :cards="cards"
+          :active-card-index="activeCardIndex"
+          :brand-colors="brandKit?.brandColors"
+          :business-name="brandKit?.businessName"
+          :business-address="brandKit?.address ?? ''"
+          :logo-url="brandKit?.logoUrl"
+          :rating="brandKit?.googleRating ?? null"
+          :review-count="brandKit?.reviewCount ?? null"
+          :trust-badges="brandKit?.trustBadges ?? []"
+          :years-in-business="brandKit?.yearsInBusiness ?? null"
+          :city="brandKitCity"
+          :credibility-line="brandKitCredibility"
+          class="px-6 pt-6 pb-4"
+          @select="activeCardIndex = $event"
+        />
+        <div class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden">
+          <div v-if="previewLoading && !previewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
           <img
             v-else-if="previewUrl"
             :src="previewUrl"
             alt="Postcard preview"
-            class="w-full rounded shadow-sm"
+            class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
             :class="{ 'opacity-60': previewLoading }"
           />
-          <div v-else-if="previewError" class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
+          <div v-else-if="previewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Preview unavailable.
             <button class="ml-2 text-[#47bfa9] underline" @click="refreshPreview">Retry</button>
           </div>
-          <div v-else class="aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
+          <div v-else class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
             Waiting for card data…
           </div>
         </div>
       </div>
 
-      <!-- Right: Edit panel -->
+      <!-- Right column: Edit panel -->
       <EditPanel
         v-if="activeCard"
         :card="activeCard"
@@ -288,15 +291,17 @@ watch(
          editing surface and the render panel so it's visible after the
          customer has done their pass on the Vue preview. -->
     <div
-      class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
+      class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between gap-4"
     >
-      <div class="text-sm text-gray-500">
+      <!-- Status strip. Empty on idle (no happy-talk per Krug's rule —
+           the button label is self-explanatory). Populated with active
+           state for starting/queued/rendering/done/failed. `min-w-0 flex-1`
+           lets long error messages wrap or truncate without pushing the
+           button offscreen at 1280×720. -->
+      <div class="text-sm text-gray-500 min-w-0 flex-1">
         <template v-if="!cardsReady">
           <span class="inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin align-middle mr-2" />
           Generating your postcards…
-        </template>
-        <template v-else-if="renderPhase === 'idle'">
-          Happy with the design? See the print-ready proof.
         </template>
         <template v-else-if="renderPhase === 'starting' || renderPhase === 'queued'">
           Queueing render…
@@ -311,7 +316,7 @@ watch(
           Proof ready — review below.
         </template>
         <template v-else-if="renderPhase === 'failed'">
-          <span class="text-red-600">
+          <span class="text-red-600 break-words">
             Render failed: {{ renderError?.message }}
           </span>
         </template>
