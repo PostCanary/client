@@ -30,7 +30,7 @@ async function navigateToStep3(page: Page) {
     .getByRole("button", { name: /Recommended\s+Neighbor Marketing/i })
     .click();
   await page.getByRole("button", { name: "Next", exact: true }).click();
-  const step3 = page.getByRole("button", { name: /3\s+Your Postcard/ });
+  const step3 = page.getByRole("button", { name: /(?:3\s+)?Your Postcard/ });
   await expect(step3).toBeEnabled({ timeout: 30_000 });
   await step3.click();
 

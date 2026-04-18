@@ -57,7 +57,7 @@ test.describe("wizard demo flow — live stack", () => {
         .click();
       await page.getByRole("button", { name: "Next", exact: true }).click();
 
-      const step3Btn = page.getByRole("button", { name: /3\s+Your Postcard/ });
+      const step3Btn = page.getByRole("button", { name: /(?:3\s+)?Your Postcard/ });
       await expect(step3Btn, "Step 3 tab should become enabled after Step 1 Next").toBeEnabled({
         timeout: 30_000,
       });

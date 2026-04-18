@@ -75,7 +75,7 @@ test.describe("generate-proof diagnostic — live stack", () => {
         .click();
       await page.getByRole("button", { name: "Next", exact: true }).click();
 
-      const step3Btn = page.getByRole("button", { name: /3\s+Your Postcard/ });
+      const step3Btn = page.getByRole("button", { name: /(?:3\s+)?Your Postcard/ });
       await expect(step3Btn).toBeEnabled({ timeout: 30_000 });
       await step3Btn.click();
 
