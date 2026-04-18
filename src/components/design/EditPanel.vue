@@ -30,12 +30,25 @@ function toggleEditor(editor: EditorType) {
 const editableHeadline = ref(props.card.resolvedContent.headline);
 const editableOffer = ref(props.card.resolvedContent.offerText);
 
-// Re-sync inline editor buffers when the active card changes. Without
-// this, opening Edit Headline on Card 2 shows Card 1's text and typing
-// overwrites Card 2's resolvedContent with stale data. Codex Session 57
-// HIGH 1 — pre-existing bug that pickers would inherit.
+// Re-sync inline editor buffers when the active card changes OR when
+// the server-derived resolvedContent for the active card is replaced
+// (Reset to Original does this without bumping cardNumber). S60 Bug
+// #1+#2: before this fix, watch only fired on cardNumber change, so
+// Reset to Original cleared the preview PNG but left editableHeadline/
+// editableOffer holding stale typed text; typing one character after
+// Reset replayed the stale buffer and re-corrupted the card silently.
+// Typing-loop safety: when user types, applyHeadline emits update-field,
+// parent mutates override, computed resolvedContent updates to the same
+// string the user typed, watch fires, ref is assigned the same value
+// (no-op for Vue reactivity, does not disrupt caret). See Codex S61
+// LOW 7 trace verification + S60 Codex Session 57 HIGH 1 (Card 2 switch
+// sync) still covered via cardNumber in the key.
 watch(
-  () => props.card.cardNumber,
+  () => [
+    props.card.cardNumber,
+    props.card.resolvedContent.headline,
+    props.card.resolvedContent.offerText,
+  ],
   () => {
     editableHeadline.value = props.card.resolvedContent.headline;
     editableOffer.value = props.card.resolvedContent.offerText;
