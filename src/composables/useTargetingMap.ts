@@ -4,6 +4,7 @@ import L from "leaflet";
 import "leaflet-draw";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
+import "@/styles/leaflet-edit-handles.css";
 import type { TargetingArea } from "@/types/campaign";
 
 // Fix leaflet-draw circle bug: "radius is not defined" in strict mode (Vite ES modules)
@@ -40,6 +41,50 @@ if (Ldraw?.Circle?.prototype?._onMouseMove) {
       // The tooltip display fails silently — drawing/editing still works
     }
   };
+}
+
+// Shrink default edit handles (8px) to branded circles: resize 10px, move 12px.
+// The styling (circle shape, teal color, hover scale) lives in
+// leaflet-edit-handles.css — here we just resize the icons and keep the
+// leaflet-edit-move / leaflet-edit-resize classes so the CSS can target them.
+const PcEditIcons = {
+  move: new L.DivIcon({
+    iconSize: new L.Point(12, 12),
+    className: "leaflet-div-icon leaflet-editing-icon leaflet-edit-move",
+  }),
+  resize: new L.DivIcon({
+    iconSize: new L.Point(10, 10),
+    className: "leaflet-div-icon leaflet-editing-icon leaflet-edit-resize",
+  }),
+  touchMove: new L.DivIcon({
+    iconSize: new L.Point(12, 12),
+    className:
+      "leaflet-div-icon leaflet-editing-icon leaflet-edit-move leaflet-touch-icon",
+  }),
+  touchResize: new L.DivIcon({
+    iconSize: new L.Point(10, 10),
+    className:
+      "leaflet-div-icon leaflet-editing-icon leaflet-edit-resize leaflet-touch-icon",
+  }),
+  vertex: new L.DivIcon({
+    iconSize: new L.Point(10, 10),
+    className: "leaflet-div-icon leaflet-editing-icon leaflet-edit-resize",
+  }),
+  touchVertex: new L.DivIcon({
+    iconSize: new L.Point(10, 10),
+    className:
+      "leaflet-div-icon leaflet-editing-icon leaflet-edit-resize leaflet-touch-icon",
+  }),
+};
+if (Ledit?.SimpleShape?.prototype?.options) {
+  Ledit.SimpleShape.prototype.options.moveIcon = PcEditIcons.move;
+  Ledit.SimpleShape.prototype.options.resizeIcon = PcEditIcons.resize;
+  Ledit.SimpleShape.prototype.options.touchMoveIcon = PcEditIcons.touchMove;
+  Ledit.SimpleShape.prototype.options.touchResizeIcon = PcEditIcons.touchResize;
+}
+if (Ledit?.PolyVerticesEdit?.prototype?.options) {
+  Ledit.PolyVerticesEdit.prototype.options.icon = PcEditIcons.vertex;
+  Ledit.PolyVerticesEdit.prototype.options.touchIcon = PcEditIcons.touchVertex;
 }
 
 // leaflet-draw extends L namespace at runtime but @types/leaflet doesn't know about it

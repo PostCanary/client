@@ -1,0 +1,61 @@
+/*
+ * Leaflet-draw edit handle overrides — smaller, circular, brand-aligned.
+ *
+ * Defaults are 8px white-with-gray-border squares (leaflet-draw 1.0.4). We
+ * re-style the same DOM elements into circles using the `--mkt-teal` brand
+ * token. Positioning is untouched — Leaflet sets transform/width/height on
+ * the parent; our ::before fills the parent and carries the visual styling,
+ * so the hover scale does not fight Leaflet's translate3d.
+ *
+ * Sizes: set via L.DivIcon iconSize in useTargetingMap.ts (resize 10, move 12).
+ * Polygon vertex markers share the resize look.
+ */
+
+.leaflet-editing-icon {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.leaflet-editing-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--mkt-teal, #47bfa9);
+  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.18);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  transform-origin: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Move handle = bullseye: same outer ring as resize + a small teal inner
+ * dot so it stays readable against the teal shape fill. Size differential
+ * (12 vs 10) plus the inner dot gives two signals that this one moves. */
+.leaflet-editing-icon.leaflet-edit-move::after {
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: var(--mkt-teal, #47bfa9);
+  transition: transform 150ms ease;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.leaflet-editing-icon.leaflet-edit-move:hover::after {
+  transform: scale(1.4);
+}
+
+.leaflet-editing-icon:hover::before {
+  transform: scale(1.4);
+  box-shadow: 0 2px 8px rgba(12, 45, 80, 0.28);
+}
+
+.leaflet-editing-icon:active::before {
+  transform: scale(1.2);
+  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.3);
+}
