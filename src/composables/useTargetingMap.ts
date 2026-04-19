@@ -10,10 +10,17 @@ import type { TargetingArea } from "@/types/campaign";
 // Fix leaflet-draw circle bug: "radius is not defined" in strict mode (Vite ES modules)
 // leaflet-draw 1.0.4 assigns to undeclared `radius` variable in two places
 // Patch 1: L.Edit.Circle._move (circle dragging during edit)
+// Also re-adds the resize-marker sync the upstream patch dropped — without
+// it, dragging the move handle leaves the resize handle behind in its
+// previous position (shape moves, edge handle doesn't).
 const Ledit = (L as any).Edit;
 if (Ledit?.Circle?.prototype?._move) {
   Ledit.Circle.prototype._move = function (latlng: any) {
     const r = this._shape.getRadius();
+    if (this._resizeMarkers && this._resizeMarkers.length) {
+      const resizemarkerPoint = this._getResizeMarkerPoint(latlng);
+      this._resizeMarkers[0].setLatLng(resizemarkerPoint);
+    }
     this._shape.setLatLng(latlng);
     this._shape.setRadius(r);
     this._shape.fire("edit");
