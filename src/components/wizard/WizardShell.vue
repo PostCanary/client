@@ -77,18 +77,19 @@ onBeforeRouteLeave(async () => {
       />
     </Teleport>
 
-    <!-- Save indicator -->
+    <!-- Always-mounted at fixed height so save/error state doesn't cause layout shift. -->
     <div
-      v-if="draftStore.error"
-      class="bg-red-50 text-red-600 text-xs text-center py-1.5 px-4"
+      class="h-7 shrink-0 text-xs flex items-center justify-center px-4 transition-colors"
+      :class="
+        draftStore.error
+          ? 'bg-red-50 text-red-600'
+          : draftStore.saving
+            ? 'bg-gray-50 text-gray-400'
+            : 'bg-transparent text-transparent pointer-events-none'
+      "
+      aria-live="polite"
     >
-      {{ draftStore.error }}
-    </div>
-    <div
-      v-else-if="draftStore.saving"
-      class="bg-gray-50 text-gray-400 text-xs text-center py-1.5"
-    >
-      Saving...
+      {{ draftStore.error || (draftStore.saving ? 'Saving...' : '\u00A0') }}
     </div>
 
     <!-- Step content -->
