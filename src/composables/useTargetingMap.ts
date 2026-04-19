@@ -123,6 +123,58 @@ const SHAPE_STYLE: L.PathOptions = {
 const DEFAULT_CENTER: L.LatLngExpression = [33.4484, -111.949];
 const DEFAULT_ZOOM = 12;
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatJobDate(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatJobValue(v: number | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "";
+  return v.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+}
+
+function buildJobPopup(job: {
+  address?: string;
+  serviceType?: string | null;
+  jobDate?: string;
+  value?: number;
+}): string {
+  const title = escapeHtml(job.serviceType || "Past job");
+  const addr = escapeHtml(job.address || "");
+  const dt = escapeHtml(formatJobDate(job.jobDate));
+  const val = formatJobValue(job.value);
+  const valueRow = val
+    ? `<div style="margin-top:4px;"><span style="color:#64748b;">Job value:</span> <span style="color:#0b2d50;font-weight:600;">${escapeHtml(val)}</span></div>`
+    : "";
+  return `
+    <div style="min-width:180px;font-size:12px;line-height:1.4;color:#0b2d50;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:2px;">${title}</div>
+      ${addr ? `<div style="color:#475569;">${addr}</div>` : ""}
+      ${dt ? `<div style="color:#64748b;margin-top:2px;">${dt}</div>` : ""}
+      ${valueRow}
+    </div>
+  `;
+}
+
 export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
   let map: L.Map | null = null;
   const drawnItems = new L.FeatureGroup();
@@ -193,6 +245,13 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
 
     // Fix map size after render
     setTimeout(() => map?.invalidateSize(), 100);
+
+    // Dev-only: expose the map for e2e tests that need to drive interactions
+    // via Leaflet's API (marker click delegation doesn't always route through
+    // Playwright's synthesized mouse events).
+    if (import.meta.env.DEV) {
+      (window as unknown as { __pcMap?: L.Map }).__pcMap = map;
+    }
   }
 
   // Custom draw handlers — bypasses Leaflet-Draw's broken SimpleShape interaction
@@ -352,21 +411,38 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
   }
 
   function addJobRadii(
-    jobs: { lat: number; lng: number; id: string }[],
+    jobs: Array<
+      {
+        lat: number;
+        lng: number;
+        id: string;
+        address?: string;
+        serviceType?: string | null;
+        jobDate?: string;
+        value?: number;
+      }
+    >,
     radiusMiles: number,
   ) {
     jobMarkers.clearLayers();
     const radiusMeters = radiusMiles * 1609.34;
 
     for (const job of jobs) {
-      // Pin marker
-      L.circleMarker([job.lat, job.lng], {
+      // Pin marker with a popup showing the job details (address, value, etc).
+      // Matches the heatmap popup pattern (plain bindPopup + escapeHtml).
+      // Explicit click→openPopup handler because SVG circleMarker's default
+      // bindPopup click behavior was not firing consistently in our setup
+      // (possibly the document-level mouseup listener interacts with the
+      // event ordering).
+      const pin = L.circleMarker([job.lat, job.lng], {
         radius: 6,
         fillColor: "#0b2d50",
         fillOpacity: 1,
         color: "#fff",
         weight: 2,
-      }).addTo(jobMarkers);
+      }).bindPopup(buildJobPopup(job), { className: "pc-job-popup" });
+      pin.on("click", () => pin.openPopup());
+      pin.addTo(jobMarkers);
 
       // Radius circle
       L.circle([job.lat, job.lng], {

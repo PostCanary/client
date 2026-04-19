@@ -3,13 +3,13 @@
 import type { JobReference, TargetingFilters } from "@/types/campaign";
 
 export const MOCK_JOBS: JobReference[] = [
-  { id: "j1", address: "7521 E Camelback Rd, Scottsdale, AZ 85251", lat: 33.5092, lng: -111.9280, serviceType: "AC Repair", jobDate: "2026-03-10", selected: true },
-  { id: "j2", address: "8344 E Shea Blvd, Scottsdale, AZ 85260", lat: 33.5811, lng: -111.9097, serviceType: "Heating", jobDate: "2026-03-15", selected: true },
-  { id: "j3", address: "15034 N Scottsdale Rd, Scottsdale, AZ 85254", lat: 33.6157, lng: -111.9256, serviceType: "AC Repair", jobDate: "2026-02-28", selected: true },
-  { id: "j4", address: "4747 N Goldwater Blvd, Scottsdale, AZ 85251", lat: 33.4997, lng: -111.9248, serviceType: "Duct Cleaning", jobDate: "2026-03-05", selected: true },
-  { id: "j5", address: "10455 E Via Linda, Scottsdale, AZ 85259", lat: 33.5697, lng: -111.8645, serviceType: "AC Repair", jobDate: "2026-03-20", selected: true },
-  { id: "j6", address: "6900 E Camelback Rd, Scottsdale, AZ 85251", lat: 33.5088, lng: -111.9370, serviceType: "Heating", jobDate: "2026-02-15", selected: false },
-  { id: "j7", address: "9617 N Hayden Rd, Scottsdale, AZ 85258", lat: 33.5569, lng: -111.9092, serviceType: "Installation", jobDate: "2026-01-20", selected: false },
+  { id: "j1", address: "7521 E Camelback Rd, Scottsdale, AZ 85251", lat: 33.5092, lng: -111.9280, serviceType: "AC Repair", jobDate: "2026-03-10", selected: true, value: 2450 },
+  { id: "j2", address: "8344 E Shea Blvd, Scottsdale, AZ 85260", lat: 33.5811, lng: -111.9097, serviceType: "Heating", jobDate: "2026-03-15", selected: true, value: 1890 },
+  { id: "j3", address: "15034 N Scottsdale Rd, Scottsdale, AZ 85254", lat: 33.6157, lng: -111.9256, serviceType: "AC Repair", jobDate: "2026-02-28", selected: true, value: 3120 },
+  { id: "j4", address: "4747 N Goldwater Blvd, Scottsdale, AZ 85251", lat: 33.4997, lng: -111.9248, serviceType: "Duct Cleaning", jobDate: "2026-03-05", selected: true, value: 675 },
+  { id: "j5", address: "10455 E Via Linda, Scottsdale, AZ 85259", lat: 33.5697, lng: -111.8645, serviceType: "AC Repair", jobDate: "2026-03-20", selected: true, value: 2980 },
+  { id: "j6", address: "6900 E Camelback Rd, Scottsdale, AZ 85251", lat: 33.5088, lng: -111.9370, serviceType: "Heating", jobDate: "2026-02-15", selected: false, value: 2240 },
+  { id: "j7", address: "9617 N Hayden Rd, Scottsdale, AZ 85258", lat: 33.5569, lng: -111.9092, serviceType: "Installation", jobDate: "2026-01-20", selected: false, value: 8450 },
 ];
 
 const DENSITY_PER_SQ_MILE = 500;

@@ -136,6 +136,7 @@ export interface JobReference {
   serviceType: string | null
   jobDate: string                      // ISO date
   selected: boolean                    // can be unchecked
+  value?: number                       // USD, shown in map popup; optional until Round 2 real data
 }
 
 export interface TargetingFilters {
