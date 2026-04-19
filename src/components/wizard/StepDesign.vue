@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
@@ -104,6 +104,45 @@ let originalCards: CardDesign[] = [];
 
 const cardsReady = computed(() => cards.value.length > 0);
 
+// S67 — Sequence thumbnails use the same server-rendered PNG as the main
+// preview (ONE RENDERING RULE, mems 429/430). Previously SequenceView
+// rendered thumbnails via the Vue-side PostcardPreview component, which
+// produced a completely different-looking template than the render-
+// worker output the customer actually sees. Drake caught the mismatch
+// in S67. Fix = fetch PNG for every card on cardsReady and hand URLs
+// through to SequenceView. Active-card thumbnail is kept in sync with
+// the main preview via the `previewUrl` watch below so edits reflect
+// immediately without re-fetching all cards.
+const thumbnailUrls = ref<(string | null)[]>([]);
+let thumbnailRevokeList: string[] = [];
+
+function revokeThumbnailUrls() {
+  for (const u of thumbnailRevokeList) URL.revokeObjectURL(u);
+  thumbnailRevokeList = [];
+}
+
+async function fetchAllThumbnails() {
+  if (!draftStore.draft?.id || cards.value.length === 0) return;
+  const id = draftStore.draft.id;
+  const n = cards.value.length;
+  const next = new Array<string | null>(n).fill(null);
+  await Promise.all(
+    cards.value.map(async (_, idx) => {
+      try {
+        const result = await previewCard(id, idx + 1);
+        next[idx] = URL.createObjectURL(result.blob);
+      } catch {
+        next[idx] = null;
+      }
+    }),
+  );
+  // Swap in atomically so the UI transitions from "no thumbnails" to
+  // "all thumbnails" in one paint, avoiding flicker.
+  revokeThumbnailUrls();
+  thumbnailRevokeList = next.filter((u): u is string => !!u);
+  thumbnailUrls.value = next;
+}
+
 onMounted(() => {
   if (!brandKitStore.hydrated) brandKitStore.fetch();
 
@@ -112,7 +151,40 @@ onMounted(() => {
     currentLayout.value = draftStore.draft.design.templateLayoutType;
   }
   originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+  fetchAllThumbnails();
 });
+
+onBeforeUnmount(() => revokeThumbnailUrls());
+
+// When the main preview URL updates (edit → debounced refetch succeeds),
+// mirror the new URL into the thumbnail for the active card. Avoids a
+// second network roundtrip and keeps the thumbnail in lockstep with the
+// large preview the user is editing against. Note: useCardPreview's
+// previewUrl is a blob URL it owns and will revoke on cleanup — we do
+// NOT push it onto thumbnailRevokeList (double-free risk). We simply
+// reference it; when the next edit lands, useCardPreview revokes the
+// old blob and creates a new one, and this watcher writes the new URL
+// into the thumbnail slot again.
+watch(
+  [previewUrl, activeCardIndex],
+  ([url, idx]) => {
+    if (!url) return;
+    if (idx < 0 || idx >= thumbnailUrls.value.length) return;
+    const current = [...thumbnailUrls.value];
+    current[idx] = url;
+    thumbnailUrls.value = current;
+  },
+);
+
+// When cards change length (regenerated sequence), refetch all
+// thumbnails. Covers "Try Different Template" and sequence-length
+// changes from Step 1.
+watch(
+  () => cards.value.length,
+  (n, prev) => {
+    if (n !== prev && n > 0) fetchAllThumbnails();
+  },
+);
 
 async function generateNewCards() {
   if (!brandKit.value) return;
@@ -241,6 +313,7 @@ watch(
           v-if="cards.length > 1"
           :cards="cards"
           :active-card-index="activeCardIndex"
+          :thumbnail-urls="thumbnailUrls"
           :brand-colors="brandKit?.brandColors"
           :business-name="brandKit?.businessName"
           :business-address="brandKit?.address ?? ''"

@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { CardDesign, TrustBadge } from "@/types/campaign";
-import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 
-const props = defineProps<{
+// S67 — Thumbnails render via server-PNG <img>, NOT the Vue-side
+// PostcardPreview component. Previously we used PostcardPreview at
+// size="thumbnail" which generated a completely different-looking
+// template than the render-worker output the customer sees in the main
+// preview below. Drake caught the mismatch (S67 mem). ONE RENDERING
+// RULE (mems 429/430) — on-screen = preview-card PNG. Parent
+// (StepDesign.vue) owns the per-card PNG URL list and passes it in.
+// Back-card trust-signal props remain for legacy callers that may flip
+// the thumbnail; current UI uses disable-flip + PNG front-only.
+defineProps<{
   cards: CardDesign[];
   activeCardIndex: number;
+  thumbnailUrls?: (string | null)[];
   brandColors?: string[];
   businessName?: string;
-  // Brief #6 Phase 2 back-card props threaded through 2026-04-09.
-  // PostcardPreview thumbnails are clickable and can flip to the back —
-  // without these props the back would render missing rating/trust/city.
   businessAddress?: string;
   logoUrl?: string | null;
   rating?: number | null;
@@ -48,25 +54,21 @@ const LABELS: Record<string, string> = {
         <div
           class="rounded-lg overflow-hidden border-2 transition-colors"
           :class="idx === activeCardIndex ? 'border-[#47bfa9] shadow-md' : 'border-gray-200'"
-          style="width: 100px"
+          style="width: 100px; aspect-ratio: 3 / 2;"
         >
-          <PostcardPreview
-            :card="card"
-            :layout-type="card.templateId.split('-')[0] as any"
-            :brand-colors="brandColors"
-            :business-name="businessName"
-            :business-address="businessAddress"
-            :logo-url="logoUrl"
-            :rating="rating"
-            :review-count="reviewCount"
-            :trust-badges="trustBadges"
-            :years-in-business="yearsInBusiness"
-            :city="city"
-            :credibility-line="credibilityLine"
-            :hide-address-placeholder="true"
-            :disable-flip="true"
-            size="thumbnail"
+          <img
+            v-if="thumbnailUrls && thumbnailUrls[idx]"
+            :src="thumbnailUrls[idx] as string"
+            :alt="`Card ${card.cardNumber} preview`"
+            class="w-full h-full object-cover"
+            draggable="false"
           />
+          <div
+            v-else
+            class="w-full h-full bg-gray-100 animate-pulse flex items-center justify-center"
+          >
+            <span class="text-[8px] text-gray-400">Loading…</span>
+          </div>
         </div>
         <span
           class="text-[10px] font-medium"
