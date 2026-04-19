@@ -101,6 +101,9 @@ const pickerReviews = computed<BrandKitReview[]>(
   () => props.brandKit?.reviews ?? [],
 );
 
+const reviewsEmptyCopy =
+  "Auto-pulled reviews coming soon — for now, add reviews manually in your brand kit.";
+
 const currentReviewQuote = computed(
   () => props.card.resolvedContent.reviewQuote ?? "",
 );
@@ -203,7 +206,7 @@ function applyReview(review: BrandKitReview) {
       </button>
       <div v-if="activeEditor === 'review'" class="px-3 pb-3">
         <div v-if="pickerReviews.length === 0" class="text-xs text-gray-400 py-2">
-          No reviews available. Add reviews in brand kit.
+          {{ reviewsEmptyCopy }}
         </div>
         <div v-else class="space-y-2">
           <button
