@@ -9,14 +9,12 @@ import { captureEvent } from '@/composables/usePostHog'
 /* Logo — cropped version for sidebar, bird portion for collapsed */
 import LogoUrl from '@/assets/postcanary-logo.png'
 
-/* Existing SVG sidebar icons (imported with ?url) */
-import OverviewIcon from '@/assets/sidebar/overview-icon.svg?url'
-import HeatmapIcon from '@/assets/sidebar/heatmap-icon.svg?url'
-import HistoryIcon from '@/assets/sidebar/history-icon.svg?url'
-import SettingsIcon from '@/assets/sidebar/settings-icon.svg?url'
-import LogoutIcon from '@/assets/sidebar/logout-icon.svg?url'
-
-/* New icons from @vicons/ionicons5 */
+/* Sidebar icons — all sourced from @vicons/ionicons5 so they share a single
+ * CSS color variable (currentColor via inline SVG rendering). Mixing
+ * inline-svg components with <img src="*.svg"> baked-in-fill SVGs produced
+ * the teal-vs-navy inconsistency Drake caught in S69 — some items rendered
+ * teal (via CSS), others stayed navy (fill="#0C2D50" hardcoded in the SVG).
+ * Using one icon source (Ionicons components) eliminates the class. */
 import {
   HomeOutline,
   DocumentTextOutline,
@@ -24,6 +22,11 @@ import {
   BarChartOutline,
   PeopleOutline,
   AddOutline,
+  StatsChartOutline,
+  MapOutline,
+  TimeOutline,
+  SettingsOutline,
+  LogOutOutline,
 } from '@vicons/ionicons5'
 
 const router = useRouter()
@@ -51,14 +54,14 @@ const sidebarItems: SidebarItem[] = [
   { to: '/app/designs', routeName: 'Designs', label: 'Designs', icon: 'component', component: ColorPaletteOutline, section: 'send' },
 
   // RESULTS section
-  { to: '/app/dashboard', routeName: 'Dashboard', label: 'Dashboard', icon: 'svg', svgSrc: OverviewIcon, section: 'results' },
-  { to: '/app/map', routeName: 'Heatmap', label: 'Map', icon: 'svg', svgSrc: HeatmapIcon, section: 'results' },
+  { to: '/app/dashboard', routeName: 'Dashboard', label: 'Dashboard', icon: 'component', component: StatsChartOutline, section: 'results' },
+  { to: '/app/map', routeName: 'Heatmap', label: 'Map', icon: 'component', component: MapOutline, section: 'results' },
   { to: '/app/analytics', routeName: 'Analytics', label: 'Analysis', icon: 'component', component: BarChartOutline, section: 'results' },
   { to: '/app/demographics', routeName: 'Demographics', label: 'Audience', icon: 'component', component: PeopleOutline, section: 'results' },
-  { to: '/app/history', routeName: 'History', label: 'History', icon: 'svg', svgSrc: HistoryIcon, section: 'results' },
+  { to: '/app/history', routeName: 'History', label: 'History', icon: 'component', component: TimeOutline, section: 'results' },
 
   // ACCOUNT section (pinned to bottom)
-  { to: '/app/settings', routeName: 'Settings', label: 'Settings', icon: 'svg', svgSrc: SettingsIcon, section: 'account' },
+  { to: '/app/settings', routeName: 'Settings', label: 'Settings', icon: 'component', component: SettingsOutline, section: 'account' },
 ]
 
 /* ── Section grouping ──────────────────────────────────── */
@@ -209,7 +212,8 @@ async function onSignOut() {
           @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
-          <img v-if="item.icon === 'svg'" :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
+          <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
+          <img v-else :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
           <span class="sidebar-label">{{ item.label }}</span>
         </button>
       </li>
@@ -220,7 +224,7 @@ async function onSignOut() {
           @click="onSignOut"
           type="button"
         >
-          <img :src="LogoutIcon" alt="" class="item-icon item-icon--svg" draggable="false" />
+          <component :is="LogOutOutline" class="item-icon item-icon--component" />
           <span class="sidebar-label">Sign Out</span>
         </button>
       </li>
