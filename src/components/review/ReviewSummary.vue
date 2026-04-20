@@ -16,53 +16,93 @@ const props = defineProps<{
   cards: CardDesign[];
 }>();
 
+type CardStatus = "pending" | "loading" | "ready" | "failed";
+
 const currentCardIndex = ref(0);
 const cardUrls = ref<(string | null)[]>([]);
-const loading = ref(false);
-const error = ref<string | null>(null);
+const cardStatus = ref<CardStatus[]>([]);
 let revokeList: string[] = [];
 
 const totalCards = computed(() => props.cards.length);
 const currentCard = computed(() => props.cards[currentCardIndex.value]);
 const currentUrl = computed(() => cardUrls.value[currentCardIndex.value] ?? null);
+const currentStatus = computed<CardStatus>(
+  () => cardStatus.value[currentCardIndex.value] ?? "pending",
+);
 
 function revokeAll() {
   for (const u of revokeList) URL.revokeObjectURL(u);
   revokeList = [];
 }
 
+// S69 — per-card retry mirrors useCardPreview.ts pattern (mem 482/491).
+// Server renders Card 3 successfully (API logs show 200), but client blob
+// handling under Promise.all occasionally drops a fetch. One retry with
+// a short delay reliably recovers. Retry count matches useCardPreview's
+// two-attempt total (initial + 1 retry).
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 1500;
+
+async function fetchOne(
+  draftId: string,
+  cardN: number,
+  idx: number,
+  attempt = 0,
+): Promise<string | null> {
+  cardStatus.value[idx] = "loading";
+  try {
+    const result = await previewCard(draftId, cardN);
+    if (result.warnings.length > 0) {
+      console.warn(
+        `[ReviewSummary] card ${cardN} render warnings:`,
+        result.warnings,
+      );
+    }
+    const url = URL.createObjectURL(result.blob);
+    cardStatus.value[idx] = "ready";
+    return url;
+  } catch (e) {
+    console.error(
+      `[ReviewSummary] card ${cardN} preview attempt ${attempt + 1} failed:`,
+      e,
+    );
+    if (attempt + 1 < MAX_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      return fetchOne(draftId, cardN, idx, attempt + 1);
+    }
+    cardStatus.value[idx] = "failed";
+    return null;
+  }
+}
+
 async function fetchAll() {
   if (!props.draftId || props.cards.length === 0) {
     cardUrls.value = [];
+    cardStatus.value = [];
     return;
   }
-  loading.value = true;
-  error.value = null;
   const id = props.draftId;
   const n = props.cards.length;
-  const next = new Array<string | null>(n).fill(null);
-  await Promise.all(
-    props.cards.map(async (_, idx) => {
-      try {
-        const result = await previewCard(id, idx + 1);
-        next[idx] = URL.createObjectURL(result.blob);
-        if (result.warnings.length > 0) {
-          console.warn(
-            `[ReviewSummary] card ${idx + 1} render warnings:`,
-            result.warnings,
-          );
-        }
-      } catch (e) {
-        console.error(`[ReviewSummary] card ${idx + 1} preview failed:`, e);
-        next[idx] = null;
-        error.value = "Some previews failed to load. Refresh to retry.";
-      }
-    }),
+  cardStatus.value = Array<CardStatus>(n).fill("pending");
+  const next = await Promise.all(
+    props.cards.map((_, idx) => fetchOne(id, idx + 1, idx)),
   );
   revokeAll();
   revokeList = next.filter((u): u is string => !!u);
   cardUrls.value = next;
-  loading.value = false;
+}
+
+async function retryCurrent() {
+  const idx = currentCardIndex.value;
+  if (!props.draftId) return;
+  const url = await fetchOne(props.draftId, idx + 1, idx);
+  if (url) {
+    const existing = cardUrls.value[idx];
+    if (existing) URL.revokeObjectURL(existing);
+    revokeList = revokeList.filter((u) => u !== existing);
+    revokeList.push(url);
+    cardUrls.value[idx] = url;
+  }
 }
 
 onMounted(fetchAll);
@@ -119,22 +159,30 @@ function nextCard() {
         style="aspect-ratio: 9 / 6;"
       >
         <img
-          v-if="currentUrl"
+          v-if="currentUrl && currentStatus === 'ready'"
           :src="currentUrl"
           :alt="`Card ${currentCardIndex + 1} preview`"
           class="w-full h-full object-contain"
         />
         <div
-          v-else-if="loading"
+          v-else-if="currentStatus === 'loading' || currentStatus === 'pending'"
           class="text-sm text-gray-400"
         >
           Loading preview…
         </div>
         <div
           v-else
-          class="text-sm text-red-500 px-4 text-center"
+          class="flex flex-col items-center gap-3 px-4 text-center"
         >
-          {{ error ?? "Preview unavailable." }}
+          <span class="text-sm text-gray-500">
+            Preview couldn't load.
+          </span>
+          <button
+            class="text-sm text-[#47bfa9] underline hover:text-[#3aa893]"
+            @click="retryCurrent"
+          >
+            Retry
+          </button>
         </div>
       </div>
     </div>
