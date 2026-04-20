@@ -57,7 +57,7 @@ const zips = ref<string[]>([]);
 const HVAC_PRESET_FILTERS: TargetingFilters = {
   homeowner: "homeowner",
   homeValueMin: 150000,
-  homeValueMax: null,
+  homeValueMax: 800000,
   yearBuiltMin: null,
   yearBuiltMax: 2010,
   propertyTypes: ["Single Family"],

@@ -44,6 +44,21 @@ function togglePropertyType(pt: string) {
   }
 }
 
+// S69 — home-value inputs display with comma separators + $ prefix.
+// Underlying storage stays a raw number; the input is type=text with
+// inputmode=numeric so mobile keyboards still surface digits only.
+function formatDollar(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "";
+  return n.toLocaleString("en-US");
+}
+
+function parseDollar(s: string): number | null {
+  const cleaned = s.replace(/[^\d]/g, "");
+  if (!cleaned) return null;
+  const n = parseInt(cleaned, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 defineExpose({ activeFilterCount });
 </script>
 
@@ -87,20 +102,28 @@ defineExpose({ activeFilterCount });
     <div>
       <label class="text-xs text-gray-500">Home value range</label>
       <div class="flex gap-2 mt-1">
-        <input
-          :value="filters.homeValueMin ?? ''"
-          type="number"
-          placeholder="Min ($)"
-          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          @input="filters.homeValueMin = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
-        />
-        <input
-          :value="filters.homeValueMax ?? ''"
-          type="number"
-          placeholder="Max ($)"
-          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          @input="filters.homeValueMax = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
-        />
+        <div class="relative w-1/2">
+          <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
+          <input
+            :value="formatDollar(filters.homeValueMin)"
+            type="text"
+            inputmode="numeric"
+            placeholder="Min"
+            class="w-full border border-gray-200 rounded-lg pl-6 pr-3 py-2 text-sm"
+            @input="filters.homeValueMin = parseDollar(($event.target as HTMLInputElement).value)"
+          />
+        </div>
+        <div class="relative w-1/2">
+          <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
+          <input
+            :value="formatDollar(filters.homeValueMax)"
+            type="text"
+            inputmode="numeric"
+            placeholder="Max"
+            class="w-full border border-gray-200 rounded-lg pl-6 pr-3 py-2 text-sm"
+            @input="filters.homeValueMax = parseDollar(($event.target as HTMLInputElement).value)"
+          />
+        </div>
       </div>
     </div>
 
