@@ -15,7 +15,7 @@ async function handleClose() {
   } catch {
     // Save failed — still allow exit
   }
-  router.push("/app/campaigns");
+  router.push("/app/dashboard");
 }
 </script>
 
