@@ -187,9 +187,13 @@ function determineMethod(): "draw" | "zip" | "around_jobs" | "combined" {
   return "draw";
 }
 
-// Watch for changes and auto-commit
+// Watch for changes and auto-commit.
+// S70 demo-fix: include finalHouseholdCount so that when the async
+// household-count API resolves AFTER the first commit (user clicked
+// Next quickly), a second commit persists the API-accurate number
+// instead of leaving the draft with the client-mock fallback.
 watch(
-  [selectedJobs, radiusMiles, zips, filters, excludePastCustomers, excludeMailedWithinDays],
+  [selectedJobs, radiusMiles, zips, filters, excludePastCustomers, excludeMailedWithinDays, finalHouseholdCount],
   commitTargeting,
   { deep: true },
 );

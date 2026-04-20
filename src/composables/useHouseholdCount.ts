@@ -54,6 +54,16 @@ export function useHouseholdCount() {
       totalFetchedForAreas = ''
     }
 
+    // S70 demo-fix: seed count immediately with client-side mock so that
+    // auto-commit (which runs on a 1s timer in StepTargeting.vue) never
+    // persists `finalHouseholdCount: 0` when the user clicks Next before
+    // the API has a chance to respond or when the request is aborted on
+    // unmount. The API result overwrites this on success.
+    if (count.value === 0) {
+      count.value = clientMockCount(areas, filters)
+      source.value = 'mock'
+    }
+
     try {
       const result = await getHouseholdCount(areas, filters, currentSignal)
       count.value = result.finalCount
