@@ -174,16 +174,16 @@ export const MOCK_HOME_CONTEXT: HomeUserContext = {
 }
 
 export const MOCK_RECOMMENDATION: BestPracticeRecommendation = {
-  id: 'rec-spring-ac',
-  title: 'Spring AC Tune-Up Campaign',
-  description: 'Your past AC customers are prime targets for spring tune-ups before the heat hits. Neighbor marketing around recent jobs gets you the highest ROI.',
-  why: 'Spring cooling season starts in 3 weeks. Best time to mail is now.',
-  goalType: 'seasonal_tuneup',
-  estimatedCount: 312,
-  estimatedCost: 215,
+  id: 'rec-neighbor-marketing-30d',
+  title: 'Neighbor Marketing — Past 30 Days',
+  description: 'Target the neighbors of every job you completed in the past 30 days. They already see your truck in the driveway — highest-converting audience you can mail.',
+  why: 'You completed 12 jobs in the past 30 days. Mail their neighbors this week while the work is still visible.',
+  goalType: 'neighbor_marketing',
+  estimatedCount: 526,
+  estimatedCost: 363,
   previewImageUrl: null,
-  seasonalTag: 'Spring 2026',
-  urgency: 'medium',
+  seasonalTag: 'Recommended',
+  urgency: 'high',
 }
 
 export const MOCK_CAMPAIGNS: HomeCampaignSummary[] = [

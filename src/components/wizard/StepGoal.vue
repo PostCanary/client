@@ -114,6 +114,19 @@ onMounted(() => {
   if (!brandKitStore.hydrated) {
     brandKitStore.fetch();
   }
+
+  // S69 demo prep: pre-select Neighbor Marketing for untouched drafts.
+  // Matches the Home page Recommendation CTA + auto-populate philosophy
+  // (mem 425). Once the customer picks a different goal, that selection
+  // persists via draft.goal.goalType and this block is skipped.
+  // Post-demo: replace hardcoded default with industry/context-aware
+  // recommendation keyed off brandKit.industry + recent-job signal.
+  if (!selectedGoalType.value) {
+    const defaultGoal = [...primary, ...more].find(
+      (g) => g.type === "neighbor_marketing",
+    );
+    if (defaultGoal) selectGoal(defaultGoal);
+  }
 });
 </script>
 
