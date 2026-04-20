@@ -234,17 +234,8 @@ async function approve() {
     <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
       <div class="flex-1 flex items-center justify-center p-8">
         <ReviewSummary
+          :draft-id="draftStore.draft?.id"
           :cards="designCards"
-          :brand-colors="brandKitStore.brandKit?.brandColors"
-          :business-name="brandKitStore.brandKit?.businessName"
-          :business-address="brandKitStore.brandKit?.address ?? ''"
-          :logo-url="brandKitStore.brandKit?.logoUrl"
-          :rating="brandKitStore.brandKit?.googleRating ?? null"
-          :review-count="brandKitStore.brandKit?.reviewCount ?? null"
-          :trust-badges="brandKitStore.brandKit?.trustBadges ?? []"
-          :years-in-business="brandKitStore.brandKit?.yearsInBusiness ?? null"
-          :city="brandKitCity"
-          :credibility-line="brandKitCredibility"
         />
       </div>
 

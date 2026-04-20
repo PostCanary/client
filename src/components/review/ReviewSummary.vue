@@ -1,42 +1,82 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
-import type { CardDesign, TemplateLayoutType, TrustBadge } from "@/types/campaign";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import type { CardDesign } from "@/types/campaign";
+import { previewCard } from "@/api/renderJobs";
 
+// S69 — Step 4 (Review & Send) previews render via server-rendered
+// preview-card PNG, NOT the client-side PostcardPreview.vue Vue mockup.
+// Previously ReviewSummary used PostcardPreview which produced a
+// completely different-looking layout (full-bleed overlay headline +
+// corner badge + fabricated testimonial) than the real HAC-1000 template
+// Step 3 shows. Drake caught the mismatch at T-1 to demo. ONE RENDERING
+// RULE (mems 429/430): on-screen = preview-card PNG everywhere in the
+// wizard. Same pattern as SequenceView thumbnails (S67 mems 546/547).
 const props = defineProps<{
+  draftId: string | undefined;
   cards: CardDesign[];
-  brandColors?: string[];
-  businessName?: string;
-  businessAddress?: string;
-  logoUrl?: string | null;
-  // Brief #6 Phase 2 props threaded through 2026-04-09 — without these
-  // the wizard/review flow would render PostcardBack without rating,
-  // reviewCount, trustBadges, yearsInBusiness, city (dead-prop bug
-  // caught by Codex Pass 1 on P0 #2).
-  rating?: number | null;
-  reviewCount?: number | null;
-  trustBadges?: TrustBadge[];
-  yearsInBusiness?: number | null;
-  city?: string;
-  credibilityLine?: string;
 }>();
 
 const currentCardIndex = ref(0);
+const cardUrls = ref<(string | null)[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+let revokeList: string[] = [];
 
-const currentCard = computed(() => props.cards[currentCardIndex.value]);
 const totalCards = computed(() => props.cards.length);
+const currentCard = computed(() => props.cards[currentCardIndex.value]);
+const currentUrl = computed(() => cardUrls.value[currentCardIndex.value] ?? null);
 
-const currentLayout = computed((): TemplateLayoutType => {
-  const id = currentCard.value?.templateId ?? "";
-  // Template IDs are formatted as "layoutType-cardPurpose"
-  const layout = id.split("-")[0] as TemplateLayoutType;
-  return layout || "full-bleed";
-});
+function revokeAll() {
+  for (const u of revokeList) URL.revokeObjectURL(u);
+  revokeList = [];
+}
+
+async function fetchAll() {
+  if (!props.draftId || props.cards.length === 0) {
+    cardUrls.value = [];
+    return;
+  }
+  loading.value = true;
+  error.value = null;
+  const id = props.draftId;
+  const n = props.cards.length;
+  const next = new Array<string | null>(n).fill(null);
+  await Promise.all(
+    props.cards.map(async (_, idx) => {
+      try {
+        const result = await previewCard(id, idx + 1);
+        next[idx] = URL.createObjectURL(result.blob);
+        if (result.warnings.length > 0) {
+          console.warn(
+            `[ReviewSummary] card ${idx + 1} render warnings:`,
+            result.warnings,
+          );
+        }
+      } catch (e) {
+        console.error(`[ReviewSummary] card ${idx + 1} preview failed:`, e);
+        next[idx] = null;
+        error.value = "Some previews failed to load. Refresh to retry.";
+      }
+    }),
+  );
+  revokeAll();
+  revokeList = next.filter((u): u is string => !!u);
+  cardUrls.value = next;
+  loading.value = false;
+}
+
+onMounted(fetchAll);
+onBeforeUnmount(revokeAll);
+
+// Refetch if draftId changes mid-session (e.g., resume flow)
+watch(
+  () => props.draftId,
+  () => fetchAll(),
+);
 
 function prevCard() {
   if (currentCardIndex.value > 0) currentCardIndex.value--;
 }
-
 function nextCard() {
   if (currentCardIndex.value < totalCards.value - 1) currentCardIndex.value++;
 }
@@ -45,10 +85,7 @@ function nextCard() {
 <template>
   <div class="flex flex-col items-center gap-4">
     <!-- Card switcher (only if multiple cards) -->
-    <div
-      v-if="totalCards > 1"
-      class="flex items-center gap-3"
-    >
+    <div v-if="totalCards > 1" class="flex items-center gap-3">
       <button
         class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
         :disabled="currentCardIndex === 0"
@@ -72,24 +109,35 @@ function nextCard() {
       </button>
     </div>
 
-    <!-- Postcard preview (real card data, not stubs) -->
-    <PostcardPreview
-      v-if="currentCard"
-      :card="currentCard"
-      :layout-type="currentLayout"
-      :brand-colors="brandColors"
-      :business-name="businessName"
-      :business-address="businessAddress"
-      :logo-url="logoUrl"
-      :rating="rating"
-      :review-count="reviewCount"
-      :trust-badges="trustBadges"
-      :years-in-business="yearsInBusiness"
-      :city="city"
-      :credibility-line="credibilityLine"
-      :hide-address-placeholder="true"
-      size="large"
-    />
+    <!-- Server-rendered postcard PNG (matches Step 3 exactly) -->
+    <div
+      class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+      style="width: 600px; max-width: 100%;"
+    >
+      <div
+        class="flex items-center justify-center bg-gray-50"
+        style="aspect-ratio: 9 / 6;"
+      >
+        <img
+          v-if="currentUrl"
+          :src="currentUrl"
+          :alt="`Card ${currentCardIndex + 1} preview`"
+          class="w-full h-full object-contain"
+        />
+        <div
+          v-else-if="loading"
+          class="text-sm text-gray-400"
+        >
+          Loading preview…
+        </div>
+        <div
+          v-else
+          class="text-sm text-red-500 px-4 text-center"
+        >
+          {{ error ?? "Preview unavailable." }}
+        </div>
+      </div>
+    </div>
 
     <!-- Card purpose label -->
     <span
