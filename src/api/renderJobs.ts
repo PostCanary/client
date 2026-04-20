@@ -172,11 +172,18 @@ export interface PreviewCardResult {
 export async function previewCard(
   draftId: string,
   cardNumber: number,
+  signal?: AbortSignal,
 ): Promise<PreviewCardResult> {
+  // S70 fix: accept AbortSignal and forward to axios so that callers'
+  // abortController.abort() actually cancels the in-flight request.
+  // Prior: the signal param didn't exist, so useCardPreview.ts called
+  // .abort() thinking it was cancelling the request, but the HTTP
+  // request ran to completion and a late-arriving blob for card=N
+  // could overwrite currentObjectUrl after the user switched to card=M.
   const res = await http.post(
     `/api/campaign-drafts/${draftId}/preview-card/${cardNumber}`,
     {},
-    { responseType: "blob" },
+    { responseType: "blob", signal },
   );
   const warningsHeader = (res.headers?.["x-render-warnings"] ?? "") as string;
   const warnings = warningsHeader

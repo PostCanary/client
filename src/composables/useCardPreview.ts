@@ -46,13 +46,23 @@ export function useCardPreview(
 
     if (abortController) abortController.abort();
     abortController = new AbortController();
+    const thisController = abortController;
     if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
 
     loading.value = true;
     error.value = null;
 
     try {
-      const result = await previewCard(id, num);
+      // S70 fix: pass abort signal AND capture the card number at fetch
+      // start. On response, discard if EITHER the abort fired OR the
+      // card number changed mid-flight. Prior code had neither guard —
+      // a late-returning blob for card=2 could overwrite the on-screen
+      // card=3 preview.
+      const fetchedCardNum = num;
+      const result = await previewCard(id, num, thisController.signal);
+      if (thisController.signal.aborted || fetchedCardNum !== cardNumber.value) {
+        return;
+      }
       cleanup();
       currentObjectUrl = URL.createObjectURL(result.blob);
       previewUrl.value = currentObjectUrl;
