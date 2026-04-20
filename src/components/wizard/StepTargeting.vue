@@ -254,17 +254,24 @@ function handleMethodChosen(method: "draw" | "zip" | "around_jobs") {
 
 onMounted(() => {
   if (!brandKitStore.hydrated) brandKitStore.fetch();
+  // S69: gate on jobs.value.some(j => j.selected), NOT selectedJobs.
+  // selectedJobs is a computed that returns [] when goal !== neighbor_marketing
+  // (it's only used for neighbor_marketing's radius render path). The raw
+  // `jobs.value` is what updateMapJobs reads. Previous gate caused Bug B
+  // — pre-selected jobs didn't render on mount for non-neighbor goals
+  // because the gate saw selectedJobs.length === 0.
+  const anyJobSelected = jobs.value.some((j) => j.selected);
   if (draftStore.draft?.targeting) {
     // Restore map state from draft (shapes + job radii lost on remount)
     nextTick(() => {
       if (draftStore.draft?.targeting?.areas?.length) {
         mapRef.value?.restoreAreas(draftStore.draft.targeting.areas);
       }
-      if (selectedJobs.value.length > 0) {
+      if (anyJobSelected) {
         updateMapJobs();
       }
     });
-  } else if (selectedJobs.value.length > 0) {
+  } else if (anyJobSelected) {
     // First mount with pre-selected jobs — render radii and commit
     nextTick(() => updateMapJobs());
     commitTargeting();

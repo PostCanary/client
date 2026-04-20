@@ -434,6 +434,20 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
       // bindPopup click behavior was not firing consistently in our setup
       // (possibly the document-level mouseup listener interacts with the
       // event ordering).
+      // S69: radius circle drawn FIRST (paints below the pin) and
+      // interactive:false so clicks pass through to the pin on top.
+      // Without interactive:false the 0.5mi neighbor-marketing radius
+      // circle intercepts pin clicks and the popup never opens. Also
+      // skip the circle entirely when radius=0 (non-neighbor goals) —
+      // no visible overlay to draw.
+      if (radiusMeters > 0) {
+        L.circle([job.lat, job.lng], {
+          radius: radiusMeters,
+          interactive: false,
+          ...SHAPE_STYLE,
+        }).addTo(jobMarkers);
+      }
+
       const pin = L.circleMarker([job.lat, job.lng], {
         radius: 6,
         fillColor: "#0b2d50",
@@ -443,12 +457,6 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
       }).bindPopup(buildJobPopup(job), { className: "pc-job-popup" });
       pin.on("click", () => pin.openPopup());
       pin.addTo(jobMarkers);
-
-      // Radius circle
-      L.circle([job.lat, job.lng], {
-        radius: radiusMeters,
-        ...SHAPE_STYLE,
-      }).addTo(jobMarkers);
     }
 
     // Fit map to show all jobs
