@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
+import { useRoute } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CampaignGoalType, GoalSelection, Industry } from "@/types/campaign";
@@ -13,6 +14,7 @@ import {
   type GoalDefinition,
 } from "@/data/campaignGoals";
 
+const route = useRoute();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 const auth = useAuthStore();
@@ -110,7 +112,7 @@ function commitGoal() {
   draftStore.setGoal(goal);
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (!brandKitStore.hydrated) {
     brandKitStore.fetch();
   }
@@ -121,11 +123,30 @@ onMounted(() => {
   // persists via draft.goal.goalType and this block is skipped.
   // Post-demo: replace hardcoded default with industry/context-aware
   // recommendation keyed off brandKit.industry + recent-job signal.
-  if (!selectedGoalType.value) {
+  const wasAutoSelected = !selectedGoalType.value;
+  if (wasAutoSelected) {
     const defaultGoal = [...primary, ...more].find(
       (g) => g.type === "neighbor_marketing",
     );
     if (defaultGoal) selectGoal(defaultGoal);
+  }
+
+  // S69: if the customer arrived from the Home page Recommendation card
+  // (?from=recommendation), they already expressed their goal by clicking
+  // the card — skip ahead to Step 2. Gated on (a) goal was auto-selected
+  // this mount (not a returning user editing Step 1), (b) setup isn't
+  // required (location + industry present), (c) Step 1 is complete per
+  // draftStore. nextTick waits one paint so selectGoal's async store
+  // commit lands before we check isStepComplete.
+  if (
+    wasAutoSelected &&
+    route.query.from === "recommendation" &&
+    !needsSetup.value
+  ) {
+    await nextTick();
+    if (draftStore.isStepComplete(1)) {
+      draftStore.goToStep(2);
+    }
   }
 });
 </script>

@@ -18,7 +18,10 @@ function formatCurrency(amount: number): string {
 
 function startCampaign() {
   captureEvent('home_recommendation_clicked', { recommendationId: props.recommendation.id, goalType: props.recommendation.goalType })
-  router.push('/app/send')
+  // S69: `from=recommendation` tells StepGoal to auto-advance to Step 2
+  // after the goal is committed — the customer already expressed their
+  // goal by clicking this card, no need to re-select on Step 1.
+  router.push('/app/send?from=recommendation')
 }
 
 onMounted(() => {

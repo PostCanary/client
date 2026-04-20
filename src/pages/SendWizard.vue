@@ -74,9 +74,14 @@ onMounted(async () => {
       await draftStore.resume(draftId);
     } else {
       await draftStore.startNew();
-      // Update URL with draft ID without adding history entry
+      // Update URL with draft ID without adding history entry.
+      // Preserve query params (e.g. ?from=recommendation) so downstream
+      // steps can detect the entry-point signal.
       if (draftStore.draft) {
-        router.replace(`/app/send/${draftStore.draft.id}`);
+        router.replace({
+          path: `/app/send/${draftStore.draft.id}`,
+          query: route.query,
+        });
       }
     }
     // Hydrate brand kit for design step
