@@ -121,26 +121,68 @@ function revokeThumbnailUrls() {
   thumbnailRevokeList = [];
 }
 
-async function fetchAllThumbnails() {
+// S70 — per-card fetch with exponential-ish backoff retries. Initial
+// /preview-card/N calls often 400 because AI-generated card content
+// hasn't finished persisting server-side yet (fresh draft). 4 attempts
+// over ~12s gives the server time to catch up. Each thumbnail slot
+// updates INDEPENDENTLY as soon as its own fetch resolves — no
+// Promise.all blocking the whole row on the slowest card.
+const THUMB_RETRY_DELAYS_MS = [1500, 3000, 6000];
+const THUMB_MAX_ATTEMPTS = 4;
+
+async function fetchThumbnail(idx: number, attempt = 0): Promise<string | null> {
+  const id = draftStore.draft?.id;
+  if (!id) return null;
+  const cardNum = idx + 1;
+  try {
+    const result = await previewCard(id, cardNum);
+    return URL.createObjectURL(result.blob);
+  } catch (e) {
+    if (attempt + 1 < THUMB_MAX_ATTEMPTS) {
+      const delay = THUMB_RETRY_DELAYS_MS[attempt] ?? THUMB_RETRY_DELAYS_MS[THUMB_RETRY_DELAYS_MS.length - 1]!;
+      await new Promise((r) => setTimeout(r, delay));
+      return fetchThumbnail(idx, attempt + 1);
+    }
+    console.error(`[StepDesign] thumbnail card ${cardNum} failed after ${THUMB_MAX_ATTEMPTS} attempts:`, e);
+    return null;
+  }
+}
+
+// Updates ONE slot in thumbnailUrls + revoke list. Safe against the
+// other slots being changed concurrently.
+function writeThumbnailSlot(idx: number, url: string | null) {
+  const current = [...thumbnailUrls.value];
+  const old = current[idx];
+  current[idx] = url;
+  thumbnailUrls.value = current;
+  if (url) thumbnailRevokeList.push(url);
+  if (old) {
+    URL.revokeObjectURL(old);
+    thumbnailRevokeList = thumbnailRevokeList.filter((u) => u !== old);
+  }
+}
+
+function fetchAllThumbnails() {
   if (!draftStore.draft?.id || cards.value.length === 0) return;
-  const id = draftStore.draft.id;
-  const n = cards.value.length;
-  const next = new Array<string | null>(n).fill(null);
-  await Promise.all(
-    cards.value.map(async (_, idx) => {
-      try {
-        const result = await previewCard(id, idx + 1);
-        next[idx] = URL.createObjectURL(result.blob);
-      } catch {
-        next[idx] = null;
-      }
-    }),
-  );
-  // Swap in atomically so the UI transitions from "no thumbnails" to
-  // "all thumbnails" in one paint, avoiding flicker.
+  // Reset slots so SequenceView re-shows the Loading spinner for any
+  // previously-rendered card (e.g. after regenerate). Keeps UI honest.
   revokeThumbnailUrls();
-  thumbnailRevokeList = next.filter((u): u is string => !!u);
-  thumbnailUrls.value = next;
+  thumbnailUrls.value = new Array<string | null>(cards.value.length).fill(null);
+  // Fire each fetch independently; each slot paints as it resolves.
+  for (let idx = 0; idx < cards.value.length; idx++) {
+    const thisIdx = idx;
+    void fetchThumbnail(thisIdx).then((url) => {
+      if (url) writeThumbnailSlot(thisIdx, url);
+    });
+  }
+}
+
+// Refresh a single thumbnail in-place (used by the watcher below when
+// the user edits the active card — fresh fetch, not a blob copy).
+async function refreshOneThumbnail(idx: number) {
+  if (idx < 0 || idx >= cards.value.length) return;
+  const url = await fetchThumbnail(idx);
+  if (url !== null) writeThumbnailSlot(idx, url);
 }
 
 onMounted(() => {
@@ -156,25 +198,18 @@ onMounted(() => {
 
 onBeforeUnmount(() => revokeThumbnailUrls());
 
-// When the main preview URL updates (edit → debounced refetch succeeds),
-// mirror the new URL into the thumbnail for the active card. Avoids a
-// second network roundtrip and keeps the thumbnail in lockstep with the
-// large preview the user is editing against. Note: useCardPreview's
-// previewUrl is a blob URL it owns and will revoke on cleanup — we do
-// NOT push it onto thumbnailRevokeList (double-free risk). We simply
-// reference it; when the next edit lands, useCardPreview revokes the
-// old blob and creates a new one, and this watcher writes the new URL
-// into the thumbnail slot again.
-watch(
-  [previewUrl, activeCardIndex],
-  ([url, idx]) => {
-    if (!url) return;
-    if (idx < 0 || idx >= thumbnailUrls.value.length) return;
-    const current = [...thumbnailUrls.value];
-    current[idx] = url;
-    thumbnailUrls.value = current;
-  },
-);
+// S70 — when the active card's main preview updates (edit or card
+// switch), refetch THAT card's thumbnail as its own blob. Previously
+// this watcher copied useCardPreview's `previewUrl` directly into the
+// thumbnail slot — shared mutable state with conflicting lifecycles
+// (useCardPreview owns + revokes that blob) caused the "Card N
+// thumbnail briefly shows Card M's image" flash AND the stuck-on-
+// wrong-card behavior Drake reported. Independent thumbnail blobs =
+// no cross-ownership. Codex-reviewed (S70).
+watch(previewUrl, (url) => {
+  if (!url) return;
+  refreshOneThumbnail(activeCardIndex.value);
+});
 
 // When cards change length (regenerated sequence), refetch all
 // thumbnails. Covers "Try Different Template" and sequence-length
