@@ -49,15 +49,36 @@ const jobs = ref<JobReference[]>(
 );
 const radiusMiles = ref(draftStore.draft?.targeting?.jobRadiusMiles ?? 0.5);
 const zips = ref<string[]>([]);
+// S69 demo prep: HVAC default presets. Applied when the draft has no
+// filters yet OR filters exist but every field is null/empty (the
+// "untouched-new-draft" signature). Once any field is customized, the
+// stored filters win. Post-demo: replace with industry->preset mapping
+// keyed off brandKit.industry (mem 562).
+const HVAC_PRESET_FILTERS: TargetingFilters = {
+  homeowner: "homeowner",
+  homeValueMin: 150000,
+  homeValueMax: null,
+  yearBuiltMin: null,
+  yearBuiltMax: 2010,
+  propertyTypes: ["Single Family"],
+};
+
+function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
+  if (!f) return true;
+  return (
+    f.homeowner === null &&
+    f.homeValueMin === null &&
+    f.homeValueMax === null &&
+    f.yearBuiltMin === null &&
+    f.yearBuiltMax === null &&
+    f.propertyTypes.length === 0
+  );
+}
+
 const filters = ref<TargetingFilters>(
-  draftStore.draft?.targeting?.filters ?? {
-    homeowner: null,
-    homeValueMin: null,
-    homeValueMax: null,
-    yearBuiltMin: null,
-    yearBuiltMax: null,
-    propertyTypes: [],
-  },
+  filtersAreUntouched(draftStore.draft?.targeting?.filters)
+    ? { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] }
+    : draftStore.draft!.targeting!.filters!,
 );
 const excludePastCustomers = ref(
   draftStore.draft?.targeting?.excludePastCustomers ?? goalDefaults.value.includePastCustomers === false,
