@@ -120,6 +120,17 @@ export function useCardPreview(
     debouncedFetch();
   }, { deep: true });
 
+  // Watch cardNumber separately so we can clear the stale previewUrl
+  // BEFORE a new fetch resolves. S70 fix: StepDesign mirrors previewUrl
+  // into the thumbnail slot of the active card on every watcher tick.
+  // Without this clear, clicking Card 3 while previewUrl still held the
+  // Card 1 blob would briefly paint Card 1's image into Card 3's
+  // thumbnail before the Card 3 fetch returned.
+  watch(cardNumber, () => {
+    cleanup();
+    previewUrl.value = null;
+  });
+
   watch(
     [draftId, cardNumber],
     () => {
