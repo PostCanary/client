@@ -35,13 +35,15 @@ function revokeAll() {
   revokeList = [];
 }
 
-// S69 — per-card retry mirrors useCardPreview.ts pattern (mem 482/491).
-// Server renders Card 3 successfully (API logs show 200), but client blob
-// handling under Promise.all occasionally drops a fetch. One retry with
-// a short delay reliably recovers. Retry count matches useCardPreview's
-// two-attempt total (initial + 1 retry).
-const MAX_ATTEMPTS = 2;
-const RETRY_DELAY_MS = 1500;
+// S70 — exponential backoff retry. Previous 2-attempt / 1.5s-gap schedule
+// flashed "Preview couldn't load" within ~3s when the render-worker /
+// Anthropic path was transiently slow (demo day: backed-up queue). The
+// preview ALWAYS recovers — the fetch just needs a longer settle window
+// before we admit defeat. Budget: 4 attempts across ~12s with delays
+// 1.5s / 3s / 6s. If all 4 fail, user sees "Preview couldn't load." with
+// a manual Retry button (unchanged).
+const MAX_ATTEMPTS = 4;
+const RETRY_DELAYS_MS = [1500, 3000, 6000];
 
 async function fetchOne(
   draftId: string,
@@ -67,7 +69,8 @@ async function fetchOne(
       e,
     );
     if (attempt + 1 < MAX_ATTEMPTS) {
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      const delay = RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]!;
+      await new Promise((r) => setTimeout(r, delay));
       return fetchOne(draftId, cardN, idx, attempt + 1);
     }
     cardStatus.value[idx] = "failed";
