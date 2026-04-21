@@ -65,13 +65,20 @@ export function useHouseholdCount() {
     }
 
     try {
+      // Capture prior source BEFORE overwriting so we can detect live→mock flip
+      // (server signals mock when MELISSA_API_KEY is unset on dev boxes).
+      const prevSource = source.value
       const result = await getHouseholdCount(areas, filters, currentSignal)
       count.value = result.finalCount
       source.value = result.source
 
-      // If source flipped from melissa to mock mid-session, show warning
-      if (result.source === 'mock' && source.value === 'melissa') {
+      // Mid-session live→mock flip = server lost Melissa permission (dev-mode
+      // fallback only — prod returns 503 via the catch branch below). Warn
+      // so testers know the count is now estimated, not live.
+      if (result.source === 'mock' && prevSource === 'melissa') {
         error.value = 'Live data temporarily unavailable — showing estimates'
+      } else {
+        error.value = null
       }
 
       retryCount = 0
@@ -86,11 +93,18 @@ export function useHouseholdCount() {
         return
       }
       retryCount = 0
-      // Fall back to client-side mock count so the UI isn't blank
-      count.value = clientMockCount(areas, filters)
-      source.value = 'mock'
-      error.value = null  // don't show error — mock counts are usable
+      // Drake priority #1 (S71 mem 574): NO silent mock fallback in prod.
+      // When the server returns 503 (Melissa unavailable + alert already
+      // fired server-side), surface the real error message to the user.
+      // The seeded clientMockCount from L62-65 stays as-is so auto-commit
+      // doesn't corrupt draft state with 0, but `error.value` is populated
+      // so the UI layer can gate the Next button / show a warning banner.
       loading.value = false
+      if (e.status === 503 || e.message?.includes('temporarily unavailable')) {
+        error.value = e.message || 'Household-count service temporarily unavailable. Please retry in a minute.'
+      } else {
+        error.value = e.message || 'Could not get household count. Please retry.'
+      }
     }
   }, 500)
 
