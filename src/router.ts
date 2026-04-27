@@ -2,7 +2,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
-import { initMetaPixel, trackPageView, trackViewContent } from "@/composables/useMetaPixel";
 import { capturePageview } from "@/composables/usePostHog";
 import { getSeoData, SITE_URL } from "@/config/seo";
 
@@ -284,14 +283,6 @@ router.afterEach((to) => {
 
   // PostHog pageview
   capturePageview();
-
-  // Meta Pixel tracking
-  initMetaPixel();
-  if (to.meta?.marketing) {
-    trackViewContent({ content_name: to.meta.title as string, content_category: "marketing" });
-  } else {
-    trackPageView();
-  }
 });
 
 export default router;
