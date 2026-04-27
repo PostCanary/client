@@ -132,7 +132,14 @@ test.describe("Alex zero-data path — wizard works without CRM upload precondit
       .click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
 
-    await page.waitForLoadState("networkidle", { timeout: 20_000 });
+    // Element-visibility wait — test 2 uses this same pattern. networkidle
+    // is unreliable on Step 2 because the picker renders a leaflet/canvas
+    // map (see pickerSurface locator below), and map tile-fetching keeps
+    // the network busy past Playwright's idle threshold (S124 spawn fix).
+    await expect(
+      page.getByText(/Around My Jobs|Select Area|Refine/).first(),
+      "Step 2 didn't render after Step 1 advance — wizard may gate on data",
+    ).toBeVisible({ timeout: 20_000 });
 
     // Step 2's picker UI must render without prior matchback / staging
     // data. Same selector net as bob-first-campaign.spec.ts since
