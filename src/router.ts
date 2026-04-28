@@ -4,6 +4,8 @@ import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 import { capturePageview } from "@/composables/usePostHog";
 import { getSeoData, SITE_URL } from "@/config/seo";
+import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
+import { initMetaPixel } from "@/composables/useMetaPixel";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -283,6 +285,15 @@ router.afterEach((to) => {
 
   // PostHog pageview
   capturePageview();
+
+  // Meta Pixel: load fbevents.js + initialize ONLY on marketing routes.
+  // S125 Sprint 1.0.3 — closes privacy gap from 1.0.2 partial fix. App routes
+  // never load fbevents.js → all useMetaPixel.ts callers gracefully no-op
+  // there via the typeof-window.fbq guard at useMetaPixel.ts:33.
+  if (to.meta?.marketing === true) {
+    loadMetaPixelScript();
+    initMetaPixel();
+  }
 });
 
 export default router;
