@@ -29,7 +29,6 @@ import { ref, onBeforeUnmount } from "vue";
 import {
   submitPrintJob,
   getPrintJob,
-  type PrintJobServerStatus,
   type PrintJobStatus,
   type PrintJobSubmitInputs,
 } from "@/api/printJobs";
@@ -63,7 +62,11 @@ const TERMINAL_PHASES: ReadonlySet<PrintJobPhase> = new Set([
   "cancelled",
 ]);
 
-function serverStatusToPhase(s: PrintJobServerStatus): PrintJobPhase {
+// Returns null for unknown server states (e.g. server adds a 10th status
+// ahead of a client deploy). Callers MUST handle null by setting phase to
+// "failed" + an UNKNOWN_SERVER_STATUS diagnostic (S332 Codex strike-1
+// MEDIUM-1; prevents silent `phase = undefined` during version skew).
+function serverStatusToPhase(s: string): PrintJobPhase | null {
   switch (s) {
     case "draft":
       return "submitting";
@@ -82,13 +85,15 @@ function serverStatusToPhase(s: PrintJobServerStatus): PrintJobPhase {
       return "returned";
     case "failed":
       return "failed";
+    default:
+      return null;
   }
 }
 
 export function usePrintJob() {
   const phase = ref<PrintJobPhase>("idle");
   const jobId = ref<string | null>(null);
-  const status = ref<PrintJobServerStatus | null>(null);
+  const status = ref<string | null>(null);
   const partnerOrderId = ref<string | null>(null);
   const error = ref<PrintJobError | null>(null);
   const existingJobId = ref<string | null>(null);
@@ -117,11 +122,24 @@ export function usePrintJob() {
       try {
         snap = await getPrintJob(jobId.value);
       } catch (e: any) {
+        if (runId !== thisRun) return;
+        const httpStatus = e?.status ?? 0;
+        const data = e?.data ?? {};
+        const errCode = (data?.error as string | undefined) ?? "";
         phase.value = "failed";
         error.value = {
-          code: e?.status ? `HTTP_${e.status}` : "NETWORK_ERROR",
+          code:
+            httpStatus === 403 && errCode === "membership_inactive"
+              ? "MEMBERSHIP_INACTIVE"
+              : httpStatus === 404 && errCode === "not_found"
+                ? "NOT_FOUND"
+                : httpStatus
+                  ? `HTTP_${httpStatus}`
+                  : "NETWORK_ERROR",
           message:
-            e?.data?.message || e?.message || "Could not reach the server.",
+            (data?.message as string | undefined) ||
+            e?.message ||
+            "Could not reach the server.",
         };
         return;
       }
@@ -130,6 +148,14 @@ export function usePrintJob() {
       status.value = snap.status;
       partnerOrderId.value = snap.partnerOrderId;
       const next = serverStatusToPhase(snap.status);
+      if (next === null) {
+        phase.value = "failed";
+        error.value = {
+          code: "UNKNOWN_SERVER_STATUS",
+          message: `Unrecognized server status: ${snap.status}`,
+        };
+        return;
+      }
       phase.value = next;
       if (TERMINAL_PHASES.has(next) || next === "accepted") return;
 
@@ -163,15 +189,19 @@ export function usePrintJob() {
     try {
       started = await submitPrintJob(inputs);
     } catch (e: any) {
-      phase.value = "failed";
+      if (runId !== thisRun) return phase.value;
       const httpStatus = e?.status ?? 0;
       const data = e?.data ?? {};
-      const code = (data?.code as string | undefined) ?? "";
+      // Server's canonical code lives at `data.error`; `data.code` is only
+      // adapter-specific detail on `partner_rejected` (S332 Codex strike-1
+      // HIGH-1; verified against `app/blueprints/print_jobs.py::_error_response`).
+      const code = (data?.error as string | undefined) ?? "";
 
       if (httpStatus === 409 && data?.existing_job_id) {
         existingJobId.value = data.existing_job_id as string;
       }
 
+      phase.value = "failed";
       error.value = {
         code:
           httpStatus === 400 && code === "campaign_empty"
@@ -204,7 +234,16 @@ export function usePrintJob() {
     jobId.value = started.jobId;
     status.value = started.status;
     partnerOrderId.value = started.partnerOrderId;
-    phase.value = serverStatusToPhase(started.status);
+    const startedPhase = serverStatusToPhase(started.status);
+    if (startedPhase === null) {
+      phase.value = "failed";
+      error.value = {
+        code: "UNKNOWN_SERVER_STATUS",
+        message: `Unrecognized server status: ${started.status}`,
+      };
+      return phase.value;
+    }
+    phase.value = startedPhase;
     if (TERMINAL_PHASES.has(phase.value) || phase.value === "accepted") {
       return phase.value;
     }

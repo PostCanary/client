@@ -34,6 +34,10 @@ import { get, postJson } from "@/api/http";
 // Server response shapes (snake_case — match the Flask endpoints exactly).
 // ---------------------------------------------------------------------------
 
+// Documented known set of server statuses. Server may add new states ahead of
+// a client deploy (version skew); response/domain types use `string` so the
+// composable's `serverStatusToPhase()` can route unknowns to a safe fallback
+// rather than producing `phase = undefined` (S332 Codex strike-1 MEDIUM-1).
 export type PrintJobServerStatus =
   | "draft"
   | "submitted"
@@ -47,13 +51,13 @@ export type PrintJobServerStatus =
 
 interface SubmitPrintJobResponse {
   job_id: string;
-  status: PrintJobServerStatus;
+  status: string;
   partner_order_id: string | null;
 }
 
 interface GetPrintJobResponse {
   job_id: string;
-  status: PrintJobServerStatus;
+  status: string;
   partner_id: string;
   partner_order_id: string | null;
 }
@@ -88,13 +92,13 @@ export interface PrintJobSubmitInputs {
 
 export interface PrintJobSubmitResult {
   jobId: string;
-  status: PrintJobServerStatus;
+  status: string;
   partnerOrderId: string | null;
 }
 
 export interface PrintJobStatus {
   jobId: string;
-  status: PrintJobServerStatus;
+  status: string;
   partnerId: string;
   partnerOrderId: string | null;
 }
