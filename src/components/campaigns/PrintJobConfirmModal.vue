@@ -59,22 +59,34 @@ function asString(v: unknown): string {
 }
 
 function loadFromLocalStorage() {
-  clearReturnAddress();
+  let parsed: Record<string, unknown> | null = null;
   try {
     const raw = window.localStorage.getItem(localStorageKey());
-    if (!raw) return;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (!parsed || typeof parsed !== "object") return;
-    name.value = asString(parsed.name);
-    line1.value = asString(parsed.line_1);
-    line2.value = asString(parsed.line_2);
-    city.value = asString(parsed.city);
-    state.value = asString(parsed.state);
-    zip5.value = asString(parsed.zip5);
-    zip4.value = asString(parsed.zip4);
+    if (!raw) {
+      // No stored value for this org → clear any in-memory residue from prior org.
+      clearReturnAddress();
+      return;
+    }
+    const decoded = JSON.parse(raw) as unknown;
+    if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
+      parsed = decoded as Record<string, unknown>;
+    }
   } catch {
-    // localStorage unavailable or corrupt JSON — already cleared, user fills manually
+    // localStorage unavailable or corrupt JSON — preserve any in-progress typed fields.
+    return;
   }
+  if (!parsed) {
+    // Stored value was non-object (array / primitive) — preserve in-progress edits.
+    return;
+  }
+  // Successful read: replace refs from validated parse.
+  name.value = asString(parsed.name);
+  line1.value = asString(parsed.line_1);
+  line2.value = asString(parsed.line_2);
+  city.value = asString(parsed.city);
+  state.value = asString(parsed.state);
+  zip5.value = asString(parsed.zip5);
+  zip4.value = asString(parsed.zip4);
 }
 
 function resetCardNumber() {
