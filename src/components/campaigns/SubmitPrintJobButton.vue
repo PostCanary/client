@@ -19,7 +19,12 @@ const isActiveJobBlocking = computed(() => {
   return s !== "failed" && s !== "returned";
 });
 
+const SUBMITTABLE_CAMPAIGN_STATUSES = new Set(["draft", "approved"]);
+
 const disabledReason = computed<string | null>(() => {
+  if (!SUBMITTABLE_CAMPAIGN_STATUSES.has(props.campaign.status)) {
+    return `This campaign is ${props.campaign.status} and cannot accept new print jobs.`;
+  }
   if (props.recipientCount === 0) {
     return "Add recipients to this campaign before submitting a print job.";
   }

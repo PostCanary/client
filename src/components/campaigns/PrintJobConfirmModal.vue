@@ -44,20 +44,36 @@ function localStorageKey() {
   return `postcanary:lastReturnAddress:${props.orgId}`;
 }
 
+function clearReturnAddress() {
+  name.value = "";
+  line1.value = "";
+  line2.value = "";
+  city.value = "";
+  state.value = "";
+  zip5.value = "";
+  zip4.value = "";
+}
+
+function asString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
 function loadFromLocalStorage() {
+  clearReturnAddress();
   try {
     const raw = window.localStorage.getItem(localStorageKey());
     if (!raw) return;
-    const parsed = JSON.parse(raw) as Partial<PrintJobReturnAddress>;
-    name.value = parsed.name ?? "";
-    line1.value = parsed.line_1 ?? "";
-    line2.value = parsed.line_2 ?? "";
-    city.value = parsed.city ?? "";
-    state.value = parsed.state ?? "";
-    zip5.value = parsed.zip5 ?? "";
-    zip4.value = parsed.zip4 ?? "";
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return;
+    name.value = asString(parsed.name);
+    line1.value = asString(parsed.line_1);
+    line2.value = asString(parsed.line_2);
+    city.value = asString(parsed.city);
+    state.value = asString(parsed.state);
+    zip5.value = asString(parsed.zip5);
+    zip4.value = asString(parsed.zip4);
   } catch {
-    // localStorage unavailable or corrupt JSON — silently ignore, user fills manually
+    // localStorage unavailable or corrupt JSON — already cleared, user fills manually
   }
 }
 
@@ -76,6 +92,15 @@ watch(
     if (isOpen) {
       loadFromLocalStorage();
       resetCardNumber();
+    }
+  },
+);
+
+watch(
+  () => props.orgId,
+  () => {
+    if (props.open) {
+      loadFromLocalStorage();
     }
   },
 );
