@@ -284,7 +284,13 @@ export function usePrintJob() {
     partnerOrderId.value = null;
     error.value = null;
     existingJobId.value = null;
-    phase.value = "submitted";
+    // S357 strike-2 fold (Codex MEDIUM-1 conf-89): do NOT seed a non-idle
+    // phase before the first GET resolves. `_poll(initialDelayMs=0)` still
+    // defers the fetch by one macrotask via `await setTimeout(r, 0)`, so a
+    // seed of "submitted" can paint for at least one frame on deep-links to
+    // already-failed/delivered/returned jobs. Stay in "idle" (PHASE_COPY
+    // renders "Loading…") until the first server snapshot arrives.
+    phase.value = "idle";
 
     await _poll(thisRun, 0, false);
     return phase.value;
