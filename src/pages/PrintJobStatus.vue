@@ -19,15 +19,19 @@
 // routes back to /app/campaigns/<id> so the modal (already shipped
 // S339 with localStorage prefill) can replay with adjusted inputs.
 
-import { onMounted, computed } from "vue";
+import { onMounted, computed, watch as vueWatch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { usePrintJob, type PrintJobPhase } from "@/composables/usePrintJob";
 
 const route = useRoute();
 const router = useRouter();
 
-const jobId = route.params.id as string;
-const { phase, status, partnerOrderId, error, watch } = usePrintJob();
+// S355 LOW-3 fold: keep jobId reactive against route.params.id so
+// component-reuse navigation (vue-router reuses this instance when the
+// only delta is :id) restarts polling against the new job rather than
+// continuing to poll the stale snapshot.
+const jobId = computed(() => route.params.id as string);
+const { phase, status, partnerOrderId, error, watch: watchJob } = usePrintJob();
 
 // Optional ?from=campaign:<uuid> threads the originating campaign id back
 // for the failed-retry CTA + Back link. Absent → fall back to /app/campaigns.
@@ -45,8 +49,17 @@ const backHref = computed(() =>
 );
 
 onMounted(() => {
-  watch(jobId);
+  watchJob(jobId.value);
 });
+
+vueWatch(
+  () => route.params.id,
+  (newId, oldId) => {
+    if (typeof newId === "string" && newId !== oldId) {
+      watchJob(newId);
+    }
+  },
+);
 
 const PHASE_COPY: Record<PrintJobPhase, string> = {
   idle: "Loading…",

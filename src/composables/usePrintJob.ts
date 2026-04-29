@@ -100,9 +100,20 @@ export function usePrintJob() {
 
   let runId = 0;
 
-  async function _poll(thisRun: number, delayMs: number): Promise<void> {
+  // S355 — strike-1 fold:
+  //   - HIGH-1: `stopAtAccepted` distinguishes submit-flow (true; success-on-
+  //     accepted is the U.4 contract) from status-page watch (false; must
+  //     continue past accepted through producing/mailed/delivered/terminal).
+  //   - MEDIUM-2: `initialDelayMs=0` runs the first GET immediately (deep-
+  //     link path), then the loop ramps to POLL_INITIAL_MS so subsequent
+  //     polls follow normal exp backoff.
+  async function _poll(
+    thisRun: number,
+    initialDelayMs: number,
+    stopAtAccepted: boolean,
+  ): Promise<void> {
     const startedAt = Date.now();
-    let nextDelay = delayMs;
+    let nextDelay = initialDelayMs;
 
     while (runId === thisRun) {
       if (Date.now() - startedAt > POLL_DEADLINE_MS) {
@@ -157,12 +168,18 @@ export function usePrintJob() {
         return;
       }
       phase.value = next;
-      if (TERMINAL_PHASES.has(next) || next === "accepted") return;
+      if (TERMINAL_PHASES.has(next) || (stopAtAccepted && next === "accepted"))
+        return;
 
-      nextDelay = Math.min(
-        Math.round(nextDelay * POLL_BACKOFF_MULT),
-        POLL_MAX_MS,
-      );
+      // 0-delay first-tick path (status-page deep-link) ramps to
+      // POLL_INITIAL_MS for subsequent ticks so backoff math behaves.
+      nextDelay =
+        nextDelay === 0
+          ? POLL_INITIAL_MS
+          : Math.min(
+              Math.round(nextDelay * POLL_BACKOFF_MULT),
+              POLL_MAX_MS,
+            );
     }
   }
 
@@ -248,12 +265,16 @@ export function usePrintJob() {
       return phase.value;
     }
 
-    await _poll(thisRun, POLL_INITIAL_MS);
+    await _poll(thisRun, POLL_INITIAL_MS, true);
     return phase.value;
   }
 
   /**
    * Begin polling an already-submitted job (deep-link / refresh path).
+   * Per S355 strike-1 fold: first poll fires immediately so deep-linked
+   * already-failed/delivered jobs don't flash "submitted" while waiting
+   * POLL_INITIAL_MS, and polling continues past `accepted` through the
+   * full producing → mailed → delivered timeline (only terminal stops).
    */
   async function watch(id: string): Promise<PrintJobPhase> {
     runId += 1;
@@ -265,7 +286,7 @@ export function usePrintJob() {
     existingJobId.value = null;
     phase.value = "submitted";
 
-    await _poll(thisRun, POLL_INITIAL_MS);
+    await _poll(thisRun, 0, false);
     return phase.value;
   }
 
