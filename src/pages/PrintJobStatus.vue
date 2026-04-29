@@ -228,9 +228,13 @@ function retry() {
       </li>
     </ol>
 
-    <!-- Terminal-error banner (replaces timeline) -->
+    <!-- Terminal-error banner (replaces timeline). S369 U.6 strike-1 fold:
+         changed bare v-else → v-else-if="isTerminalError" so phase==='idle'
+         falls through (skeleton already rendered above) instead of painting
+         red role="alert" + "Loading…" copy on every deep-link before first
+         GET resolves. Codex thread 019dda8e (S368 HIGH conf-96). -->
     <div
-      v-else
+      v-else-if="isTerminalError"
       class="mb-8 rounded-lg border p-4 text-sm"
       :class="
         phase === 'cancelled'
