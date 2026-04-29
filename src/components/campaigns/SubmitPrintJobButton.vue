@@ -52,6 +52,7 @@ function onClick() {
       :disabled="isDisabled"
       :title="disabledReason ?? undefined"
       :aria-disabled="isDisabled"
+      :aria-describedby="disabledReason ? 'submit-print-job-disabled-reason' : undefined"
       :class="[
         'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
         isDisabled
@@ -64,6 +65,7 @@ function onClick() {
     </button>
     <p
       v-if="disabledReason"
+      id="submit-print-job-disabled-reason"
       class="text-xs text-gray-500"
     >
       {{ disabledReason }}

@@ -161,12 +161,46 @@ function retry() {
     <!-- Section 1: Status header -->
     <header class="mb-8">
       <h1 class="text-2xl font-bold text-[#0b2d50] mb-2">Print job status</h1>
-      <p class="text-base text-[#0b2d50]">{{ displayPhaseCopy }}</p>
+      <!--
+        S365 U.6: role="status" + aria-live="polite" announce phase
+        transitions to screen readers without interrupting active speech.
+      -->
+      <p class="text-base text-[#0b2d50]" role="status" aria-live="polite">
+        {{ displayPhaseCopy }}
+      </p>
     </header>
 
-    <!-- Section 2: Timeline (hidden on terminal-error) -->
+    <!--
+      S365 U.6: skeleton blocks while phase === 'idle' (initial state per
+      S357 fold, before first GET resolves). aria-hidden="true" so screen
+      readers announce only the live status copy above; visual placeholder
+      avoids layout shift on the brief 50-200ms idle window.
+    -->
+    <div v-if="phase === 'idle'" aria-hidden="true">
+      <div class="flex items-center justify-between mb-8 px-2">
+        <div v-for="n in 5" :key="n" class="flex flex-col items-center flex-1">
+          <span class="w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
+          <span class="h-3 w-16 mt-2 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+        <div class="h-4 w-24 bg-gray-200 rounded animate-pulse mb-3" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
+          <div>
+            <div class="h-3 w-12 bg-gray-200 rounded animate-pulse mb-1" />
+            <div class="h-4 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div>
+            <div class="h-3 w-16 bg-gray-200 rounded animate-pulse mb-1" />
+            <div class="h-4 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Timeline (hidden on idle + terminal-error) -->
     <ol
-      v-if="!isTerminalError"
+      v-if="phase !== 'idle' && !isTerminalError"
       class="flex items-center justify-between mb-8 px-2"
       aria-label="Print job timeline"
     >
@@ -212,8 +246,8 @@ function retry() {
       </p>
     </div>
 
-    <!-- Section 3: Order metadata -->
-    <section class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+    <!-- Section 3: Order metadata (hidden during idle skeleton state, S365 U.6) -->
+    <section v-if="phase !== 'idle'" class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
       <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Order details</h3>
       <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm">
         <div>
