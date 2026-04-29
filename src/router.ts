@@ -172,6 +172,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/CampaignDetail.vue"),
         meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign" },
       },
+      {
+        path: "print-jobs/:id",
+        name: "PrintJobStatus",
+        component: () => import("@/pages/PrintJobStatus.vue"),
+        meta: { title: `Print Job • ${BRAND.name}`, navbarTitle: "Print Job" },
+      },
 
       // Designs page
       {
