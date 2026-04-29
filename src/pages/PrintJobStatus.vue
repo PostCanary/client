@@ -70,9 +70,36 @@ const PHASE_COPY: Record<PrintJobPhase, string> = {
   mailed: "Mailed",
   delivered: "Delivered",
   returned: "Returned — please check the recipient address",
-  failed: "Submission failed",
+  failed: "Print job failed",
   cancelled: "Cancelled",
 };
+
+// S359 strike-3 fold (Codex MEDIUM-1 conf-86): the `failed` phase fires
+// for both server-reported job failure AND watch-loop GET failures
+// (NOT_FOUND / MEMBERSHIP_INACTIVE / NETWORK_ERROR / HTTP_xxx /
+// POLL_TIMEOUT / UNKNOWN_SERVER_STATUS). The status page is the deep-
+// link/refresh surface; the prior "Submission failed" copy mis-attributed
+// load-failures to a submit-time failure. Branch on error.code so load
+// failures read as load failures, not submit failures. (PHASE_COPY.failed
+// kept for completeness — used when error is unset, e.g. server-status
+// mapping path that translates server status="failed" without populating
+// the error field.)
+const WATCH_LOAD_ERROR_CODES = new Set([
+  "NOT_FOUND",
+  "MEMBERSHIP_INACTIVE",
+  "NETWORK_ERROR",
+  "POLL_TIMEOUT",
+  "UNKNOWN_SERVER_STATUS",
+]);
+
+const displayPhaseCopy = computed<string>(() => {
+  if (phase.value !== "failed") return PHASE_COPY[phase.value];
+  const code = error.value?.code ?? "";
+  if (WATCH_LOAD_ERROR_CODES.has(code) || code.startsWith("HTTP_")) {
+    return "Could not load print job status";
+  }
+  return PHASE_COPY.failed;
+});
 
 // Timeline rendering: 5 forward steps; `returned` / `failed` / `cancelled`
 // collapse the timeline → terminal banner.
@@ -134,7 +161,7 @@ function retry() {
     <!-- Section 1: Status header -->
     <header class="mb-8">
       <h1 class="text-2xl font-bold text-[#0b2d50] mb-2">Print job status</h1>
-      <p class="text-base text-[#0b2d50]">{{ PHASE_COPY[phase] }}</p>
+      <p class="text-base text-[#0b2d50]">{{ displayPhaseCopy }}</p>
     </header>
 
     <!-- Section 2: Timeline (hidden on terminal-error) -->
@@ -178,7 +205,7 @@ function retry() {
       "
       role="alert"
     >
-      <p class="font-semibold mb-1">{{ PHASE_COPY[phase] }}</p>
+      <p class="font-semibold mb-1">{{ displayPhaseCopy }}</p>
       <p v-if="error?.message">{{ error.message }}</p>
       <p v-else-if="phase === 'returned'">
         The mail was returned. Update the recipient address and resubmit from the campaign page.
