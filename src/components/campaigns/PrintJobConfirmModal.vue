@@ -58,7 +58,13 @@ function asString(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function loadFromLocalStorage() {
+function loadFromLocalStorage(opts: { isTenantChange?: boolean } = {}) {
+  // On tenant (orgId) change, ANY load failure must clear to avoid bleeding
+  // a previous org's typed return address into the new org context. On
+  // same-org rehydrations (mount + props.open reopen), preserve in-progress
+  // typed fields when storage is corrupt / unavailable / non-object so the
+  // user does not lose data they entered manually.
+  const failureClears = opts.isTenantChange === true;
   let parsed: Record<string, unknown> | null = null;
   try {
     const raw = window.localStorage.getItem(localStorageKey());
@@ -72,11 +78,13 @@ function loadFromLocalStorage() {
       parsed = decoded as Record<string, unknown>;
     }
   } catch {
-    // localStorage unavailable or corrupt JSON — preserve any in-progress typed fields.
+    // localStorage unavailable or corrupt JSON.
+    if (failureClears) clearReturnAddress();
     return;
   }
   if (!parsed) {
-    // Stored value was non-object (array / primitive) — preserve in-progress edits.
+    // Stored value was non-object (array / primitive).
+    if (failureClears) clearReturnAddress();
     return;
   }
   // Successful read: replace refs from validated parse.
@@ -112,7 +120,7 @@ watch(
   () => props.orgId,
   () => {
     if (props.open) {
-      loadFromLocalStorage();
+      loadFromLocalStorage({ isTenantChange: true });
     }
   },
 );
