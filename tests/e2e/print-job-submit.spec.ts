@@ -101,11 +101,19 @@ test("happy path: status page polls through phases to delivered", async ({ page 
   expect(idxMailed).toBeGreaterThan(idxProducing);
   expect(idxDelivered).toBeGreaterThan(idxMailed);
 
-  // S383 — terminal-state CTA renders post-`delivered` (PrintJobStatus.vue
-  // :291-301; `phase === 'delivered'` branch). No fromCampaignId on the
-  // deep-link → button copy is "All Campaigns".
+  // S387 strike-2 MED fold (Codex thread 019ddacf): terminal-state CTA
+  // renders post-`delivered` (PrintJobStatus.vue:291-301; `phase ===
+  // 'delivered'` branch). No fromCampaignId on the deep-link → button copy
+  // is "All Campaigns". Strike-2 found `.first()` silently matched the
+  // always-present top back button (PrintJobStatus.vue:152) — bottom
+  // delivered-only CTA could regress unnoticed. Lock the dual-CTA invariant:
+  // exactly 2 "All Campaigns" buttons after delivery (top back + delivered
+  // CTA); 1 before (top back only).
   await expect(
-    page.getByRole("button", { name: /All Campaigns/i }).first(),
+    page.getByRole("button", { name: /All Campaigns/i }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: /All Campaigns/i }).last(),
   ).toBeVisible();
 
   // Terminal state: timeline still visible, no error banner.
