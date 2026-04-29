@@ -101,19 +101,14 @@ test("happy path: status page polls through phases to delivered", async ({ page 
   expect(idxMailed).toBeGreaterThan(idxProducing);
   expect(idxDelivered).toBeGreaterThan(idxMailed);
 
-  // S387 strike-2 MED fold (Codex thread 019ddacf): terminal-state CTA
-  // renders post-`delivered` (PrintJobStatus.vue:291-301; `phase ===
-  // 'delivered'` branch). No fromCampaignId on the deep-link → button copy
-  // is "All Campaigns". Strike-2 found `.first()` silently matched the
-  // always-present top back button (PrintJobStatus.vue:152) — bottom
-  // delivered-only CTA could regress unnoticed. Lock the dual-CTA invariant:
-  // exactly 2 "All Campaigns" buttons after delivery (top back + delivered
-  // CTA); 1 before (top back only).
+  // S389 strike-3 MED fold (Codex thread 019ddad4): scope assertion to the
+  // delivered-only CTA branch via dedicated `data-testid`. Strike-2's
+  // `.toHaveCount(2)` + `.last()` could pass on a regression that duplicates
+  // the top back button AND removes the delivered CTA. The testid lives on
+  // the `phase === 'delivered'` branch in PrintJobStatus.vue, so visibility
+  // proves the terminal-CTA branch actually rendered.
   await expect(
-    page.getByRole("button", { name: /All Campaigns/i }),
-  ).toHaveCount(2);
-  await expect(
-    page.getByRole("button", { name: /All Campaigns/i }).last(),
+    page.getByTestId("print-job-terminal-cta"),
   ).toBeVisible();
 
   // Terminal state: timeline still visible, no error banner.

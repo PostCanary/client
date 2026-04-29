@@ -293,6 +293,7 @@ function retry() {
       class="flex gap-3"
     >
       <button
+        data-testid="print-job-terminal-cta"
         class="px-4 py-2 rounded-lg bg-[#47bfa9] text-white text-sm font-semibold hover:bg-[#3aa68f]"
         @click="router.push(backHref)"
       >
