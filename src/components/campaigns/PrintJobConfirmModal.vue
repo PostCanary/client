@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "@vueuse/integrations/useFocusTrap";
 
 export type PrintJobReturnAddress = {
   name: string;
@@ -30,6 +31,14 @@ const emit = defineEmits<{
   (e: "close"): void;
   (e: "submit", payload: PrintJobConfirmPayload): void;
 }>();
+
+const modalRef = ref<HTMLElement | null>(null);
+const { activate: activateTrap, deactivate: deactivateTrap } = useFocusTrap(modalRef, {
+  immediate: false,
+  returnFocusOnDeactivate: true,
+  escapeDeactivates: false,
+  allowOutsideClick: true,
+});
 
 const cardNumber = ref<number>(1);
 const name = ref("");
@@ -108,13 +117,25 @@ onMounted(() => {
 
 watch(
   () => props.open,
-  (isOpen) => {
+  async (isOpen) => {
     if (isOpen) {
       loadFromLocalStorage();
       resetCardNumber();
+      await nextTick();
+      try {
+        activateTrap();
+      } catch {
+        // focus-trap throws if no focusable element is present; treat as no-op.
+      }
+    } else {
+      deactivateTrap();
     }
   },
 );
+
+onBeforeUnmount(() => {
+  deactivateTrap();
+});
 
 watch(
   () => props.orgId,
@@ -171,7 +192,15 @@ function onClose() {
 
 <template>
   <div v-if="open" class="modal-backdrop" @click.self="onClose">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="print-job-modal-title">
+    <div
+      ref="modalRef"
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="print-job-modal-title"
+      tabindex="-1"
+      @keydown.esc="onClose"
+    >
       <header class="modal-header">
         <h3 id="print-job-modal-title">Submit Print Job</h3>
         <button class="close-btn" type="button" :disabled="submitting" @click="onClose">&times;</button>

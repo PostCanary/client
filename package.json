@@ -26,10 +26,12 @@
   "dependencies": {
     "@vicons/ionicons5": "0.13.0",
     "@vueuse/core": "^11.0.0",
+    "@vueuse/integrations": "^14.2.1",
     "@vueuse/motion": "^3.0.3",
     "axios": "1.13.1",
     "chart.js": "4.5.1",
     "dompurify": "^3.3.3",
+    "focus-trap": "^8.1.0",
     "leaflet": "1.9.4",
     "leaflet-draw": "^1.0.4",
     "leaflet.markercluster": "1.5.3",
