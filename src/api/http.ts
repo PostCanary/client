@@ -151,9 +151,13 @@ http.interceptors.response.use(
       msg = `${msg} — ${data.message}`;
     }
 
-    const e = new Error(msg) as Error & { status?: number; data?: any };
+    const e = new Error(msg) as Error & { status?: number; data?: any; code?: string };
     e.status = status;
     e.data = data;
+    // Preserve axios-internal codes (ECONNABORTED on timeout, ERR_CANCELED on
+    // abort) so call-sites can distinguish timeout from generic network error.
+    // S382 strike-1 HIGH fold; useCardPreview.ts:87 already expected this.
+    if (err.code) e.code = err.code;
 
     return Promise.reject(e);
   }

@@ -134,6 +134,19 @@ export function usePrintJob() {
         snap = await getPrintJob(jobId.value);
       } catch (e: any) {
         if (runId !== thisRun) return;
+        // S382 strike-1 HIGH fold: route axios timeouts to POLL_TIMEOUT for
+        // consistent UX. Hung-request (axios aborts at 60s with ECONNABORTED)
+        // and stalled-polling (loop deadline check at line 119) now surface
+        // the same banner copy. Codex thread 019ddaba.
+        if (e?.code === "ECONNABORTED") {
+          phase.value = "failed";
+          error.value = {
+            code: "POLL_TIMEOUT",
+            message:
+              "Status check took longer than expected. The job may still progress — refresh to recheck.",
+          };
+          return;
+        }
         const httpStatus = e?.status ?? 0;
         const data = e?.data ?? {};
         const errCode = (data?.error as string | undefined) ?? "";
