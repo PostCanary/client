@@ -39,6 +39,36 @@ async function gotoStatusPage(
 }
 
 test("happy path: status page polls through phases to delivered", async ({ page }) => {
+  // S383 — MEDIUM-fold of S381 Codex strike-1: capture every distinct value the
+  // ARIA live region announces so we can assert ordered phase progression
+  // (accepted → producing → mailed → delivered) instead of only the final
+  // copy. MutationObserver runs in-page and dedupes consecutive duplicates.
+  // Installed BEFORE navigation so the initial idle/Loading copy is recorded.
+  await page.addInitScript(() => {
+    const history: string[] = [];
+    (window as Window & { __phaseHistory?: string[] }).__phaseHistory = history;
+    const attach = () => {
+      const region = document.querySelector(
+        '[role="status"][aria-live="polite"]',
+      );
+      if (!region) {
+        requestAnimationFrame(attach);
+        return;
+      }
+      const record = () => {
+        const text = region.textContent?.trim();
+        if (text && history[history.length - 1] !== text) history.push(text);
+      };
+      record();
+      new MutationObserver(record).observe(region, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    };
+    attach();
+  });
+
   await gotoStatusPage(page, "happy");
 
   // Phase 1: timeline appears once first GET resolves (idle skeleton replaced).
@@ -51,6 +81,32 @@ test("happy path: status page polls through phases to delivered", async ({ page 
     /delivered/i,
     { timeout: 30_000 },
   );
+
+  // S383 — assert ordered phase sequence via MutationObserver history.
+  // Mock advances accepted → in_production → printed → mailed → delivered.
+  // PHASE_COPY (PrintJobStatus.vue:64-75) maps `in_production` and `printed`
+  // both to `producing` ("In production"), so 4 distinct copies are visible:
+  // Accepted, In production, Mailed, Delivered.
+  const history = await page.evaluate(
+    () =>
+      (window as Window & { __phaseHistory?: string[] }).__phaseHistory ?? [],
+  );
+  const indexOf = (rx: RegExp) => history.findIndex((c: string) => rx.test(c));
+  const idxAccepted = indexOf(/^Accepted/i);
+  const idxProducing = indexOf(/^In production/i);
+  const idxMailed = indexOf(/^Mailed$/i);
+  const idxDelivered = indexOf(/^Delivered$/i);
+  expect(idxAccepted, `phase history: ${JSON.stringify(history)}`).toBeGreaterThanOrEqual(0);
+  expect(idxProducing).toBeGreaterThan(idxAccepted);
+  expect(idxMailed).toBeGreaterThan(idxProducing);
+  expect(idxDelivered).toBeGreaterThan(idxMailed);
+
+  // S383 — terminal-state CTA renders post-`delivered` (PrintJobStatus.vue
+  // :291-301; `phase === 'delivered'` branch). No fromCampaignId on the
+  // deep-link → button copy is "All Campaigns".
+  await expect(
+    page.getByRole("button", { name: /All Campaigns/i }).first(),
+  ).toBeVisible();
 
   // Terminal state: timeline still visible, no error banner.
   await expect(page.locator('[aria-label="Print job timeline"]')).toBeVisible();
