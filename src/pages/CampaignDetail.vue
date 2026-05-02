@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useCampaignDetail } from "@/composables/useCampaignDetail";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -7,6 +7,12 @@ import CampaignStatusBadge from "@/components/campaigns/CampaignStatusBadge.vue"
 import CampaignKPICards from "@/components/campaigns/CampaignKPICards.vue";
 import SequenceTimeline from "@/components/campaigns/SequenceTimeline.vue";
 import CampaignActions from "@/components/campaigns/CampaignActions.vue";
+import SubmitPrintJobButton from "@/components/campaigns/SubmitPrintJobButton.vue";
+import PrintJobConfirmModal, {
+  type PrintJobConfirmPayload,
+} from "@/components/campaigns/PrintJobConfirmModal.vue";
+import { usePrintJob } from "@/composables/usePrintJob";
+import type { PrintJobSubmitInputs } from "@/api/printJobs";
 
 const route = useRoute();
 const router = useRouter();
@@ -14,6 +20,43 @@ const brandKitStore = useBrandKitStore();
 const campaignId = route.params.id as string;
 const { campaign, loading, error, fetch, pause, resume } =
   useCampaignDetail(campaignId);
+
+const printJob = usePrintJob();
+const showPrintModal = ref(false);
+const printJobError = ref<string | null>(null);
+
+const hasDesign = computed(
+  () => campaign.value?.cards.every((c) => !!c.previewImageUrl) ?? false,
+);
+const recipientCount = computed(() => campaign.value?.householdCount ?? 0);
+
+async function onPrintJobSubmit(payload: PrintJobConfirmPayload) {
+  if (!campaign.value) return;
+  printJobError.value = null;
+  const inputs: PrintJobSubmitInputs = {
+    campaign_id: campaign.value.id,
+    design_template_id:
+      campaign.value.cards[payload.cardNumber - 1]?.previewImageUrl ?? "",
+    partner_id: "mock",
+    return_address: payload.returnAddress,
+    front_request_body: {},
+    back_request_body: {},
+    has_merge_fields: false,
+  };
+  const resultPhase = await printJob.submit(inputs);
+  if (resultPhase === "failed") {
+    if (printJob.existingJobId.value) {
+      showPrintModal.value = false;
+      router.push(`/app/print-jobs/${printJob.existingJobId.value}`);
+      return;
+    }
+    printJobError.value =
+      printJob.error.value?.message ?? "Submission failed. Please try again.";
+    return;
+  }
+  showPrintModal.value = false;
+  router.push(`/app/print-jobs/${printJob.jobId.value}`);
+}
 
 onMounted(() => {
   fetch();
@@ -64,11 +107,35 @@ onMounted(() => {
         </h1>
         <CampaignStatusBadge :status="campaign.status" />
       </div>
-      <CampaignActions
-        :campaign="campaign"
-        @pause="pause"
-        @resume="resume"
-      />
+      <div class="flex items-center gap-3">
+        <SubmitPrintJobButton
+          :campaign="campaign"
+          :recipient-count="recipientCount"
+          :has-design="hasDesign"
+          :active-print-job-status="null"
+          @open-modal="showPrintModal = true"
+        />
+        <CampaignActions
+          :campaign="campaign"
+          @pause="pause"
+          @resume="resume"
+        />
+      </div>
+    </div>
+
+    <!-- Print job submission error banner -->
+    <div
+      v-if="printJobError"
+      class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between"
+      role="alert"
+    >
+      <span>{{ printJobError }}</span>
+      <button
+        class="ml-3 text-red-500 hover:text-red-700 font-medium shrink-0"
+        @click="printJobError = null"
+      >
+        Dismiss
+      </button>
     </div>
 
     <!-- KPI cards -->
@@ -121,5 +188,17 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Print job confirm modal -->
+    <PrintJobConfirmModal
+      :open="showPrintModal"
+      :org-id="campaign.orgId"
+      :recipient-count="recipientCount"
+      :card-count="campaign.cards.length"
+      :front-preview-url="campaign.cards[0]?.previewImageUrl ?? null"
+      :submitting="printJob.phase.value === 'submitting'"
+      @submit="onPrintJobSubmit"
+      @close="showPrintModal = false; printJobError = null"
+    />
   </div>
 </template>
