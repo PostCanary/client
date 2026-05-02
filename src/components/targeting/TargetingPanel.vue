@@ -16,6 +16,7 @@ defineProps<{
   excludeMailedWithinDays: number | null;
   doNotMailCount: number;
   totalHouseholds: number;
+  filterReductions: number;
   excludedPastCustomers: number;
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
@@ -116,6 +117,7 @@ const tabs = [
       <PanelTabSummary
         v-if="activeTab === 'summary'"
         :total-households="totalHouseholds"
+        :filter-reductions="filterReductions"
         :excluded-past-customers="excludedPastCustomers"
         :excluded-recently-mailed="excludedRecentlyMailed"
         :excluded-do-not-mail="excludedDoNotMail"

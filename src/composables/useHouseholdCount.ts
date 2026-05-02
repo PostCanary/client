@@ -18,6 +18,8 @@ import type { TargetingArea, TargetingFilters } from '@/types/campaign'
 export function useHouseholdCount() {
   const count = ref(0)
   const totalCount = ref(0)
+  const filteredCount = ref(0)
+  const exclusions = ref({ pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 })
   const loading = ref(false)
   const error = ref<string | null>(null)
   const source = ref<'melissa' | 'mock'>('mock')
@@ -70,6 +72,12 @@ export function useHouseholdCount() {
       const prevSource = source.value
       const result = await getHouseholdCount(areas, filters, currentSignal)
       count.value = result.finalCount
+      filteredCount.value = result.filteredCount
+      exclusions.value = {
+        pastCustomers: result.exclusions.pastCustomers,
+        recentlyMailed: result.exclusions.recentlyMailed,
+        doNotMail: result.exclusions.doNotMail,
+      }
       source.value = result.source
 
       // Mid-session live→mock flip = server lost Melissa permission (dev-mode
@@ -168,6 +176,8 @@ export function useHouseholdCount() {
   return {
     count,
     totalCount,
+    filteredCount,
+    exclusions,
     loading,
     error,
     source,

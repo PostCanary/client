@@ -7,6 +7,7 @@ import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 
 const props = defineProps<{
   totalHouseholds: number;
+  filterReductions: number;
   excludedPastCustomers: number;
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
@@ -52,11 +53,20 @@ onMounted(() => hc.fetchTotalIfNeeded());
       <div class="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
     </div>
 
-    <!-- Household breakdown -->
+    <!-- Household breakdown.
+         S131: filter-reductions row added so the visible math sums correctly.
+         Server response carries totalCount (unfiltered) + filteredCount (post-filters)
+         + exclusions; filterReductions = totalCount - filteredCount surfaces the
+         filter effect that was previously invisible. All exclusion numbers come
+         from the server, not client-side mock math. -->
     <div v-else class="space-y-1.5 text-sm">
       <div class="flex justify-between">
         <span class="text-gray-500">Total in area</span>
         <span class="text-[#0b2d50]">{{ formatNumber(totalHouseholds) }}</span>
+      </div>
+      <div v-if="filterReductions > 0" class="flex justify-between">
+        <span class="text-gray-500">- Filter reductions</span>
+        <span class="text-red-400">-{{ formatNumber(filterReductions) }}</span>
       </div>
       <div v-if="excludedPastCustomers > 0" class="flex justify-between">
         <span class="text-gray-500">- Past customers</span>

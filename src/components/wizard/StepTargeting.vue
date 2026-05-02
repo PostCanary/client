@@ -10,7 +10,6 @@ import { useHouseholdCount } from "@/composables/useHouseholdCount";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 import {
   MOCK_JOBS,
-  mockPastCustomersInArea,
   mockRecipientBreakdown,
 } from "@/data/mockTargetingData";
 
@@ -22,6 +21,8 @@ const mapRef = ref<InstanceType<typeof TargetingMap> | null>(null);
 const {
   count: apiCount,
   totalCount: apiTotalCount,
+  filteredCount: apiFilteredCount,
+  exclusions: apiExclusions,
   loading: countLoading,
   error: countError,
   source: countSource,
@@ -86,7 +87,9 @@ const excludePastCustomers = ref(
 const excludeMailedWithinDays = ref<number | null>(
   draftStore.draft?.targeting?.excludeMailedWithinDays ?? goalDefaults.value.frequencyExclusionDays,
 );
-const doNotMailCount = 7; // mock
+// S131: read from server response (still a placeholder server-side until
+// real DNM-list table lands in Sprint 1.5 — see postcanary-todo.md).
+const doNotMailCount = computed(() => apiExclusions.value.doNotMail);
 
 // Computed counts — only count jobs toward targeting for neighbor marketing
 const selectedJobs = computed(() =>
@@ -115,12 +118,30 @@ const allAreas = computed(() => {
   return areas;
 });
 
-// Use API count as the final household count
-const totalHouseholds = computed(() => apiTotalCount.value || apiCount.value);
-const finalHouseholdCount = computed(() => apiCount.value);
-const pastInArea = computed(() => mockPastCustomersInArea(finalHouseholdCount.value));
-const excludedPast = computed(() => excludePastCustomers.value ? pastInArea.value : 0);
-const excludedRecent = computed(() => Math.round(finalHouseholdCount.value * 0.03));
+// Use API count as the final household count.
+// S131: exclusion numbers come from the server response (apiExclusions) so
+// the breakdown line items match the math. The "Past customers" toggle
+// gates whether the server-supplied past-customer count is subtracted from
+// the displayed final (composable's `count` already nets all three out;
+// when the toggle is OFF we add `pastCustomers` back to surface a higher
+// final count). Until the toggle wires through to the API request itself
+// (Sprint 1.5 follow-up — see postcanary-todo.md), this is a client-side
+// approximation but uses real server numbers, not made-up percentages.
+const totalHouseholds = computed(() => apiTotalCount.value || apiFilteredCount.value || apiCount.value);
+const filterReductions = computed(() =>
+  Math.max((apiTotalCount.value || apiFilteredCount.value) - apiFilteredCount.value, 0)
+);
+const excludedPast = computed(() =>
+  excludePastCustomers.value ? apiExclusions.value.pastCustomers : 0
+);
+const excludedRecent = computed(() => apiExclusions.value.recentlyMailed);
+const excludedDoNotMailServer = computed(() => apiExclusions.value.doNotMail);
+const finalHouseholdCount = computed(() =>
+  excludePastCustomers.value
+    ? apiCount.value
+    : apiCount.value + apiExclusions.value.pastCustomers
+);
+const pastInArea = computed(() => apiExclusions.value.pastCustomers);
 const sequenceLength = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
 const estimatedCostSequence = computed(
   () => finalHouseholdCount.value * PRICING.payPerSend * sequenceLength.value,
@@ -156,11 +177,11 @@ function commitTargeting() {
       jobRadiusMiles: selectedJobs.value.length > 0 ? radiusMiles.value : null,
       excludePastCustomers: excludePastCustomers.value,
       excludeMailedWithinDays: excludeMailedWithinDays.value,
-      doNotMailCount,
+      doNotMailCount: doNotMailCount.value,
       totalHouseholds: totalHouseholds.value,
       excludedPastCustomers: excludedPast.value,
       excludedRecentlyMailed: excludedRecent.value,
-      excludedDoNotMail: doNotMailCount,
+      excludedDoNotMail: doNotMailCount.value,
       finalHouseholdCount: finalHouseholdCount.value,
       pastCustomersInArea: pastInArea.value,
       recipientBreakdown: mockRecipientBreakdown(
@@ -305,6 +326,7 @@ onMounted(() => {
       :exclude-mailed-within-days="excludeMailedWithinDays"
       :do-not-mail-count="doNotMailCount"
       :total-households="totalHouseholds"
+      :filter-reductions="filterReductions"
       :excluded-past-customers="excludedPast"
       :excluded-recently-mailed="excludedRecent"
       :excluded-do-not-mail="doNotMailCount"
