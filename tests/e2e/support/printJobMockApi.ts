@@ -54,7 +54,7 @@ function json(route: Route, body: unknown, status = 200) {
 function err(route: Route, code: string, status: number, message?: string) {
   return json(
     route,
-    { error: { code, message: message ?? code.replace(/_/g, " ") } },
+    { error: code, message: message ?? code.replace(/_/g, " ") },
     status,
   );
 }
@@ -83,10 +83,23 @@ function campaignFixture() {
   return {
     id: MOCK_CAMPAIGN_ID,
     org_id: MOCK_ORG_ID,
+    created_by: null,
     name: "Mock Campaign",
     status: "draft",
-    record_count: 250,
+    goal_type: "new_customers",
+    service_type: null,
+    sequence_length: 1,
+    household_count: 250,
+    total_cost: 172.50,
+    total_spent: 0,
+    targeting_data: null,
+    design_data: null,
+    schedule_data: null,
+    cards_data: [],
+    approved_at: null,
+    draft_id: null,
     created_at: "2026-04-29T00:00:00Z",
+    updated_at: "2026-04-29T00:00:00Z",
   };
 }
 
@@ -117,6 +130,34 @@ export async function installPrintJobMockApi(
       return json(route, authMeFixture());
     }
 
+    // Stub /api/users/me so fetchUserProfile() (called by fetchMe() after auth)
+    // doesn't hit the Vite proxy (Flask not running in E2E → 401 →
+    // HTTP_EVENT_AUTH_REQUIRED → openLoginModal() → blocks button clicks).
+    if (pathname === "/api/users/me" && method === "GET") {
+      return json(route, {
+        id: "user-mock-id",
+        email: "test@example.com",
+        full_name: "Mock User",
+        website_url: null,
+        industry: null,
+        crm: null,
+        mail_provider: null,
+        avatar_url: null,
+        role: "owner",
+        is_invited_user: false,
+        profile_complete: true,
+        tour_completed: true,
+        created_at: "2026-01-01T00:00:00Z",
+      });
+    }
+
+    // Stub brand-kit so brandKitStore.fetch() doesn't hit the Vite proxy
+    // (which has no real Flask session → 401 → auth.loginModalOpen=true →
+    // LoginModal backdrop blocks button clicks in E2E tests).
+    if (pathname === "/api/brand-kit" && method === "GET") {
+      return json(route, { brand_kit: null });
+    }
+
     const campaignMatch = pathname.match(/^\/api\/mail-campaigns\/([^/]+)$/);
     if (campaignMatch && method === "GET") {
       return json(route, campaignFixture());
@@ -134,7 +175,7 @@ export async function installPrintJobMockApi(
         case "idempotency_409":
           return json(
             route,
-            { error: { code: "idempotency_conflict", existing_job_id: EXISTING_JOB_ID } },
+            { error: "idempotency_conflict", existing_job_id: EXISTING_JOB_ID, message: "A print job already exists for this campaign." },
             409,
           );
         case "empty_400":
@@ -196,6 +237,13 @@ export async function installPrintJobMockApi(
             partner_order_id: null,
           });
       }
+    }
+
+    // Catch-all: return empty 200 for any remaining /api/* GET requests to
+    // prevent unmocked endpoints from hitting the Vite proxy → Flask → 401 →
+    // HTTP_EVENT_AUTH_REQUIRED → openLoginModal() blocking button clicks.
+    if (pathname.startsWith("/api/") && method === "GET") {
+      return json(route, {});
     }
 
     // Pass-through for SPA assets, vite HMR, and any other in-app traffic.

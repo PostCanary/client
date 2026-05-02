@@ -27,6 +27,26 @@ import {
 } from "./support/printJobMockApi";
 
 const MOCK_JOB_ID = "11111111-2222-3333-4444-555555555555";
+const EXISTING_JOB_ID = "abc12345-2222-3333-4444-555555555555";
+const MOCK_CAMPAIGN_ID = "campaign-mock-id";
+
+/** Navigate to CampaignDetail, open modal, fill minimal return address, click Confirm. */
+async function submitFromCampaignDetail(page: import("@playwright/test").Page) {
+  await page.goto(`/app/campaigns/${MOCK_CAMPAIGN_ID}`);
+  // 30s timeout: Vite on-demand compilation latency on first parallel batch (see gotoStatusPage note).
+  await expect(page.getByRole("heading", { name: /Mock Campaign/i })).toBeVisible({ timeout: 30_000 });
+  // Open PrintJobConfirmModal via SubmitPrintJobButton
+  await page.getByRole("button", { name: "Submit Print Job" }).first().click();
+  // Fill return address fields — modal uses <label> wrapping <input>, matched by label text
+  await expect(page.getByLabel("Name")).toBeVisible();
+  await page.getByLabel("Name").fill("Test Sender");
+  await page.getByLabel("Address line 1").fill("123 Main St");
+  await page.getByLabel("City").fill("Austin");
+  await page.getByLabel("State").fill("TX");
+  await page.getByLabel("ZIP").fill("78701");
+  // Confirm submission — modal footer confirm button is last "Submit Print Job" in DOM
+  await page.getByRole("button", { name: "Submit Print Job" }).last().click();
+}
 
 async function gotoStatusPage(
   page: import("@playwright/test").Page,
@@ -35,7 +55,10 @@ async function gotoStatusPage(
 ) {
   await installPrintJobMockApi(page, scenario);
   await page.goto(`/app/print-jobs/${jobId}`);
-  await expect(page.getByRole("heading", { name: "Print job status" })).toBeVisible();
+  // 30s timeout: Vite compiles SPA chunks on-demand; first-batch parallel tests
+  // may hit the compile latency before the cache warms up (tests 5-6 pass at
+  // 5s because they run after tests 1-4 have already warmed Vite's cache).
+  await expect(page.getByRole("heading", { name: "Print job status" })).toBeVisible({ timeout: 30_000 });
 }
 
 test("happy path: status page polls through phases to delivered", async ({ page }) => {
@@ -116,18 +139,32 @@ test("happy path: status page polls through phases to delivered", async ({ page 
   await expect(page.locator('[role="alert"]')).toHaveCount(0);
 });
 
-test.skip("idempotency replay (409): navigates to existing_job_id", async () => {
-  // BLOCKED-S376: SubmitPrintJobButton.vue is authored (U.3, commit f3c6b75)
-  // but not yet rendered on any parent page. CampaignDetail.vue does not
-  // import it. Un-skip after the parent-integration commit lands.
+test("idempotency replay (409): navigates to existing_job_id", async ({ page }) => {
+  await installPrintJobMockApi(page, "idempotency_409");
+  await submitFromCampaignDetail(page);
+  // usePrintJob sees 409 + existing_job_id → CampaignDetail navigates to prior job
+  await page.waitForURL(`**/app/print-jobs/${EXISTING_JOB_ID}`, { timeout: 10_000 });
+  await expect(page.getByRole("heading", { name: "Print job status" })).toBeVisible();
 });
 
-test.skip("empty campaign (400): banner stays on campaign-detail", async () => {
-  // BLOCKED-S376: see above.
+test("empty campaign (400): banner stays on campaign-detail", async ({ page }) => {
+  await installPrintJobMockApi(page, "empty_400");
+  await submitFromCampaignDetail(page);
+  // 400 campaign_empty → usePrintJob returns "failed", CampaignDetail shows error banner
+  await expect(page.getByRole("heading", { name: /Mock Campaign/i })).toBeVisible();
+  const alert = page.locator('[role="alert"]').first();
+  await expect(alert).toBeVisible({ timeout: 10_000 });
+  await expect(alert).toContainText(/submission failed|could not submit|campaign/i);
 });
 
-test.skip("membership inactive (403): subscription-redirect CTA", async () => {
-  // BLOCKED-S376: see above.
+test("membership inactive (403): error banner on campaign-detail", async ({ page }) => {
+  await installPrintJobMockApi(page, "membership_403");
+  await submitFromCampaignDetail(page);
+  // 403 membership_inactive → usePrintJob returns "failed", CampaignDetail shows error banner
+  await expect(page.getByRole("heading", { name: /Mock Campaign/i })).toBeVisible();
+  const alert = page.locator('[role="alert"]').first();
+  await expect(alert).toBeVisible({ timeout: 10_000 });
+  await expect(alert).toContainText(/subscription|inactive|membership|submission failed/i);
 });
 
 test("watch failure on deep-link (404): renders watch-load error copy", async ({ page }) => {
