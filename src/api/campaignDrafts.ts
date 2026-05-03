@@ -45,6 +45,7 @@ function toDraft(r: DraftResponse): CampaignDraft {
     currentStep: (r.current_step || 1) as 1 | 2 | 3 | 4,
     completedSteps: (r.completed_steps || []) as (1 | 2 | 3 | 4)[],
     needsReviewSteps: (r.needs_review_steps || []) as (1 | 2 | 3 | 4)[],
+    campaignType: (data.campaignType as 'targeted' | 'eddm') ?? 'targeted',
     goal: data.goal ?? null,
     targeting,
     design: data.design ?? null,
@@ -73,6 +74,7 @@ export async function saveDraft(draft: CampaignDraft): Promise<CampaignDraft> {
       completed_steps: draft.completedSteps,
       needs_review_steps: draft.needsReviewSteps,
       data: {
+        campaignType: draft.campaignType,
         goal: draft.goal,
         targeting: draft.targeting,
         design: draft.design,

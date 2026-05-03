@@ -305,6 +305,8 @@ export interface ReviewSelection {
 
 export type WizardStep = 1 | 2 | 3 | 4
 
+export type CampaignType = 'targeted' | 'eddm'
+
 export interface CampaignDraft {
   id: string                           // UUID
   orgId: string
@@ -312,6 +314,7 @@ export interface CampaignDraft {
   completedSteps: WizardStep[]         // steps that have valid data
   needsReviewSteps: WizardStep[]       // steps flagged for re-review after goal change
 
+  campaignType: CampaignType           // 'targeted' (default) | 'eddm'
   goal: GoalSelection | null
   targeting: TargetingSelection | null
   design: DesignSelection | null

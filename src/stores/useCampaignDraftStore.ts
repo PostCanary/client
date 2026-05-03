@@ -96,6 +96,12 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     // --- Step Updates ---
+    setCampaignType(type: 'targeted' | 'eddm') {
+      if (!this.draft) return;
+      this.draft.campaignType = type;
+      this._debounceSave();
+    },
+
     setGoal(goal: GoalSelection) {
       if (!this.draft) return;
       const goalChanged = this.draft.goal?.goalType !== goal.goalType;
@@ -279,6 +285,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         completed_steps: this.draft.completedSteps,
         needs_review_steps: this.draft.needsReviewSteps,
         data: {
+          campaignType: this.draft.campaignType,
           goal: this.draft.goal,
           targeting: this.draft.targeting,
           design: this.draft.design,

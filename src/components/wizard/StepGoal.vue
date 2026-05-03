@@ -13,6 +13,7 @@ import {
   getGoalsForDisplay,
   type GoalDefinition,
 } from "@/data/campaignGoals";
+import { EDDM_ENABLED } from "@/config/featureFlags";
 
 const route = useRoute();
 const draftStore = useCampaignDraftStore();
@@ -56,6 +57,16 @@ async function completeSetup() {
     });
     savingSetup.value = false;
   }
+}
+
+// Campaign type toggle (EDDM_ENABLED feature flag)
+const campaignType = ref<'targeted' | 'eddm'>(
+  draftStore.draft?.campaignType ?? 'targeted',
+);
+
+function selectCampaignType(type: 'targeted' | 'eddm') {
+  campaignType.value = type;
+  draftStore.setCampaignType(type);
 }
 
 // Goal selection
@@ -218,6 +229,33 @@ onMounted(async () => {
       <div
         class="w-6 h-6 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
       />
+    </div>
+
+    <!-- EDDM campaign-type toggle (feature flag OFF by default) -->
+    <div
+      v-if="EDDM_ENABLED && !needsSetup"
+      class="flex gap-2 mb-6"
+    >
+      <button
+        type="button"
+        class="flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all"
+        :class="campaignType === 'targeted'
+          ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+          : 'border-gray-200 text-gray-500 hover:border-gray-300'"
+        @click="selectCampaignType('targeted')"
+      >
+        Targeted Mailing
+      </button>
+      <button
+        type="button"
+        class="flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all"
+        :class="campaignType === 'eddm'
+          ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+          : 'border-gray-200 text-gray-500 hover:border-gray-300'"
+        @click="selectCampaignType('eddm')"
+      >
+        EDDM (Every Door Direct Mail)
+      </button>
     </div>
 
     <!-- Goal selection (shown after setup is complete or not needed) -->
