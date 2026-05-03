@@ -204,6 +204,7 @@ function requestHuman() {
               v-if="chat.hasMessages"
               class="chat-panel__icon-btn"
               title="Clear conversation"
+              aria-label="Clear conversation"
               @click="chat.clearConversation()"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -211,7 +212,7 @@ function requestHuman() {
                 <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
               </svg>
             </button>
-            <button class="chat-panel__icon-btn" title="Close" @click="chat.toggle()">
+            <button class="chat-panel__icon-btn" title="Close" aria-label="Close chat" @click="chat.toggle()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 6L6 18" /><path d="M6 6l12 12" />
               </svg>
@@ -320,7 +321,7 @@ function requestHuman() {
     <!-- Teaser tooltip (mobile auto-open) -->
     <Transition name="chat-teaser">
       <div v-if="chat.teaser && !chat.open" class="chat-teaser" @click="openFromTeaser">
-        <button class="chat-teaser__close" @click.stop="chat.dismissTeaser()">
+        <button class="chat-teaser__close" aria-label="Dismiss" @click.stop="chat.dismissTeaser()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6L6 18" /><path d="M6 6l12 12" />
           </svg>

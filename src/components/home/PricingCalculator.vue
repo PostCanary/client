@@ -269,6 +269,10 @@ watch(
     var(--mkt-border) 100%
   );
 }
+.calc-slider:focus-visible {
+  outline: 2px solid var(--mkt-teal, #47bfa9);
+  outline-offset: 2px;
+}
 
 /* ── Webkit thumb ─────────────────────────────────────────── */
 .calc-slider::-webkit-slider-thumb {
