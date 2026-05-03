@@ -54,6 +54,7 @@ export function useHouseholdCount() {
     const areasKey = JSON.stringify(areas)
     if (areasKey !== totalFetchedForAreas) {
       totalFetchedForAreas = ''
+      totalCount.value = 0  // S131: reset stale unfiltered total so Count&Cost tab doesn't show old area's number
     }
 
     // S70 demo-fix: seed count immediately with client-side mock so that
