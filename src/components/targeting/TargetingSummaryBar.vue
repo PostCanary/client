@@ -21,8 +21,14 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
       </div>
     </template>
     <template v-else-if="hasTargeting">
-      <div class="text-sm font-semibold text-[#0b2d50]">
-        {{ formatNumber(finalHouseholdCount) }} households
+      <div class="flex items-center gap-1.5">
+        <div class="text-sm font-semibold text-[#0b2d50]">
+          {{ formatNumber(finalHouseholdCount) }} households
+        </div>
+        <span
+          v-if="hc.source.value === 'mock'"
+          class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium"
+        >(demo data)</span>
       </div>
       <div class="text-xs text-gray-500 mt-0.5">
         Est. {{ formatCurrency(estimatedCostSequence) }} · {{ sequenceLength }} {{ sequenceLength === 1 ? 'card' : 'cards' }}
