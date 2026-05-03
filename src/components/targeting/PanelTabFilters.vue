@@ -32,6 +32,7 @@ const activeFilterCount = computed(() => {
   if (filters.value.yearBuiltMin !== null || filters.value.yearBuiltMax !== null)
     count++;
   if (filters.value.propertyTypes.length > 0) count++;
+  if (filters.value.hhageMin !== null || filters.value.hhageMax !== null) count++;
   return count;
 });
 
@@ -86,16 +87,39 @@ defineExpose({ activeFilterCount });
       </select>
     </div>
 
-    <!-- Homeowner age (coming soon — needs data integration) -->
-    <div class="opacity-50">
+    <!-- Homeowner age (Melissa hhage, brackets 1-7) -->
+    <div>
       <label class="text-xs text-gray-500">Homeowner age</label>
-      <select
-        disabled
-        class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
-      >
-        <option>Coming soon</option>
-      </select>
-      <p class="text-[11px] text-gray-400 mt-1">Age targeting available after data integration</p>
+      <div class="flex gap-2 mt-1">
+        <select
+          :value="filters.hhageMin ?? ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.hhageMin = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Min age</option>
+          <option value="1">18-24</option>
+          <option value="2">25-34</option>
+          <option value="3">35-44</option>
+          <option value="4">45-54</option>
+          <option value="5">55-64</option>
+          <option value="6">65-74</option>
+          <option value="7">75+</option>
+        </select>
+        <select
+          :value="filters.hhageMax ?? ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.hhageMax = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Max age</option>
+          <option value="1">18-24</option>
+          <option value="2">25-34</option>
+          <option value="3">35-44</option>
+          <option value="4">45-54</option>
+          <option value="5">55-64</option>
+          <option value="6">65-74</option>
+          <option value="7">75+</option>
+        </select>
+      </div>
     </div>
 
     <!-- Home value range -->

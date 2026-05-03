@@ -146,6 +146,8 @@ export interface TargetingFilters {
   yearBuiltMin: number | null
   yearBuiltMax: number | null
   propertyTypes: string[]              // empty = all
+  hhageMin: number | null              // Melissa bracket 1-7 (1=18-24 … 7=75+); null = any
+  hhageMax: number | null
 }
 
 export interface RecipientBreakdown {
