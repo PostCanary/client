@@ -11,6 +11,7 @@ export interface GoalDefinition {
   seasonal: boolean;
   displayPriority: "primary" | "more";
   comingSoon?: boolean;
+  hidden?: boolean;
   defaults: CampaignGoalDefaults;
 }
 
@@ -91,6 +92,7 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     seasonal: false,
     displayPriority: "more",
     comingSoon: true,
+    hidden: true,
     defaults: GOAL_DEFAULTS.new_mover,
   },
   {
@@ -127,10 +129,10 @@ export function getGoalsForDisplay(): {
 
   return {
     primary: all
-      .filter((g) => g.displayPriority === "primary" && !g.comingSoon)
+      .filter((g) => g.displayPriority === "primary" && !g.comingSoon && !g.hidden)
       .slice(0, 3),
     more: all.filter(
-      (g) => g.displayPriority === "more" || g.comingSoon,
+      (g) => !g.hidden && (g.displayPriority === "more" || g.comingSoon),
     ),
   };
 }
