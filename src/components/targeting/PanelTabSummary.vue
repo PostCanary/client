@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, inject, onMounted } from "vue";
+import { computed, inject } from "vue";
 import { PRICING } from "@/types/campaign";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { formatCurrency, formatNumber } from "@/utils/format";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 
 const props = defineProps<{
-  totalHouseholds: number;
-  filterReductions: number;
   excludedPastCustomers: number;
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
@@ -23,9 +21,11 @@ const perCard = PRICING.payPerSend;
 const perCardCost = computed(() => props.finalHouseholdCount * perCard);
 const totalCost = computed(() => perCardCost.value * seqLen.value);
 const isSmall = computed(() => props.finalHouseholdCount < 100);
-
-// Lazy fetch total count when Summary tab is opened
-onMounted(() => hc.fetchTotalIfNeeded());
+const hasExclusions = computed(() =>
+  props.excludedPastCustomers > 0 ||
+  props.excludedRecentlyMailed > 0 ||
+  props.excludedDoNotMail > 0
+);
 </script>
 
 <template>
@@ -54,19 +54,14 @@ onMounted(() => hc.fetchTotalIfNeeded());
     </div>
 
     <!-- Household breakdown.
-         S131: filter-reductions row added so the visible math sums correctly.
-         Server response carries totalCount (unfiltered) + filteredCount (post-filters)
-         + exclusions; filterReductions = totalCount - filteredCount surfaces the
-         filter effect that was previously invisible. All exclusion numbers come
-         from the server, not client-side mock math. -->
+         S131 Bug B fix: removed "Total in area" (unfiltered lazy-fetch) and
+         "Filter reductions" rows — they caused a perceived discrepancy because
+         the lazy fetchTotalIfNeeded call returned an unfiltered count higher than
+         the summary bar's filtered finalHouseholdCount. Now top-line matches bar. -->
     <div v-else class="space-y-1.5 text-sm">
       <div class="flex justify-between">
-        <span class="text-gray-500">Total in area</span>
-        <span class="text-[#0b2d50]">{{ formatNumber(totalHouseholds) }}</span>
-      </div>
-      <div v-if="filterReductions > 0" class="flex justify-between">
-        <span class="text-gray-500">- Filter reductions</span>
-        <span class="text-red-400">-{{ formatNumber(filterReductions) }}</span>
+        <span class="text-gray-500">Qualifying households</span>
+        <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
       </div>
       <div v-if="excludedPastCustomers > 0" class="flex justify-between">
         <span class="text-gray-500">- Past customers</span>
@@ -80,11 +75,13 @@ onMounted(() => hc.fetchTotalIfNeeded());
         <span class="text-gray-500">- Do not mail</span>
         <span class="text-red-400">-{{ formatNumber(excludedDoNotMail) }}</span>
       </div>
-      <hr class="border-gray-200" />
-      <div class="flex justify-between font-semibold">
-        <span class="text-[#0b2d50]">Final count</span>
-        <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
-      </div>
+      <template v-if="hasExclusions">
+        <hr class="border-gray-200" />
+        <div class="flex justify-between font-semibold">
+          <span class="text-[#0b2d50]">Final count</span>
+          <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
+        </div>
+      </template>
     </div>
 
     <!-- Cost estimate -->

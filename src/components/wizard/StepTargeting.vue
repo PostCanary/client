@@ -62,6 +62,8 @@ const HVAC_PRESET_FILTERS: TargetingFilters = {
   yearBuiltMin: null,
   yearBuiltMax: 2010,
   propertyTypes: ["Single Family"],
+  hhageMin: null,
+  hhageMax: null,
 };
 
 function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
@@ -72,7 +74,9 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
     f.homeValueMax === null &&
     f.yearBuiltMin === null &&
     f.yearBuiltMax === null &&
-    f.propertyTypes.length === 0
+    f.propertyTypes.length === 0 &&
+    (f.hhageMin ?? null) === null &&
+    (f.hhageMax ?? null) === null
   );
 }
 
@@ -325,8 +329,6 @@ onMounted(() => {
       :exclude-past-customers="excludePastCustomers"
       :exclude-mailed-within-days="excludeMailedWithinDays"
       :do-not-mail-count="doNotMailCount"
-      :total-households="totalHouseholds"
-      :filter-reductions="filterReductions"
       :excluded-past-customers="excludedPast"
       :excluded-recently-mailed="excludedRecent"
       :excluded-do-not-mail="doNotMailCount"
