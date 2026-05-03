@@ -7,6 +7,7 @@ const frequencyDays = defineModel<number | null>("excludeMailedWithinDays", {
 });
 const props = defineProps<{
   doNotMailCount: number;
+  hasNonZipAreas?: boolean;
 }>();
 </script>
 
@@ -44,6 +45,10 @@ const props = defineProps<{
     <!-- Do not mail -->
     <div class="text-xs text-gray-400">
       {{ props.doNotMailCount }} addresses on your do-not-mail list
+      <span
+        v-if="props.hasNonZipAreas"
+        class="block mt-0.5 text-gray-300"
+      >* Estimate covers ZIP areas only; drawn-area suppression applied at send time.</span>
     </div>
   </div>
 </template>

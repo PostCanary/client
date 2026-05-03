@@ -14,6 +14,7 @@ const frequencyDays = defineModel<number | null>("excludeMailedWithinDays", {
 });
 const props = defineProps<{
   doNotMailCount: number;
+  hasNonZipAreas?: boolean;
 }>();
 
 const PROPERTY_TYPES = [
@@ -199,6 +200,7 @@ defineExpose({ activeFilterCount });
       v-model:exclude-past-customers="excludePast"
       v-model:exclude-mailed-within-days="frequencyDays"
       :do-not-mail-count="doNotMailCount"
+      :has-non-zip-areas="props.hasNonZipAreas"
     />
   </div>
 </template>

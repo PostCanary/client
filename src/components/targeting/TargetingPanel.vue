@@ -15,6 +15,7 @@ defineProps<{
   excludePastCustomers: boolean;
   excludeMailedWithinDays: number | null;
   doNotMailCount: number;
+  hasNonZipAreas?: boolean;
   excludedPastCustomers: number;
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
@@ -108,6 +109,7 @@ const tabs = [
         :exclude-past-customers="excludePastCustomers"
         :exclude-mailed-within-days="excludeMailedWithinDays"
         :do-not-mail-count="doNotMailCount"
+        :has-non-zip-areas="hasNonZipAreas"
         @update:filters="emit('update:filters', $event)"
         @update:exclude-past-customers="emit('update:excludePastCustomers', $event)"
         @update:exclude-mailed-within-days="emit('update:excludeMailedWithinDays', $event)"

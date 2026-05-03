@@ -115,6 +115,8 @@ const allAreas = computed(() => {
   return areas;
 });
 
+const hasNonZipAreas = computed(() => allAreas.value.some((a) => a.type !== 'zip'));
+
 // Use API count as the final household count.
 // S131: exclusion numbers come from the server response (apiExclusions) so
 // the breakdown line items match the math. The "Past customers" toggle
@@ -325,6 +327,7 @@ onMounted(() => {
       :exclude-past-customers="excludePastCustomers"
       :exclude-mailed-within-days="excludeMailedWithinDays"
       :do-not-mail-count="doNotMailCount"
+      :has-non-zip-areas="hasNonZipAreas"
       :excluded-past-customers="excludedPast"
       :excluded-recently-mailed="excludedRecent"
       :excluded-do-not-mail="doNotMailCount"
