@@ -24,6 +24,7 @@
     "test:e2e:live:report": "playwright show-report playwright-report-live"
   },
   "dependencies": {
+    "@sentry/vue": "^8.55.2",
     "@vicons/ionicons5": "0.13.0",
     "@vueuse/core": "^11.0.0",
     "@vueuse/integrations": "^14.2.1",

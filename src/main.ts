@@ -2,6 +2,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { MotionPlugin } from "@vueuse/motion";
+import * as Sentry from "@sentry/vue";
 import App from "./App.vue";
 import router from "./router";
 import "@/styles/tour.css";
@@ -21,6 +22,18 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(router);
 app.use(MotionPlugin);
+
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+if (sentryDsn) {
+  Sentry.init({
+    app,
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    release: import.meta.env.VITE_GIT_COMMIT_SHA as string | undefined,
+    tracesSampleRate: 0.1,
+    integrations: [Sentry.browserTracingIntegration({ router })],
+  });
+}
 
 initPostHog();
 
