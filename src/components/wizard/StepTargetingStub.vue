@@ -27,6 +27,8 @@ function apply() {
       yearBuiltMin: null,
       yearBuiltMax: null,
       propertyTypes: [],
+      hhageMin: null,
+      hhageMax: null,
     },
     jobsUsed: null,
     jobRadiusMiles: null,
