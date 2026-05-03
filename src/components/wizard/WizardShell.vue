@@ -100,8 +100,8 @@ onBeforeRouteLeave(async () => {
       <StepReview v-else-if="step === 4" />
     </div>
 
-    <!-- Navigation buttons -->
-    <div class="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+    <!-- Navigation buttons — sticky so they stay thumb-reachable on mobile -->
+    <div class="sticky bottom-0 z-10 bg-white border-t border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between">
       <button
         v-if="step > 1"
         class="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"

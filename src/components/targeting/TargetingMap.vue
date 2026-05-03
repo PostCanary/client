@@ -52,7 +52,7 @@ defineExpose({
 <template>
   <div class="relative w-full h-full">
     <!-- Map -->
-    <div ref="mapEl" class="w-full h-full min-h-[400px]" />
+    <div ref="mapEl" class="w-full h-full min-h-[45vh] sm:min-h-[400px]" />
 
     <!-- Custom drawing buttons — hidden in EDDM mode -->
     <div

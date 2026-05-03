@@ -17,7 +17,8 @@ const initError = ref(false);
 const initializing = ref(true);
 
 function checkMobile() {
-  isMobile.value = window.innerWidth < 768;
+  // Gate only below 360px (below smallest common phone). 360px+ can use the wizard with responsive layout.
+  isMobile.value = window.innerWidth < 360;
 }
 
 onMounted(async () => {
@@ -129,11 +130,10 @@ onBeforeUnmount(() => {
   >
     <div class="text-4xl mb-4">💻</div>
     <h2 class="text-lg font-semibold text-[#0b2d50] mb-2">
-      Works best on a computer
+      Screen too small
     </h2>
     <p class="text-sm text-gray-500 mb-6">
-      The campaign builder needs a larger screen for the targeting map and
-      postcard designer. Open PostCanary on your computer to get started.
+      Please rotate your device to landscape or use a larger screen to access the campaign builder.
     </p>
     <button
       class="text-sm text-[#47bfa9] font-medium hover:underline"

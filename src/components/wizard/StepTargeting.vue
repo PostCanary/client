@@ -370,7 +370,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full">
+  <div class="flex flex-col sm:flex-row h-full">
     <!-- Map (takes remaining space) -->
     <div class="flex-1 relative">
       <TargetingMap
