@@ -57,6 +57,7 @@ const HVAC_PRESET_FILTERS: TargetingFilters = {
   propertyTypes: ["Single Family"],
   hhageMin: null,
   hhageMax: null,
+  incomeMin: null,
 };
 
 function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
@@ -69,7 +70,8 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
     f.yearBuiltMax === null &&
     f.propertyTypes.length === 0 &&
     (f.hhageMin ?? null) === null &&
-    (f.hhageMax ?? null) === null
+    (f.hhageMax ?? null) === null &&
+    (f.incomeMin ?? null) === null
   );
 }
 

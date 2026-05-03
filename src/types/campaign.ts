@@ -148,6 +148,7 @@ export interface TargetingFilters {
   propertyTypes: string[]              // empty = all
   hhageMin: number | null              // Melissa bracket 1-7 (1=18-24 … 7=75+); null = any
   hhageMax: number | null
+  incomeMin: string | null             // Melissa hhinc bracket code A-J ($60K–$275K+); null = any
 }
 
 export interface RecipientBreakdown {

@@ -34,6 +34,7 @@ const activeFilterCount = computed(() => {
     count++;
   if (filters.value.propertyTypes.length > 0) count++;
   if (filters.value.hhageMin !== null || filters.value.hhageMax !== null) count++;
+  if (filters.value.incomeMin !== null) count++;
   return count;
 });
 
@@ -121,6 +122,28 @@ defineExpose({ activeFilterCount });
           <option value="7">75+</option>
         </select>
       </div>
+    </div>
+
+    <!-- Household income (minimum bracket) -->
+    <div>
+      <label class="text-xs text-gray-500">Household income (min)</label>
+      <select
+        :value="filters.incomeMin ?? ''"
+        class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        @change="filters.incomeMin = (($event.target as HTMLSelectElement).value || null)"
+      >
+        <option value="">Any income</option>
+        <option value="A">$60K+</option>
+        <option value="B">$75K+</option>
+        <option value="C">$100K+</option>
+        <option value="D">$125K+</option>
+        <option value="E">$150K+</option>
+        <option value="F">$175K+</option>
+        <option value="G">$200K+</option>
+        <option value="H">$225K+</option>
+        <option value="I">$250K+</option>
+        <option value="J">$275K+</option>
+      </select>
     </div>
 
     <!-- Home value range -->
