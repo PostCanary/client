@@ -1,11 +1,12 @@
 // src/composables/useTargetingMap.ts
-import { ref, type Ref } from "vue";
+import { ref, computed, type Ref } from "vue";
 import L from "leaflet";
 import "leaflet-draw";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import "@/styles/leaflet-edit-handles.css";
-import type { TargetingArea } from "@/types/campaign";
+import type { TargetingArea, EddmRoute } from "@/types/campaign";
+import { fetchRoutes } from "@/composables/useEddmRoutes";
 
 // Fix leaflet-draw circle bug: "radius is not defined" in strict mode (Vite ES modules)
 // leaflet-draw 1.0.4 assigns to undeclared `radius` variable in two places
@@ -175,13 +176,89 @@ function buildJobPopup(job: {
   `;
 }
 
-export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
+export function useTargetingMap(
+  mapRef: Ref<HTMLElement | null>,
+  campaignTypeRef?: Ref<'targeted' | 'eddm'>,
+) {
   let map: L.Map | null = null;
   const drawnItems = new L.FeatureGroup();
   const jobMarkers = new L.FeatureGroup();
   const areas = ref<TargetingArea[]>([]);
   const activeDrawTool = ref<string | null>(null);
   let docMouseUpHandler: (() => void) | null = null;
+
+  // EDDM state — Sprint 2.3 ER.2c
+  const eddmRoutes = ref<EddmRoute[]>([]);
+  const selectedCrrt = ref<Set<string>>(new Set());
+  const eddmZip = ref<string>('');
+  const eddmLayerGroup = ref<L.LayerGroup | null>(null);
+
+  const isEddmMode = computed(() => campaignTypeRef?.value === 'eddm');
+
+  const selectedEddmHouseholds = computed(() =>
+    eddmRoutes.value
+      .filter(r => selectedCrrt.value.has(r.crrt))
+      .reduce((s, r) => s + r.household_count, 0)
+  );
+
+  async function loadEddmRoutes(zip5: string): Promise<void> {
+    eddmZip.value = zip5;
+    const routes = await fetchRoutes(zip5);
+    eddmRoutes.value = routes;
+    if (!map) return;
+
+    if (eddmLayerGroup.value) {
+      map.removeLayer(eddmLayerGroup.value);
+    }
+
+    const group = L.layerGroup();
+    for (const route of routes) {
+      const coords = route.geometry.coordinates[0]!.map(
+        ([lng, lat]) => [lat, lng] as L.LatLngTuple,
+      );
+      const poly = L.polygon(coords, {
+        fillColor: '#6B7280',
+        fillOpacity: 0.2,
+        color: '#6B7280',
+        weight: 1,
+      });
+
+      poly.on('click', () => toggleEddmRoute(route.crrt));
+      poly.on('mouseover', () => {
+        if (!selectedCrrt.value.has(route.crrt)) poly.setStyle({ fillOpacity: 0.35 });
+      });
+      poly.on('mouseout', () => {
+        if (!selectedCrrt.value.has(route.crrt)) poly.setStyle({ fillOpacity: 0.2 });
+      });
+      (poly as any)._eddmCrrt = route.crrt;
+      group.addLayer(poly);
+    }
+
+    group.addTo(map);
+    eddmLayerGroup.value = group;
+
+    if (routes.length > 0) {
+      try {
+        map.fitBounds((group as any).getBounds().pad(0.1));
+      } catch { /* empty group — skip fitBounds */ }
+    }
+  }
+
+  function toggleEddmRoute(crrt: string): void {
+    const next = new Set(selectedCrrt.value);
+    if (next.has(crrt)) next.delete(crrt); else next.add(crrt);
+    selectedCrrt.value = next;
+
+    eddmLayerGroup.value?.eachLayer((layer: any) => {
+      if (layer._eddmCrrt === crrt) {
+        layer.setStyle(
+          next.has(crrt)
+            ? { fillColor: '#F97316', fillOpacity: 0.4, color: '#F97316', weight: 2 }
+            : { fillColor: '#6B7280', fillOpacity: 0.2, color: '#6B7280', weight: 1 },
+        );
+      }
+    });
+  }
 
   function initMap(center?: [number, number]) {
     if (!mapRef.value || map) return;
@@ -550,5 +627,13 @@ export function useTargetingMap(mapRef: Ref<HTMLElement | null>) {
     destroy,
     areas,
     activeDrawTool,
+    // EDDM
+    isEddmMode,
+    eddmRoutes,
+    selectedCrrt,
+    eddmZip,
+    selectedEddmHouseholds,
+    loadEddmRoutes,
+    toggleEddmRoute,
   };
 }
