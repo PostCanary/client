@@ -70,8 +70,31 @@ export const http = axios.create({
   validateStatus: (status) => status >= 200 && status < 300,
 });
 
+// ---- CSRF token (module-scope; fetched once per session, injected on state-changing requests)
+let _csrfToken: string | null = null;
+const _CSRF_STATE_METHODS = new Set(["post", "put", "patch", "delete"]);
+
+async function ensureCsrfToken(): Promise<string> {
+  if (_csrfToken) return _csrfToken;
+  // Use raw fetch (not axios) to avoid triggering this interceptor recursively
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/csrf-token`, { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      _csrfToken = data.csrf_token as string;
+    }
+  } catch {
+    // Non-fatal — requests proceed without the token; server will reject state-changing ones
+  }
+  return _csrfToken ?? "";
+}
+
+export function clearCsrfToken() {
+  _csrfToken = null;
+}
+
 // ---- Request interceptor
-http.interceptors.request.use((cfg) => {
+http.interceptors.request.use(async (cfg) => {
   inflight++;
   notify();
 
@@ -84,6 +107,13 @@ http.interceptors.request.use((cfg) => {
       (headers as AxiosHeaders).set("X-Request-ID", reqId);
     } else {
       cfg.headers = { ...(cfg.headers as any), "X-Request-ID": reqId } as any;
+    }
+  }
+
+  if (_CSRF_STATE_METHODS.has(cfg.method?.toLowerCase() ?? "")) {
+    const token = await ensureCsrfToken();
+    if (token) {
+      (cfg.headers as any)["X-CSRF-Token"] = token;
     }
   }
 
@@ -121,6 +151,17 @@ http.interceptors.response.use(
       data,
       message: err.message,
     });
+
+    // CSRF token expired: clear cached token and retry once
+    if (
+      status === 403 &&
+      data?.error?.code === “csrf_token_invalid” &&
+      !(err.config as any)?._csrfRetried
+    ) {
+      clearCsrfToken();
+      const retryConfig = { ...(err.config as any), _csrfRetried: true };
+      return http.request(retryConfig);
+    }
 
     // Fire “gate” events that main.ts can handle
     if (status === 401) {
