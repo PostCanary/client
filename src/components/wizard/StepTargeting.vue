@@ -58,6 +58,8 @@ const HVAC_PRESET_FILTERS: TargetingFilters = {
   hhageMin: null,
   hhageMax: null,
   incomeMin: null,
+  loresMin: null,
+  loresMax: null,
 };
 
 function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
@@ -71,7 +73,9 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
     f.propertyTypes.length === 0 &&
     (f.hhageMin ?? null) === null &&
     (f.hhageMax ?? null) === null &&
-    (f.incomeMin ?? null) === null
+    (f.incomeMin ?? null) === null &&
+    (f.loresMin ?? null) === null &&
+    (f.loresMax ?? null) === null
   );
 }
 

@@ -35,6 +35,7 @@ const activeFilterCount = computed(() => {
   if (filters.value.propertyTypes.length > 0) count++;
   if (filters.value.hhageMin !== null || filters.value.hhageMax !== null) count++;
   if (filters.value.incomeMin !== null) count++;
+  if (filters.value.loresMin !== null || filters.value.loresMax !== null) count++;
   return count;
 });
 
@@ -120,6 +121,59 @@ defineExpose({ activeFilterCount });
           <option value="5">55-64</option>
           <option value="6">65-74</option>
           <option value="7">75+</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Length of residence (Melissa lores, brackets 0-15) -->
+    <div>
+      <label class="text-xs text-gray-500">Length of residence</label>
+      <div class="flex gap-2 mt-1">
+        <select
+          :value="filters.loresMin !== null ? filters.loresMin : ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.loresMin = (($event.target as HTMLSelectElement).value !== '' ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Min years</option>
+          <option value="0">&lt; 1 year</option>
+          <option value="1">1 year</option>
+          <option value="2">2 years</option>
+          <option value="3">3 years</option>
+          <option value="4">4 years</option>
+          <option value="5">5 years</option>
+          <option value="6">6 years</option>
+          <option value="7">7 years</option>
+          <option value="8">8 years</option>
+          <option value="9">9 years</option>
+          <option value="10">10 years</option>
+          <option value="11">11 years</option>
+          <option value="12">12 years</option>
+          <option value="13">13 years</option>
+          <option value="14">14 years</option>
+          <option value="15">&gt; 14 years</option>
+        </select>
+        <select
+          :value="filters.loresMax !== null ? filters.loresMax : ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.loresMax = (($event.target as HTMLSelectElement).value !== '' ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Max years</option>
+          <option value="0">&lt; 1 year</option>
+          <option value="1">1 year</option>
+          <option value="2">2 years</option>
+          <option value="3">3 years</option>
+          <option value="4">4 years</option>
+          <option value="5">5 years</option>
+          <option value="6">6 years</option>
+          <option value="7">7 years</option>
+          <option value="8">8 years</option>
+          <option value="9">9 years</option>
+          <option value="10">10 years</option>
+          <option value="11">11 years</option>
+          <option value="12">12 years</option>
+          <option value="13">13 years</option>
+          <option value="14">14 years</option>
+          <option value="15">&gt; 14 years</option>
         </select>
       </div>
     </div>
