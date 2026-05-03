@@ -37,6 +37,17 @@ if (sentryDsn) {
 
 initPostHog();
 
+// Fetch server-side feature flags before mounting so window.__POSTCANARY_CONFIG__
+// is populated before any route component is rendered. Non-fatal — defaults to off.
+try {
+  const _cfgBase = (import.meta.env.VITE_API_BASE as string | undefined ?? '').trim();
+  const _cfgRes = await fetch(`${_cfgBase}/api/config`, { credentials: 'include' });
+  if (_cfgRes.ok) {
+    const _cfgData = await _cfgRes.json();
+    (window as any).__POSTCANARY_CONFIG__ = { eddmEnabled: Boolean(_cfgData.eddm_enabled) };
+  }
+} catch { /* non-fatal — feature flags default off */ }
+
 // Initialize auth once at boot (so billing flags are available)
 const auth = useAuthStore(pinia);
 auth.fetchMe();
