@@ -145,6 +145,7 @@ onMounted(() => {
     <SequenceTimeline
       :cards="campaign.cards"
       :brand-colors="brandKitStore.brandKit?.brandColors"
+      :campaign-status="campaign.status"
       class="mb-8"
     />
 

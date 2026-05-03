@@ -445,6 +445,7 @@ export interface TemplateDefinition {
 export type MailCampaignStatus =
   | 'draft'
   | 'approved'
+  | 'pending_moderation'
   | 'printing'
   | 'in_transit'
   | 'delivered'

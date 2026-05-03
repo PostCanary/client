@@ -10,6 +10,8 @@ const config = computed(() => {
   switch (props.status) {
     case "approved":
       return { label: "Approved", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
+    case "pending_moderation":
+      return { label: "Under Review", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
     case "printing":
       return { label: "Printing", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
     case "in_transit":
