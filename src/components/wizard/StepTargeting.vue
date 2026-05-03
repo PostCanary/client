@@ -3,15 +3,18 @@ import { ref, computed, watch, provide, onMounted, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { GOAL_DEFAULTS, PRICING } from "@/types/campaign";
-import type { TargetingSelection, TargetingFilters, JobReference } from "@/types/campaign";
+import type { TargetingSelection, TargetingFilters, JobReference, EddmSelection } from "@/types/campaign";
 import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
+import EddmTargetingPanel from "@/components/targeting/EddmTargetingPanel.vue";
 import { useHouseholdCount } from "@/composables/useHouseholdCount";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 const mapRef = ref<InstanceType<typeof TargetingMap> | null>(null);
+
+const isEddmMode = computed(() => draftStore.draft?.campaignType === 'eddm');
 
 // Household count composable — replaces mock area-based estimation
 const {
@@ -160,6 +163,60 @@ watch(
   },
   { deep: true },
 );
+
+// EDDM route actions
+function onLoadEddmRoutes(zip5: string) {
+  mapRef.value?.loadEddmRoutes(zip5);
+}
+
+function onToggleEddmRoute(crrt: string) {
+  mapRef.value?.toggleEddmRoute(crrt);
+  commitEddmTargeting();
+}
+
+function onClearEddmRoutes() {
+  const map = mapRef.value;
+  if (!map) return;
+  map.selectedCrrt.clear();
+  commitEddmTargeting();
+}
+
+function commitEddmTargeting() {
+  const map = mapRef.value;
+  if (!map) return;
+  const sel: EddmSelection = {
+    zip5: map.eddmZip.value ?? '',
+    selectedCrrt: [...map.selectedCrrt.value],
+    totalHouseholds: map.selectedEddmHouseholds.value,
+  };
+  const targeting: TargetingSelection = {
+    campaignGoal: goalType.value,
+    serviceType: null,
+    sequenceLength: draftStore.draft?.goal?.sequenceLength ?? 1,
+    sequenceSpacingDays: 0,
+    areas: [],
+    method: 'draw',
+    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null },
+    jobsUsed: null,
+    jobRadiusMiles: null,
+    excludePastCustomers: false,
+    excludeMailedWithinDays: null,
+    doNotMailCount: 0,
+    totalHouseholds: sel.totalHouseholds,
+    excludedPastCustomers: 0,
+    excludedRecentlyMailed: 0,
+    excludedDoNotMail: 0,
+    finalHouseholdCount: sel.totalHouseholds,
+    pastCustomersInArea: 0,
+    recipientBreakdown: { newProspects: sel.totalHouseholds, pastCustomers: 0, pastCustomersIncluded: false },
+    estimatedCostSingle: sel.totalHouseholds * PRICING.payPerSend,
+    estimatedCostSequence: sel.totalHouseholds * PRICING.payPerSend * (draftStore.draft?.goal?.sequenceLength ?? 1),
+    countSource: 'mock',
+    savedAudienceName: null,
+    eddmSelection: sel,
+  };
+  draftStore.setTargeting(targeting);
+}
 
 // Debounced commit to draft store
 let commitTimer: ReturnType<typeof setTimeout> | null = null;
@@ -318,13 +375,26 @@ onMounted(() => {
     <div class="flex-1 relative">
       <TargetingMap
         ref="mapRef"
+        :campaign-type="draftStore.draft?.campaignType"
         @areas-changed="commitTargeting"
         @method-chosen="handleMethodChosen"
       />
     </div>
 
-    <!-- Panel -->
+    <!-- EDDM panel -->
+    <EddmTargetingPanel
+      v-if="isEddmMode"
+      :routes="mapRef?.eddmRoutes ?? []"
+      :selected-crrt="mapRef?.selectedCrrt ?? new Set()"
+      :selected-households="mapRef?.selectedEddmHouseholds ?? 0"
+      @load-routes="onLoadEddmRoutes"
+      @toggle-route="onToggleEddmRoute"
+      @clear="onClearEddmRoutes"
+    />
+
+    <!-- Targeted panel -->
     <TargetingPanel
+      v-else
       :jobs="jobs"
       :is-neighbor-goal="isNeighborGoal"
       :radius-miles="radiusMiles"

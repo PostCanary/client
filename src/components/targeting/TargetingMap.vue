@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useTargetingMap } from "@/composables/useTargetingMap";
 import { AROUND_MY_JOBS } from "@/config/featureFlags";
+import type { CampaignType } from "@/types/campaign";
+
+const props = defineProps<{ campaignType?: CampaignType }>();
 const emit = defineEmits<{
   (e: "areas-changed"): void;
   (e: "method-chosen", method: "draw" | "zip" | "around_jobs"): void;
 }>();
 const mapEl = ref<HTMLElement | null>(null);
-const { initMap, areas, addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll, destroy, activeDrawTool } =
-  useTargetingMap(mapEl);
+const campaignTypeRef = computed(() => props.campaignType ?? 'targeted');
+const {
+  initMap, areas, addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll, destroy, activeDrawTool,
+  isEddmMode, eddmRoutes, selectedCrrt, selectedEddmHouseholds, loadEddmRoutes, toggleEddmRoute, eddmZip,
+} = useTargetingMap(mapEl, campaignTypeRef);
 
 // First-time prompt
 const introSeen = ref(localStorage.getItem("pc:targeting-intro-seen") === "1");
@@ -37,7 +43,10 @@ onBeforeUnmount(() => {
   if (introTimer) clearTimeout(introTimer);
 });
 
-defineExpose({ addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll, areas, activeDrawTool });
+defineExpose({
+  addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll, areas, activeDrawTool,
+  isEddmMode, eddmRoutes, selectedCrrt, selectedEddmHouseholds, loadEddmRoutes, toggleEddmRoute, eddmZip,
+});
 </script>
 
 <template>
@@ -45,9 +54,9 @@ defineExpose({ addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll,
     <!-- Map -->
     <div ref="mapEl" class="w-full h-full min-h-[400px]" />
 
-    <!-- Custom drawing buttons (replaces Leaflet-Draw toolbar) -->
+    <!-- Custom drawing buttons — hidden in EDDM mode -->
     <div
-      v-if="introSeen"
+      v-if="introSeen && !isEddmMode"
       class="absolute top-[10px] left-[50px] z-[500] flex flex-col gap-1"
     >
       <button
