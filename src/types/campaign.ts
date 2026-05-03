@@ -159,6 +159,28 @@ export interface RecipientBreakdown {
   pastCustomersIncluded: boolean
 }
 
+// ============================================================
+// EDDM types — Sprint 2.3 ER.2
+// ============================================================
+
+export interface GeoJsonPolygon {
+  type: 'Polygon'
+  coordinates: number[][][]
+}
+
+export interface EddmRoute {
+  crrt: string
+  zip5: string
+  household_count: number
+  geometry: GeoJsonPolygon
+}
+
+export interface EddmSelection {
+  zip5: string
+  selectedCrrt: string[]
+  totalHouseholds: number
+}
+
 export interface TargetingSelection {
   // Context from Step 1
   campaignGoal: CampaignGoalType
@@ -196,6 +218,9 @@ export interface TargetingSelection {
 
   // Save
   savedAudienceName: string | null
+
+  // EDDM path — null when campaign_type = 'targeted'
+  eddmSelection: EddmSelection | null
 }
 
 // ============================================================
