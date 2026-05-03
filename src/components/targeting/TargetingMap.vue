@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useTargetingMap } from "@/composables/useTargetingMap";
+import { AROUND_MY_JOBS } from "@/config/featureFlags";
 const emit = defineEmits<{
   (e: "areas-changed"): void;
   (e: "method-chosen", method: "draw" | "zip" | "around_jobs"): void;
@@ -97,6 +98,7 @@ defineExpose({ addJobRadii, highlightZips, restoreAreas, startDrawing, clearAll,
         </p>
         <div class="space-y-2">
           <button
+            v-if="AROUND_MY_JOBS"
             class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
             @click="dismissIntro('around_jobs')"
           >

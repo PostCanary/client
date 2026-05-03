@@ -2,6 +2,7 @@
 import type { JobReference } from "@/types/campaign";
 import JobSelector from "./JobSelector.vue";
 import ZipInput from "./ZipInput.vue";
+import { AROUND_MY_JOBS } from "@/config/featureFlags";
 
 const props = defineProps<{
   jobs: JobReference[];
@@ -23,7 +24,7 @@ const emit = defineEmits<{
 <template>
   <div class="space-y-6 p-4">
     <!-- Around My Jobs (full selection UI — neighbor marketing only) -->
-    <template v-if="isNeighborGoal">
+    <template v-if="isNeighborGoal && AROUND_MY_JOBS">
       <JobSelector
         :jobs="jobs"
         :radius-miles="radiusMiles"
@@ -34,6 +35,12 @@ const emit = defineEmits<{
       />
       <hr class="border-gray-100" />
     </template>
+
+    <!-- Around My Jobs — coming soon tile (flag OFF) -->
+    <div v-if="isNeighborGoal && !AROUND_MY_JOBS" class="rounded-xl border border-dashed border-gray-200 p-4 text-center space-y-1">
+      <p class="text-sm font-medium text-[#0b2d50]">📍 Around My Jobs</p>
+      <p class="text-xs text-gray-400">Targeting by recent job locations is coming soon. Use the drawing tools or ZIP codes to target your area.</p>
+    </div>
 
     <!-- Job markers toggle (non-neighbor goals — context only, not targeting) -->
     <div v-else class="flex items-center justify-between">

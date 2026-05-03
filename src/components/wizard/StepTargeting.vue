@@ -8,10 +8,6 @@ import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
 import { useHouseholdCount } from "@/composables/useHouseholdCount";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
-import {
-  MOCK_JOBS,
-  mockRecipientBreakdown,
-} from "@/data/mockTargetingData";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -44,10 +40,7 @@ const goalDefaults = computed(() => GOAL_DEFAULTS[goalType.value]);
 
 // State — only pre-select jobs for neighbor marketing goal
 const isNeighborGoal = computed(() => goalType.value === "neighbor_marketing");
-const jobs = ref<JobReference[]>(
-  draftStore.draft?.targeting?.jobsUsed ??
-    MOCK_JOBS.map((j) => ({ ...j, selected: goalType.value === "neighbor_marketing" })),
-);
+const jobs = ref<JobReference[]>(draftStore.draft?.targeting?.jobsUsed ?? []);
 const radiusMiles = ref(draftStore.draft?.targeting?.jobRadiusMiles ?? 0.5);
 const zips = ref<string[]>([]);
 // S69 demo prep: HVAC default presets. Applied when the draft has no
@@ -188,10 +181,13 @@ function commitTargeting() {
       excludedDoNotMail: doNotMailCount.value,
       finalHouseholdCount: finalHouseholdCount.value,
       pastCustomersInArea: pastInArea.value,
-      recipientBreakdown: mockRecipientBreakdown(
-        finalHouseholdCount.value,
-        excludePastCustomers.value,
-      ),
+      recipientBreakdown: {
+        newProspects: excludePastCustomers.value
+          ? finalHouseholdCount.value
+          : finalHouseholdCount.value - apiExclusions.value.pastCustomers,
+        pastCustomers: apiExclusions.value.pastCustomers,
+        pastCustomersIncluded: !excludePastCustomers.value,
+      },
       estimatedCostSingle: finalHouseholdCount.value * perCard,
       estimatedCostSequence: finalHouseholdCount.value * perCard * seqLen,
       countSource: countSource.value,
