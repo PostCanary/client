@@ -155,7 +155,7 @@ http.interceptors.response.use(
     // CSRF token expired: clear cached token and retry once
     if (
       status === 403 &&
-      data?.error?.code === “csrf_token_invalid” &&
+      data?.error?.code === "csrf_token_invalid" &&
       !(err.config as any)?._csrfRetried
     ) {
       clearCsrfToken();
