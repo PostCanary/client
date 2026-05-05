@@ -19,7 +19,10 @@ const isActiveJobBlocking = computed(() => {
   return s !== "failed" && s !== "returned";
 });
 
-const SUBMITTABLE_CAMPAIGN_STATUSES = new Set(["draft", "approved"]);
+// Server's print_submit orchestrator (print_submit.py:407, W.2 guard) only
+// accepts campaigns at 'records_purchased' — the post-buy-on-Approve state.
+// 'draft' / 'approved' campaigns must complete buy-on-Approve first.
+const SUBMITTABLE_CAMPAIGN_STATUSES = new Set(["records_purchased"]);
 
 const disabledReason = computed<string | null>(() => {
   if (!SUBMITTABLE_CAMPAIGN_STATUSES.has(props.campaign.status)) {
