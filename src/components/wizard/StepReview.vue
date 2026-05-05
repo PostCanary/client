@@ -8,7 +8,7 @@ import type { CardSchedule, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
-import { approveMailCampaign } from "@/api/mailCampaigns";
+import { approveMailCampaign, purchaseCampaignRecords } from "@/api/mailCampaigns";
 import { useRenderJob } from "@/composables/useRenderJob";
 
 const router = useRouter();
@@ -182,7 +182,25 @@ async function approve() {
 
   try {
     // Create MailCampaign from draft (server deletes draft on success)
-    await approveMailCampaign(draftStore.draft!.id);
+    const campaign = await approveMailCampaign(draftStore.draft!.id);
+
+    // Buy-on-Approve (Drake decision 2026-05-05, mem 984): trigger Melissa
+    // list purchase synchronously. Trial-era qty cap = 100; clamp household
+    // count at 100 until paid contract lands and the cap is raised.
+    const qty = Math.max(1, Math.min(householdCount.value, 100));
+    try {
+      await purchaseCampaignRecords(campaign.id, qty);
+    } catch (purchaseErr: any) {
+      // Campaign exists at status='approved' (server rolled back from
+      // 'purchasing_records' on failure). Show actionable error so customer
+      // can retry. The endpoint is idempotent — re-clicking Approve is safe.
+      draftStore.error =
+        "Campaign approved, but we couldn't purchase the mailing list. " +
+        "Tap Approve again to retry, or check your data filters.";
+      approving.value = false;
+      return;
+    }
+
     approved.value = true;
   } catch (e: any) {
     draftStore.error = "Failed to approve campaign. Please try again.";

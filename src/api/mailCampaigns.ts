@@ -68,6 +68,33 @@ export async function approveMailCampaign(
   return toMailCampaign(res);
 }
 
+export interface PurchaseRecordsResponse {
+  order_id: string | null;
+  record_count: number;
+  sample: Array<{
+    address_line_1: string;
+    address_line_2: string | null;
+    city: string;
+    state: string;
+    zip5: string;
+    zip4: string | null;
+  }>;
+  source: string;
+}
+
+// Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous Melissa
+// list purchase for an approved campaign. Idempotent — repeat calls after
+// a successful purchase return the existing records without burning credits.
+export async function purchaseCampaignRecords(
+  campaignId: string,
+  qty: number = 10,
+): Promise<PurchaseRecordsResponse> {
+  return postJson<PurchaseRecordsResponse>(
+    `/api/mail-campaigns/${campaignId}/purchase-records`,
+    { qty },
+  );
+}
+
 export async function pauseMailCampaign(id: string): Promise<MailCampaign> {
   const res = await api<MailCampaignResponse>(
     `/api/mail-campaigns/${id}/pause`,
