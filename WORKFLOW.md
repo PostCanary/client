@@ -3,7 +3,7 @@ tracker:
   kind: linear
   project_slug: "postcanary-design-studio-r2-stabilization-19d727e52059"
   active_states:
-    - Todo
+    - Ready for Symphony
   terminal_states:
     - Done
     - Canceled
@@ -54,6 +54,23 @@ Implement exactly the Linear issue scope in this isolated client repository work
 
 This project is stabilizing `feat/design-studio-r2`. Treat Linear as the source of truth and open a focused PR back into `feat/design-studio-r2`.
 
+## Eligibility gate
+
+Only work issues that are explicitly queued in Linear state `Ready for Symphony`. Human operators decide whether a `Todo` issue is safe enough to move into that state.
+
+The issue must be client-scoped and must not involve any restricted work category. If it is outside this eligibility policy, do not edit code. Leave a concise Linear blocker note explaining why it is not agent-safe, then move it back to `In Progress`.
+
+Restricted work categories:
+
+- purchase, billing, Stripe, Melissa, payment, invoicing, or refund behavior
+- database migrations, schema ownership changes, or production data changes
+- production credentials, secrets, API keys, OAuth app settings, or deploy-provider configuration
+- cross-repo client/server contract changes unless the issue explicitly names this client workflow as the owner
+- Render worker contracts, background job orchestration, or queue semantics
+- legal approval artifacts, compliance decisions, or user-facing policy copy that needs human approval
+- direct production deploys, merges, or release promotion
+- broad refactors without explicit file boundaries
+
 ## Hard guardrails
 
 - Work only inside this workspace.
@@ -62,8 +79,7 @@ This project is stabilizing `feat/design-studio-r2`. Treat Linear as the source 
 - Do not target PRs at `main` unless the issue explicitly says so.
 - Do not merge PRs.
 - Do not change server code from this client workflow.
-- If the issue is not client-scoped, stop after leaving a concise blocker note in Linear and move the issue to `In Progress`; do not move it to `In Review` without a PR.
-- If the issue requires secrets, production credentials, billing changes, Melissa purchase behavior, migrations, or render-worker contract changes, stop, leave a blocker note in Linear, and move the issue to `In Progress`; do not move it to `In Review` without a PR.
+- If the issue is not client-scoped or is restricted by the eligibility gate, stop after leaving a concise blocker note in Linear and move the issue to `In Progress`; do not move it to `In Review` without a PR.
 
 ## Branch and PR policy
 
