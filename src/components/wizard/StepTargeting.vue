@@ -136,14 +136,10 @@ const hasNonZipAreas = computed(() => allAreas.value.some((a) => a.type !== 'zip
 // (Sprint 1.5 follow-up — see postcanary-todo.md), this is a client-side
 // approximation but uses real server numbers, not made-up percentages.
 const totalHouseholds = computed(() => apiTotalCount.value || apiFilteredCount.value || apiCount.value);
-const filterReductions = computed(() =>
-  Math.max((apiTotalCount.value || apiFilteredCount.value) - apiFilteredCount.value, 0)
-);
 const excludedPast = computed(() =>
   excludePastCustomers.value ? apiExclusions.value.pastCustomers : 0
 );
 const excludedRecent = computed(() => apiExclusions.value.recentlyMailed);
-const excludedDoNotMailServer = computed(() => apiExclusions.value.doNotMail);
 const finalHouseholdCount = computed(() =>
   excludePastCustomers.value
     ? apiCount.value
@@ -177,7 +173,9 @@ function onToggleEddmRoute(crrt: string) {
 function onClearEddmRoutes() {
   const map = mapRef.value;
   if (!map) return;
-  map.selectedCrrt.clear();
+  for (const crrt of map.selectedCrrt) {
+    map.toggleEddmRoute(crrt);
+  }
   commitEddmTargeting();
 }
 
@@ -185,9 +183,9 @@ function commitEddmTargeting() {
   const map = mapRef.value;
   if (!map) return;
   const sel: EddmSelection = {
-    zip5: map.eddmZip.value ?? '',
-    selectedCrrt: [...map.selectedCrrt.value],
-    totalHouseholds: map.selectedEddmHouseholds.value,
+    zip5: map.eddmZip ?? '',
+    selectedCrrt: [...map.selectedCrrt],
+    totalHouseholds: map.selectedEddmHouseholds,
   };
   const targeting: TargetingSelection = {
     campaignGoal: goalType.value,
@@ -257,6 +255,7 @@ function commitTargeting() {
       estimatedCostSequence: finalHouseholdCount.value * perCard * seqLen,
       countSource: countSource.value,
       savedAudienceName: null,
+      eddmSelection: null,
     };
     draftStore.setTargeting(targeting);
   }, 1000);

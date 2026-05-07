@@ -61,29 +61,6 @@ const targeting = computed(() => draftStore.draft?.targeting);
 const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []);
 const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
-// City extracted from brandKit.location ("City, ST") — used for
-// PostcardBack's "Serving {city} since {year}" local-proof line.
-const brandKitCity = computed(() => {
-  const loc = brandKitStore.brandKit?.location ?? "";
-  return loc.split(",")[0]?.trim() ?? "";
-});
-
-// Credibility line for the front of the card. Same derivation as
-// StepDesign.vue — prefer "Serving {city} since {year}", else first
-// certification, else neutral default.
-const brandKitCredibility = computed(() => {
-  const bk = brandKitStore.brandKit;
-  if (!bk) return "Licensed & Insured";
-  if (brandKitCity.value && bk.yearsInBusiness && bk.yearsInBusiness > 0) {
-    const year = new Date().getFullYear() - bk.yearsInBusiness;
-    return `Serving ${brandKitCity.value} since ${year}`;
-  }
-  if (bk.certifications && bk.certifications.length > 0) {
-    return bk.certifications[0]!;
-  }
-  return "Licensed & Insured";
-});
-
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
 onMounted(() => {

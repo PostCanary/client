@@ -40,7 +40,11 @@ export function loadMetaPixelScript(): void {
   t.async = true;
   t.src = "https://connect.facebook.net/en_US/fbevents.js";
   const s = document.getElementsByTagName("script")[0];
-  s.parentNode!.insertBefore(t, s);
+  if (s?.parentNode) {
+    s.parentNode.insertBefore(t, s);
+  } else {
+    document.head.appendChild(t);
+  }
 
   scriptInjected = true;
 }

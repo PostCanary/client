@@ -161,6 +161,11 @@ export function useHouseholdCount() {
         yearBuiltMin: null,
         yearBuiltMax: null,
         propertyTypes: [],
+        hhageMin: null,
+        hhageMax: null,
+        incomeMin: null,
+        loresMin: null,
+        loresMax: null,
       }, undefined, true)
       totalCount.value = result.totalCount ?? result.filteredCount
       totalFetchedForAreas = areasKey

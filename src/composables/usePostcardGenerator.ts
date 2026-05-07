@@ -6,7 +6,6 @@ import type {
   CardDesign,
   CardPurpose,
   RecipientBreakdown,
-  TemplateLayoutType,
 } from "@/types/campaign";
 import { getRecommendedTemplateSet, ALL_TEMPLATES } from "@/data/templates";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
@@ -215,7 +214,9 @@ export function deriveTeaser(
     const re = new RegExp(`\\bfree\\s+(${tokenRe}(?:\\s+${tokenRe}){0,2})`, "i");
     const m = offerText.match(re);
     if (m && m.index !== undefined) {
-      const raw = m[1].trim().toUpperCase();
+      const phrase = m[1];
+      if (!phrase) return goalFallback;
+      const raw = phrase.trim().toUpperCase();
       const capped = truncateAtWord(raw, 20);
       candidates.push({
         index: m.index,
@@ -237,8 +238,11 @@ export function deriveTeaser(
     const re = new RegExp(`\\$(\\d{1,4})\\s+(${tokenRe}(?:\\s+${tokenRe}){0,2})`);
     const m = offerText.match(re);
     if (m && m.index !== undefined) {
-      const amount = `$${m[1]}`;
-      const phraseUpper = m[2].toUpperCase();
+      const amountRaw = m[1];
+      const phraseRaw = m[2];
+      if (!amountRaw || !phraseRaw) return goalFallback;
+      const amount = `$${amountRaw}`;
+      const phraseUpper = phraseRaw.toUpperCase();
       // Prefer the first salient service noun phrase that APPEARS in the
       // captured text (substring match, not token match — so multi-word
       // entries like "TUNE UP" / "CHECK UP" work).
@@ -503,14 +507,19 @@ export async function generateCards(
     const fallbackTemplates = getRecommendedTemplateSet(goalType);
 
     return response.cards.map((card, i) =>
-      mapServerCardToDesign(
-        card,
-        i,
-        brandKit,
-        cardPurposes[i],
-        fallbackTemplates[i]?.id ?? fallbackTemplates[0]?.id ?? "full-bleed-offer",
-        goalType,
-      ),
+      {
+        const purpose = cardPurposes[i] ?? cardPurposes[cardPurposes.length - 1] ?? "offer";
+        const fallbackTemplateId =
+          fallbackTemplates[i]?.id ?? fallbackTemplates[0]?.id ?? "full-bleed-offer";
+        return mapServerCardToDesign(
+          card,
+          i,
+          brandKit,
+          purpose,
+          fallbackTemplateId,
+          goalType,
+        );
+      }
     );
   } catch (err) {
     console.error("AI generation failed, using local fallback:", err);
