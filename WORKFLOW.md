@@ -62,8 +62,8 @@ This project is stabilizing `feat/design-studio-r2`. Treat Linear as the source 
 - Do not target PRs at `main` unless the issue explicitly says so.
 - Do not merge PRs.
 - Do not change server code from this client workflow.
-- If the issue is not client-scoped, stop after leaving a concise blocker note in Linear and move the issue to `In Review`.
-- If the issue requires secrets, production credentials, billing changes, Melissa purchase behavior, migrations, or render-worker contract changes, stop and move the issue to `In Review` with the blocker clearly described.
+- If the issue is not client-scoped, stop after leaving a concise blocker note in Linear and move the issue to `In Progress`; do not move it to `In Review` without a PR.
+- If the issue requires secrets, production credentials, billing changes, Melissa purchase behavior, migrations, or render-worker contract changes, stop, leave a blocker note in Linear, and move the issue to `In Progress`; do not move it to `In Review` without a PR.
 
 ## Branch and PR policy
 
@@ -99,8 +99,18 @@ Run the narrowest meaningful checks for the issue. For build/type work, `npm run
 
 ## Completion
 
-When the branch is pushed and a PR is open:
+Review-ready means all of these are true:
+
+- the changes are committed on an issue-specific branch
+- the branch is pushed to GitHub
+- a PR is open against `feat/design-studio-r2`
+- the PR URL is attached to or commented on the Linear issue
+- required validation has run and the result is included in the PR/Linear handoff
+
+Only when the branch is pushed and a PR is open:
 
 1. Update Linear with the PR link and validation summary.
 2. Move the issue to `In Review`.
 3. Final response should only summarize what changed, what was verified, and blockers.
+
+If you complete code changes but cannot push the branch or open the PR, do not move the issue to `In Review`. Leave the workspace dirty or committed locally as appropriate, add a Linear blocker note with the branch/workspace path and validation results, and move the issue to `In Progress`.
