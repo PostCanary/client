@@ -4,7 +4,7 @@ This repository is prepared for a cautious Symphony pilot against the Linear pro
 
 ## What Symphony Should Do Here
 
-- Watch the Linear project for `Todo` issues.
+- Watch the Linear project for `Ready for Symphony` issues.
 - Create an isolated workspace per issue under `~/repos/work/PostCanary/symphony-workspaces/client`.
 - Clone `PostCanary/client` from `feat/design-studio-r2`.
 - Run Codex in app-server mode against the issue.
@@ -17,7 +17,7 @@ Use a single client-only issue first:
 
 - `POS-70 Restore client build on feat/design-studio-r2`
 
-Move only that issue to `Todo` when ready. Leave unrelated issues in `Backlog` or `In Progress` so the pilot daemon does not pick them up.
+Move only that issue to `Ready for Symphony` when ready. Leave unrelated issues in `Backlog` or `In Progress` so the pilot daemon does not pick them up.
 
 ## Local Setup
 
@@ -60,6 +60,6 @@ mise exec -- ./bin/symphony ~/repos/work/PostCanary/client-symphony-setup/WORKFL
 ## Operating Rules
 
 - Run only one PostCanary Symphony daemon at a time until repo filtering is proven.
-- Put exactly one issue into `Todo` for the first pilot.
+- Put exactly one issue into `Ready for Symphony` for the first pilot.
 - Do not use Symphony for migrations, billing, Melissa purchase behavior, render-worker contract changes, or legal approval artifact decisions until the pilot has produced a clean reviewed PR.
 - Keep human review as the merge gate.

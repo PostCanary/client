@@ -56,7 +56,7 @@ This project is stabilizing `feat/design-studio-r2`. Treat Linear as the source 
 
 ## Eligibility gate
 
-Only work issues that are explicitly queued in Linear state `Ready for Symphony`. Human operators decide whether a `Todo` issue is safe enough to move into that state.
+Only work issues that are explicitly queued in Linear state `Ready for Symphony`. Human operators decide whether an issue is safe enough to move into that state.
 
 The issue must be client-scoped and must not involve any restricted work category. If it is outside this eligibility policy, do not edit code. Leave a concise Linear blocker note explaining why it is not agent-safe, then move it back to `In Progress`.
 
