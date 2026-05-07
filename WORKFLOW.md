@@ -21,10 +21,10 @@ hooks:
     git fetch origin feat/design-studio-r2
 agent:
   max_concurrent_agents: 1
-  max_turns: 1
+  max_turns: 8
   max_retry_backoff_ms: 300000
 codex:
-  command: codex --config shell_environment_policy.inherit=all app-server
+  command: CODEX_HOME=/Users/dustinthompson/repos/work/PostCanary/symphony-codex-home codex --config shell_environment_policy.inherit=all app-server
   approval_policy: never
   thread_sandbox: workspace-write
   turn_sandbox_policy:
