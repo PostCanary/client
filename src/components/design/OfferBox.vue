@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { ensureContrast, safeTextColor } from "@/utils/contrast";
+import { safeTextColor } from "@/utils/contrast";
 
 // Brief #6 Task 8 — OfferBox.
 //
@@ -26,7 +26,6 @@ const props = defineProps<{
 const primary = computed(() => props.primaryColor ?? "#0b2d50");
 const accent = computed(() => props.accentColor ?? primary.value);
 const textOnPrimary = computed(() => safeTextColor(primary.value));
-const textOnWhite = computed(() => ensureContrast(primary.value, "#FFFFFF"));
 // B-01: when on a dark background, items and text are white
 const itemColor = computed(() => "#FFFFFF");
 </script>

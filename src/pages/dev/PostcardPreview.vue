@@ -4,6 +4,7 @@ import PostcardFront from "@/components/postcard/PostcardFront.vue";
 import PostcardBack from "@/components/postcard/PostcardBack.vue";
 import type {
   CardDesign,
+  OfferStackItem,
   TemplateLayoutType,
   TrustBadge,
 } from "@/types/campaign";
@@ -148,16 +149,17 @@ const businessAddress = computed(
 // "Service Name | $49 value" → { label: "Service Name", value: "$49 value" }
 // Lines without "|" become label-only items (no right-aligned value).
 // Empty lines + whitespace are filtered out.
-const offerItems = computed(() =>
+const offerItems = computed<OfferStackItem[]>(() =>
   offerItemsText.value
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => {
+    .flatMap((line) => {
       const [labelRaw, valueRaw] = line.split("|").map((s) => s.trim());
+      if (!labelRaw) return [];
       return valueRaw
-        ? { label: labelRaw, value: valueRaw }
-        : { label: labelRaw };
+        ? [{ label: labelRaw, value: valueRaw }]
+        : [{ label: labelRaw }];
     })
 );
 

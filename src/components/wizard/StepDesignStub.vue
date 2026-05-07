@@ -41,6 +41,10 @@ function approve() {
           websiteUrl: brandKitStore.brandKit?.websiteUrl ?? "",
           qrCodeUrl: "",
         },
+        headlineCandidates: [],
+        offerReason: "",
+        reviewReason: "",
+        templateReason: "",
       },
     ],
   };

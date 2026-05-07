@@ -228,6 +228,7 @@ export const useBrandKitStore = defineStore("brandKit", {
       const reviews = [...this.brandKit.reviews];
       if (index < 0 || index >= reviews.length) return;
       const [selected] = reviews.splice(index, 1);
+      if (!selected) return;
       reviews.unshift(selected);
       this.brandKit = { ...this.brandKit, reviews } as any;
     },

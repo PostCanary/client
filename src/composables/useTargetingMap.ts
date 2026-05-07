@@ -208,7 +208,7 @@ export function useTargetingMap(
     if (!map) return;
 
     if (eddmLayerGroup.value) {
-      map.removeLayer(eddmLayerGroup.value);
+      map.removeLayer(eddmLayerGroup.value as unknown as L.Layer);
     }
 
     const group = L.layerGroup();

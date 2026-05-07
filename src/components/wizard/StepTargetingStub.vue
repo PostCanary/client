@@ -29,6 +29,9 @@ function apply() {
       propertyTypes: [],
       hhageMin: null,
       hhageMax: null,
+      incomeMin: null,
+      loresMin: null,
+      loresMax: null,
     },
     jobsUsed: null,
     jobRadiusMiles: null,
@@ -50,6 +53,7 @@ function apply() {
     estimatedCostSequence: householdCount.value * perCard * seqLen,
     countSource: 'mock',
     savedAudienceName: null,
+    eddmSelection: null,
   };
   draftStore.setTargeting(targeting);
 }
