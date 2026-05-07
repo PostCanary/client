@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { safeTextColor } from "@/utils/contrast";
 
 // Brief #6 Task 8 + P0 #3 — CTABox.
 //
@@ -21,8 +20,6 @@ const props = defineProps<{
   primaryColor?: string; // Brand accent for bg
 }>();
 
-const primary = computed(() => props.primaryColor ?? "#0b2d50");
-const textOnPrimary = computed(() => safeTextColor(primary.value));
 const label = computed(() => props.ctaLabel ?? "CALL NOW");
 const hasQrCode = computed(() => !!props.qrCodeUrl && props.qrCodeUrl.length > 0);
 </script>

@@ -62,6 +62,7 @@ export interface HomeCampaignSummary {
 export const CAMPAIGN_STATUS_LABELS: Record<MailCampaignStatus, string> = {
   draft: 'Draft',
   approved: 'Approved',
+  pending_moderation: 'Pending Moderation',
   printing: 'Sent to Printer',
   in_transit: 'Mailed (Estimated)',
   delivered: 'Estimated Delivered',

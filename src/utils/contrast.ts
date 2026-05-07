@@ -56,11 +56,13 @@ export function hexToRgb(hex: string): RGB {
  * Compute WCAG relative luminance for an sRGB color (0-1 scale).
  */
 export function relativeLuminance({ r, g, b }: RGB): number {
-  const srgb = [r, g, b].map((v) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  const sr = r / 255;
+  const sg = g / 255;
+  const sb = b / 255;
+  const rLinear = sr <= 0.03928 ? sr / 12.92 : Math.pow((sr + 0.055) / 1.055, 2.4);
+  const gLinear = sg <= 0.03928 ? sg / 12.92 : Math.pow((sg + 0.055) / 1.055, 2.4);
+  const bLinear = sb <= 0.03928 ? sb / 12.92 : Math.pow((sb + 0.055) / 1.055, 2.4);
+  return 0.2126 * rLinear + 0.7152 * gLinear + 0.0722 * bLinear;
 }
 
 /**

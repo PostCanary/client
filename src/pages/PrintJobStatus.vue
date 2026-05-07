@@ -103,13 +103,13 @@ const displayPhaseCopy = computed<string>(() => {
 
 // Timeline rendering: 5 forward steps; `returned` / `failed` / `cancelled`
 // collapse the timeline → terminal banner.
-const TIMELINE_STEPS: PrintJobPhase[] = [
+const TIMELINE_STEPS = [
   "submitted",
   "accepted",
   "producing",
   "mailed",
   "delivered",
-];
+] as const satisfies PrintJobPhase[];
 
 const TIMELINE_LABELS: Record<(typeof TIMELINE_STEPS)[number], string> = {
   submitted: "Submitted",
@@ -127,11 +127,15 @@ const TERMINAL_ERROR_PHASES: ReadonlySet<PrintJobPhase> = new Set([
 
 const isTerminalError = computed(() => TERMINAL_ERROR_PHASES.has(phase.value));
 
-function stepIndex(p: PrintJobPhase): number {
+function stepIndex(p: (typeof TIMELINE_STEPS)[number]): number {
   return TIMELINE_STEPS.indexOf(p);
 }
 
-const currentStepIdx = computed(() => stepIndex(phase.value));
+const currentStepIdx = computed(() =>
+  TIMELINE_STEPS.includes(phase.value as (typeof TIMELINE_STEPS)[number])
+    ? stepIndex(phase.value as (typeof TIMELINE_STEPS)[number])
+    : -1,
+);
 
 function stepState(idx: number): "complete" | "current" | "upcoming" {
   if (currentStepIdx.value < 0) return "upcoming";
