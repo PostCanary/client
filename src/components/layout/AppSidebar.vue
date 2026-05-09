@@ -27,6 +27,7 @@ import {
   TimeOutline,
   SettingsOutline,
   LogOutOutline,
+  BanOutline,
 } from '@vicons/ionicons5'
 
 const router = useRouter()
@@ -61,6 +62,7 @@ const sidebarItems: SidebarItem[] = [
   { to: '/app/history', routeName: 'History', label: 'History', icon: 'component', component: TimeOutline, section: 'results' },
 
   // ACCOUNT section (pinned to bottom)
+  { to: '/app/audience/do-not-mail', routeName: 'DoNotMail', label: 'Do Not Mail', icon: 'component', component: BanOutline, section: 'account' },
   { to: '/app/settings', routeName: 'Settings', label: 'Settings', icon: 'component', component: SettingsOutline, section: 'account' },
 ]
 

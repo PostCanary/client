@@ -145,6 +145,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Settings • ${BRAND.name}`, navbarTitle: "Settings" },
       },
       {
+        path: "audience/do-not-mail",
+        name: "DoNotMail",
+        component: () => import("@/pages/DoNotMail.vue"),
+        meta: { title: `Do Not Mail • ${BRAND.name}`, navbarTitle: "Do Not Mail" },
+      },
+      {
         path: "history",
         name: "History",
         alias: "/history", // ✅ clean URL
