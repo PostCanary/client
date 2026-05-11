@@ -338,7 +338,7 @@ const columns = computed<DataTableColumns<DnmEntry>>(() => [
     <NCard :bordered="true" content-style="padding: 0">
       <NSpin :show="loading && initialLoad">
         <div v-if="!loading && total === 0" class="py-12">
-          <NEmpty description="No suppressed addresses yet">
+          <NEmpty description="Nothing on your Do Not Mail list yet.">
             <template #extra>
               <div class="text-sm text-gray-500 max-w-md mx-auto text-left">
                 <p class="mb-2">Two ways to add addresses:</p>
