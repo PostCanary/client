@@ -35,7 +35,11 @@ export type CreateAudienceRes = ApiResponse<AudienceCreateData>;
 
 /**
  * Upload a CSV and create an Audience.
- * Accepts 409 mapping_required + 200 existing-match without throwing.
+ *
+ * Returns { status, data } for ALL responses — including 4xx/5xx. Callers
+ * branch on `res.status` for error handling. Matches the `normalizeBatch`
+ * pattern in uploads.ts (Codex S164 client-M1 fold — contract must match
+ * comment; otherwise non-2xx/409 throws and caller's branch is dead).
  */
 export async function createAudience(
   params: CreateAudienceParams
@@ -47,11 +51,17 @@ export async function createAudience(
   if (name) fd.append("name", name);
   if (workspace_id) fd.append("workspace_id", workspace_id);
 
-  const res = await post<any>("/api/audiences", fd, {
-    validateStatus: (s) => (s >= 200 && s < 300) || s === 409,
-  });
-
-  return { status: res.status, data: res.data ?? {} };
+  try {
+    const res = await post<any>("/api/audiences", fd, {
+      validateStatus: (s) => (s >= 200 && s < 300) || s === 409,
+    });
+    return { status: res.status, data: res.data ?? {} };
+  } catch (err: any) {
+    // http.ts normalizes thrown errors into { status, data } (uploads.ts pattern).
+    const status = err?.status ?? 0;
+    const data = err?.data ?? {};
+    return { status, data };
+  }
 }
 
 /* ============================================================
