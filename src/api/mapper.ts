@@ -1,18 +1,33 @@
 // client/src/api/mapper.ts
 import { getRaw, post } from "./http";
 
+// MapperSource extends the existing uploads.ts `Source` ("mail"|"crm") with
+// "audience" for SttL (Send to a List). All existing call sites that import
+// `Source` from uploads.ts remain valid; SttL code imports MapperSource here.
+// (Phase 0c carve — see ~/postcanary/client/src/types/audiences.ts.)
+export type MapperSource = "mail" | "crm" | "audience";
+
 export type HeaderType = "string" | "number" | "date" | "unknown";
 
 export type MappingSide = Record<string, string>;
-export type Mapping = { mail: MappingSide; crm: MappingSide };
+
+// audience is OPTIONAL on Mapping for backwards compatibility — existing
+// callers that destructure { mail, crm } stay valid.
+export type Mapping = {
+  mail: MappingSide;
+  crm: MappingSide;
+  audience?: MappingSide;
+};
 
 /**
- * Pair of batch IDs – either or both may be present.
- * If a side is missing, we just treat it as "no data / no mapping".
+ * Batch IDs per source – any subset may be present.
+ * Missing side = "no data / no mapping" for that source.
+ * `audienceBatchId` is the SttL upload (Phase 0c carve).
  */
 export type BatchPair = {
   mailBatchId?: string | null;
   crmBatchId?: string | null;
+  audienceBatchId?: string | null;
 };
 
 /* ----------------------------
