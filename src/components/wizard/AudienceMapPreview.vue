@@ -59,6 +59,7 @@ function renderPoints(pts: Point[]) {
   const bounds: L.LatLngTuple[] = []
 
   for (const p of pts) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: 6,
       fillColor: '#47bfa9',
@@ -116,7 +117,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="rounded-lg border border-slate-200 overflow-hidden">
-    <div ref="mapEl" class="w-full h-64" />
+    <div ref="mapEl" class="w-full h-64" role="img" aria-label="Audience address map preview" />
     <div v-if="points.length === 0" class="flex items-center justify-center h-16 text-sm text-slate-400 bg-slate-50 border-t border-slate-100">
       No address points to display
     </div>

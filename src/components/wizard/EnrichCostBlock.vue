@@ -2,13 +2,12 @@
 import { computed } from 'vue'
 import type { AudienceCostPreview } from '@/types/audiences'
 
-const props = withDefaults(
-  defineProps<{
-    enrichEnabled?: boolean
-    costPreview: AudienceCostPreview | null
-  }>(),
-  { enrichEnabled: false }
-)
+const props = defineProps<{
+  costPreview: AudienceCostPreview | null
+}>()
+
+// Derive from the type's own field — single source of truth (Codex HIGH finding)
+const isEnrichEnabled = computed(() => props.costPreview?.enrich_enabled ?? false)
 
 const perCardSubtotal = computed(() => {
   if (!props.costPreview) return null
@@ -29,7 +28,7 @@ const perCardRate = computed(() => {
 })
 
 const melissaTotal = computed(() => {
-  if (!props.costPreview?.melissa_enrich_estimate_cents) return null
+  if (props.costPreview?.melissa_enrich_estimate_cents == null) return null
   return (props.costPreview.melissa_enrich_estimate_cents / 100).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -66,16 +65,16 @@ const grandTotal = computed(() => {
     <!-- Enrich add-on — Phase 1 disabled state -->
     <div
       class="px-4 py-3 border-t border-slate-100"
-      :class="enrichEnabled ? 'bg-white' : 'bg-slate-50 opacity-60'"
+      :class="isEnrichEnabled ? 'bg-white' : 'bg-slate-50 opacity-60'"
     >
       <div class="flex items-start justify-between gap-3">
         <div>
           <span class="text-sm font-medium text-slate-500">Melissa address enrichment</span>
-          <p v-if="!enrichEnabled" class="text-xs text-slate-400 mt-0.5">
+          <p v-if="!isEnrichEnabled" class="text-xs text-slate-400 mt-0.5">
             Optional add-on (not yet available) — your list will mail as-is
           </p>
         </div>
-        <span v-if="enrichEnabled && melissaTotal" class="text-sm font-semibold text-slate-700 shrink-0">
+        <span v-if="isEnrichEnabled && melissaTotal" class="text-sm font-semibold text-slate-700 shrink-0">
           {{ melissaTotal }}
         </span>
         <span v-else class="text-xs text-slate-400 shrink-0 mt-0.5">Coming after Phase 2</span>
