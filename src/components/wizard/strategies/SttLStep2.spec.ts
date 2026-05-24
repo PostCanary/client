@@ -160,6 +160,41 @@ describe('SttLStep2', () => {
     expect(wrapper.find('[data-testid="error-banner"]').text()).toContain('Server error')
   })
 
+  it('stops before suppression when column mapping is required', async () => {
+    mockCreateAudience.mockResolvedValue({
+      status: 409,
+      data: { missing: ['zip', 'address1'] },
+    })
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    expect(mockSuppressAudience).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="error-banner"]').text()).toContain('Column mapping required')
+    expect(wrapper.find('[data-testid="error-banner"]').text()).toContain('zip, address1')
+  })
+
+  it('shows cost retry state and retries cost preview without rerunning suppression', async () => {
+    mockGetAudienceCost
+      .mockRejectedValueOnce(new Error('Cost API unavailable'))
+      .mockResolvedValueOnce(costPreview)
+
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    expect(mockSuppressAudience).toHaveBeenCalledOnce()
+    expect(mockGetAudienceCost).toHaveBeenCalledOnce()
+    expect(wrapper.find('[data-testid="cost-retry-banner"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="approve-btn"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.find('[data-testid="retry-cost-btn"]').trigger('click')
+    await flushPromises()
+
+    expect(mockSuppressAudience).toHaveBeenCalledOnce()
+    expect(mockGetAudienceCost).toHaveBeenCalledTimes(2)
+    expect(wrapper.find('[data-testid="cost-retry-banner"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="approve-btn"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('passes enrich_enabled=false from costPreview to EnrichCostBlock (Phase 1 wiring)', async () => {
     const wrapper = mountCsv()
     await flushPromises()
