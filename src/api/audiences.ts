@@ -3,7 +3,7 @@
 // Phase 0c carve — written interactively S164 to unlock POS-88 for autonomy.
 // Backend endpoints implemented in POS-86 (server/app/blueprints/audiences.py).
 
-import { get, post } from "@/api/http";
+import { get, post, postJson } from "@/api/http";
 import type { ApiResponse } from "@/api/uploads";
 import type {
   Audience,
@@ -118,11 +118,10 @@ export async function getAudience(audienceId: string): Promise<Audience> {
 export async function suppressAudience(
   audienceId: string
 ): Promise<AudienceSuppressionResult> {
-  const data = await post<AudienceSuppressionResult>(
+  return await postJson<AudienceSuppressionResult>(
     `/api/audiences/${encodeURIComponent(audienceId)}/suppress`,
     {}
   );
-  return data;
 }
 
 /* ============================================================
@@ -154,7 +153,7 @@ export async function approveAudience(
   const body: Record<string, string> = {};
   if (campaign_id) body.campaign_id = campaign_id;
 
-  return await post<AudienceApprovalResponse>(
+  return await postJson<AudienceApprovalResponse>(
     `/api/audiences/${encodeURIComponent(audience_id)}/approve`,
     body
   );
