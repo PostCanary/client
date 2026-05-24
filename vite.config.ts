@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
   return {
     test: {
       exclude: ["tests/e2e/**", "node_modules/**"],
+      environment: "happy-dom",
       passWithNoTests: true,
     },
     plugins: [vue(), svgLoader()],
