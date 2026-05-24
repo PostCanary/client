@@ -82,6 +82,7 @@ export function normalizeIndustry(raw: string | null): Industry | null {
 
 export type CampaignGoalType =
   | 'neighbor_marketing'
+  | 'send_to_list'
   | 'seasonal_tuneup'
   | 'target_area'
   | 'storm_response'
@@ -100,6 +101,7 @@ export interface CampaignGoalDefaults {
 // Maps goal type to its defaults (auto-applied in Step 2)
 export const GOAL_DEFAULTS: Record<CampaignGoalType, CampaignGoalDefaults> = {
   neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  send_to_list:        { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
   seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
   target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
   storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 2, spacingWeeks: 1 },

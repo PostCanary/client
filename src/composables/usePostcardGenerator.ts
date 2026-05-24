@@ -93,6 +93,7 @@ const OFFERS: Record<string, string[]> = {
 // business never agreed to.
 const TEASERS: Record<CampaignGoalType, string> = {
   neighbor_marketing:  "$50 OFF",
+  send_to_list:        "SPECIAL OFFER",
   seasonal_tuneup:     "$79 TUNE-UP",
   target_area:         "$50 OFF",
   storm_response:      "FREE ESTIMATE",
