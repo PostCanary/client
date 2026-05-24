@@ -46,6 +46,7 @@ const mapPoints = ref<MapPoint[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const approving = ref(false)
+const costFailed = ref(false)
 
 // ── derived ───────────────────────────────────────────────────────────────────
 const canApprove = computed(
@@ -126,10 +127,27 @@ async function runFlow(): Promise<void> {
     suppression.value = await suppressAudience(audienceId.value)
     mapPoints.value = [] // Phase 1: no geocoded points yet
 
-    // 3. Cost preview (enrich_enabled=false from API in Phase 1 — EnrichCostBlock derives from field)
-    costPreview.value = await getAudienceCost(audienceId.value)
+    // 3. Cost preview — isolated so a transient failure doesn't block suppression display
+    try {
+      costPreview.value = await getAudienceCost(audienceId.value)
+    } catch {
+      costFailed.value = true
+    }
   } catch (err: unknown) {
     error.value = (err as Error)?.message ?? 'An error occurred'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function retryCost(): Promise<void> {
+  if (!audienceId.value) return
+  costFailed.value = false
+  loading.value = true
+  try {
+    costPreview.value = await getAudienceCost(audienceId.value)
+  } catch {
+    costFailed.value = true
   } finally {
     loading.value = false
   }
@@ -207,6 +225,23 @@ onMounted(runFlow)
       :points="mapPoints"
       data-testid="audience-map"
     />
+
+    <!-- Cost retry — suppression succeeded but cost fetch failed; retry without re-uploading -->
+    <div
+      v-if="costFailed && !loading"
+      class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center justify-between"
+      data-testid="cost-retry-banner"
+    >
+      <span>Cost preview failed. Approval is unavailable until it loads.</span>
+      <button
+        type="button"
+        class="ml-4 font-medium underline underline-offset-2 hover:text-amber-900 transition-colors"
+        data-testid="retry-cost-btn"
+        @click="retryCost"
+      >
+        Retry
+      </button>
+    </div>
 
     <!-- Cost block: passes full preview; enrich_enabled comes from API (false in Phase 1) -->
     <EnrichCostBlock
