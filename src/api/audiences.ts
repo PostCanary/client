@@ -118,11 +118,11 @@ export async function getAudience(audienceId: string): Promise<Audience> {
 export async function suppressAudience(
   audienceId: string
 ): Promise<AudienceSuppressionResult> {
-  const data = await post<AudienceSuppressionResult>(
+  const res = await post<AudienceSuppressionResult>(
     `/api/audiences/${encodeURIComponent(audienceId)}/suppress`,
     {}
   );
-  return data;
+  return res.data;
 }
 
 /* ============================================================
@@ -154,8 +154,9 @@ export async function approveAudience(
   const body: Record<string, string> = {};
   if (campaign_id) body.campaign_id = campaign_id;
 
-  return await post<AudienceApprovalResponse>(
+  const res = await post<AudienceApprovalResponse>(
     `/api/audiences/${encodeURIComponent(audience_id)}/approve`,
     body
   );
+  return res.data;
 }
