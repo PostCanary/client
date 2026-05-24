@@ -8,6 +8,10 @@ import type {
   DesignSelection,
   ReviewSelection,
 } from "@/types/campaign";
+import type {
+  AudienceCostPreview,
+  AudienceSuppressionResult,
+} from "@/types/audiences";
 import {
   saveDraft,
   loadDraft,
@@ -35,6 +39,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     loading: false,
     error: null as string | null,
     lastSavedAt: null as string | null,
+    audienceId: null as string | null,
+    audienceSource: null as "csv" | "existing" | null,
+    suppressionResult: null as AudienceSuppressionResult | null,
+    costPreview: null as AudienceCostPreview | null,
   }),
 
   getters: {
@@ -148,6 +156,29 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.draft.review = review;
       this._markComplete(4);
       this._debounceSave();
+    },
+
+    setAudienceSource(source: "csv" | "existing") {
+      this.audienceSource = source;
+    },
+
+    setAudienceId(audienceId: string | null) {
+      this.audienceId = audienceId;
+    },
+
+    setSuppressionResult(result: AudienceSuppressionResult | null) {
+      this.suppressionResult = result;
+    },
+
+    setCostPreview(preview: AudienceCostPreview | null) {
+      this.costPreview = preview;
+    },
+
+    clearAudienceState() {
+      this.audienceId = null;
+      this.audienceSource = null;
+      this.suppressionResult = null;
+      this.costPreview = null;
     },
 
     goToStep(step: WizardStep) {

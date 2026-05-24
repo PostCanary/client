@@ -201,6 +201,95 @@
             <strong>{{ unmappedRequiredCrm.map(f => labelFor('crm', f)).join(', ') }}</strong>
           </div>
         </section>
+
+        <!-- AUDIENCE CSV -->
+        <section v-if="audienceHeaders.length" class="csv-section" data-testid="audience-mapper-section">
+          <h4 class="csv-title">Audience CSV</h4>
+
+          <div class="spreadsheet-wrapper">
+            <table class="spreadsheet">
+              <thead>
+                <tr class="col-letters-row">
+                  <th class="corner-cell"></th>
+                  <th
+                    v-for="(_h, i) in audienceHeaders"
+                    :key="'al-' + i"
+                    class="col-letter"
+                  >
+                    {{ columnLetter(i) }}
+                  </th>
+                </tr>
+                <tr class="dropdown-row">
+                  <th class="row-label">Map to</th>
+                  <th
+                    v-for="h in audienceHeaders"
+                    :key="'ad-' + h"
+                    class="dropdown-cell"
+                  >
+                    <select
+                      class="col-select"
+                      :class="{
+                        'is-mapped': !!audienceColumnMap[h],
+                        'is-error': !!columnError('audience', h),
+                      }"
+                      :value="audienceColumnMap[h] || ''"
+                      @change="onColumnSelect('audience', h, ($event.target as HTMLSelectElement).value)"
+                    >
+                      <option value="">-- Skip --</option>
+                      <option
+                        v-for="opt in fieldsForHeader('audience', h)"
+                        :key="opt.value"
+                        :value="opt.value"
+                        :disabled="opt.disabled"
+                      >
+                        {{ opt.label }}{{ opt.disabled ? ' (mapped)' : '' }}{{ opt.required ? ' *' : '' }}
+                      </option>
+                    </select>
+                    <p v-if="columnError('audience', h)" class="cell-error">
+                      {{ columnError('audience', h) }}
+                    </p>
+                  </th>
+                </tr>
+                <tr class="header-row">
+                  <th class="row-num">1</th>
+                  <th
+                    v-for="h in audienceHeaders"
+                    :key="'ah-' + h"
+                    class="header-cell"
+                  >
+                    {{ h }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, ri) in displayedAudienceSamples"
+                  :key="'ar-' + ri"
+                  class="data-row"
+                >
+                  <td class="row-num">{{ ri + 2 }}</td>
+                  <td
+                    v-for="h in audienceHeaders"
+                    :key="'ac-' + h + ri"
+                    class="data-cell"
+                  >
+                    {{ row[h] ?? '' }}
+                  </td>
+                </tr>
+                <tr v-if="!displayedAudienceSamples.length" class="empty-row">
+                  <td :colspan="audienceHeaders.length + 1" class="empty-cell">
+                    No sample data available
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="unmappedRequiredAudience.length" class="missing-banner">
+            Missing required mappings:
+            <strong>{{ unmappedRequiredAudience.map(f => labelFor('audience', f)).join(', ') }}</strong>
+          </div>
+        </section>
       </div>
 
       <footer class="mapper-footer">
@@ -225,6 +314,8 @@
 import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
 
+type MapperSource = "mail" | "crm" | "audience";
+
 type HeaderType =
   | "string"
   | "number"
@@ -236,28 +327,42 @@ type HeaderType =
 
 type CanonicalType = "string" | "state" | "zip" | "date" | "currency";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   open: boolean;
   mailHeaders: string[];
   crmHeaders: string[];
+  audienceHeaders?: string[];
   mailHeaderTypes: Record<string, HeaderType>;
   crmHeaderTypes: Record<string, HeaderType>;
+  audienceHeaderTypes?: Record<string, HeaderType>;
   mailSamples: Record<string, any>[];
   crmSamples: Record<string, any>[];
+  audienceSamples?: Record<string, any>[];
   mailFields: string[];
   crmFields: string[];
+  audienceFields?: string[];
   mailLabels?: Record<string, string>;
   crmLabels?: Record<string, string>;
+  audienceLabels?: Record<string, string>;
   initialMapping?: Partial<MapperMapping>;
   requiredMail: string[];
   requiredCrm: string[];
+  requiredAudience?: string[];
   errors?: {
     mail: Record<string, string>;
     crm: Record<string, string>;
+    audience?: Record<string, string>;
   } | null;
   saving?: boolean;
   confirmLabel?: string;
-}>();
+}>(), {
+  audienceHeaders: () => [],
+  audienceHeaderTypes: () => ({}),
+  audienceSamples: () => [],
+  audienceFields: () => [],
+  audienceLabels: () => ({}),
+  requiredAudience: () => [],
+});
 
 const emit = defineEmits<{
   (e: "close"): void;
@@ -291,16 +396,33 @@ const CRM_FIELD_TYPES: Record<string, CanonicalType> = {
   job_value: "currency",
 };
 
+const AUDIENCE_FIELD_TYPES: Record<string, CanonicalType> = {
+  source_id: "string",
+  name: "string",
+  first_name: "string",
+  last_name: "string",
+  address1: "string",
+  address2: "string",
+  city: "string",
+  state: "state",
+  zip: "zip",
+};
+
 function expectedCanonicalType(
-  source: "mail" | "crm",
+  source: MapperSource,
   field: string
 ): CanonicalType {
-  const tbl = source === "mail" ? MAIL_FIELD_TYPES : CRM_FIELD_TYPES;
+  const tbl =
+    source === "mail"
+      ? MAIL_FIELD_TYPES
+      : source === "crm"
+        ? CRM_FIELD_TYPES
+        : AUDIENCE_FIELD_TYPES;
   return tbl[field] || "string";
 }
 
 function allowedHeaderTypeSet(
-  source: "mail" | "crm",
+  source: MapperSource,
   field: string
 ): Set<HeaderType> {
   if (field === "address2") {
@@ -327,16 +449,21 @@ function allowedHeaderTypeSet(
 const titleCase = (s: string): string =>
   s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-function labelFor(source: "mail" | "crm", field: string): string {
-  const labels = source === "mail" ? props.mailLabels : props.crmLabels;
+function labelFor(source: MapperSource, field: string): string {
+  const labels =
+    source === "mail"
+      ? props.mailLabels
+      : source === "crm"
+        ? props.crmLabels
+        : props.audienceLabels;
   return labels?.[field] ?? titleCase(field);
 }
 
-function isRequired(source: "mail" | "crm", field: string): boolean {
+function isRequired(source: MapperSource, field: string): boolean {
   if (!field) return false;
-  return source === "mail"
-    ? props.requiredMail.includes(field)
-    : props.requiredCrm.includes(field);
+  if (source === "mail") return props.requiredMail.includes(field);
+  if (source === "crm") return props.requiredCrm.includes(field);
+  return (props.requiredAudience ?? []).includes(field);
 }
 
 function columnLetter(index: number): string {
@@ -353,6 +480,7 @@ function columnLetter(index: number): string {
 
 const mailColumnMap = ref<Record<string, string>>({});
 const crmColumnMap = ref<Record<string, string>>({});
+const audienceColumnMap = ref<Record<string, string>>({});
 
 function invertFieldToHeader(
   fieldMap: Record<string, string> | undefined,
@@ -391,6 +519,10 @@ function seedFromProps() {
     props.initialMapping?.crm,
     props.crmHeaders
   );
+  audienceColumnMap.value = invertFieldToHeader(
+    props.initialMapping?.audience,
+    props.audienceHeaders ?? []
+  );
 }
 
 /* ---------- sample data ---------- */
@@ -400,6 +532,9 @@ const displayedMailSamples = computed(() =>
 );
 const displayedCrmSamples = computed(() =>
   props.crmSamples.slice(0, DISPLAY_ROW_COUNT)
+);
+const displayedAudienceSamples = computed(() =>
+  (props.audienceSamples ?? []).slice(0, DISPLAY_ROW_COUNT)
 );
 
 /* ---------- dropdown options per column ---------- */
@@ -412,16 +547,27 @@ type FieldOption = {
 };
 
 function fieldsForHeader(
-  source: "mail" | "crm",
+  source: MapperSource,
   header: string
 ): FieldOption[] {
-  const fields = source === "mail" ? props.mailFields : props.crmFields;
+  const fields =
+    source === "mail"
+      ? props.mailFields
+      : source === "crm"
+        ? props.crmFields
+        : props.audienceFields ?? [];
   const columnMap =
-    source === "mail" ? mailColumnMap.value : crmColumnMap.value;
+    source === "mail"
+      ? mailColumnMap.value
+      : source === "crm"
+        ? crmColumnMap.value
+        : audienceColumnMap.value;
   const typesMap =
     source === "mail"
       ? props.mailHeaderTypes || {}
-      : props.crmHeaderTypes || {};
+      : source === "crm"
+        ? props.crmHeaderTypes || {}
+        : props.audienceHeaderTypes || {};
   const headerType: HeaderType =
     (typesMap[header] as HeaderType) || "string";
 
@@ -445,12 +591,16 @@ function fieldsForHeader(
 /* ---------- column selection handler ---------- */
 
 function onColumnSelect(
-  source: "mail" | "crm",
+  source: MapperSource,
   header: string,
   field: string
 ) {
   const columnMap =
-    source === "mail" ? mailColumnMap : crmColumnMap;
+    source === "mail"
+      ? mailColumnMap
+      : source === "crm"
+        ? crmColumnMap
+        : audienceColumnMap;
   columnMap.value = { ...columnMap.value, [header]: field };
 }
 
@@ -459,24 +609,36 @@ function onColumnSelect(
 const localErrors = ref<{
   mail: Record<string, string>;
   crm: Record<string, string>;
+  audience: Record<string, string>;
 }>({
   mail: {},
   crm: {},
+  audience: {},
 });
 
-const backendErrors = computed(() => props.errors ?? { mail: {}, crm: {} });
+const backendErrors = computed(
+  () => props.errors ?? { mail: {}, crm: {}, audience: {} }
+);
 
 function columnError(
-  source: "mail" | "crm",
+  source: MapperSource,
   header: string
 ): string | null {
   const columnMap =
-    source === "mail" ? mailColumnMap.value : crmColumnMap.value;
+    source === "mail"
+      ? mailColumnMap.value
+      : source === "crm"
+        ? crmColumnMap.value
+        : audienceColumnMap.value;
   const field = columnMap[header];
   if (!field) return null;
 
   const bucket =
-    source === "mail" ? backendErrors.value.mail : backendErrors.value.crm;
+    source === "mail"
+      ? backendErrors.value.mail
+      : source === "crm"
+        ? backendErrors.value.crm
+        : backendErrors.value.audience;
   return bucket?.[field] || null;
 }
 
@@ -492,11 +654,17 @@ const unmappedRequiredCrm = computed(() => {
   return props.requiredCrm.filter((f) => !mapped.has(f));
 });
 
+const unmappedRequiredAudience = computed(() => {
+  const mapped = new Set(Object.values(audienceColumnMap.value).filter(Boolean));
+  return (props.requiredAudience ?? []).filter((f) => !mapped.has(f));
+});
+
 const saveDisabled = computed(
   () =>
     !!props.saving ||
     unmappedRequiredMail.value.length > 0 ||
-    unmappedRequiredCrm.value.length > 0
+    unmappedRequiredCrm.value.length > 0 ||
+    unmappedRequiredAudience.value.length > 0
 );
 
 /* ---------- lifecycle / focus ---------- */
@@ -506,7 +674,7 @@ watch(
   (open) => {
     if (open) {
       seedFromProps();
-      localErrors.value = { mail: {}, crm: {} };
+      localErrors.value = { mail: {}, crm: {}, audience: {} };
       setTimeout(() => {
         dialogEl.value?.focus();
       }, 0);
@@ -522,7 +690,7 @@ onMounted(() => {
 });
 
 watch(
-  () => [props.initialMapping, props.mailFields, props.crmFields],
+  () => [props.initialMapping, props.mailFields, props.crmFields, props.audienceFields],
   seedFromProps,
   { deep: true }
 );
@@ -552,6 +720,9 @@ function confirm() {
     mail: invertToFieldMap(toRaw(mailColumnMap.value)),
     crm: invertToFieldMap(toRaw(crmColumnMap.value)),
   };
+  if ((props.audienceHeaders ?? []).length) {
+    payload.audience = invertToFieldMap(toRaw(audienceColumnMap.value));
+  }
   emit("confirm", payload);
 }
 </script>

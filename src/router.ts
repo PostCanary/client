@@ -186,6 +186,20 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Designs.vue"),
         meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
       },
+      {
+        path: "send-to-a-list/:audienceId",
+        name: "SttLStep2",
+        component: () => import("@/components/wizard/strategies/SttLStep2.vue"),
+        props: (route) => ({
+          audienceSource: "existing",
+          existingAudienceId: String(route.params.audienceId),
+          campaignId: typeof route.query.campaignId === "string" ? route.query.campaignId : undefined,
+        }),
+        meta: {
+          title: `Send to a List • ${BRAND.name}`,
+          navbarTitle: "Send to a List",
+        },
+      },
 
       // /app -> /app/home
       { path: "", redirect: { name: "AppHome" } },
