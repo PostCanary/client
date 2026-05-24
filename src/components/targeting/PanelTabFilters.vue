@@ -90,7 +90,7 @@ defineExpose({ activeFilterCount });
       </select>
     </div>
 
-    <!-- Homeowner age (Melissa hhage, brackets 1-7) -->
+    <!-- Homeowner age (provider hhage, brackets 1-7) -->
     <div>
       <label class="text-xs text-gray-500">Homeowner age</label>
       <div class="flex gap-2 mt-1">
@@ -125,7 +125,7 @@ defineExpose({ activeFilterCount });
       </div>
     </div>
 
-    <!-- Length of residence (Melissa lores, brackets 0-15) -->
+    <!-- Length of residence (provider lores, brackets 0-15) -->
     <div>
       <label class="text-xs text-gray-500">Length of residence</label>
       <div class="flex gap-2 mt-1">

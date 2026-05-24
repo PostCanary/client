@@ -545,7 +545,7 @@ export function useTargetingMap(
 
   function highlightZips(zips: string[]) {
     // Round 1: center map on first ZIP and add a rough area marker
-    // Real ZIP boundary data comes in Round 2 with Melissa Data
+    // Real ZIP boundary data comes in Round 2 with provider data
     // For now, just add a visual indicator
     if (zips.length > 0) {
       // We don't have ZIP centroid data in Round 1, so this is a no-op visually

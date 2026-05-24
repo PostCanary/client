@@ -41,7 +41,7 @@ const props = defineProps<{
   // P1-A fix 2026-04-10: hide the "John Doe / 123 Main Street" placeholder
   // in the address block when previewing (dev route + wizard preview). In
   // production the address block is populated at mail-merge time by the
-  // print partner's automation from the Melissa Data list, so the preview
+  // print partner's automation from the data-partner list, so the preview
   // placeholder is meaningless — and Drake flagged it as distracting
   // during session 32 visual review. Defaults to showing the placeholder
   // (real/print mode) to preserve existing behavior.

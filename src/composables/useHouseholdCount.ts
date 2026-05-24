@@ -69,7 +69,7 @@ export function useHouseholdCount() {
 
     try {
       // Capture prior source BEFORE overwriting so we can detect live→mock flip
-      // (server signals mock when MELISSA_API_KEY is unset on dev boxes).
+      // (server signals mock when the provider API key is unset on dev boxes).
       const prevSource = source.value
       const result = await getHouseholdCount(areas, filters, currentSignal)
       count.value = result.finalCount
@@ -81,7 +81,7 @@ export function useHouseholdCount() {
       }
       source.value = result.source
 
-      // Mid-session live→mock flip = server lost Melissa permission (dev-mode
+      // Mid-session live→mock flip = server lost provider permission (dev-mode
       // fallback only — prod returns 503 via the catch branch below). Warn
       // so testers know the count is now estimated, not live.
       if (result.source === 'mock' && prevSource === 'melissa') {
@@ -103,7 +103,7 @@ export function useHouseholdCount() {
       }
       retryCount = 0
       // Drake priority #1 (S71 mem 574): NO silent mock fallback in prod.
-      // When the server returns 503 (Melissa unavailable + alert already
+      // When the server returns 503 (provider unavailable + alert already
       // fired server-side), surface the real error message to the user.
       // The seeded clientMockCount from L62-65 stays as-is so auto-commit
       // doesn't corrupt draft state with 0, but `error.value` is populated

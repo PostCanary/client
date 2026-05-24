@@ -161,7 +161,7 @@ async function approve() {
     // Create MailCampaign from draft (server deletes draft on success)
     const campaign = await approveMailCampaign(draftStore.draft!.id);
 
-    // Buy-on-Approve (Drake decision 2026-05-05, mem 984): trigger Melissa
+    // Buy-on-Approve (Drake decision 2026-05-05, mem 984): trigger data-partner
     // list purchase synchronously. Trial-era qty cap = 100; clamp household
     // count at 100 until paid contract lands and the cap is raised.
     const qty = Math.max(1, Math.min(householdCount.value, 100));

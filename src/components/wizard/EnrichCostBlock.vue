@@ -27,7 +27,7 @@ const perCardRate = computed(() => {
   })
 })
 
-const melissaTotal = computed(() => {
+const enrichmentTotal = computed(() => {
   if (props.costPreview?.melissa_enrich_estimate_cents == null) return null
   return (props.costPreview.melissa_enrich_estimate_cents / 100).toLocaleString('en-US', {
     style: 'currency',
@@ -69,13 +69,13 @@ const grandTotal = computed(() => {
     >
       <div class="flex items-start justify-between gap-3">
         <div>
-          <span class="text-sm font-medium text-slate-500">Melissa address enrichment</span>
+          <span class="text-sm font-medium text-slate-500">Address cleanup</span>
           <p v-if="!isEnrichEnabled" class="text-xs text-slate-400 mt-0.5">
             Optional add-on (not yet available) — your list will mail as-is
           </p>
         </div>
-        <span v-if="isEnrichEnabled && melissaTotal" class="text-sm font-semibold text-slate-700 shrink-0">
-          {{ melissaTotal }}
+        <span v-if="isEnrichEnabled && enrichmentTotal" class="text-sm font-semibold text-slate-700 shrink-0">
+          {{ enrichmentTotal }}
         </span>
         <span v-else class="text-xs text-slate-400 shrink-0 mt-0.5">Coming after Phase 2</span>
       </div>
