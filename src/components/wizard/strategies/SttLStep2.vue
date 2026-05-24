@@ -10,7 +10,13 @@ import {
   getAudienceCost,
   approveAudience,
 } from '@/api/audiences'
-import type { AudienceSuppressionResult, AudienceCostPreview } from '@/types/audiences'
+import type {
+  AudienceSuppressionResult,
+  AudienceCostPreview,
+  AudienceCreateOk,
+  AudienceCreateExistingMatch,
+  AudienceCreateMappingRequired,
+} from '@/types/audiences'
 
 type MapPoint = { lat: number; lng: number; label?: string }
 
@@ -74,19 +80,42 @@ const headerSubText = computed(() =>
 // Phase 1 map points are empty — AudienceMapPreview renders "No address points"
 // until the backend returns geocoded coordinates in a future phase.
 async function runFlow(): Promise<void> {
+  // Runtime prop invariant guard (MEDIUM: comment-only in props block is insufficient)
+  if (props.audienceSource === 'csv' && !props.file) {
+    error.value = 'No file provided for CSV upload'
+    return
+  }
+  if (props.audienceSource === 'existing' && !props.existingAudienceId) {
+    error.value = 'No audience selected'
+    return
+  }
+
   error.value = null
   loading.value = true
 
   try {
     // 1. Resolve audience ID
     if (props.audienceSource === 'csv') {
-      if (!props.file) throw new Error('No file provided for CSV upload')
-      const res = await createAudience({ file: props.file })
+      const res = await createAudience({ file: props.file! })
+
+      // 409 → columns unmapped; surface actionable error before any suppression
+      if (res.status === 409) {
+        const mappingErr = res.data as AudienceCreateMappingRequired
+        const missingHint = mappingErr.missing?.length
+          ? ` Missing columns: ${mappingErr.missing.join(', ')}.`
+          : ''
+        error.value = `Column mapping required before this list can be used.${missingHint}`
+        return
+      }
+
       if (res.status !== 201 && res.status !== 200) {
         error.value = (res.data as Record<string, unknown>)?.message as string ?? 'Upload failed'
         return
       }
-      audienceId.value = ((res.data as Record<string, unknown>)?.audience as Record<string, unknown>)?.id as string ?? null
+
+      // 200 + re_upload_prompt: existing match — proceed with existing audience ID
+      const createData = res.data as AudienceCreateOk | AudienceCreateExistingMatch
+      audienceId.value = createData.audience?.id ?? null
     } else {
       audienceId.value = props.existingAudienceId ?? null
     }
