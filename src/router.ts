@@ -192,6 +192,20 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  // ── Send-to-a-List Step 2 route (POS-95) ─────────────────
+  {
+    path: "/app/send/:draftId/sttl-step-2",
+    name: "SttLStep2",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+  {
+    path: "/app/send/sttl-step-2",
+    name: "SttLStep2NewDraft",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+
   // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──
   {
     path: "/app/send/:draftId?",

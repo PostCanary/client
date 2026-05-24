@@ -1,6 +1,11 @@
 // ============================================================
 // PostCanary V1 Campaign Types — shared across all terminals
 // ============================================================
+
+import type {
+  AudienceCostPreview,
+  AudienceSuppressionResult,
+} from "@/types/audiences";
 // API CONVENTION: The codebase uses snake_case directly in TypeScript
 // (no camelCase transformation). New API files should follow this same
 // pattern — use snake_case field names to match the server response.
@@ -77,6 +82,7 @@ export function normalizeIndustry(raw: string | null): Industry | null {
 
 export type CampaignGoalType =
   | 'neighbor_marketing'
+  | 'send_to_list'
   | 'seasonal_tuneup'
   | 'target_area'
   | 'storm_response'
@@ -95,6 +101,7 @@ export interface CampaignGoalDefaults {
 // Maps goal type to its defaults (auto-applied in Step 2)
 export const GOAL_DEFAULTS: Record<CampaignGoalType, CampaignGoalDefaults> = {
   neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  send_to_list:        { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
   seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
   target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
   storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 2, spacingWeeks: 1 },
@@ -332,6 +339,13 @@ export type WizardStep = 1 | 2 | 3 | 4
 
 export type CampaignType = 'targeted' | 'eddm'
 
+export interface AudienceWizardState {
+  audienceId: string | null
+  audienceSource: 'csv' | 'existing' | null
+  suppressionResult: AudienceSuppressionResult | null
+  costPreview: AudienceCostPreview | null
+}
+
 export interface CampaignDraft {
   id: string                           // UUID
   orgId: string
@@ -342,6 +356,7 @@ export interface CampaignDraft {
   campaignType: CampaignType           // 'targeted' (default) | 'eddm'
   goal: GoalSelection | null
   targeting: TargetingSelection | null
+  audience: AudienceWizardState | null
   design: DesignSelection | null
   review: ReviewSelection | null
 

@@ -28,6 +28,16 @@ export const CAMPAIGN_GOALS: GoalDefinition[] = [
     defaults: GOAL_DEFAULTS.neighbor_marketing,
   },
   {
+    type: "send_to_list",
+    label: "Send to a List",
+    shortDescription: "Already have customers? Mail them.",
+    icon: "MailOutline",
+    recommended: false,
+    seasonal: false,
+    displayPriority: "primary",
+    defaults: GOAL_DEFAULTS.send_to_list,
+  },
+  {
     type: "target_area",
     label: "Target an Area",
     shortDescription:
@@ -127,12 +137,14 @@ export function getGoalsForDisplay(): {
         : g.displayPriority,
   }));
 
+  const visible = all.filter((g) => !g.hidden);
+  const primary = visible
+    .filter((g) => g.displayPriority === "primary" && !g.comingSoon)
+    .slice(0, 3);
+  const primaryTypes = new Set(primary.map((g) => g.type));
+
   return {
-    primary: all
-      .filter((g) => g.displayPriority === "primary" && !g.comingSoon && !g.hidden)
-      .slice(0, 3),
-    more: all.filter(
-      (g) => !g.hidden && (g.displayPriority === "more" || g.comingSoon),
-    ),
+    primary,
+    more: visible.filter((g) => !primaryTypes.has(g.type)),
   };
 }

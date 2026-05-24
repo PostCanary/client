@@ -75,6 +75,7 @@ export const ALL_TEMPLATES: TemplateDefinition[] = LAYOUTS.flatMap((layout) =>
 // Goal → recommended layout
 export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
   neighbor_marketing: "full-bleed",
+  send_to_list: "full-bleed",
   seasonal_tuneup: "side-split",
   target_area: "bold-graphic",
   storm_response: "bold-graphic",
