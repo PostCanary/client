@@ -36,6 +36,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'approved', audienceId: string, campaignId: string | null): void
   (e: 'back'): void
+  (e: 'state-change', state: {
+    audienceId: string | null
+    audienceSource: 'csv' | 'existing'
+    suppressionResult?: AudienceSuppressionResult | null
+    costPreview?: AudienceCostPreview | null
+  }): void
 }>()
 
 // ── reactive state ────────────────────────────────────────────────────────────
@@ -122,14 +128,30 @@ async function runFlow(): Promise<void> {
     }
 
     if (!audienceId.value) throw new Error('Could not resolve audience ID')
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      suppressionResult: null,
+      costPreview: null,
+    })
 
     // 2. Suppression (DNM > Past > Recent — server enforces precedence)
     suppression.value = await suppressAudience(audienceId.value)
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      suppressionResult: suppression.value,
+    })
     mapPoints.value = [] // Phase 1: no geocoded points yet
 
     // 3. Cost preview — isolated so a transient failure doesn't block suppression display
     try {
       costPreview.value = await getAudienceCost(audienceId.value)
+      emit('state-change', {
+        audienceId: audienceId.value,
+        audienceSource: props.audienceSource,
+        costPreview: costPreview.value,
+      })
     } catch {
       costFailed.value = true
     }
@@ -146,6 +168,11 @@ async function retryCost(): Promise<void> {
   loading.value = true
   try {
     costPreview.value = await getAudienceCost(audienceId.value)
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      costPreview: costPreview.value,
+    })
   } catch {
     costFailed.value = true
   } finally {
@@ -161,6 +188,12 @@ async function handleApprove(): Promise<void> {
     const res = await approveAudience({
       audience_id: audienceId.value,
       ...(props.campaignId ? { campaign_id: props.campaignId } : {}),
+    })
+    emit('state-change', {
+      audienceId: res.audience_id,
+      audienceSource: props.audienceSource,
+      suppressionResult: suppression.value,
+      costPreview: costPreview.value,
     })
     emit('approved', res.audience_id, res.campaign_id)
   } catch (err: unknown) {

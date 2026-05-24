@@ -1,6 +1,11 @@
 // ============================================================
 // PostCanary V1 Campaign Types — shared across all terminals
 // ============================================================
+
+import type {
+  AudienceCostPreview,
+  AudienceSuppressionResult,
+} from "@/types/audiences";
 // API CONVENTION: The codebase uses snake_case directly in TypeScript
 // (no camelCase transformation). New API files should follow this same
 // pattern — use snake_case field names to match the server response.
@@ -332,6 +337,13 @@ export type WizardStep = 1 | 2 | 3 | 4
 
 export type CampaignType = 'targeted' | 'eddm'
 
+export interface AudienceWizardState {
+  audienceId: string | null
+  audienceSource: 'csv' | 'existing' | null
+  suppressionResult: AudienceSuppressionResult | null
+  costPreview: AudienceCostPreview | null
+}
+
 export interface CampaignDraft {
   id: string                           // UUID
   orgId: string
@@ -342,6 +354,7 @@ export interface CampaignDraft {
   campaignType: CampaignType           // 'targeted' (default) | 'eddm'
   goal: GoalSelection | null
   targeting: TargetingSelection | null
+  audience: AudienceWizardState | null
   design: DesignSelection | null
   review: ReviewSelection | null
 
