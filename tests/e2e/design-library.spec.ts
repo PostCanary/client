@@ -29,7 +29,10 @@ test("Designs page shows curated render-backed templates and starts the wizard f
   );
   await expect(
     page.getByRole("heading", {
-      name: "To send postcards, we need a couple things first:",
+      name: "What's the goal of this campaign?",
     }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Recommended\s+Neighbor Marketing/ }),
   ).toBeVisible();
 });
