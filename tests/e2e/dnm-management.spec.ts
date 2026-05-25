@@ -110,7 +110,7 @@ test.describe("DNM management page — Sprint 1.5 #4", () => {
     // Scope to <main> — the topbar also renders "Do Not Mail" via navbarTitle.
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { name: "Do Not Mail" })).toBeVisible();
-    await expect(main.getByText("No suppressed addresses yet")).toBeVisible();
+    await expect(main.getByText("Nothing on your Do Not Mail list yet.")).toBeVisible();
     await expect(main.getByText(/Header row required/)).toBeVisible();
   });
 
