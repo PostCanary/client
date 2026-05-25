@@ -65,6 +65,20 @@ describe("postcard variant adapter", () => {
     expect(card.resolvedContent.offerText).toContain("We appreciate your business");
   });
 
+  it("defaults missing compliance to no customer or service personalization", () => {
+    const card = variantPayloadToCardDesign(
+      basePayload({
+        compliance: undefined,
+      }),
+    );
+
+    expect(card.resolvedContent.headline).toBe(
+      "Thank you for choosing Canary HVAC",
+    );
+    expect(card.resolvedContent.offerText).not.toContain("Sarah");
+    expect(card.resolvedContent.offerText).not.toContain("AC tune-up");
+  });
+
   it("maps referral incentive rewards and QR through existing back content", () => {
     const card = variantPayloadToCardDesign(
       basePayload({
@@ -86,6 +100,26 @@ describe("postcard variant adapter", () => {
     expect(card.resolvedContent.offerText).toContain("You get $50.");
     expect(card.resolvedContent.offerTeaser).toBe("REFER & SAVE");
     expect(card.backContent.qrCodeUrl).toBe("/media/qr/SARAH50.png");
+  });
+
+  it("does not leak referral URLs into the brand website field", () => {
+    const card = variantPayloadToCardDesign(
+      basePayload({
+        variantType: "referral_incentive",
+        source: { kind: "campaign", sourceId: "campaign-1" },
+        brandSnapshot: {
+          businessName: "Canary HVAC",
+          phone: "(404) 555-0100",
+        },
+        referral: {
+          code: "SARAH50",
+          url: "https://postcanary.test/r/SARAH50",
+        },
+      }),
+    );
+
+    expect(card.backContent.qrCodeUrl).toBe("https://postcanary.test/r/SARAH50");
+    expect(card.backContent.websiteUrl).toBe("");
   });
 
   it("does not invent referral rewards when reward copy is missing", () => {
@@ -139,6 +173,14 @@ describe("postcard variant adapter", () => {
         }),
       ),
     ).toThrow("recipient.addressLine1");
+
+    expect(() =>
+      validatePostcardVariantPayload(
+        basePayload({
+          source: { kind: "webhook" as any, sourceId: "event-1" },
+        }),
+      ),
+    ).toThrow("unsupported variant source.kind");
 
     expect(() =>
       validatePostcardVariantPayload(

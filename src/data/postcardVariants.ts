@@ -64,6 +64,7 @@ export interface VariantCardDesignOptions {
 }
 
 const DEFAULT_TEMPLATE_ID = "hac-1000-front-v1";
+const SOURCE_KINDS: ReadonlySet<string> = new Set(["job", "campaign", "manual"]);
 
 function requireField(value: unknown, message: string): asserts value is string {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -74,6 +75,9 @@ function requireField(value: unknown, message: string): asserts value is string 
 function assertBasePayload(payload: PostcardVariantPayload) {
   requireField(payload.orgId, "variant payload requires orgId");
   requireField(payload.source?.kind, "variant payload requires source.kind");
+  if (!SOURCE_KINDS.has(payload.source.kind)) {
+    throw new Error(`unsupported variant source.kind: ${payload.source.kind}`);
+  }
   requireField(payload.source?.sourceId, "variant payload requires source.sourceId");
   requireField(payload.recipient?.addressLine1, "variant payload requires recipient.addressLine1");
   requireField(payload.recipient?.city, "variant payload requires recipient.city");
@@ -189,7 +193,7 @@ export function variantPayloadToCardDesign(
 
   const phone = payload.brandSnapshot.phone;
   const referralUrl = payload.referral?.qrCodeUrl ?? payload.referral?.url ?? "";
-  const websiteUrl = payload.brandSnapshot.websiteUrl ?? payload.referral?.url ?? "";
+  const websiteUrl = payload.brandSnapshot.websiteUrl ?? "";
 
   return {
     cardNumber: options.cardNumber ?? 1,
