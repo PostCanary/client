@@ -72,6 +72,17 @@ async function installApprovalFlowMocks(page: Page) {
 }
 
 test.describe("StepReview approval artifact flow", () => {
+  test("keeps approve disabled when no draft is loaded", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+
+    await page.goto("/dev/step-review-approval-flow?emptyDraft=1");
+    await page.getByLabel(/I confirm all information/i).check();
+
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Card 1/i }),
+    ).toBeDisabled();
+  });
+
   test("saves approval proof before buying mailing records", async ({ page }) => {
     const sideEffects: string[] = [];
     let artifactPayload: Record<string, unknown> | null = null;

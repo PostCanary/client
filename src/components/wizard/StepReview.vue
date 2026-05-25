@@ -136,6 +136,7 @@ const seedAddress = computed(
 const canApprove = computed(
   () =>
     !approving.value &&
+    Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
     schedules.value.length > 0 &&
     acknowledgedAccuracy.value,
