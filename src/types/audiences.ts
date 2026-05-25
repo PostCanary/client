@@ -3,7 +3,7 @@
 // ============================================================
 // Shared contract between client + server for the audience-source
 // upload pipeline (Phase 1: CSV upload + suppression + map + cost + approve).
-// Phase 2 will extend with Melissa enrich (gated on vendor verification).
+// Phase 2 will extend with optional address enrichment.
 // ============================================================
 // API CONVENTION: snake_case directly in TypeScript (matches server response,
 // no camelCase transformation). JSONB blobs use camelCase where the client
@@ -156,9 +156,9 @@ export const REQUIRED_FIELDS: Record<MapperSource, readonly string[]> = {
 // ============================================================
 // COST PREVIEW — Phase 1 ships per-card-only; Phase 2 layers enrich on top
 // ============================================================
-// EnrichCostBlock receives this. In Phase 1, melissa_enrich_estimate is
-// null + enrich_enabled is false. In Phase 2 enabled-but-defaults-OFF
-// (Drake-locked S164 mem 1139), melissa_enrich_estimate is populated and
+// EnrichCostBlock receives this. In Phase 1, the enrich estimate is
+// null + enrich_enabled is false. In Phase 2 enabled-but-defaults-OFF,
+// the enrich estimate is populated and
 // user opt-in flips enrich_enabled=true.
 
 export type AudienceCostPreview = {

@@ -153,10 +153,10 @@ export interface TargetingFilters {
   yearBuiltMin: number | null
   yearBuiltMax: number | null
   propertyTypes: string[]              // empty = all
-  hhageMin: number | null              // Melissa bracket 1-7 (1=18-24 … 7=75+); null = any
+  hhageMin: number | null              // vendor bracket 1-7 (1=18-24 … 7=75+); null = any
   hhageMax: number | null
-  incomeMin: string | null             // Melissa hhinc bracket code A-J ($60K–$275K+); null = any
-  loresMin: number | null              // Melissa lores bracket 0-15 (0=<1yr … 15=>14yr); null = any
+  incomeMin: string | null             // household-income bracket code A-J ($60K–$275K+); null = any
+  loresMin: number | null              // residence-length bracket 0-15 (0=<1yr … 15=>14yr); null = any
   loresMax: number | null
 }
 

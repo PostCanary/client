@@ -127,7 +127,7 @@ export async function suppressAudience(
 /* ============================================================
  * Cost preview: GET /api/audiences/:id/cost
  * ============================================================
- * Phase 1 returns per-card only (enrich_enabled=false, melissa_enrich_estimate_cents=null).
+ * Phase 1 returns per-card only with enrichment disabled and no enrich estimate.
  * Phase 2 will populate enrich fields when the toggle flips on.
  */
 

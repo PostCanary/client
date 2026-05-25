@@ -82,7 +82,7 @@ export interface PurchaseRecordsResponse {
   source: string;
 }
 
-// Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous Melissa
+// Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous data-partner
 // list purchase for an approved campaign. Idempotent — repeat calls after
 // a successful purchase return the existing records without burning credits.
 export async function purchaseCampaignRecords(
