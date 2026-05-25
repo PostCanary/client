@@ -189,7 +189,7 @@ export function variantPayloadToCardDesign(
 
   const phone = payload.brandSnapshot.phone;
   const referralUrl = payload.referral?.qrCodeUrl ?? payload.referral?.url ?? "";
-  const websiteUrl = payload.brandSnapshot.websiteUrl ?? payload.referral?.url ?? "";
+  const websiteUrl = payload.brandSnapshot.websiteUrl ?? "";
 
   return {
     cardNumber: options.cardNumber ?? 1,
