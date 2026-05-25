@@ -105,6 +105,7 @@ onUnmounted(() => {
           :key="org.id"
           type="button"
           class="org-switcher-item"
+          :data-testid="`org-switcher-item-${org.id}`"
           :class="{
             'org-switcher-item-active': org.id === currentOrgId,
           }"
