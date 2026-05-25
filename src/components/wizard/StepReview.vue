@@ -146,7 +146,6 @@ async function approve() {
   approving.value = true;
   draftStore.error = null;
 
-  // Commit review data to store
   const review: ReviewSelection = {
     campaignName: campaignName.value.trim(),
     schedules: schedules.value,
@@ -161,13 +160,16 @@ async function approve() {
     ),
     agreedToTerms: acknowledgedAccuracy.value,
   };
-  draftStore.setReview(review);
 
   try {
     // Create MailCampaign from draft once; the server deletes the draft on success,
     // so same-screen retries after artifact/purchase errors must reuse this id.
     let campaign = approvedCampaign.value;
     if (!campaign) {
+      // Commit review data to the draft only before the first approval. After
+      // the campaign exists, retry clicks must not dirty a draft the server
+      // has already consumed and deleted.
+      draftStore.setReview(review);
       await draftStore.saveNow();
       campaign = await approveMailCampaign(draftStore.draft!.id);
     }

@@ -268,6 +268,7 @@ test.describe("StepReview approval artifact flow", () => {
 
     await approveButton.click();
     await expect(page.getByText("Your campaign is live!")).toBeVisible();
+    await page.waitForTimeout(700);
 
     expect(createCalls).toBe(1);
     expect(artifactCalls).toBe(2);
