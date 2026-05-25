@@ -169,6 +169,22 @@ describe("postcard variant adapter", () => {
     expect(() =>
       validatePostcardVariantPayload(
         basePayload({
+          variantType: "" as any,
+        }),
+      ),
+    ).toThrow("variantType");
+
+    expect(() =>
+      validatePostcardVariantPayload(
+        basePayload({
+          variantType: "winback" as any,
+        }),
+      ),
+    ).toThrow("unsupported postcard variant");
+
+    expect(() =>
+      validatePostcardVariantPayload(
+        basePayload({
           recipient: { city: "Atlanta", state: "GA", zip: "30301" },
         }),
       ),

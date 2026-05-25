@@ -64,6 +64,11 @@ export interface VariantCardDesignOptions {
 }
 
 const DEFAULT_TEMPLATE_ID = "hac-1000-front-v1";
+const VARIANT_TYPES: ReadonlySet<string> = new Set([
+  "thank_you",
+  "referral_incentive",
+  "refer_for_me",
+]);
 const SOURCE_KINDS: ReadonlySet<string> = new Set(["job", "campaign", "manual"]);
 
 function requireField(value: unknown, message: string): asserts value is string {
@@ -73,6 +78,10 @@ function requireField(value: unknown, message: string): asserts value is string 
 }
 
 function assertBasePayload(payload: PostcardVariantPayload) {
+  requireField(payload.variantType, "variant payload requires variantType");
+  if (!VARIANT_TYPES.has(payload.variantType)) {
+    throw new Error(`unsupported postcard variant: ${payload.variantType}`);
+  }
   requireField(payload.orgId, "variant payload requires orgId");
   requireField(payload.source?.kind, "variant payload requires source.kind");
   if (!SOURCE_KINDS.has(payload.source.kind)) {
