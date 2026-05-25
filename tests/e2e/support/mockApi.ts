@@ -21,6 +21,7 @@ type RequestLog = {
 export type MockAppState = {
   authMe: JsonMap;
   profile: JsonMap;
+  brandKit: JsonMap;
   orgs: JsonMap[];
   membersByOrg: Record<string, JsonMap[]>;
   invitationsByOrg: Record<string, JsonMap[]>;
@@ -233,6 +234,22 @@ export function createMockAppState(): MockAppState {
       profile_complete: true,
       tour_completed: true,
       created_at: "2024-01-10T12:00:00Z",
+    },
+    brandKit: {
+      ok: true,
+      id: "brand-kit-alpha",
+      org_id: ORG_ALPHA.id,
+      data: {
+        businessName: "Alpha Roofing",
+        location: "Atlanta, GA",
+        websiteUrl: "https://alpha.example",
+        industry: "roofing",
+        serviceTypes: ["Roof replacement", "Storm repair"],
+        completenessPercent: 85,
+      },
+      scrape_status: "complete",
+      created_at: "2024-01-10T12:00:00Z",
+      updated_at: "2024-01-12T12:00:00Z",
     },
     orgs: [clone(ORG_ALPHA), clone(ORG_BETA)],
     membersByOrg: {
@@ -899,6 +916,23 @@ export async function installMockApi(page: Page, state: MockAppState) {
       return noContent(route);
     }
 
+    if (pathname === "/api/brand-kit" && method === "GET") {
+      return json(route, state.brandKit);
+    }
+
+    if (pathname === "/api/brand-kit" && method === "PUT") {
+      const payload = parseJson(route);
+      state.brandKit = {
+        ...state.brandKit,
+        data: {
+          ...(state.brandKit.data ?? {}),
+          ...payload,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      return json(route, state.brandKit);
+    }
+
     if (pathname === "/api/orgs" && method === "GET") {
       return json(route, { orgs: state.orgs });
     }
@@ -965,7 +999,9 @@ export async function installMockApi(page: Page, state: MockAppState) {
       const orgId = decodeURIComponent(orgUpdateMatch[1]);
       const payload = parseJson(route);
       state.orgs = state.orgs.map((org) =>
-        org.id === orgId ? { ...org, name: payload.name ?? org.name } : org,
+        org.id === orgId
+          ? { ...org, name: payload.name ?? org.name, location: payload.location ?? org.location }
+          : org,
       );
       syncSession(state);
       state.requestLog.orgUpdates.push({ orgId, name: payload.name });
