@@ -156,4 +156,101 @@ test.describe("StepReview approval artifact flow", () => {
     expect(artifactPayload?.terms_version).toBe("accuracy-rights-v1");
     expect(purchasePayload).toEqual({ qty: 10 });
   });
+
+  test("retries artifact failure without approving the deleted draft again", async ({
+    page,
+  }) => {
+    const sideEffects: string[] = [];
+    let createCalls = 0;
+    let artifactCalls = 0;
+
+    await installApprovalFlowMocks(page);
+
+    await page.route("**/api/mail-campaigns", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      createCalls += 1;
+      sideEffects.push("create");
+      return json(route, {
+        ok: true,
+        id: CAMPAIGN_ID,
+        org_id: "22222222-2222-4222-8222-222222222222",
+        created_by: "user-owner",
+        name: "Neighbor Marketing - 55422",
+        status: "approved",
+        goal_type: "neighbor_marketing",
+        service_type: "HVAC Tune-Up",
+        sequence_length: 1,
+        household_count: 10,
+        total_cost: 7.9,
+        total_spent: 0,
+        targeting_data: {},
+        design_data: {},
+        schedule_data: {},
+        cards_data: [],
+        approved_at: "2026-05-25T02:20:00.000Z",
+        draft_id: DRAFT_ID,
+        created_at: "2026-05-25T02:20:00.000Z",
+        updated_at: "2026-05-25T02:20:00.000Z",
+      });
+    });
+
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`,
+      async (route) => {
+        artifactCalls += 1;
+        sideEffects.push("artifact");
+        if (artifactCalls === 1) {
+          return json(route, { ok: false, error: "render unavailable" }, 503);
+        }
+        return json(route, {
+          ok: true,
+          id: "44444444-4444-4444-8444-444444444444",
+          org_id: "22222222-2222-4222-8222-222222222222",
+          mail_campaign_id: CAMPAIGN_ID,
+          created_by: "user-owner",
+          source_draft_id: DRAFT_ID,
+          artifact_type: "approval_proof",
+          storage_backend: "railway_volume",
+          storage_key:
+            "orgs/22222222-2222-4222-8222-222222222222/mail-campaigns/" +
+            `${CAMPAIGN_ID}/44444444-4444-4444-8444-444444444444`,
+          manifest: {},
+          manifest_sha256: "a".repeat(64),
+          terms_version: "accuracy-rights-v1",
+          acknowledged_at: "2026-05-25T02:20:00.000Z",
+          created_at: "2026-05-25T02:20:01.000Z",
+        });
+      },
+    );
+
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+      async (route) => {
+        sideEffects.push("purchase");
+        return json(route, {
+          order_id: "melissa-order-1",
+          record_count: 10,
+          sample: [],
+          source: "melissa",
+        });
+      },
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    const approveButton = page.getByRole("button", {
+      name: /Approve & Send Card 1/i,
+    });
+
+    await approveButton.click();
+    await expect.poll(() => sideEffects.join(",")).toBe("create,artifact");
+    await expect(approveButton).toBeEnabled();
+
+    await approveButton.click();
+    await expect(page.getByText("Your campaign is live!")).toBeVisible();
+
+    expect(createCalls).toBe(1);
+    expect(artifactCalls).toBe(2);
+    expect(sideEffects).toEqual(["create", "artifact", "artifact", "purchase"]);
+  });
 });

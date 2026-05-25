@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { PRICING } from "@/types/campaign";
-import type { CardSchedule, ReviewSelection } from "@/types/campaign";
+import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
@@ -37,6 +37,7 @@ async function handleGenerateProof() {
 
 const approving = ref(false);
 const approved = ref(false);
+const approvedCampaign = ref<MailCampaign | null>(null);
 const APPROVAL_TERMS_VERSION = "accuracy-rights-v1";
 
 // Brief #6 P0 #4: Consolidated accuracy + rights confirmation before
@@ -143,6 +144,7 @@ const canApprove = computed(
 async function approve() {
   if (!canApprove.value || approving.value) return;
   approving.value = true;
+  draftStore.error = null;
 
   // Commit review data to store
   const review: ReviewSelection = {
@@ -163,8 +165,11 @@ async function approve() {
   await draftStore.saveNow();
 
   try {
-    // Create MailCampaign from draft (server deletes draft on success)
-    const campaign = await approveMailCampaign(draftStore.draft!.id);
+    // Create MailCampaign from draft once; the server deletes the draft on success,
+    // so same-screen retries after artifact/purchase errors must reuse this id.
+    const campaign =
+      approvedCampaign.value ?? (await approveMailCampaign(draftStore.draft!.id));
+    approvedCampaign.value = campaign;
 
     try {
       await createApprovalArtifact(campaign.id, {
