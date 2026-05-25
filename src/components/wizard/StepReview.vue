@@ -4,11 +4,15 @@ import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { PRICING } from "@/types/campaign";
-import type { CardSchedule, ReviewSelection } from "@/types/campaign";
+import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
-import { approveMailCampaign, purchaseCampaignRecords } from "@/api/mailCampaigns";
+import {
+  approveMailCampaign,
+  createApprovalArtifact,
+  purchaseCampaignRecords,
+} from "@/api/mailCampaigns";
 import { useRenderJob } from "@/composables/useRenderJob";
 
 const router = useRouter();
@@ -33,6 +37,8 @@ async function handleGenerateProof() {
 
 const approving = ref(false);
 const approved = ref(false);
+const approvedCampaign = ref<MailCampaign | null>(null);
+const APPROVAL_TERMS_VERSION = "accuracy-rights-v1";
 
 // Brief #6 P0 #4: Consolidated accuracy + rights confirmation before
 // Approve is enabled. V1 spec line 989: "Mandatory confirmation checkboxes
@@ -130,6 +136,7 @@ const seedAddress = computed(
 const canApprove = computed(
   () =>
     !approving.value &&
+    Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
     schedules.value.length > 0 &&
     acknowledgedAccuracy.value,
@@ -138,8 +145,8 @@ const canApprove = computed(
 async function approve() {
   if (!canApprove.value || approving.value) return;
   approving.value = true;
+  draftStore.error = null;
 
-  // Commit review data to store
   const review: ReviewSelection = {
     campaignName: campaignName.value.trim(),
     schedules: schedules.value,
@@ -154,12 +161,33 @@ async function approve() {
     ),
     agreedToTerms: acknowledgedAccuracy.value,
   };
-  draftStore.setReview(review);
-  await draftStore.saveNow();
 
   try {
-    // Create MailCampaign from draft (server deletes draft on success)
-    const campaign = await approveMailCampaign(draftStore.draft!.id);
+    // Create MailCampaign from draft once; the server deletes the draft on success,
+    // so same-screen retries after artifact/purchase errors must reuse this id.
+    let campaign = approvedCampaign.value;
+    if (!campaign) {
+      // Commit review data to the draft only before the first approval. After
+      // the campaign exists, retry clicks must not dirty a draft the server
+      // has already consumed and deleted.
+      draftStore.setReview(review);
+      await draftStore.saveNow();
+      campaign = await approveMailCampaign(draftStore.draft!.id);
+    }
+    approvedCampaign.value = campaign;
+
+    try {
+      await createApprovalArtifact(campaign.id, {
+        acknowledgedAt: new Date().toISOString(),
+        termsVersion: APPROVAL_TERMS_VERSION,
+      });
+    } catch (artifactErr: any) {
+      draftStore.error =
+        "Campaign approved, but we couldn't save the approval proof. " +
+        "Tap Approve again to retry before the mailing list is purchased.";
+      approving.value = false;
+      return;
+    }
 
     // Buy-on-Approve (Drake decision 2026-05-05, mem 984): trigger data-partner
     // list purchase synchronously. Trial-era qty cap = 100; clamp household
@@ -172,7 +200,7 @@ async function approve() {
       // 'purchasing_records' on failure). Show actionable error so customer
       // can retry. The endpoint is idempotent — re-clicking Approve is safe.
       draftStore.error =
-        "Campaign approved, but we couldn't purchase the mailing list. " +
+        "Campaign approved and proof saved, but we couldn't purchase the mailing list. " +
         "Tap Approve again to retry, or check your data filters.";
       approving.value = false;
       return;
