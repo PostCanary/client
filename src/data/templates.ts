@@ -4,7 +4,25 @@ import type {
   TemplateLayoutType,
   CardPurpose,
   CampaignGoalType,
+  Industry,
 } from "@/types/campaign";
+
+export type TemplateStatus = "draft" | "visible" | "retired";
+export type TemplateSource = "curated";
+export type PreviewStrategy = "render-worker";
+
+export interface DesignLibraryTemplate extends TemplateDefinition {
+  version: number;
+  status: TemplateStatus;
+  source: TemplateSource;
+  industry: Industry;
+  goalTypes: CampaignGoalType[];
+  cardPositions: CardPurpose[];
+  renderTemplateId: string;
+  tags: string[];
+  previewStrategy: PreviewStrategy;
+  thumbnailUrl: string;
+}
 
 function makeTemplate(
   layoutType: TemplateLayoutType,
@@ -72,6 +90,86 @@ export const ALL_TEMPLATES: TemplateDefinition[] = LAYOUTS.flatMap((layout) =>
   ),
 );
 
+function makeLibraryTemplate(
+  id: string,
+  cardPosition: CardPurpose,
+  name: string,
+  description: string,
+  tags: string[],
+): DesignLibraryTemplate {
+  const base = makeTemplate(
+    "full-bleed",
+    "Full-Bleed Photo",
+    cardPosition,
+    ["neighbor_marketing", "send_to_list", "seasonal_tuneup"],
+    description,
+  );
+
+  return {
+    ...base,
+    id,
+    name,
+    description,
+    version: 1,
+    status: "visible",
+    source: "curated",
+    industry: "hvac",
+    goalTypes: ["neighbor_marketing", "send_to_list", "seasonal_tuneup"],
+    cardPositions: [cardPosition],
+    renderTemplateId: "hac-1000-front-v1",
+    tags,
+    previewStrategy: "render-worker",
+    thumbnailUrl: "",
+    previewImageUrl: "",
+  };
+}
+
+export const DESIGN_LIBRARY_TEMPLATES: DesignLibraryTemplate[] = [
+  makeLibraryTemplate(
+    "hvac-hac-1000-full-bleed-offer-v1",
+    "offer",
+    "HVAC Neighborhood Offer",
+    "Full-bleed HVAC offer card for high-intent neighborhood or list campaigns.",
+    ["hvac", "offer", "neighbor-marketing"],
+  ),
+  makeLibraryTemplate(
+    "hvac-hac-1000-full-bleed-proof-v1",
+    "proof",
+    "HVAC Reputation Proof",
+    "Trust-led proof card for reviews, guarantees, and reputation signals.",
+    ["hvac", "proof", "reviews"],
+  ),
+  makeLibraryTemplate(
+    "hvac-hac-1000-full-bleed-last-chance-v1",
+    "last_chance",
+    "HVAC Final Call",
+    "Urgency card for the final touch in a direct-mail sequence.",
+    ["hvac", "last-chance", "urgency"],
+  ),
+];
+
+export const visibleDesignLibraryTemplates = DESIGN_LIBRARY_TEMPLATES.filter(
+  (template) => template.status === "visible",
+);
+
+export function getVisibleDesignLibraryTemplates(
+  goalType?: CampaignGoalType,
+): DesignLibraryTemplate[] {
+  if (!goalType) return visibleDesignLibraryTemplates;
+
+  const matches = visibleDesignLibraryTemplates.filter((template) =>
+    template.goalTypes.includes(goalType),
+  );
+
+  return matches.length > 0 ? matches : visibleDesignLibraryTemplates;
+}
+
+export function getDesignLibraryTemplate(
+  templateId: string,
+): DesignLibraryTemplate | undefined {
+  return visibleDesignLibraryTemplates.find((template) => template.id === templateId);
+}
+
 // Goal → recommended layout
 export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
   neighbor_marketing: "full-bleed",
@@ -91,9 +189,15 @@ export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
 export function getRecommendedTemplateSet(
   goalType: CampaignGoalType,
 ): TemplateDefinition[] {
-  const layout = GOAL_TEMPLATE_MAP[goalType];
+  const mappedLayout = GOAL_TEMPLATE_MAP[goalType];
+  const layout = DEMO_VISIBLE_LAYOUTS.includes(mappedLayout)
+    ? mappedLayout
+    : DEMO_VISIBLE_LAYOUTS[0]!;
   return POSITIONS.map(
     (pos) =>
+      getVisibleDesignLibraryTemplates(goalType).find(
+        (t) => t.layoutType === layout && t.cardPosition === pos,
+      ) ??
       ALL_TEMPLATES.find(
         (t) => t.layoutType === layout && t.cardPosition === pos,
       )!,
@@ -106,7 +210,11 @@ export function getRecommendedTemplateSet(
 export function getTemplateSetsForGoal(
   goalType: CampaignGoalType,
 ): { layout: TemplateLayoutType; name: string; templates: TemplateDefinition[]; recommended: boolean }[] {
-  const recommended = GOAL_TEMPLATE_MAP[goalType];
+  const mappedRecommended = GOAL_TEMPLATE_MAP[goalType];
+  const recommended = DEMO_VISIBLE_LAYOUTS.includes(mappedRecommended)
+    ? mappedRecommended
+    : DEMO_VISIBLE_LAYOUTS[0]!;
+  const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(goalType);
   // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
   // layouts in ALL_TEMPLATES (so code that references them still works)
   // but hides them from the customer browser.
@@ -117,6 +225,9 @@ export function getTemplateSetsForGoal(
       name: layout.name,
       templates: POSITIONS.map(
         (pos) =>
+          visibleLibraryTemplates.find(
+            (t) => t.layoutType === layout.type && t.cardPosition === pos,
+          ) ??
           ALL_TEMPLATES.find(
             (t) => t.layoutType === layout.type && t.cardPosition === pos,
           )!,

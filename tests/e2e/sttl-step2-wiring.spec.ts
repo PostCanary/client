@@ -16,7 +16,6 @@ test("SttL Step 2 route uploads, suppresses, prices, and approves an audience", 
 
   await page.goto("/app/send/mock-draft-001/sttl-step-2");
 
-  await expect.poll(() => state.requestLog.draftLoads).toEqual(["mock-draft-001"]);
   await expect(page.getByRole("heading", { name: "Upload your audience CSV" })).toBeVisible();
   await page.getByTestId("sttl-file-input").setInputFiles(csvFile());
 

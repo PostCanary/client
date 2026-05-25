@@ -213,6 +213,7 @@ function doSearch() {
       <template v-else>
         <select
           class="campaign-select"
+          data-testid="campaign-select"
           :value="campaignStore.activeCampaignId ?? ''"
           @change="onCampaignChange"
         >

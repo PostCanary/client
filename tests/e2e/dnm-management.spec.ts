@@ -54,12 +54,8 @@ async function installDnmRoutes(page: Page, store: { items: Entry[] }) {
   });
 
   // POST /api/dnm — single create
-  // DELETE /api/dnm/<id>
-  await page.route("**/api/dnm/**", async (route: Route, request) => {
-    const method = request.method();
-    const url = request.url();
-
-    if (method === "POST" && url.endsWith("/api/dnm")) {
+  await page.route("**/api/dnm", async (route: Route, request) => {
+    if (request.method() === "POST") {
       const body = request.postDataJSON();
       const created: Entry = entry({
         id: "22222222-2222-2222-2222-222222222222",
@@ -80,6 +76,14 @@ async function installDnmRoutes(page: Page, store: { items: Entry[] }) {
       });
       return;
     }
+
+    await route.fallback();
+  });
+
+  // DELETE /api/dnm/<id>
+  await page.route("**/api/dnm/**", async (route: Route, request) => {
+    const method = request.method();
+    const url = request.url();
 
     if (method === "DELETE") {
       const id = url.split("/").pop() ?? "";
@@ -114,16 +118,7 @@ test.describe("DNM management page — Sprint 1.5 #4", () => {
     await expect(main.getByText(/Header row required/)).toBeVisible();
   });
 
-  // FIXME: the State NInput inside this 3-column grid loses its value on
-  // every programmatic input technique tried (fill, pressSequentially with
-  // delay, prototype-setter + synthetic input/change, keyboard.type + Tab).
-  // The other 5 inputs in the same modal accept fill() correctly, and the
-  // page works in a real browser (verified via Vite dev server). Suspect a
-  // naive-ui v-model commit-timing bug specific to this field's grid+rule
-  // combination. Empty-state + delete tests below give route + page-render
-  // + API integration coverage; manual smoke covers the add path until
-  // this is unblocked.
-  test.fixme("add address flow inserts a row and closes the modal", async ({ page }) => {
+  test("add address flow inserts a row and closes the modal", async ({ page }) => {
     const state = createMockAppState();
     await installMockApi(page, state);
     const store = { items: [] as Entry[] };
@@ -131,30 +126,19 @@ test.describe("DNM management page — Sprint 1.5 #4", () => {
 
     await page.goto("/app/audience/do-not-mail");
     const main = page.getByRole("main");
-    await expect(main.getByText("No suppressed addresses yet")).toBeVisible();
+    await expect(main.getByText("Nothing on your Do Not Mail list yet.")).toBeVisible();
 
     await main.getByRole("button", { name: /Add address/ }).click();
     // Modal renders outside <main>, so scope to dialog.
     const dialog = page.getByRole("dialog");
-    // Address inputs render in declaration order: address1, city, state, zip5,
-    // full_name, reason. fill() loses values on the State NInput specifically
-    // when followed by clicks on adjacent grid siblings — verified with a
-    // debug spec. keyboard.type after explicit click is reliable.
-    const inputs = dialog.locator("input[type='text']");
-    await inputs.nth(0).fill("777 Pine Rd"); // address1
-    await inputs.nth(1).fill("Tucson");      // city
-    await inputs.nth(3).fill("85701");       // zip5
-    // State NInput's v-model commit lags fill() in this naive-ui version.
-    // Drive the field via .pressSequentially after click + commit via Tab.
-    await inputs.nth(2).click();
-    await page.keyboard.press("ControlOrMeta+a");
-    await page.keyboard.press("Delete");
-    await page.keyboard.type("AZ", { delay: 60 });
-    await page.keyboard.press("Tab"); // explicit blur to commit v-model
+    await dialog.getByPlaceholder("123 Main St").fill("777 Pine Rd");
+    await dialog.getByPlaceholder("Phoenix").fill("Tucson");
+    await dialog.getByPlaceholder("AZ").fill("AZ");
+    await dialog.getByPlaceholder("85001").fill("85701");
     await dialog.getByRole("button", { name: "Add to list" }).click();
 
     await expect(main.getByText("777 Pine Rd")).toBeVisible();
-    await expect(main.getByText("No suppressed addresses yet")).not.toBeVisible();
+    await expect(main.getByText("Nothing on your Do Not Mail list yet.")).not.toBeVisible();
   });
 
   test("delete row removes it from the table optimistically", async ({ page }) => {

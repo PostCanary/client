@@ -3,19 +3,34 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { captureEvent } from '@/composables/usePostHog'
+import { visibleDesignLibraryTemplates, type DesignLibraryTemplate } from '@/data/templates'
 
 const router = useRouter()
 
 onMounted(() => {
   captureEvent('designs_page_viewed')
 })
+
+function startFromTemplate(template: DesignLibraryTemplate) {
+  captureEvent('designs_template_started', {
+    template_id: template.id,
+    render_template_id: template.renderTemplateId,
+  })
+  router.push({
+    path: '/app/send',
+    query: {
+      templateId: template.id,
+      goal: template.goalTypes[0],
+    },
+  })
+}
 </script>
 
 <template>
   <div class="designs-page">
     <div class="designs-header">
       <h1 class="designs-title">Designs</h1>
-      <p class="designs-subtitle">Your saved postcard designs and templates.</p>
+      <p class="designs-subtitle">Approved launch templates for customer-visible postcards.</p>
     </div>
 
     <div class="designs-grid">
@@ -25,18 +40,35 @@ onMounted(() => {
         <span class="design-card__label">Create New Design</span>
       </button>
 
-      <!-- Placeholder cards -->
-      <div class="design-card design-card--placeholder" v-for="n in 3" :key="n">
-        <div class="design-card__preview"></div>
-        <div class="design-card__meta">
-          <span class="design-card__name">Sample Design {{ n }}</span>
-          <span class="design-card__date">Coming soon</span>
+      <article
+        v-for="template in visibleDesignLibraryTemplates"
+        :key="template.id"
+        class="design-card design-card--template"
+        data-testid="design-library-template"
+      >
+        <div class="design-card__preview">
+          <span class="design-card__badge">{{ template.cardPosition.replace('_', ' ') }}</span>
+          <strong>{{ template.name }}</strong>
         </div>
-      </div>
+        <div class="design-card__meta">
+          <span class="design-card__name">{{ template.name }}</span>
+          <span class="design-card__date">{{ template.renderTemplateId }}</span>
+          <div class="design-card__tags" aria-label="Template tags">
+            <span v-for="tag in template.tags" :key="tag">{{ tag }}</span>
+          </div>
+          <button
+            class="design-card__action"
+            type="button"
+            @click="startFromTemplate(template)"
+          >
+            Start from template
+          </button>
+        </div>
+      </article>
     </div>
 
     <div class="designs-empty">
-      <p>Your saved designs will appear here after you create campaigns in the Design Studio.</p>
+      <p>User-saved designs will appear here after saved-template storage is approved.</p>
     </div>
   </div>
 </template>
@@ -72,7 +104,7 @@ onMounted(() => {
 
 .design-card {
   min-height: 240px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--app-border, #e2e8f0);
   background: var(--app-card-bg, #ffffff);
   overflow: hidden;
@@ -128,7 +160,31 @@ onMounted(() => {
 
 .design-card__preview {
   aspect-ratio: 4 / 3;
-  background: var(--app-bg, #f0f2f5);
+  background:
+    linear-gradient(135deg, rgba(71, 191, 169, 0.16), rgba(12, 45, 80, 0.08)),
+    var(--app-bg, #f0f2f5);
+  color: var(--app-text, #0c2d50);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px;
+}
+
+.design-card__preview strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.design-card__badge {
+  align-self: flex-start;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--app-text-secondary, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-transform: capitalize;
 }
 
 .design-card__meta {
@@ -147,6 +203,38 @@ onMounted(() => {
 .design-card__date {
   font-size: 12px;
   color: var(--app-text-muted, #94a3b8);
+}
+
+.design-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.design-card__tags span {
+  border-radius: 999px;
+  background: var(--app-bg, #f0f2f5);
+  color: var(--app-text-secondary, #64748b);
+  font-size: 11px;
+  padding: 3px 7px;
+}
+
+.design-card__action {
+  align-self: flex-start;
+  border: 0;
+  border-radius: 6px;
+  background: var(--app-teal, #47bfa9);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 8px;
+  padding: 8px 10px;
+}
+
+.design-card__action:hover {
+  background: #329f8e;
 }
 
 .designs-empty {
