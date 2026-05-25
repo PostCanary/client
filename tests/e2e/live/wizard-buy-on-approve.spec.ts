@@ -2,9 +2,10 @@
  * wizard-buy-on-approve.spec.ts — segment-1 E2E regression guard
  *
  * Verifies the buy-on-Approve wiring (server commit 1dcac2f, client 9f853e4):
- * clicking "Approve & Send Card 1" on Step 4 calls BOTH
+ * clicking "Approve & Send Card 1" on Step 4 calls all approval-side effects:
  *   1. POST /api/mail-campaigns                        (creates MailCampaign)
- *   2. POST /api/mail-campaigns/<id>/purchase-records  (buys Melissa list)
+ *   2. POST /api/mail-campaigns/<id>/approval-artifact (saves immutable proof)
+ *   3. POST /api/mail-campaigns/<id>/purchase-records  (buys Melissa list)
  * and the customer sees the "Your campaign is live!" success screen.
  *
  * Drake decision 2026-05-05 (mem 984): buy data immediately on Approve.
@@ -22,6 +23,7 @@ test.use({
 });
 
 const DRAFT_URL_RE = /\/app\/send\/([0-9a-f-]{36})/;
+const ARTIFACT_URL_RE = /\/api\/mail-campaigns\/([0-9a-f-]{36})\/approval-artifact/;
 const PURCHASE_URL_RE = /\/api\/mail-campaigns\/([0-9a-f-]{36})\/purchase-records/;
 
 test.describe("wizard buy-on-approve — segment 1 wiring", () => {
@@ -29,16 +31,19 @@ test.describe("wizard buy-on-approve — segment 1 wiring", () => {
     page.on("dialog", (dialog) => dialog.accept());
   });
 
-  test("Approve triggers both create-campaign AND purchase-records", async ({
+  test("Approve creates proof before purchasing records", async ({
     page,
   }, testInfo) => {
     test.setTimeout(120_000);
 
     let createStatus: number | null = null;
+    let artifactStatus: number | null = null;
+    let artifactBodyRequested: string | null = null;
     let purchaseStatus: number | null = null;
     let purchaseBodyRequested: string | null = null;
     let purchaseResponseBody: string | null = null;
     let createdCampaignId: string | null = null;
+    const sideEffectOrder: string[] = [];
 
     page.on("response", async (response) => {
       const url = response.url();
@@ -59,6 +64,9 @@ test.describe("wizard buy-on-approve — segment 1 wiring", () => {
         }
       }
       // POST /api/mail-campaigns/<id>/purchase-records
+      if (method === "POST" && ARTIFACT_URL_RE.test(url)) {
+        artifactStatus = response.status();
+      }
       if (method === "POST" && PURCHASE_URL_RE.test(url)) {
         purchaseStatus = response.status();
         try {
@@ -71,7 +79,12 @@ test.describe("wizard buy-on-approve — segment 1 wiring", () => {
 
     page.on("request", (request) => {
       if (request.method() === "POST" && PURCHASE_URL_RE.test(request.url())) {
+        sideEffectOrder.push("purchase");
         purchaseBodyRequested = request.postData();
+      }
+      if (request.method() === "POST" && ARTIFACT_URL_RE.test(request.url())) {
+        sideEffectOrder.push("artifact");
+        artifactBodyRequested = request.postData();
       }
     });
 
@@ -130,7 +143,7 @@ test.describe("wizard buy-on-approve — segment 1 wiring", () => {
 
     await approveBtn.click();
 
-    // Wait for both API calls to complete
+    // Wait for API side effects to complete
     await page.waitForTimeout(15_000);
 
     await page.screenshot({
@@ -143,6 +156,19 @@ test.describe("wizard buy-on-approve — segment 1 wiring", () => {
       createStatus,
       `POST /api/mail-campaigns returned ${createStatus} — expected 200`,
     ).toBe(200);
+
+    // PRIMARY assertion: approval artifact exists before purchase-records
+    expect(
+      artifactStatus,
+      `POST /api/mail-campaigns/<id>/approval-artifact returned ${artifactStatus} — expected 200 or 201`,
+    ).toEqual(expect.any(Number));
+    expect([200, 201]).toContain(artifactStatus);
+    expect(
+      artifactBodyRequested,
+      "approval-artifact request body must include acknowledged_at and terms_version",
+    ).toContain("acknowledged_at");
+    expect(artifactBodyRequested).toContain("accuracy-rights-v1");
+    expect(sideEffectOrder.slice(0, 2)).toEqual(["artifact", "purchase"]);
 
     // PRIMARY assertion: purchase-records 200
     expect(

@@ -68,6 +68,36 @@ export async function approveMailCampaign(
   return toMailCampaign(res);
 }
 
+export interface ApprovalArtifactResponse {
+  ok: boolean;
+  id: string;
+  org_id: string;
+  mail_campaign_id: string;
+  created_by: string | null;
+  source_draft_id: string | null;
+  artifact_type: "approval_proof";
+  storage_backend: string;
+  storage_key: string;
+  manifest: Record<string, any>;
+  manifest_sha256: string;
+  terms_version: string | null;
+  acknowledged_at: string | null;
+  created_at: string | null;
+}
+
+export async function createApprovalArtifact(
+  campaignId: string,
+  payload: { acknowledgedAt: string; termsVersion?: string },
+): Promise<ApprovalArtifactResponse> {
+  return postJson<ApprovalArtifactResponse>(
+    `/api/mail-campaigns/${campaignId}/approval-artifact`,
+    {
+      acknowledged_at: payload.acknowledgedAt,
+      terms_version: payload.termsVersion,
+    },
+  );
+}
+
 export interface PurchaseRecordsResponse {
   order_id: string | null;
   record_count: number;
