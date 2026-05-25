@@ -1,9 +1,7 @@
 <script setup lang="ts">
-// vue imports not needed — no computed/ref used in this component
 import type { MailCampaignCard, MailCampaignStatus } from "@/types/campaign";
-import PostcardPreview from "@/components/postcard/PostcardPreview.vue";
 
-const props = defineProps<{
+defineProps<{
   cards: MailCampaignCard[];
   brandColors?: string[];
   campaignStatus?: MailCampaignStatus;
@@ -29,6 +27,11 @@ function formatDate(iso: string | null): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function previewUrl(card: MailCampaignCard): string | null {
+  const url = card.previewImageUrl?.trim();
+  return url && url.length > 0 ? url : null;
 }
 </script>
 
@@ -58,7 +61,25 @@ function formatDate(iso: string | null): string {
     >
       <!-- Thumbnail -->
       <div class="shrink-0 w-20">
-        <PostcardPreview :brand-colors="brandColors" size="thumbnail" />
+        <div
+          class="w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+          style="aspect-ratio: 3 / 2;"
+        >
+          <img
+            v-if="previewUrl(card)"
+            :src="previewUrl(card) as string"
+            :alt="`Card ${card.cardNumber} preview`"
+            class="h-full w-full object-cover"
+            draggable="false"
+          />
+          <div
+            v-else
+            class="flex h-full w-full items-center justify-center px-2 text-center"
+            data-testid="campaign-card-preview-placeholder"
+          >
+            <span class="text-[10px] font-medium text-gray-400">Preview pending</span>
+          </div>
+        </div>
       </div>
 
       <!-- Status progression -->
