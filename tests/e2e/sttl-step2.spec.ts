@@ -70,7 +70,9 @@ function mockAudienceRoutes(page: Page) {
       contentType: "application/json",
       body: JSON.stringify({
         audience_id: AUDIENCE_ID,
-        per_card_cents: 79,
+        deliverable_count: 3,
+        per_card_cost_cents: 79,
+        per_card_subtotal_cents: 237,
         total_cents: 237,
         enrich_enabled: false,
         melissa_enrich_estimate_cents: null,

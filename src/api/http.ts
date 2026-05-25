@@ -6,6 +6,7 @@ import type {
   AxiosRequestConfig,
   AxiosResponse,
 } from "axios";
+import { AUTH_BASE } from "@/config/auth";
 import { log, getReq } from "@/utils/logger";
 
 // ---- Base URL
@@ -78,7 +79,7 @@ async function ensureCsrfToken(): Promise<string> {
   if (_csrfToken) return _csrfToken;
   // Use raw fetch (not axios) to avoid triggering this interceptor recursively
   try {
-    const res = await fetch(`${API_BASE}/api/auth/csrf-token`, { credentials: "include" });
+    const res = await fetch(`${AUTH_BASE}/auth/csrf-token`, { credentials: "include" });
     if (res.ok) {
       const data = await res.json();
       _csrfToken = data.csrf_token as string;
