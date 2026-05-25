@@ -231,6 +231,7 @@ async function handleRefreshDashboard() {
           v-for="batch in batches"
           :key="batch.id"
           class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+          :data-testid="`history-batch-${batch.id}`"
         >
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">

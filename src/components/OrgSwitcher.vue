@@ -61,6 +61,7 @@ onUnmounted(() => {
       ref="triggerRef"
       type="button"
       class="org-switcher-btn"
+      data-testid="org-switcher-trigger"
       @click.stop="toggle"
     >
       <svg
@@ -104,6 +105,7 @@ onUnmounted(() => {
           :key="org.id"
           type="button"
           class="org-switcher-item"
+          :data-testid="`org-switcher-item-${org.id}`"
           :class="{
             'org-switcher-item-active': org.id === currentOrgId,
           }"

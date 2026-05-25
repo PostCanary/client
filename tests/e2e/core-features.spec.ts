@@ -39,6 +39,7 @@ test("dashboard upload-and-match flow hydrates KPI results", async ({ page }) =>
   await expect(page.getByText("crm.csv")).toBeVisible();
 
   await page.getByRole("button", { name: "Upload & Match" }).click();
+  await page.getByRole("button", { name: "No thanks" }).click();
 
   await expect.poll(() => state.requestLog.normalizeCalls.length).toBe(2);
   await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("42");
