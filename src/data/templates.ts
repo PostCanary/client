@@ -189,9 +189,15 @@ export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
 export function getRecommendedTemplateSet(
   goalType: CampaignGoalType,
 ): TemplateDefinition[] {
-  const layout = GOAL_TEMPLATE_MAP[goalType];
+  const mappedLayout = GOAL_TEMPLATE_MAP[goalType];
+  const layout = DEMO_VISIBLE_LAYOUTS.includes(mappedLayout)
+    ? mappedLayout
+    : DEMO_VISIBLE_LAYOUTS[0]!;
   return POSITIONS.map(
     (pos) =>
+      getVisibleDesignLibraryTemplates(goalType).find(
+        (t) => t.layoutType === layout && t.cardPosition === pos,
+      ) ??
       ALL_TEMPLATES.find(
         (t) => t.layoutType === layout && t.cardPosition === pos,
       )!,
@@ -204,7 +210,10 @@ export function getRecommendedTemplateSet(
 export function getTemplateSetsForGoal(
   goalType: CampaignGoalType,
 ): { layout: TemplateLayoutType; name: string; templates: TemplateDefinition[]; recommended: boolean }[] {
-  const recommended = GOAL_TEMPLATE_MAP[goalType];
+  const mappedRecommended = GOAL_TEMPLATE_MAP[goalType];
+  const recommended = DEMO_VISIBLE_LAYOUTS.includes(mappedRecommended)
+    ? mappedRecommended
+    : DEMO_VISIBLE_LAYOUTS[0]!;
   const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(goalType);
   // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
   // layouts in ALL_TEMPLATES (so code that references them still works)

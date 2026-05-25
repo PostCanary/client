@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getDesignLibraryTemplate,
+  getRecommendedTemplateSet,
   getTemplateSetsForGoal,
   getVisibleDesignLibraryTemplates,
   visibleDesignLibraryTemplates,
@@ -50,6 +51,20 @@ describe("design library templates", () => {
     const templates = getVisibleDesignLibraryTemplates("target_area");
 
     expect(templates).toEqual(visibleDesignLibraryTemplates);
+  });
+
+  it("uses the launch set for generated recommendations while only full-bleed is approved", () => {
+    const targetAreaTemplates = getRecommendedTemplateSet("target_area");
+    const seasonalTemplates = getRecommendedTemplateSet("seasonal_tuneup");
+
+    expect(targetAreaTemplates.map((template) => template.id)).toEqual(
+      visibleDesignLibraryTemplates.map((template) => template.id),
+    );
+    expect(seasonalTemplates.map((template) => template.id)).toEqual(
+      visibleDesignLibraryTemplates.map((template) => template.id),
+    );
+    expect(getTemplateSetsForGoal("target_area")[0]?.recommended).toBe(true);
+    expect(getTemplateSetsForGoal("seasonal_tuneup")[0]?.recommended).toBe(true);
   });
 
   it("looks up only visible design library templates by id", () => {
