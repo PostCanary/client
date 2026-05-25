@@ -22,20 +22,27 @@ const brandKitStore = useBrandKitStore();
 const auth = useAuthStore();
 
 // Existing user inline setup (missing location/industry)
+const missingSetupLocation = computed(() => !brandKitStore.brandKit?.location);
+const missingSetupIndustry = computed(() => !brandKitStore.brandKit?.industry);
 const needsSetup = computed(
-  () => !brandKitStore.brandKit?.location || !brandKitStore.brandKit?.industry,
+  () => missingSetupLocation.value || missingSetupIndustry.value,
 );
 const setupLocation = ref("");
 const setupIndustry = ref<Industry | "">("");
 const savingSetup = ref(false);
+const canCompleteSetup = computed(
+  () =>
+    (!missingSetupLocation.value || !!setupLocation.value.trim()) &&
+    (!missingSetupIndustry.value || !!setupIndustry.value),
+);
 
 const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
 
 async function completeSetup() {
-  if (!setupLocation.value.trim() || !setupIndustry.value) return;
+  if (!canCompleteSetup.value) return;
   savingSetup.value = true;
   try {
-    if (auth.orgId) {
+    if (auth.orgId && setupLocation.value.trim()) {
       await updateOrg(auth.orgId, {
         location: setupLocation.value.trim(),
       });
@@ -52,8 +59,12 @@ async function completeSetup() {
     brandKitStore.$patch({
       brandKit: {
         ...brandKitStore.brandKit,
-        location: setupLocation.value.trim() || brandKitStore.brandKit?.location,
-        industry: setupIndustry.value || brandKitStore.brandKit?.industry,
+        location: missingSetupLocation.value
+          ? setupLocation.value.trim()
+          : brandKitStore.brandKit?.location,
+        industry: missingSetupIndustry.value
+          ? setupIndustry.value
+          : brandKitStore.brandKit?.industry,
       },
     });
     savingSetup.value = false;
@@ -186,7 +197,7 @@ onMounted(async () => {
       </p>
 
       <div class="space-y-3">
-        <div v-if="!brandKitStore.brandKit?.location" class="field">
+        <div v-if="missingSetupLocation" class="field">
           <label class="block text-sm font-medium text-gray-700 mb-1">
             Where's your business?
           </label>
@@ -198,7 +209,7 @@ onMounted(async () => {
           />
         </div>
 
-        <div v-if="!brandKitStore.brandKit?.industry" class="field">
+        <div v-if="missingSetupIndustry" class="field">
           <label class="block text-sm font-medium text-gray-700 mb-1">
             What industry are you in?
           </label>
@@ -222,7 +233,7 @@ onMounted(async () => {
 
         <button
           class="bg-[#47bfa9] text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-[#3aa893] transition-colors mt-2"
-          :disabled="!setupLocation.trim() && !brandKitStore.brandKit?.location"
+          :disabled="!canCompleteSetup"
           @click="completeSetup"
         >
           Continue
