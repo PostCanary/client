@@ -14,7 +14,7 @@ test("team management covers invites, role updates, and member removal", async (
 
   await page.goto("/team");
 
-  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("heading", { name: "Team" })).toBeVisible();
   await expect(page.getByTestId("team-invitation-invite-pending-1")).toBeVisible();
 
   await page.getByRole("button", { name: "Invite member" }).click();
@@ -52,9 +52,8 @@ test("org switcher reloads the app in the selected organization context", async 
   await expect.poll(() => state.requestLog.switches.at(-1)).toBe("org-beta");
   await expect(page.getByTestId("org-switcher-trigger")).toContainText("Beta Plumbing");
 
-  const campaignOptions = await page.getByTestId("campaign-select").locator("option").allTextContents();
-  expect(campaignOptions).toContain("West Region Launch");
-  expect(campaignOptions).not.toContain("Spring Reactivation");
+  await expect(page.getByTestId("campaign-select")).toContainText("West Region Launch");
+  await expect(page.getByTestId("campaign-select")).not.toContainText("Spring Reactivation");
 });
 
 test("invite accept page prompts unauthenticated users to sign in or sign up", async ({ page }) => {
@@ -85,6 +84,6 @@ test("accepting an invite while signed in joins the org and returns to the dashb
 
   await page.getByRole("button", { name: "Accept invitation" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/app\/home$/);
   await expect(page.getByTestId("org-switcher-trigger")).toContainText("Beta Plumbing");
 });

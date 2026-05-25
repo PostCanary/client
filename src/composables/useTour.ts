@@ -131,16 +131,16 @@ export function useTour() {
     tourInstance.on("complete", async () => {
       isActive.value = false;
       await markTourCompleted();
-      if (router.currentRoute.value.path !== "/dashboard") {
-        router.push("/dashboard");
+      if (router.currentRoute.value.path !== "/app/home") {
+        router.push("/app/home");
       }
     });
 
     tourInstance.on("cancel", async () => {
       isActive.value = false;
       await markTourCompleted();
-      if (router.currentRoute.value.path !== "/dashboard") {
-        router.push("/dashboard");
+      if (router.currentRoute.value.path !== "/app/home") {
+        router.push("/app/home");
       }
     });
 

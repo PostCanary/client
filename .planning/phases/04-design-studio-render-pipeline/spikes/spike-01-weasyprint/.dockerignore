@@ -1,0 +1,4 @@
+output/
+*.pdf
+SPIKE-01-RESULT.md
+.dockerignore

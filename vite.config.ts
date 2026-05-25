@@ -39,6 +39,11 @@ export default defineConfig(({ mode }) => {
   };
 
   return {
+    test: {
+      exclude: ["tests/e2e/**", "node_modules/**"],
+      environment: "happy-dom",
+      passWithNoTests: true,
+    },
     plugins: [vue(), svgLoader()],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
@@ -64,6 +69,11 @@ export default defineConfig(({ mode }) => {
         "/runs": proxyOpts,
         "/billing": proxyOpts,
       },
+    },
+    // Exclude leaflet-draw from pre-bundling so runtime monkey-patches work
+    // (fixes "radius is not defined" bug in leaflet-draw 1.0.4 + strict mode)
+    optimizeDeps: {
+      exclude: ["leaflet-draw"],
     },
     build: {
       outDir: "dist",

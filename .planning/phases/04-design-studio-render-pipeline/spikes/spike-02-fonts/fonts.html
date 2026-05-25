@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WeasyPrint Spike 02 — @font-face</title>
+<style>
+  @font-face {
+    font-family: "Oswald";
+    src: url("fonts/Oswald-VariableFont_wght.ttf") format("truetype-variations");
+    font-weight: 200 700;
+  }
+  @font-face {
+    font-family: "Bebas Neue";
+    src: url("fonts/BebasNeue-Regular.ttf") format("truetype");
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: "Instrument Sans";
+    src: url("fonts/InstrumentSans-VariableFont.ttf") format("truetype-variations");
+    font-weight: 400 700;
+  }
+
+  @page {
+    size: 10in 13in;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  .card {
+    width: 10in;
+    height: 13in;
+    padding: 24px 32px;
+    box-sizing: border-box;
+    color: #222;
+  }
+  h1.oswald78 {
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 78pt;
+    color: #dc3228;
+    margin: 0;
+    line-height: 0.9;
+  }
+  h2.oswald81 {
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 81pt;
+    color: #3caad7;
+    margin: 8px 0 0;
+    line-height: 0.9;
+  }
+  .bebas42 {
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 400;
+    font-size: 42pt;
+    color: #323232;
+    letter-spacing: 1px;
+    margin: 12px 0 0;
+  }
+  .oswald66 {
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 66pt;
+    color: #006db2;
+    margin: 8px 0 0;
+    line-height: 1;
+  }
+  .is-bold-48 {
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 48pt;
+    color: #006db2;
+    margin: 8px 0 0;
+  }
+  .is-reg-21 {
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 21pt;
+    color: #0d2b4b;
+    margin: 12px 0 0;
+  }
+  .is-bold-24 {
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 24pt;
+    color: #1a4d0d;
+    margin: 8px 0 0;
+  }
+  .label {
+    font-family: "Instrument Sans", sans-serif;
+    font-size: 10pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label">Oswald Bold 78pt (red headline)</div>
+  <h1 class="oswald78">THE SUMMER HEAT IS HERE</h1>
+
+  <div class="label">Oswald Bold 81pt (blue headline)</div>
+  <h2 class="oswald81">NEW A/C SYSTEM!</h2>
+
+  <div class="label">Bebas Neue Regular 42pt (business name)</div>
+  <div class="bebas42">DESERT DIAMOND HVAC</div>
+
+  <div class="label">Oswald Bold 66pt (phone)</div>
+  <div class="oswald66">1-800-628-1804</div>
+
+  <div class="label">Instrument Sans Bold 48pt (offer amount)</div>
+  <div class="is-bold-48">$750 OFF</div>
+
+  <div class="label">Instrument Sans Regular 21pt + Bold 24pt</div>
+  <div class="is-reg-21">—stay comfortable with a new A/C system</div>
+  <div class="is-bold-24">Call today to schedule your service!</div>
+</div>
+</body>
+</html>

@@ -51,7 +51,7 @@ async function onAccept() {
     await acceptInvitation(token.value);
     // Refresh auth to pick up new org membership
     await auth.fetchMe();
-    router.push("/dashboard");
+    router.push("/app/home");
   } catch (err: any) {
     console.error("[AcceptInvite] accept failed", err);
     error.value =

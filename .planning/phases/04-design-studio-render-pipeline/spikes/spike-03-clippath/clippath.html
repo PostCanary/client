@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>WeasyPrint Spike 03 — diagonal cut</title>
+<style>
+  @page {
+    size: 9in 6in;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  .card {
+    position: relative;
+    width: 9in;
+    height: 6in;
+    background: #eeeeee;
+    overflow: hidden;
+  }
+  /* Approach A: CSS clip-path polygon */
+  .zone-a-left {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 51.2%;
+    height: 62.4%;
+    background: #ffffff;
+    clip-path: polygon(0 0, 100% 0, 82.6% 100%, 0 100%);
+    -webkit-clip-path: polygon(0 0, 100% 0, 82.6% 100%, 0 100%);
+  }
+  .zone-a-right {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 57.4%;
+    height: 62.4%;
+    background: linear-gradient(135deg, #3b5c7a 0%, #6b8ba8 60%, #d0dce8 100%);
+    clip-path: polygon(30.4% 0, 100% 0, 100% 100%, 0 100%);
+    -webkit-clip-path: polygon(30.4% 0, 100% 0, 100% 100%, 0 100%);
+  }
+  .label-a {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-family: sans-serif;
+    font-size: 12pt;
+    color: #cc0000;
+    font-weight: bold;
+    z-index: 10;
+  }
+  .headline-a {
+    position: absolute;
+    top: 12%;
+    left: 4%;
+    font-family: sans-serif;
+    font-size: 42pt;
+    font-weight: bold;
+    color: #dc3228;
+    line-height: 1;
+    z-index: 5;
+  }
+  /* Approach B: inline SVG with clipPath for comparison (bottom half) */
+  .svg-zone {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 37.6%;
+    background: #006db2;
+  }
+  .label-b {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    font-family: sans-serif;
+    font-size: 12pt;
+    color: #ffffff;
+    font-weight: bold;
+    z-index: 10;
+  }
+  .caption {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    font-family: sans-serif;
+    font-size: 10pt;
+    color: #ffffff;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="label-a">APPROACH A: CSS clip-path polygon()</div>
+  <div class="zone-a-left"></div>
+  <div class="zone-a-right"></div>
+  <div class="headline-a">THE SUMMER<br>HEAT IS HERE</div>
+
+  <div class="svg-zone"></div>
+  <div class="label-b">APPROACH B (offer strip — no clip-path needed)</div>
+  <div class="caption">Goal: diagonal cut at 82.6% / 30.4% — matches Figma HAC-1000</div>
+</div>
+</body>
+</html>

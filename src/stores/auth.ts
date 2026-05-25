@@ -38,7 +38,7 @@ export const useAuthStore = defineStore("auth", {
 
     // Login modal UI state
     loginModalOpen: false,
-    loginRedirectTo: "/dashboard" as string,
+    loginRedirectTo: "/app/home" as string,
     loginLoading: false,
     loginError: "" as string,
     loginMode: "login" as LoginMode,
@@ -95,7 +95,7 @@ export const useAuthStore = defineStore("auth", {
   },
 
   actions: {
-    openLoginModal(next: string = "/dashboard", mode: LoginMode = "login") {
+    openLoginModal(next: string = "/app/home", mode: LoginMode = "login") {
       this.loginRedirectTo = next;
       this.loginMode = mode;
       this.loginModalOpen = true;

@@ -76,5 +76,5 @@ export async function authForgotPassword(email: string): Promise<Response> {
 }
 
 export async function authLogout(): Promise<void> {
-  await fetch(join(AUTH_BASE, "/auth/logout"), { method: "GET", credentials: "include" });
+  await fetch(join(AUTH_BASE, "/auth/logout"), { method: "POST", credentials: "include" });
 }

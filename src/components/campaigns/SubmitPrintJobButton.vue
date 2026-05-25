@@ -1,0 +1,77 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import type { MailCampaign } from "@/types/campaign";
+
+const props = defineProps<{
+  campaign: MailCampaign;
+  recipientCount: number;
+  hasDesign: boolean;
+  activePrintJobStatus?: string | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "open-modal"): void;
+}>();
+
+const isActiveJobBlocking = computed(() => {
+  const s = props.activePrintJobStatus;
+  if (!s) return false;
+  return s !== "failed" && s !== "returned";
+});
+
+// Server's print_submit orchestrator (print_submit.py:407, W.2 guard) only
+// accepts campaigns at 'records_purchased' — the post-buy-on-Approve state.
+// 'draft' / 'approved' campaigns must complete buy-on-Approve first.
+const SUBMITTABLE_CAMPAIGN_STATUSES = new Set(["records_purchased"]);
+
+const disabledReason = computed<string | null>(() => {
+  if (!SUBMITTABLE_CAMPAIGN_STATUSES.has(props.campaign.status)) {
+    return `This campaign is ${props.campaign.status} and cannot accept new print jobs.`;
+  }
+  if (props.recipientCount === 0) {
+    return "Add recipients to this campaign before submitting a print job.";
+  }
+  if (!props.hasDesign) {
+    return "Attach a design to this campaign before submitting a print job.";
+  }
+  if (isActiveJobBlocking.value) {
+    return "A print job is already in progress for this campaign.";
+  }
+  return null;
+});
+
+const isDisabled = computed(() => disabledReason.value !== null);
+
+function onClick() {
+  if (isDisabled.value) return;
+  emit("open-modal");
+}
+</script>
+
+<template>
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      :disabled="isDisabled"
+      :title="disabledReason ?? undefined"
+      :aria-disabled="isDisabled"
+      :aria-describedby="disabledReason ? 'submit-print-job-disabled-reason' : undefined"
+      :class="[
+        'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+        isDisabled
+          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          : 'bg-[#47bfa9] text-white hover:bg-[#3aa893]',
+      ]"
+      @click="onClick"
+    >
+      Submit Print Job
+    </button>
+    <p
+      v-if="disabledReason"
+      id="submit-print-job-disabled-reason"
+      class="text-xs text-gray-500"
+    >
+      {{ disabledReason }}
+    </p>
+  </div>
+</template>

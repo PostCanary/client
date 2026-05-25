@@ -113,14 +113,14 @@ const submit = async () => {
     trackCompleteRegistration({ content_name: "Email Signup" }, eventId);
   }
 
-  const target = auth.loginRedirectTo || "/dashboard";
+  const target = auth.loginRedirectTo || "/app/home";
   auth.closeLoginModal();
   router.push(target);
 };
 
 // SSO via Auth0: send user to /auth/login with connection + next
 const startSso = (connection: string) => {
-  const next = auth.loginRedirectTo || "/dashboard";
+  const next = auth.loginRedirectTo || "/app/home";
   const params = new URLSearchParams({ next, connection });
   window.location.href = `${base}/auth/login?${params.toString()}`;
 };

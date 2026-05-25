@@ -2,9 +2,10 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
-import { initMetaPixel, trackPageView, trackViewContent } from "@/composables/useMetaPixel";
 import { capturePageview } from "@/composables/usePostHog";
 import { getSeoData, SITE_URL } from "@/config/seo";
+import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
+import { initMetaPixel } from "@/composables/useMetaPixel";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -103,6 +104,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/layouts/MainLayout.vue"),
     children: [
       {
+        path: "home",
+        name: "AppHome",
+        component: () => import("@/pages/AppHome.vue"),
+        meta: { title: `Home • ${BRAND.name}`, navbarTitle: "Home" },
+      },
+      {
         path: "dashboard",
         name: "Dashboard",
         alias: "/dashboard", // ✅ clean URL
@@ -114,21 +121,21 @@ const routes: RouteRecordRaw[] = [
         name: "Demographics",
         alias: "/demographics",
         component: () => import("@/pages/Demographics.vue"),
-        meta: { title: `Demographics • ${BRAND.name}`, navbarTitle: "Demographics" },
+        meta: { title: `Audience • ${BRAND.name}`, navbarTitle: "Audience" },
       },
       {
         path: "analytics",
         name: "Analytics",
         alias: "/analytics",
         component: () => import("@/pages/Analytics.vue"),
-        meta: { title: `AI Insights • ${BRAND.name}`, navbarTitle: "AI Insights" },
+        meta: { title: `Analysis • ${BRAND.name}`, navbarTitle: "Analysis" },
       },
       {
         path: "map",
         name: "Heatmap",
         alias: "/map", // ✅ clean URL
         component: () => import("@/pages/Heatmap.vue"),
-        meta: { title: `Heatmap • ${BRAND.name}`, navbarTitle: "Heatmap" },
+        meta: { title: `Map • ${BRAND.name}`, navbarTitle: "Map" },
       },
       {
         path: "settings",
@@ -136,6 +143,12 @@ const routes: RouteRecordRaw[] = [
         alias: "/settings", // ✅ clean URL
         component: () => import("@/pages/Settings.vue"),
         meta: { title: `Settings • ${BRAND.name}`, navbarTitle: "Settings" },
+      },
+      {
+        path: "audience/do-not-mail",
+        name: "DoNotMail",
+        component: () => import("@/pages/DoNotMail.vue"),
+        meta: { title: `Do Not Mail • ${BRAND.name}`, navbarTitle: "Do Not Mail" },
       },
       {
         path: "history",
@@ -152,9 +165,70 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Team • ${BRAND.name}`, navbarTitle: "Team" },
       },
 
-      // /app -> /dashboard
-      { path: "", redirect: { name: "Dashboard" } },
+      // Campaign pages (stubs until Terminal 3 builds real pages)
+      {
+        path: "campaigns",
+        name: "Campaigns",
+        component: () => import("@/pages/Campaigns.vue"),
+        meta: { title: `Campaigns • ${BRAND.name}`, navbarTitle: "Campaigns" },
+      },
+      {
+        path: "campaigns/:id",
+        name: "CampaignDetail",
+        component: () => import("@/pages/CampaignDetail.vue"),
+        meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign" },
+      },
+      {
+        path: "print-jobs/:id",
+        name: "PrintJobStatus",
+        component: () => import("@/pages/PrintJobStatus.vue"),
+        meta: { title: `Print Job • ${BRAND.name}`, navbarTitle: "Print Job" },
+      },
+
+      // Designs page
+      {
+        path: "designs",
+        name: "Designs",
+        component: () => import("@/pages/Designs.vue"),
+        meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
+      },
+      // /app -> /app/home
+      { path: "", redirect: { name: "AppHome" } },
     ],
+  },
+
+  // ── Send-to-a-List Step 2 route (POS-95) ─────────────────
+  {
+    path: "/app/send-to-a-list/:audienceId",
+    name: "SttLStep2ExistingAudience",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+  {
+    path: "/app/send/:draftId/sttl-step-2",
+    name: "SttLStep2",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+  {
+    path: "/app/send/sttl-step-2",
+    name: "SttLStep2NewDraft",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+
+  // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──
+  {
+    path: "/app/send/:draftId?",
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        name: "SendWizard",
+        component: () => import("@/pages/SendWizard.vue"),
+      },
+    ],
+    meta: { title: `Send Postcards • ${BRAND.name}` },
   },
 
   // ── Invitation accept page (marketing layout, no auth check initially) ──
@@ -164,6 +238,22 @@ const routes: RouteRecordRaw[] = [
     alias: "/invite/:token",
     component: () => import("@/pages/AcceptInvite.vue"),
     meta: { title: `Accept Invitation • ${BRAND.name}`, marketing: true },
+  },
+
+  // ── Dev-only preview routes ───────
+  // Not linked from navigation. Used for visual verification of postcard
+  // templates without running the full wizard or hitting the backend.
+  {
+    path: "/dev/postcard-preview",
+    name: "DevPostcardPreview",
+    component: () => import("@/pages/dev/PostcardPreview.vue"),
+    meta: { title: "Postcard Preview (dev)", marketing: false },
+  },
+  {
+    path: "/dev/sttl-step2-preview",
+    name: "DevSttLStep2Preview",
+    component: () => import("@/pages/dev/SttLStep2Preview.vue"),
+    meta: { title: "SttL Step 2 Preview (dev)", marketing: false },
   },
 
   { path: "/:pathMatch(.*)*", redirect: "/" },
@@ -233,12 +323,13 @@ router.afterEach((to) => {
   // PostHog pageview
   capturePageview();
 
-  // Meta Pixel tracking
-  initMetaPixel();
-  if (to.meta?.marketing) {
-    trackViewContent({ content_name: to.meta.title as string, content_category: "marketing" });
-  } else {
-    trackPageView();
+  // Meta Pixel: load fbevents.js + initialize ONLY on marketing routes.
+  // S125 Sprint 1.0.3 — closes privacy gap from 1.0.2 partial fix. App routes
+  // never load fbevents.js → all useMetaPixel.ts callers gracefully no-op
+  // there via the typeof-window.fbq guard at useMetaPixel.ts:33.
+  if (to.meta?.marketing === true) {
+    loadMetaPixelScript();
+    initMetaPixel();
   }
 });
 

@@ -14,3 +14,18 @@ test-results
 # vue-tsc --build emit artifacts
 *.tsbuildinfo
 src/**/*.js
+
+# Working / demo / audit artifacts — local output, not source
+screenshots/
+demo-smoke-test-*/
+visual-audit-*/
+.planning/phases/*/spikes/*/output/
+
+# Playwright CLI output
+test-results/
+playwright-report/
+blob-report/
+test-results-live/
+playwright-report-live/
+.auth/
+
