@@ -162,13 +162,15 @@ async function approve() {
     agreedToTerms: acknowledgedAccuracy.value,
   };
   draftStore.setReview(review);
-  await draftStore.saveNow();
 
   try {
     // Create MailCampaign from draft once; the server deletes the draft on success,
     // so same-screen retries after artifact/purchase errors must reuse this id.
-    const campaign =
-      approvedCampaign.value ?? (await approveMailCampaign(draftStore.draft!.id));
+    let campaign = approvedCampaign.value;
+    if (!campaign) {
+      await draftStore.saveNow();
+      campaign = await approveMailCampaign(draftStore.draft!.id);
+    }
     approvedCampaign.value = campaign;
 
     try {

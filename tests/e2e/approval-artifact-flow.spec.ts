@@ -163,8 +163,28 @@ test.describe("StepReview approval artifact flow", () => {
     const sideEffects: string[] = [];
     let createCalls = 0;
     let artifactCalls = 0;
+    let draftSaveCalls = 0;
 
     await installApprovalFlowMocks(page);
+
+    await page.route(`**/api/campaign-drafts/${DRAFT_ID}`, (route) => {
+      if (route.request().method() === "PUT") {
+        draftSaveCalls += 1;
+      }
+      return json(route, {
+        ok: true,
+        id: DRAFT_ID,
+        org_id: "22222222-2222-4222-8222-222222222222",
+        created_by: "user-owner",
+        current_step: 4,
+        completed_steps: [1, 2, 3, 4],
+        needs_review_steps: [],
+        data: route.request().postDataJSON()?.data ?? {},
+        schema_version: 1,
+        created_at: "2026-05-25T02:20:00.000Z",
+        updated_at: "2026-05-25T02:20:01.000Z",
+      });
+    });
 
     await page.route("**/api/mail-campaigns", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
@@ -251,6 +271,7 @@ test.describe("StepReview approval artifact flow", () => {
 
     expect(createCalls).toBe(1);
     expect(artifactCalls).toBe(2);
+    expect(draftSaveCalls).toBe(1);
     expect(sideEffects).toEqual(["create", "artifact", "artifact", "purchase"]);
   });
 });
