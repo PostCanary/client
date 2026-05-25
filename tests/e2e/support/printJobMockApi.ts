@@ -85,7 +85,7 @@ function campaignFixture() {
     org_id: MOCK_ORG_ID,
     created_by: null,
     name: "Mock Campaign",
-    status: "draft",
+    status: "records_purchased",
     goal_type: "new_customers",
     service_type: null,
     sequence_length: 1,
