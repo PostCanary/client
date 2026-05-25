@@ -39,8 +39,6 @@ test("dashboard upload-and-match flow hydrates KPI results", async ({ page }) =>
   await expect(page.getByText("crm.csv")).toBeVisible();
 
   await page.getByRole("button", { name: "Upload & Match" }).click();
-
-  // Campaign prompt modal intercepts the flow; dismiss it to let normalize fire.
   await page.getByRole("button", { name: "No thanks" }).click();
 
   await expect.poll(() => state.requestLog.normalizeCalls.length).toBe(2);

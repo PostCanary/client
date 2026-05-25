@@ -173,6 +173,7 @@ function displayRole(role: string): string {
               v-for="member in activeMembers"
               :key="member.user_id"
               class="flex items-center justify-between gap-4 px-4 py-3 sm:px-6"
+              :data-testid="`team-member-${member.user_id}`"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium text-slate-900 truncate">
@@ -289,6 +290,7 @@ function displayRole(role: string): string {
               v-for="invitation in pendingMembers"
               :key="invitation.id"
               class="flex items-center justify-between gap-4 px-4 py-3 sm:px-6"
+              :data-testid="`team-invitation-${invitation.id}`"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium text-slate-600 truncate">
@@ -332,10 +334,13 @@ function displayRole(role: string): string {
 
             <form class="mt-5 space-y-4" @submit.prevent="onSendInvite">
               <div>
-                <label class="block text-sm font-medium text-slate-700"
+                <label
+                  for="invite-email"
+                  class="block text-sm font-medium text-slate-700"
                   >Email address</label
                 >
                 <input
+                  id="invite-email"
                   v-model="inviteEmail"
                   type="email"
                   required
@@ -346,10 +351,13 @@ function displayRole(role: string): string {
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-slate-700"
+                <label
+                  for="invite-role"
+                  class="block text-sm font-medium text-slate-700"
                   >Role</label
                 >
                 <select
+                  id="invite-role"
                   v-model="inviteRole"
                   class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   :disabled="inviteBusy"
