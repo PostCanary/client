@@ -186,13 +186,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Designs.vue"),
         meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
       },
-
       // /app -> /app/home
       { path: "", redirect: { name: "AppHome" } },
     ],
   },
 
   // ── Send-to-a-List Step 2 route (POS-95) ─────────────────
+  {
+    path: "/app/send-to-a-list/:audienceId",
+    name: "SttLStep2ExistingAudience",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
   {
     path: "/app/send/:draftId/sttl-step-2",
     name: "SttLStep2",

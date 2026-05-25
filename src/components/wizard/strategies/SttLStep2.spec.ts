@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import SttLStep2 from './SttLStep2.vue'
 
 // ── mock shared sub-components ────────────────────────────────────────────────
@@ -65,16 +66,20 @@ const approvalResponse = {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function mountCsv(file = new File(['name,address1,city,state,zip\nBob,1 Main,Dallas,TX,75001'], 'list.csv')) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
   return mount(SttLStep2, {
     props: { audienceSource: 'csv', file, campaignId: CAMPAIGN_ID },
-    global: { stubs: { leaflet: true } },
+    global: { plugins: [pinia], stubs: { leaflet: true } },
   })
 }
 
 function mountExisting() {
+  const pinia = createPinia()
+  setActivePinia(pinia)
   return mount(SttLStep2, {
     props: { audienceSource: 'existing', existingAudienceId: AUDIENCE_ID, campaignId: CAMPAIGN_ID },
-    global: { stubs: { leaflet: true } },
+    global: { plugins: [pinia], stubs: { leaflet: true } },
   })
 }
 
@@ -82,6 +87,7 @@ function mountExisting() {
 describe('SttLStep2', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setActivePinia(createPinia())
     mockCreateAudience.mockResolvedValue({ status: 201, data: { audience: { id: AUDIENCE_ID } } })
     mockSuppressAudience.mockResolvedValue(suppressionResult)
     mockGetAudienceCost.mockResolvedValue(costPreview)
@@ -105,6 +111,36 @@ describe('SttLStep2', () => {
     expect(mockCreateAudience).toHaveBeenCalledOnce()
     expect(mockSuppressAudience).toHaveBeenCalledWith(AUDIENCE_ID)
     expect(mockGetAudienceCost).toHaveBeenCalledWith(AUDIENCE_ID)
+    expect(wrapper.emitted('state-change')).toEqual([
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult: null,
+          costPreview: null,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          costPreview,
+        },
+      ],
+    ])
+  })
+
+  it('emits audience source, resolved audience, suppression, and cost preview for wrapper persistence', async () => {
+    const wrapper = mountCsv()
+    await flushPromises()
+
     expect(wrapper.emitted('state-change')).toEqual([
       [
         {

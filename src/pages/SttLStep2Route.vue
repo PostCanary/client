@@ -13,6 +13,8 @@ const selectedFile = ref<File | null>(null);
 const approvedAudienceId = ref<string | null>(null);
 
 const existingAudienceId = computed(() => {
+  const fromParam = route.params.audienceId;
+  if (typeof fromParam === "string" && fromParam.trim()) return fromParam;
   const value = route.query.audienceId;
   return typeof value === "string" && value.trim() ? value : null;
 });
