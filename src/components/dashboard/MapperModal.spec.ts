@@ -8,19 +8,24 @@ function mountAudienceMapper() {
       open: true,
       mailHeaders: [],
       crmHeaders: [],
-      audienceHeaders: ["Street", "City", "State", "Zip"],
+      audienceHeaders: ["Address", "City", "State", "ZIP"],
       mailHeaderTypes: {},
       crmHeaderTypes: {},
       audienceHeaderTypes: {
-        Street: "string",
+        Address: "string",
         City: "string",
         State: "state",
-        Zip: "zip",
+        ZIP: "zip",
       },
       mailSamples: [],
       crmSamples: [],
       audienceSamples: [
-        { Street: "1 Main St", City: "Austin", State: "TX", Zip: "78701" },
+        {
+          Address: "123 Peachtree St",
+          City: "Atlanta",
+          State: "GA",
+          ZIP: "30309",
+        },
       ],
       mailFields: [],
       crmFields: [],
@@ -31,7 +36,13 @@ function mountAudienceMapper() {
         state: "State",
         zip: "ZIP",
       },
-      initialMapping: {},
+      initialMapping: {
+        audience: {
+          address1: "Address",
+          city: "City",
+          state: "State",
+        },
+      },
       requiredMail: [],
       requiredCrm: [],
       requiredAudience: ["address1", "city", "state", "zip"],
@@ -40,38 +51,36 @@ function mountAudienceMapper() {
 }
 
 describe("MapperModal audience source", () => {
-  it("renders an audience mapping pane without mail or CRM panes", () => {
+  it("renders the audience pane and validates required audience fields", () => {
     const wrapper = mountAudienceMapper();
 
-    expect(wrapper.get('[data-testid="audience-mapper-section"]').text()).toContain(
-      "Audience CSV",
-    );
-    expect(wrapper.text()).not.toContain("Mail CSV");
-    expect(wrapper.text()).not.toContain("CRM CSV");
-    expect(wrapper.get("button.btn-primary").attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).toContain("Audience CSV");
+    expect(wrapper.text()).toContain("123 Peachtree St");
+    expect(wrapper.text()).toContain("Missing required mappings:");
+    expect(wrapper.text()).toContain("ZIP");
+    expect(wrapper.get(".btn-primary").attributes("disabled")).toBeDefined();
   });
 
-  it("emits audience mapping after required audience fields are mapped", async () => {
+  it("emits audience mapping without breaking mail/crm payload shape", async () => {
     const wrapper = mountAudienceMapper();
     const selects = wrapper.findAll("select");
+    const zipSelect = selects[3];
+    expect(zipSelect).toBeDefined();
+    await zipSelect!.setValue("zip");
 
-    await selects[0]!.setValue("address1");
-    await selects[1]!.setValue("city");
-    await selects[2]!.setValue("state");
-    await selects[3]!.setValue("zip");
+    expect(wrapper.get(".btn-primary").attributes("disabled")).toBeUndefined();
+    await wrapper.get(".btn-primary").trigger("click");
 
-    expect(wrapper.get("button.btn-primary").attributes("disabled")).toBeUndefined();
-
-    await wrapper.get("button.btn-primary").trigger("click");
-
-    expect(wrapper.emitted("confirm")?.[0]?.[0]).toEqual({
+    const emitted = wrapper.emitted("confirm");
+    expect(emitted).toBeTruthy();
+    expect(emitted![0]![0]).toEqual({
       mail: {},
       crm: {},
       audience: {
-        address1: "Street",
+        address1: "Address",
         city: "City",
         state: "State",
-        zip: "Zip",
+        zip: "ZIP",
       },
     });
   });

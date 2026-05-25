@@ -7,6 +7,7 @@ import type {
   TargetingSelection,
   DesignSelection,
   ReviewSelection,
+  AudienceWizardState,
 } from "@/types/campaign";
 import type {
   AudienceCostPreview,
@@ -138,6 +139,31 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           if (!this.draft.needsReviewSteps.includes(step)) {
             this.draft.needsReviewSteps.push(step);
           }
+        }
+      }
+      this._debounceSave();
+    },
+
+    setAudienceState(audience: Partial<AudienceWizardState>) {
+      if (!this.draft) return;
+      const current: AudienceWizardState = this.draft.audience ?? {
+        audienceId: null,
+        audienceSource: null,
+        suppressionResult: null,
+        costPreview: null,
+      };
+      this.draft.audience = { ...current, ...audience };
+      this._debounceSave();
+    },
+
+    approveAudienceState(audience: Partial<AudienceWizardState>) {
+      if (!this.draft) return;
+      this.setAudienceState(audience);
+      this._markComplete(2);
+      this._clearReview(2);
+      for (const step of [3, 4] as WizardStep[]) {
+        if (this.draft.completedSteps.includes(step) && !this.draft.needsReviewSteps.includes(step)) {
+          this.draft.needsReviewSteps.push(step);
         }
       }
       this._debounceSave();
@@ -319,6 +345,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           campaignType: this.draft.campaignType,
           goal: this.draft.goal,
           targeting: this.draft.targeting,
+          audience: this.draft.audience,
           design: this.draft.design,
           review: this.draft.review,
         },

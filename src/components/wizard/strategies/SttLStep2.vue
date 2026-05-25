@@ -4,7 +4,6 @@ import Step2Header from '@/components/wizard/Step2Header.vue'
 import SuppressionStrip from '@/components/wizard/SuppressionStrip.vue'
 import EnrichCostBlock from '@/components/wizard/EnrichCostBlock.vue'
 import AudienceMapPreview from '@/components/wizard/AudienceMapPreview.vue'
-import { useCampaignDraftStore } from '@/stores/useCampaignDraftStore'
 import {
   createAudience,
   suppressAudience,
@@ -37,6 +36,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'approved', audienceId: string, campaignId: string | null): void
   (e: 'back'): void
+  (e: 'state-change', state: {
+    audienceId: string | null
+    audienceSource: 'csv' | 'existing'
+    suppressionResult?: AudienceSuppressionResult | null
+    costPreview?: AudienceCostPreview | null
+  }): void
 }>()
 
 // ── reactive state ────────────────────────────────────────────────────────────
@@ -48,7 +53,6 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const approving = ref(false)
 const costFailed = ref(false)
-const draftStore = useCampaignDraftStore()
 
 // ── derived ───────────────────────────────────────────────────────────────────
 const canApprove = computed(
@@ -95,10 +99,6 @@ async function runFlow(): Promise<void> {
 
   error.value = null
   loading.value = true
-  draftStore.setAudienceSource(props.audienceSource)
-  draftStore.setAudienceId(null)
-  draftStore.setSuppressionResult(null)
-  draftStore.setCostPreview(null)
 
   try {
     // 1. Resolve audience ID
@@ -128,17 +128,30 @@ async function runFlow(): Promise<void> {
     }
 
     if (!audienceId.value) throw new Error('Could not resolve audience ID')
-    draftStore.setAudienceId(audienceId.value)
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      suppressionResult: null,
+      costPreview: null,
+    })
 
     // 2. Suppression (DNM > Past > Recent — server enforces precedence)
     suppression.value = await suppressAudience(audienceId.value)
-    draftStore.setSuppressionResult(suppression.value)
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      suppressionResult: suppression.value,
+    })
     mapPoints.value = [] // Phase 1: no geocoded points yet
 
     // 3. Cost preview — isolated so a transient failure doesn't block suppression display
     try {
       costPreview.value = await getAudienceCost(audienceId.value)
-      draftStore.setCostPreview(costPreview.value)
+      emit('state-change', {
+        audienceId: audienceId.value,
+        audienceSource: props.audienceSource,
+        costPreview: costPreview.value,
+      })
     } catch {
       costFailed.value = true
     }
@@ -155,7 +168,11 @@ async function retryCost(): Promise<void> {
   loading.value = true
   try {
     costPreview.value = await getAudienceCost(audienceId.value)
-    draftStore.setCostPreview(costPreview.value)
+    emit('state-change', {
+      audienceId: audienceId.value,
+      audienceSource: props.audienceSource,
+      costPreview: costPreview.value,
+    })
   } catch {
     costFailed.value = true
   } finally {
@@ -171,6 +188,12 @@ async function handleApprove(): Promise<void> {
     const res = await approveAudience({
       audience_id: audienceId.value,
       ...(props.campaignId ? { campaign_id: props.campaignId } : {}),
+    })
+    emit('state-change', {
+      audienceId: res.audience_id,
+      audienceSource: props.audienceSource,
+      suppressionResult: suppression.value,
+      costPreview: costPreview.value,
     })
     emit('approved', res.audience_id, res.campaign_id)
   } catch (err: unknown) {

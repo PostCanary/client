@@ -13,6 +13,9 @@ type RequestLog = {
   resumeCalls: number;
   cancelCalls: number;
   changePlanCalls: string[];
+  draftLoads: string[];
+  audienceApprovals: string[];
+  audienceSuppressions: string[];
 };
 
 export type MockAppState = {
@@ -718,18 +721,21 @@ export function createMockAppState(): MockAppState {
     mappingByBatchId: {},
     normalizeByBatchId: {},
     billingPortalUrl: "https://billing.example.test/portal",
-      requestLog: {
-        heatmapQueries: [],
-        normalizeCalls: [],
-        switches: [],
-        profileUpdates: [],
-        orgUpdates: [],
-        inviteEmails: [],
-        pauseCalls: 0,
-        resumeCalls: 0,
-        cancelCalls: 0,
-        changePlanCalls: [],
-      },
+    requestLog: {
+      heatmapQueries: [],
+      normalizeCalls: [],
+      switches: [],
+      profileUpdates: [],
+      orgUpdates: [],
+      inviteEmails: [],
+      pauseCalls: 0,
+      resumeCalls: 0,
+      cancelCalls: 0,
+      changePlanCalls: [],
+      draftLoads: [],
+      audienceApprovals: [],
+      audienceSuppressions: [],
+    },
   };
 
   syncSession(state);
@@ -1018,6 +1024,145 @@ export async function installMockApi(page: Page, state: MockAppState) {
       };
       state.campaignsByOrg[orgId] = [campaign, ...(state.campaignsByOrg[orgId] ?? [])];
       return json(route, campaign, 201);
+    }
+
+    if (pathname === "/api/campaign-drafts" && method === "POST") {
+      return json(
+        route,
+        {
+          ok: true,
+          id: "mock-draft-001",
+          org_id: activeOrgId(state),
+          created_by: state.authMe.user_id ?? null,
+          current_step: 1,
+          completed_steps: [],
+          needs_review_steps: [],
+          data: {
+            campaignType: "targeted",
+            goal: null,
+            targeting: null,
+            audience: null,
+            design: null,
+            review: null,
+          },
+          schema_version: 1,
+          created_at: "2026-03-23T00:00:00Z",
+          updated_at: "2026-03-23T00:00:00Z",
+        },
+        201,
+      );
+    }
+
+    const draftMatch = pathname.match(/^\/api\/campaign-drafts\/([^/]+)$/);
+    if (draftMatch && method === "GET") {
+      const draftId = decodeURIComponent(draftMatch[1]);
+      state.requestLog.draftLoads.push(draftId);
+      return json(route, {
+        ok: true,
+        id: draftId,
+        org_id: activeOrgId(state),
+        created_by: state.authMe.user_id ?? null,
+        current_step: 2,
+        completed_steps: [1],
+        needs_review_steps: [],
+        data: {
+          campaignType: "targeted",
+          goal: null,
+          targeting: null,
+          audience: null,
+          design: null,
+          review: null,
+        },
+        schema_version: 1,
+        created_at: "2026-03-23T00:00:00Z",
+        updated_at: "2026-03-23T00:00:00Z",
+      });
+    }
+
+    if (draftMatch && method === "PUT") {
+      const draftId = decodeURIComponent(draftMatch[1]);
+      const payload = parseJson(route);
+      return json(route, {
+        ok: true,
+        id: draftId,
+        org_id: activeOrgId(state),
+        created_by: state.authMe.user_id ?? null,
+        current_step: payload.current_step ?? 2,
+        completed_steps: payload.completed_steps ?? [1],
+        needs_review_steps: payload.needs_review_steps ?? [],
+        data: payload.data ?? {},
+        schema_version: 1,
+        created_at: "2026-03-23T00:00:00Z",
+        updated_at: "2026-03-23T00:01:00Z",
+      });
+    }
+
+    if (pathname === "/api/audiences" && method === "POST") {
+      return json(
+        route,
+        {
+          audience: {
+            id: "audience-alpha",
+            org_id: activeOrgId(state),
+            user_id: state.authMe.user_id ?? "user-owner",
+            workspace_id: null,
+            name: "SttL Upload",
+            status: "uploaded",
+            batch_id: "audience-batch-alpha",
+            created_at: "2026-03-23T00:00:00Z",
+            approved_at: null,
+            uploaded_count: 500,
+            deliverable_count: 482,
+          },
+          re_upload_prompt: false,
+        },
+        201,
+      );
+    }
+
+    const audienceSuppressMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/suppress$/);
+    if (audienceSuppressMatch && method === "POST") {
+      const audienceId = decodeURIComponent(audienceSuppressMatch[1]);
+      state.requestLog.audienceSuppressions.push(audienceId);
+      return json(route, {
+        audience_id: audienceId,
+        uploaded_count: 500,
+        suppressed: {
+          dnm: 10,
+          past_customer: 5,
+          recently_mailed: 3,
+          total_suppressed: 18,
+        },
+        deliverable_count: 482,
+        precedence: ["dnm", "past_customer", "recently_mailed"],
+      });
+    }
+
+    const audienceCostMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/cost$/);
+    if (audienceCostMatch && method === "GET") {
+      const audienceId = decodeURIComponent(audienceCostMatch[1]);
+      return json(route, {
+        audience_id: audienceId,
+        deliverable_count: 482,
+        per_card_cost_cents: 69,
+        per_card_subtotal_cents: 33258,
+        enrich_enabled: false,
+        melissa_enrich_estimate_cents: null,
+        total_cents: 33258,
+      });
+    }
+
+    const audienceApproveMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/approve$/);
+    if (audienceApproveMatch && method === "POST") {
+      const audienceId = decodeURIComponent(audienceApproveMatch[1]);
+      const payload = parseJson(route);
+      state.requestLog.audienceApprovals.push(audienceId);
+      return json(route, {
+        audience_id: audienceId,
+        status: "approved",
+        campaign_id: payload.campaign_id ?? null,
+        approved_at: "2026-03-23T00:02:00Z",
+      });
     }
 
     const campaignMutationMatch = pathname.match(/^\/api\/campaigns\/([^/]+)$/);

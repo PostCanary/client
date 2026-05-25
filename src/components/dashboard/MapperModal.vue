@@ -203,7 +203,7 @@
         </section>
 
         <!-- AUDIENCE CSV -->
-        <section v-if="audienceHeaders.length" class="csv-section" data-testid="audience-mapper-section">
+        <section v-if="audienceHeaders?.length" class="csv-section">
           <h4 class="csv-title">Audience CSV</h4>
 
           <div class="spreadsheet-wrapper">
@@ -314,8 +314,6 @@
 import { ref, watch, onMounted, onBeforeUnmount, toRaw, computed } from "vue";
 import type { Mapping as MapperMapping } from "@/api/mapper";
 
-type MapperSource = "mail" | "crm" | "audience";
-
 type HeaderType =
   | "string"
   | "number"
@@ -326,14 +324,15 @@ type HeaderType =
   | "unknown";
 
 type CanonicalType = "string" | "state" | "zip" | "date" | "currency";
+type MapperUiSource = "mail" | "crm" | "audience";
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   open: boolean;
   mailHeaders: string[];
   crmHeaders: string[];
-  audienceHeaders?: string[];
   mailHeaderTypes: Record<string, HeaderType>;
   crmHeaderTypes: Record<string, HeaderType>;
+  audienceHeaders?: string[];
   audienceHeaderTypes?: Record<string, HeaderType>;
   mailSamples: Record<string, any>[];
   crmSamples: Record<string, any>[];
@@ -355,14 +354,7 @@ const props = withDefaults(defineProps<{
   } | null;
   saving?: boolean;
   confirmLabel?: string;
-}>(), {
-  audienceHeaders: () => [],
-  audienceHeaderTypes: () => ({}),
-  audienceSamples: () => [],
-  audienceFields: () => [],
-  audienceLabels: () => ({}),
-  requiredAudience: () => [],
-});
+}>();
 
 const emit = defineEmits<{
   (e: "close"): void;
@@ -398,9 +390,6 @@ const CRM_FIELD_TYPES: Record<string, CanonicalType> = {
 
 const AUDIENCE_FIELD_TYPES: Record<string, CanonicalType> = {
   source_id: "string",
-  name: "string",
-  first_name: "string",
-  last_name: "string",
   address1: "string",
   address2: "string",
   city: "string",
@@ -409,7 +398,7 @@ const AUDIENCE_FIELD_TYPES: Record<string, CanonicalType> = {
 };
 
 function expectedCanonicalType(
-  source: MapperSource,
+  source: MapperUiSource,
   field: string
 ): CanonicalType {
   const tbl =
@@ -422,7 +411,7 @@ function expectedCanonicalType(
 }
 
 function allowedHeaderTypeSet(
-  source: MapperSource,
+  source: MapperUiSource,
   field: string
 ): Set<HeaderType> {
   if (field === "address2") {
@@ -449,7 +438,7 @@ function allowedHeaderTypeSet(
 const titleCase = (s: string): string =>
   s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-function labelFor(source: MapperSource, field: string): string {
+function labelFor(source: MapperUiSource, field: string): string {
   const labels =
     source === "mail"
       ? props.mailLabels
@@ -459,7 +448,7 @@ function labelFor(source: MapperSource, field: string): string {
   return labels?.[field] ?? titleCase(field);
 }
 
-function isRequired(source: MapperSource, field: string): boolean {
+function isRequired(source: MapperUiSource, field: string): boolean {
   if (!field) return false;
   if (source === "mail") return props.requiredMail.includes(field);
   if (source === "crm") return props.requiredCrm.includes(field);
@@ -547,7 +536,7 @@ type FieldOption = {
 };
 
 function fieldsForHeader(
-  source: MapperSource,
+  source: MapperUiSource,
   header: string
 ): FieldOption[] {
   const fields =
@@ -591,7 +580,7 @@ function fieldsForHeader(
 /* ---------- column selection handler ---------- */
 
 function onColumnSelect(
-  source: MapperSource,
+  source: MapperUiSource,
   header: string,
   field: string
 ) {
@@ -616,12 +605,10 @@ const localErrors = ref<{
   audience: {},
 });
 
-const backendErrors = computed(
-  () => props.errors ?? { mail: {}, crm: {}, audience: {} }
-);
+const backendErrors = computed(() => props.errors ?? { mail: {}, crm: {}, audience: {} });
 
 function columnError(
-  source: MapperSource,
+  source: MapperUiSource,
   header: string
 ): string | null {
   const columnMap =
@@ -638,7 +625,7 @@ function columnError(
       ? backendErrors.value.mail
       : source === "crm"
         ? backendErrors.value.crm
-        : backendErrors.value.audience;
+        : backendErrors.value.audience ?? {};
   return bucket?.[field] || null;
 }
 
@@ -719,10 +706,8 @@ function confirm() {
   const payload: MapperMapping = {
     mail: invertToFieldMap(toRaw(mailColumnMap.value)),
     crm: invertToFieldMap(toRaw(crmColumnMap.value)),
+    audience: invertToFieldMap(toRaw(audienceColumnMap.value)),
   };
-  if ((props.audienceHeaders ?? []).length) {
-    payload.audience = invertToFieldMap(toRaw(audienceColumnMap.value));
-  }
   emit("confirm", payload);
 }
 </script>

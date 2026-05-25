@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CampaignGoalType, GoalSelection, Industry } from "@/types/campaign";
@@ -16,6 +16,7 @@ import {
 import { EDDM_ENABLED } from "@/config/featureFlags";
 
 const route = useRoute();
+const router = useRouter();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 const auth = useAuthStore();
@@ -93,7 +94,7 @@ const sequenceConfig = ref({
   otherGoalText: draftStore.draft?.goal?.otherGoalText ?? null,
 });
 
-function selectGoal(goal: GoalDefinition) {
+async function selectGoal(goal: GoalDefinition) {
   selectedGoalType.value = goal.type;
   // Auto-apply defaults for the new goal
   sequenceConfig.value = {
@@ -103,6 +104,14 @@ function selectGoal(goal: GoalDefinition) {
     otherGoalText: null,
   };
   commitGoal();
+
+  if (goal.type === "send_to_list") {
+    await router.push(
+      draftStore.draft?.id
+        ? `/app/send/${draftStore.draft.id}/sttl-step-2`
+        : "/app/send/sttl-step-2",
+    );
+  }
 }
 
 function onConfigUpdate(config: typeof sequenceConfig.value) {

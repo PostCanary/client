@@ -186,24 +186,29 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Designs.vue"),
         meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
       },
-      {
-        path: "send-to-a-list/:audienceId",
-        name: "SttLStep2",
-        component: () => import("@/components/wizard/strategies/SttLStep2.vue"),
-        props: (route) => ({
-          audienceSource: "existing",
-          existingAudienceId: String(route.params.audienceId),
-          campaignId: typeof route.query.campaignId === "string" ? route.query.campaignId : undefined,
-        }),
-        meta: {
-          title: `Send to a List • ${BRAND.name}`,
-          navbarTitle: "Send to a List",
-        },
-      },
-
       // /app -> /app/home
       { path: "", redirect: { name: "AppHome" } },
     ],
+  },
+
+  // ── Send-to-a-List Step 2 route (POS-95) ─────────────────
+  {
+    path: "/app/send-to-a-list/:audienceId",
+    name: "SttLStep2ExistingAudience",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+  {
+    path: "/app/send/:draftId/sttl-step-2",
+    name: "SttLStep2",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
+  },
+  {
+    path: "/app/send/sttl-step-2",
+    name: "SttLStep2NewDraft",
+    component: () => import("@/pages/SttLStep2Route.vue"),
+    meta: { title: `Send to a List • ${BRAND.name}` },
   },
 
   // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──

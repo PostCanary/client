@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SttLStep2 from './SttLStep2.vue'
-import { useCampaignDraftStore } from '@/stores/useCampaignDraftStore'
 
 // ── mock shared sub-components ────────────────────────────────────────────────
 vi.mock('@/components/wizard/Step2Header.vue', () => ({
@@ -106,23 +105,66 @@ describe('SttLStep2', () => {
   })
 
   it('calls createAudience → suppressAudience → getAudienceCost in sequence for csv mode', async () => {
-    mountCsv()
+    const wrapper = mountCsv()
     await flushPromises()
 
     expect(mockCreateAudience).toHaveBeenCalledOnce()
     expect(mockSuppressAudience).toHaveBeenCalledWith(AUDIENCE_ID)
     expect(mockGetAudienceCost).toHaveBeenCalledWith(AUDIENCE_ID)
+    expect(wrapper.emitted('state-change')).toEqual([
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult: null,
+          costPreview: null,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          costPreview,
+        },
+      ],
+    ])
   })
 
-  it('stores audience source, resolved audience, suppression, and cost preview in Pinia', async () => {
-    mountCsv()
+  it('emits audience source, resolved audience, suppression, and cost preview for wrapper persistence', async () => {
+    const wrapper = mountCsv()
     await flushPromises()
 
-    const draftStore = useCampaignDraftStore()
-    expect(draftStore.audienceSource).toBe('csv')
-    expect(draftStore.audienceId).toBe(AUDIENCE_ID)
-    expect(draftStore.suppressionResult).toEqual(suppressionResult)
-    expect(draftStore.costPreview).toEqual(costPreview)
+    expect(wrapper.emitted('state-change')).toEqual([
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult: null,
+          costPreview: null,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          suppressionResult,
+        },
+      ],
+      [
+        {
+          audienceId: AUDIENCE_ID,
+          audienceSource: 'csv',
+          costPreview,
+        },
+      ],
+    ])
   })
 
   it('skips createAudience for existing mode and uses existingAudienceId', async () => {
@@ -160,6 +202,12 @@ describe('SttLStep2', () => {
     const [emittedAudienceId, emittedCampaignId] = wrapper.emitted('approved')![0]
     expect(emittedAudienceId).toBe(AUDIENCE_ID)
     expect(emittedCampaignId).toBe(CAMPAIGN_ID)
+    expect(wrapper.emitted('state-change')?.at(-1)?.[0]).toMatchObject({
+      audienceId: AUDIENCE_ID,
+      audienceSource: 'csv',
+      suppressionResult,
+      costPreview,
+    })
   })
 
   it('emits back event when back button is clicked', async () => {
