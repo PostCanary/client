@@ -177,6 +177,14 @@ describe("postcard variant adapter", () => {
     expect(() =>
       validatePostcardVariantPayload(
         basePayload({
+          source: { kind: "webhook" as any, sourceId: "event-1" },
+        }),
+      ),
+    ).toThrow("unsupported variant source.kind");
+
+    expect(() =>
+      validatePostcardVariantPayload(
+        basePayload({
           variantType: "thank_you",
           source: { kind: "manual", sourceId: "manual-1" },
         }),
