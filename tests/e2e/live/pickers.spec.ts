@@ -33,9 +33,13 @@ async function navigateToStep3(page: Page) {
   ).toBeVisible({ timeout: 30_000 });
 }
 
-async function waitForInitialPreview(page: Page, previewResponses: { cardN: number; status: number }[]) {
+async function waitForInitialPreview(
+  page: Page,
+  previewResponses: { cardN: number; status: number }[],
+  cardNumber = 1,
+) {
   await expect
-    .poll(() => previewResponses.some((r) => r.cardN === 1 && r.status === 200), {
+    .poll(() => previewResponses.some((r) => r.cardN === cardNumber && r.status === 200), {
       timeout: 90_000,
     })
     .toBe(true);
@@ -48,11 +52,12 @@ async function grabImgSrcSignature(page: Page): Promise<string> {
     ) as HTMLImageElement | null;
     if (!img || !img.src) return "no-img";
     const response = await fetch(img.src);
-    const buf = new Uint8Array(await response.arrayBuffer());
-    const head = Array.from(buf.slice(0, 64))
+    const arrayBuffer = await response.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    const hash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    return `size:${buf.byteLength} head:${head}`;
+    return `size:${arrayBuffer.byteLength} sha256:${hash}`;
   });
 }
 
@@ -114,18 +119,18 @@ test.describe("pickers — live stack", () => {
         { timeout: 45_000, message: "expected preview-card 200 after photo swap" },
       )
       .toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(2000);
+    await expect
+      .poll(() => grabImgSrcSignature(page), {
+        timeout: 60_000,
+        message: "expected the on-screen preview image bytes to change after photo swap",
+      })
+      .not.toBe(beforeSig);
 
     const afterSig = await grabImgSrcSignature(page);
     await testInfo.attach("photo-signatures.txt", {
       body: `before=${beforeSig}\nafter=${afterSig}`,
       contentType: "text/plain",
     });
-
-    expect(
-      afterSig,
-      `photo swap should change the preview bytes. before=${beforeSig} after=${afterSig}`,
-    ).not.toBe(beforeSig);
 
     await page.screenshot({
       path: testInfo.outputPath("after-photo-swap.png"),
@@ -138,7 +143,8 @@ test.describe("pickers — live stack", () => {
   }, testInfo) => {
     const { previewResponses, markActionBoundary } = attachPreviewListener(page);
     await navigateToStep3(page);
-    await waitForInitialPreview(page, previewResponses);
+    await page.getByTestId("card-select-2").click();
+    await waitForInitialPreview(page, previewResponses, 2);
     const beforeSig = await grabImgSrcSignature(page);
 
     await page.getByTestId("edit-review-toggle").click();
@@ -164,23 +170,23 @@ test.describe("pickers — live stack", () => {
       .poll(
         () =>
           previewResponses.filter(
-            (r) => r.cardN === 1 && r.status === 200 && r.afterAction,
+            (r) => r.cardN === 2 && r.status === 200 && r.afterAction,
           ).length,
         { timeout: 45_000, message: "expected preview-card 200 after review swap" },
       )
       .toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(2000);
+    await expect
+      .poll(() => grabImgSrcSignature(page), {
+        timeout: 60_000,
+        message: "expected the on-screen preview image bytes to change after review swap",
+      })
+      .not.toBe(beforeSig);
 
     const afterSig = await grabImgSrcSignature(page);
     await testInfo.attach("review-signatures.txt", {
       body: `before=${beforeSig}\nafter=${afterSig}`,
       contentType: "text/plain",
     });
-
-    expect(
-      afterSig,
-      `review swap should change the preview bytes. before=${beforeSig} after=${afterSig}`,
-    ).not.toBe(beforeSig);
 
     await page.screenshot({
       path: testInfo.outputPath("after-review-swap.png"),

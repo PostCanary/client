@@ -30,6 +30,8 @@ let _pendingSave = false;
 let _retryCount = 0;
 let _dirty = false;
 let _generatingCards = false;
+let _saveChain: Promise<void> | null = null;
+let _saveRevision = 0;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
 
@@ -66,6 +68,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       if (!state.draft) return 0;
       return (state.draft.completedSteps.length / 4) * 100;
     },
+    isDirty: (): boolean => _dirty,
   },
 
   actions: {
@@ -236,6 +239,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     _debounceSave() {
       _dirty = true;
+      _saveRevision++;
       if (_saveTimer) clearTimeout(_saveTimer);
       // 500ms < useCardPreview's 1500ms preview debounce so the server
       // has the latest card content before `preview-card` fetches. Prior
@@ -254,15 +258,23 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       }
       if (this.saving) {
         _pendingSave = true;
+        if (_saveChain) await _saveChain;
         return;
       }
+      const draftToSave = this.draft;
       this.saving = true;
+      const saveRevisionAtStart = _saveRevision;
+      const savePromise = (async () => {
       try {
-        await saveDraft(this.draft);
+        await saveDraft(draftToSave);
         this.lastSavedAt = new Date().toISOString();
         this.error = null;
         _retryCount = 0;
-        _dirty = false;
+        if (_saveRevision === saveRevisionAtStart) {
+          _dirty = false;
+        } else {
+          _pendingSave = true;
+        }
       } catch {
         if (_retryCount < MAX_RETRIES) {
           _retryCount++;
@@ -278,6 +290,15 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         if (_pendingSave) {
           _pendingSave = false;
           await this._save();
+        }
+      }
+      })();
+      _saveChain = savePromise;
+      try {
+        await savePromise;
+      } finally {
+        if (_saveChain === savePromise) {
+          _saveChain = null;
         }
       }
     },
@@ -327,8 +348,6 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     /** Best-effort save that survives tab close via fetch keepalive. */
-    get isDirty() { return _dirty; },
-
     beaconSave() {
       if (!this.draft || !_dirty) return;
       // Mirror _save() guards

@@ -80,11 +80,12 @@ test.describe("headline edit — live stack", () => {
         ) as HTMLImageElement | null;
         if (!img || !img.src) return "no-img";
         const response = await fetch(img.src);
-        const buf = new Uint8Array(await response.arrayBuffer());
-        const head = Array.from(buf.slice(0, 64))
+        const arrayBuffer = await response.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+        const hash = Array.from(new Uint8Array(digest))
           .map((b) => b.toString(16).padStart(2, "0"))
           .join("");
-        return `size:${buf.byteLength} head:${head}`;
+        return `size:${arrayBuffer.byteLength} sha256:${hash}`;
       });
     }
 
@@ -111,27 +112,41 @@ test.describe("headline edit — live stack", () => {
       )
       .toBeGreaterThanOrEqual(1);
 
-    // Give Vue a reactive tick + let the save land.
-    await page.waitForTimeout(2000);
+    await expect
+      .poll(() => grabImgSrcSignature(), {
+        timeout: 60_000,
+        message: "expected the on-screen preview image bytes to change after headline edit",
+      })
+      .not.toBe(beforeSignature);
 
     // Stronger assertion: the on-screen <img src> bytes MUST match what
     // the preview-card endpoint serves when asked fresh. If they differ,
     // the composable is sitting on a stale blob (the Session 57 bug
     // class — save/fetch race leaving previewUrl pointing at a pre-save
     // render).
-    const imgSignature = await grabImgSrcSignature();
     const freshApiSignature = await page.evaluate(async (id) => {
+      const csrfRes = await fetch("/auth/csrf-token", { credentials: "include" });
+      const csrf = csrfRes.ok ? (await csrfRes.json()).csrf_token : "";
       const res = await fetch(`/api/campaign-drafts/${id}/preview-card/1`, {
         method: "POST",
         credentials: "include",
+        headers: csrf ? { "X-CSRF-Token": csrf } : {},
       });
       if (!res.ok) return `status:${res.status}`;
-      const buf = new Uint8Array(await res.arrayBuffer());
-      const head = Array.from(buf.slice(0, 64))
+      const arrayBuffer = await res.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+      const hash = Array.from(new Uint8Array(digest))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      return `size:${buf.byteLength} head:${head}`;
+      return `size:${arrayBuffer.byteLength} sha256:${hash}`;
     }, draftId);
+    await expect
+      .poll(() => grabImgSrcSignature(), {
+        timeout: 60_000,
+        message: "expected the on-screen preview to settle on the fresh server render",
+      })
+      .toBe(freshApiSignature);
+    const imgSignature = await grabImgSrcSignature();
 
     await testInfo.attach("useCardPreview-console.log", {
       body: consoleMessages.join("\n"),
@@ -141,11 +156,6 @@ test.describe("headline edit — live stack", () => {
       body: `before=${beforeSignature}\nimg(after)=${imgSignature}\nfreshApi(after)=${freshApiSignature}`,
       contentType: "text/plain",
     });
-
-    expect(
-      imgSignature,
-      `on-screen <img src> bytes do not match fresh preview-card bytes — composable is sitting on a stale blob. imgSize-vs-freshSize may differ due to PNG encoding variance across renders of identical content; if sizes are equal within 1% that's OK but if hex-heads differ substantially and sizes differ by more than 5% that's the bug. img=${imgSignature} fresh=${freshApiSignature}. Console:\n${consoleMessages.join("\n")}`,
-    ).toBe(freshApiSignature);
 
     await page.screenshot({
       path: testInfo.outputPath("after-edit.png"),

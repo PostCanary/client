@@ -17,6 +17,17 @@ import { test, expect } from "@playwright/test";
 
 const DRAFT_URL_RE = /\/app\/send\/([0-9a-f-]{36})/;
 const PREVIEW_CARD_RE = /\/api\/campaign-drafts\/([0-9a-f-]{36})\/preview-card\/(\d+)/;
+const BLOCKING_WARNINGS = [
+  "PHOTO_MISSING",
+  "PHOTO_UNREACHABLE",
+  "PHOTO_BLOCKED_BY_URL_GUARD",
+  "LOGO_MISSING",
+  "LOGO_UNREACHABLE",
+  "LOGO_BLOCKED_BY_URL_GUARD",
+  "QR_BLOCKED_BY_URL_GUARD",
+  "HEADLINE_LINE_TRUNCATED",
+  "CONTENT_OVERLONG_REGENERATE",
+];
 
 test.describe("generate-proof diagnostic — live stack", () => {
   test(
@@ -163,6 +174,20 @@ test.describe("generate-proof diagnostic — live stack", () => {
           `post-click preview-card calls for card ${cardN}: ${hits.length}. Full log: ${JSON.stringify(postClickPreviews, null, 2)}`,
         ).toBeGreaterThanOrEqual(1);
       }
+
+      const blockingWarnings = postClickPreviews.flatMap((r) =>
+        r.warnings
+          .split(",")
+          .map((warning) => warning.trim())
+          .filter((warning) =>
+            BLOCKING_WARNINGS.some((blocking) => warning.startsWith(blocking)),
+          )
+          .map((warning) => `card ${r.cardN}: ${warning}`),
+      );
+      expect(
+        blockingWarnings,
+        `Generate Proof produced approval-blocking render warnings for draft ${draftId}: ${blockingWarnings.join("; ")}`,
+      ).toEqual([]);
     },
   );
 });

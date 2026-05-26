@@ -332,7 +332,7 @@ function generateCardsLocal(
       offerPool[i % Math.max(offerPool.length, 1)] ??
       "";
 
-    const review = brandKit.reviews?.[0];
+    const review = brandKit.reviews?.[i % Math.max(brandKit.reviews.length, 1)];
     const photo = photos[i % Math.max(photos.length, 1)];
 
     return {
@@ -425,6 +425,9 @@ function mapServerCardToDesign(
     })),
   ];
   const photo = photos[index % Math.max(photos.length, 1)];
+  const brandKitReview =
+    brandKit.reviews?.[index % Math.max(brandKit.reviews.length, 1)] ?? null;
+  const selectedReview = card.selectedReview ?? brandKitReview;
 
   // Map templateRecommendation to a template ID
   const templateId = card.templateRecommendation
@@ -451,9 +454,9 @@ function mapServerCardToDesign(
       offerItems: [],
       photoUrl: photo?.url ?? "",
       reviewQuote:
-        card.selectedReview?.quote ?? "Professional, reliable service!",
+        selectedReview?.quote ?? "Professional, reliable service!",
       reviewerName:
-        card.selectedReview?.reviewerName ?? "A Happy Customer",
+        selectedReview?.reviewerName ?? "A Happy Customer",
       phoneNumber: brandKit.phone ?? "(555) 123-4567",
       urgencyText: URGENCY[purpose],
       riskReversal:
@@ -475,7 +478,7 @@ function mapServerCardToDesign(
     },
     headlineCandidates: card.headlines,
     offerReason: card.offer.reason,
-    reviewReason: card.selectedReview?.reason ?? "",
+    reviewReason: selectedReview?.reason ?? "",
     templateReason: card.templateReason,
   };
 }

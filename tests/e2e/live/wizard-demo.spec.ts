@@ -21,7 +21,18 @@ const DRAFT_URL_RE = /\/app\/send\/([0-9a-f-]{36})/;
 const PREVIEW_CARD_RE = /\/api\/campaign-drafts\/([0-9a-f-]{36})\/preview-card\/(\d+)/;
 // X-Render-Warnings values that MUST fail the demo protection check. A cut-off
 // or unreachable-photo warning means the user-visible postcard degraded.
-const BLOCKING_WARNINGS = ["CONTENT_CUTOFF", "PHOTO_UNREACHABLE", "LOGO_UNREACHABLE"];
+const BLOCKING_WARNINGS = [
+  "PHOTO_MISSING",
+  "PHOTO_UNREACHABLE",
+  "PHOTO_BLOCKED_BY_URL_GUARD",
+  "LOGO_MISSING",
+  "LOGO_UNREACHABLE",
+  "LOGO_BLOCKED_BY_URL_GUARD",
+  "QR_BLOCKED_BY_URL_GUARD",
+  "HEADLINE_LINE_TRUNCATED",
+  "CONTENT_CUTOFF",
+  "CONTENT_OVERLONG_REGENERATE",
+];
 
 test.describe("wizard demo flow — live stack", () => {
   test.beforeEach(async ({ page }) => {
@@ -30,7 +41,7 @@ test.describe("wizard demo flow — live stack", () => {
 
   test(
     "Step 3 renders real postcard previews for all 3 cards via preview-card endpoint",
-    async ({ page }, testInfo) => {
+    async ({ page, request }, testInfo) => {
       const previewResponses: {
         draftId: string;
         cardN: number;
@@ -112,6 +123,23 @@ test.describe("wizard demo flow — live stack", () => {
       await expect(page.getByText("Card 1: The Offer")).toBeVisible();
       await expect(page.getByText("Card 2: Social Proof")).toBeVisible();
       await expect(page.getByText("Card 3: Last Chance")).toBeVisible();
+
+      const draftRes = await request.get(`/api/campaign-drafts/${draftId}`);
+      expect(draftRes.ok(), `draft ${draftId} should be readable`).toBe(true);
+      const draft = await draftRes.json();
+      const card2Review =
+        draft.data?.design?.sequenceCards?.[1]?.resolvedContent?.reviewQuote ?? "";
+      expect(
+        card2Review,
+        "Social Proof card should use a real seeded review, not generator fallback copy",
+      ).not.toBe("Professional, reliable service!");
+      expect(
+        [
+          "Desert Diamond Air showed up on time",
+          "The maintenance visit was fast and professional",
+        ].some((text) => card2Review.includes(text)),
+        `Social Proof card review should come from seeded brand-kit reviews; got ${card2Review}`,
+      ).toBe(true);
 
       await page.screenshot({
         path: testInfo.outputPath("step3-card1-preview.png"),
