@@ -230,7 +230,7 @@ function commitTargeting() {
       serviceType: draftStore.draft?.goal?.serviceType ?? null,
       sequenceLength: seqLen,
       sequenceSpacingDays: draftStore.draft?.goal?.sequenceSpacingDays ?? 14,
-      areas: mapRef.value?.areas ?? [],
+      areas: allAreas.value,
       method: determineMethod(),
       filters: { ...filters.value },
       jobsUsed: selectedJobs.value.length > 0 ? selectedJobs.value : null,
