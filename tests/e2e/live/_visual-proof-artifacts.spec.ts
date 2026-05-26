@@ -33,9 +33,24 @@ test.describe("visual proof artifacts", () => {
     });
 
     await page.getByRole("button", { name: /Generate Proof/i }).click();
-    await expect(page.locator('img[alt^="Proof for card"]').nth(2)).toBeVisible({
-      timeout: 90_000,
-    });
+
+    const status = await Promise.race([
+      page
+        .getByTestId("proof-pdf-link-1")
+        .waitFor({ state: "visible", timeout: 180_000 })
+        .then(() => "done" as const),
+      page
+        .getByText(/Render failed:/)
+        .waitFor({ state: "visible", timeout: 180_000 })
+        .then(() => "failed" as const),
+    ]);
+    if (status === "failed") {
+      const message = await page.getByText(/Render failed:/).textContent();
+      throw new Error(message ?? "Render failed before proof PDFs were available.");
+    }
+
+    await expect(page.getByTestId("proof-pdf-link-2")).toBeVisible();
+    await expect(page.getByTestId("proof-pdf-link-3")).toBeVisible();
     await page.screenshot({
       path: path.join(OUT_DIR, "proof-panel.png"),
       fullPage: true,
