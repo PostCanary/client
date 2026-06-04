@@ -75,7 +75,7 @@ export const http = axios.create({
 let _csrfToken: string | null = null;
 const _CSRF_STATE_METHODS = new Set(["post", "put", "patch", "delete"]);
 
-async function ensureCsrfToken(): Promise<string> {
+export async function ensureCsrfToken(): Promise<string> {
   if (_csrfToken) return _csrfToken;
   // Use raw fetch (not axios) to avoid triggering this interceptor recursively
   try {

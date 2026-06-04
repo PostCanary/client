@@ -4,7 +4,7 @@ import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
 import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
-import { getRecommendedTemplateSet } from "@/data/templates";
+import { getTemplateSetsForGoal } from "@/data/templates";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
@@ -24,10 +24,36 @@ const { phase: renderPhase, progress: renderProgress, cards: renderedCards,
         error: renderError, start: startRender } = useRenderJob();
 const showProofPanel = ref(false);
 const proofImages = ref<string[]>([]);
+const proofRenderWarnings = ref<string[]>([]);
+const BLOCKING_PROOF_WARNINGS = [
+  "PHOTO_MISSING",
+  "PHOTO_UNREACHABLE",
+  "PHOTO_BLOCKED_BY_URL_GUARD",
+  "LOGO_MISSING",
+  "LOGO_UNREACHABLE",
+  "LOGO_BLOCKED_BY_URL_GUARD",
+  "QR_BLOCKED_BY_URL_GUARD",
+  "HEADLINE_LINE_TRUNCATED",
+  "CONTENT_OVERLONG_REGENERATE",
+];
+
+function invalidateProof() {
+  proofImages.value.forEach((url) => {
+    if (url) URL.revokeObjectURL(url);
+  });
+  proofImages.value = [];
+  proofRenderWarnings.value = [];
+  showProofPanel.value = false;
+}
 
 async function handleGenerateProof() {
   if (!draftStore.draft) return;
+  if (applyBrandKitReviewDefaults()) {
+    originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+    commitDesign();
+  }
   showProofPanel.value = true;
+  proofRenderWarnings.value = [];
   await draftStore.saveNow();
 
   // Fetch PNG previews for ALL cards using the same preview-card endpoint
@@ -44,6 +70,9 @@ async function handleGenerateProof() {
       const result = await previewCard(draftStore.draft.id, i);
       urls.push(URL.createObjectURL(result.blob));
       if (result.warnings.length > 0) {
+        proofRenderWarnings.value.push(
+          ...result.warnings.map((warning) => `Card ${i}: ${warning}`),
+        );
         console.warn(
           `[StepDesign] proof card ${i} render warnings:`,
           result.warnings,
@@ -103,6 +132,51 @@ const brandKitCredibility = computed(() => {
 let originalCards: CardDesign[] = [];
 
 const cardsReady = computed(() => cards.value.length > 0);
+const FALLBACK_REVIEW_QUOTES = new Set([
+  "Professional, reliable service!",
+  "Professional, reliable service",
+]);
+const FALLBACK_REVIEWER_NAMES = new Set(["A Happy Customer", ""]);
+
+function applyBrandKitReviewDefaults(): boolean {
+  const reviews = brandKit.value?.reviews ?? [];
+  if (reviews.length === 0 || cards.value.length === 0) return false;
+
+  let changed = false;
+  cards.value = cards.value.map((card, idx) => {
+    const overrideQuote = (card.overrides.reviewQuote ?? "").trim();
+    const overrideReviewer = (card.overrides.reviewerName ?? "").trim();
+    const hasCustomReviewOverride =
+      (overrideQuote !== "" && !FALLBACK_REVIEW_QUOTES.has(overrideQuote)) ||
+      (overrideReviewer !== "" && !FALLBACK_REVIEWER_NAMES.has(overrideReviewer));
+
+    if (hasCustomReviewOverride) {
+      return card;
+    }
+
+    const currentQuote = (card.resolvedContent.reviewQuote ?? "").trim();
+    const currentReviewer = (card.resolvedContent.reviewerName ?? "").trim();
+    const needsReview =
+      FALLBACK_REVIEW_QUOTES.has(currentQuote) ||
+      FALLBACK_REVIEWER_NAMES.has(currentReviewer);
+    if (!needsReview) return card;
+
+    const review = reviews[idx % reviews.length] ?? reviews[0];
+    if (!review?.quote) return card;
+
+    changed = true;
+    return {
+      ...card,
+      resolvedContent: {
+        ...card.resolvedContent,
+        reviewQuote: review.quote,
+        reviewerName: review.reviewerName || currentReviewer || "A Happy Customer",
+      },
+    };
+  });
+
+  return changed;
+}
 
 // S67 — Sequence thumbnails use the same server-rendered PNG as the main
 // preview (ONE RENDERING RULE, mems 429/430). Previously SequenceView
@@ -192,11 +266,17 @@ onMounted(() => {
     cards.value = [...draftStore.draft.design.sequenceCards];
     currentLayout.value = draftStore.draft.design.templateLayoutType;
   }
+  const appliedReviews = applyBrandKitReviewDefaults();
   originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+  if (appliedReviews) commitDesign();
   fetchAllThumbnails();
 });
 
-onBeforeUnmount(() => revokeThumbnailUrls());
+onBeforeUnmount(() => {
+  if (persistedPreviewRefreshTimer) clearTimeout(persistedPreviewRefreshTimer);
+  revokeThumbnailUrls();
+  invalidateProof();
+});
 
 // S70 — when the active card's main preview updates (edit or card
 // switch), refetch THAT card's thumbnail as its own blob. Previously
@@ -221,8 +301,10 @@ watch(
   },
 );
 
-async function generateNewCards() {
-  if (!brandKit.value) return;
+async function generateCardsForLayout(
+  layout: TemplateLayoutType,
+): Promise<CardDesign[] | null> {
+  if (!brandKit.value) return null;
   const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
   const breakdown = draftStore.draft?.targeting?.recipientBreakdown ?? {
     newProspects: 400,
@@ -230,65 +312,139 @@ async function generateNewCards() {
     pastCustomersIncluded: false,
   };
 
-  cards.value = await generateCards(
+  const generated = await generateCards(
     brandKit.value,
     goalType.value,
     seqLen,
     breakdown,
   );
+  const templateSet = getTemplateSetsForGoal(goalType.value).find(
+    (set) => set.layout === layout,
+  );
 
-  const templates = getRecommendedTemplateSet(goalType.value);
-  currentLayout.value = templates[0]?.layoutType ?? "full-bleed";
-  commitDesign();
+  return generated.map((card) => ({
+    ...card,
+    templateId:
+      templateSet?.templates.find((template) => template.cardPosition === card.cardPurpose)
+        ?.id ?? card.templateId,
+  }));
+}
+
+const PERSISTED_PREVIEW_REFRESH_MS = 650;
+let persistedPreviewRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let persistedPreviewRefreshSeq = 0;
+
+async function waitForDraftSaveIdle(timeoutMs = 10000) {
+  const started = Date.now();
+  while ((draftStore.saving || draftStore.isDirty) && Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
+function queuePersistedPreviewRefresh() {
+  const seq = ++persistedPreviewRefreshSeq;
+  if (persistedPreviewRefreshTimer) clearTimeout(persistedPreviewRefreshTimer);
+  persistedPreviewRefreshTimer = setTimeout(() => {
+    persistedPreviewRefreshTimer = null;
+    void (async () => {
+      await draftStore.saveNow();
+      await waitForDraftSaveIdle();
+      if (seq !== persistedPreviewRefreshSeq) return;
+      await refreshPreview();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await draftStore.saveNow();
+      await waitForDraftSaveIdle();
+      if (seq !== persistedPreviewRefreshSeq) return;
+      await refreshPreview();
+    })();
+  }, PERSISTED_PREVIEW_REFRESH_MS);
 }
 
 function updateCardField(field: string, value: string) {
-  if (!activeCard.value) return;
-  // Set as override
-  (activeCard.value.overrides as Record<string, string>)[field] = value;
-  // Update resolved content
-  (activeCard.value.resolvedContent as Record<string, any>)[field] = value;
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  const overrides = {
+    ...card.overrides,
+    [field]: value,
+  };
+  const resolvedContent = {
+    ...card.resolvedContent,
+    [field]: value,
+  };
   // When offerText changes, keep offerTeaser in sync so the front-of-card
   // badge doesn't show a stale teaser after the user edits the back offer.
   // (Fixes Codex Pass 2 HIGH finding — demo-visible contradiction.)
   if (field === "offerText") {
-    activeCard.value.resolvedContent.offerTeaser = deriveTeaser(
+    resolvedContent.offerTeaser = deriveTeaser(
       value,
       goalType.value,
     );
   }
+  replaceActiveCard({
+    ...card,
+    overrides,
+    resolvedContent,
+  });
   commitDesign();
+  queuePersistedPreviewRefresh();
 }
 
 function updatePhoto(url: string) {
-  if (!activeCard.value) return;
-  activeCard.value.overrides.photoUrl = url;
-  activeCard.value.resolvedContent.photoUrl = url;
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  replaceActiveCard({
+    ...card,
+    overrides: {
+      ...card.overrides,
+      photoUrl: url,
+    },
+    resolvedContent: {
+      ...card.resolvedContent,
+      photoUrl: url,
+    },
+  });
   commitDesign();
+  queuePersistedPreviewRefresh();
 }
 
-function selectTemplate(layout: TemplateLayoutType) {
+async function selectTemplate(layout: TemplateLayoutType) {
+  invalidateProof();
   currentLayout.value = layout;
-  // Regenerate cards with new template but keep overrides
   const overrides = cards.value.map((c) => ({ ...c.overrides }));
-  generateNewCards();
-  // Re-apply overrides
-  cards.value.forEach((card, i) => {
-    if (overrides[i]) {
-      Object.assign(card.overrides, overrides[i]);
-      Object.assign(card.resolvedContent, overrides[i]);
-    }
-  });
+  const generated = await generateCardsForLayout(layout);
+  if (generated) {
+    cards.value = generated.map((card, i) => {
+      const cardOverrides = overrides[i] ?? {};
+      return {
+        ...card,
+        overrides: { ...cardOverrides },
+        resolvedContent: {
+          ...card.resolvedContent,
+          ...cardOverrides,
+        },
+      };
+    });
+  }
   showTemplateBrowser.value = false;
   commitDesign();
+  queuePersistedPreviewRefresh();
 }
 
 function resetCard() {
   const orig = originalCards[activeCardIndex.value];
   if (orig) {
-    cards.value[activeCardIndex.value] = { ...(JSON.parse(JSON.stringify(orig)) as CardDesign), overrides: {} };
+    invalidateProof();
+    replaceActiveCard({ ...(JSON.parse(JSON.stringify(orig)) as CardDesign), overrides: {} });
     commitDesign();
+    queuePersistedPreviewRefresh();
   }
+}
+
+function replaceActiveCard(nextCard: CardDesign) {
+  const idx = activeCardIndex.value;
+  cards.value = cards.value.map((card, i) => (i === idx ? nextCard : card));
 }
 
 function commitDesign() {
@@ -309,7 +465,9 @@ watch(
     if (storeCards?.length && cards.value.length === 0) {
       cards.value = [...storeCards];
       currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
+      const appliedReviews = applyBrandKitReviewDefaults();
       originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+      if (appliedReviews) commitDesign();
     }
   },
 );
@@ -320,6 +478,10 @@ watch(
   (hydrated) => {
     if (hydrated && cards.value.length === 0) {
       draftStore.generateCardsForDraft();
+    } else if (hydrated && applyBrandKitReviewDefaults()) {
+      originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+      commitDesign();
+      queuePersistedPreviewRefresh();
     }
   },
 );
@@ -382,6 +544,7 @@ watch(
           </div>
           <img
             v-else-if="previewUrl"
+            :key="previewUrl"
             :src="previewUrl"
             alt="Postcard preview"
             class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
@@ -488,6 +651,13 @@ watch(
             class="text-sm text-[#47bfa9] underline"
           >Download PDF</a>
         </div>
+        <div
+          v-if="proofRenderWarnings.some((warning) => BLOCKING_PROOF_WARNINGS.some((code) => warning.includes(code)))"
+          class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+          data-testid="proof-blocking-warnings"
+        >
+          Proof has missing or blocked artwork. Regenerate after fixing the brand kit.
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="(imgUrl, idx) in proofImages"
@@ -500,6 +670,19 @@ watch(
               :alt="`Proof for card ${idx + 1}`"
               class="w-full"
             />
+            <div
+              v-if="renderPhase === 'done' && renderedCards[idx]?.downloadUrl"
+              class="border-t border-gray-100 px-3 py-2"
+            >
+              <a
+                :href="renderedCards[idx]?.downloadUrl"
+                target="_blank"
+                class="text-xs font-medium text-[#47bfa9] underline"
+                :data-testid="`proof-pdf-link-${idx + 1}`"
+              >
+                Open Card {{ idx + 1 }} PDF
+              </a>
+            </div>
           </div>
         </div>
       </div>

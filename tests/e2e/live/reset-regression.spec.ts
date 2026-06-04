@@ -42,11 +42,12 @@ async function grabImgSrcSignature(page: Page): Promise<string> {
     ) as HTMLImageElement | null;
     if (!img || !img.src) return "no-img";
     const response = await fetch(img.src);
-    const buf = new Uint8Array(await response.arrayBuffer());
-    const head = Array.from(buf.slice(0, 64))
+    const arrayBuffer = await response.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+    const hash = Array.from(new Uint8Array(digest))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    return `size:${buf.byteLength} head:${head}`;
+    return `size:${arrayBuffer.byteLength} sha256:${hash}`;
   });
 }
 
@@ -117,32 +118,30 @@ test.describe("reset regression — live stack", () => {
     setPhase("swapped");
     await options.nth(targetIndex).click();
     await waitForPreviewInPhase(previewResponses, "swapped", "expected preview-card 200 after photo swap");
-    await page.waitForTimeout(2000);
+    await expect
+      .poll(() => grabImgSrcSignature(page), {
+        timeout: 60_000,
+        message: "expected photo swap to change preview bytes",
+      })
+      .not.toBe(baselineSig);
     const swappedSig = await grabImgSrcSignature(page);
-
-    expect(
-      swappedSig,
-      `photo swap should change preview bytes. baseline=${baselineSig} swapped=${swappedSig}`,
-    ).not.toBe(baselineSig);
 
     // --- Reset ---
     setPhase("reset");
     await page.getByTestId("reset-to-original").click();
     await waitForPreviewInPhase(previewResponses, "reset", "expected preview-card 200 after reset");
-    await page.waitForTimeout(2000);
+    await expect
+      .poll(() => grabImgSrcSignature(page), {
+        timeout: 60_000,
+        message: "expected reset to restore baseline preview bytes",
+      })
+      .toBe(baselineSig);
     const resetSig = await grabImgSrcSignature(page);
 
     await testInfo.attach("reset-signatures.txt", {
       body: `baseline=${baselineSig}\nswapped=${swappedSig}\nreset=${resetSig}`,
       contentType: "text/plain",
     });
-
-    // With the shallow-clone bug, resetSig === swappedSig (originalCards was poisoned).
-    // With the fix, resetSig === baselineSig (deep clone preserved original state).
-    expect(
-      resetSig,
-      `Reset to Original should restore baseline bytes. baseline=${baselineSig} reset=${resetSig}`,
-    ).toBe(baselineSig);
 
     await page.screenshot({
       path: testInfo.outputPath("after-reset.png"),

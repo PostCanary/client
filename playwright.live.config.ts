@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+const liveBaseURL = process.env.E2E_LIVE_BASE_URL ?? "http://localhost:8080";
 
 /**
  * Playwright config for LIVE dev-stack tests.
@@ -28,7 +29,7 @@ export default defineConfig({
   timeout: 480_000,
   expect: { timeout: 30_000 },
   use: {
-    baseURL: "http://localhost:8080",
+    baseURL: liveBaseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
