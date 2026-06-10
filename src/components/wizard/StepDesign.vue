@@ -109,11 +109,42 @@ const requestedEditor = ref<{ editor: CardEditor; ts: number } | null>(null);
 function requestEditor(editor: CardEditor) {
   requestedEditor.value = { editor, ts: Date.now() };
 }
+
+// --- Hybrid live-edit overlay ----------------------------------------------
+// The server PNG stays the ONLY card imagery (ONE RENDERING RULE, S67 —
+// the Vue replica was rejected for looking different from the real render).
+// While the customer types, the edited text appears instantly as a clearly
+// transient overlay positioned by the zone geometry; the authoritative
+// render reconciles ~2s later and the overlay clears.
+const liveOverlay = ref<{ zone: "headline" | "offer"; text: string } | null>(null);
+const lastEditAt = ref(0);
+
+const liveOverlayZone = computed(() => {
+  if (!liveOverlay.value) return null;
+  return (
+    editZones.value.find((z) => z.editor === liveOverlay.value!.zone) ?? null
+  );
+});
+
+watch(activeCardIndex, () => {
+  liveOverlay.value = null;
+});
+// NOTE: the previewUrl reconciliation watch lives just below the
+// useCardPreview destructure (declaration order).
 const { previewUrl, loading: previewLoading, error: previewError, refresh: refreshPreview } = useCardPreview(
   draftIdRef,
   cardNumberRef,
   activeCard,
 );
+watch(previewUrl, () => {
+  // Hybrid overlay reconciliation: a fresh render arriving after the
+  // debounce window closed includes the latest text. (900ms = 600ms
+  // debounce + slack; a render that raced a newer keystroke keeps the
+  // overlay until its own follow-up render lands.)
+  if (liveOverlay.value && Date.now() - lastEditAt.value > 900) {
+    liveOverlay.value = null;
+  }
+});
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
 const brandKit = computed(() => brandKitStore.brandKit);
 // City is derived from brandKit.location which is "City, ST" — split on
@@ -377,6 +408,14 @@ function updateCardField(field: string, value: string) {
   const card = activeCard.value;
   if (!card) return;
   invalidateProof();
+  // Instant feedback while the authoritative render catches up.
+  if (field === "headline") {
+    liveOverlay.value = { zone: "headline", text: value };
+    lastEditAt.value = Date.now();
+  } else if (field === "offerText") {
+    liveOverlay.value = { zone: "offer", text: value };
+    lastEditAt.value = Date.now();
+  }
   const overrides = {
     ...card.overrides,
     [field]: value,
@@ -446,6 +485,7 @@ async function selectTemplate(layout: TemplateLayoutType) {
 }
 
 function resetCard() {
+  liveOverlay.value = null;
   const orig = originalCards[activeCardIndex.value];
   if (orig) {
     invalidateProof();
@@ -591,6 +631,35 @@ watch(
                 {{ zone.label }}
               </span>
             </button>
+            <!-- Hybrid live-edit overlay: instant text feedback in the edited
+                 zone while the authoritative server render catches up. The
+                 PNG stays the only card imagery (ONE RENDERING RULE). -->
+            <div
+              v-if="liveOverlay && liveOverlayZone"
+              :data-testid="`live-overlay-${liveOverlay.zone}`"
+              class="absolute pointer-events-none flex"
+              :class="liveOverlay.zone === 'offer' ? 'items-center justify-center' : 'items-start justify-start'"
+              :style="{
+                left: liveOverlayZone.left + '%',
+                top: liveOverlayZone.top + '%',
+                width: liveOverlayZone.width + '%',
+                height: liveOverlayZone.height + '%',
+                background: 'rgba(255,255,255,0.93)',
+              }"
+            >
+              <span
+                class="font-bold text-[#0b2d50] leading-tight break-words px-[6%] py-[5%]"
+                :class="liveOverlay.zone === 'headline' ? 'text-[1.6vw] min-[1400px]:text-xl' : 'text-[1.2vw] min-[1400px]:text-base text-center'"
+              >
+                {{ liveOverlay.text }}
+              </span>
+              <span
+                class="absolute bottom-1.5 right-1.5 text-[9px] font-medium bg-[#47bfa9] text-white px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+              >
+                <span class="inline-block w-2 h-2 border border-white border-t-transparent rounded-full animate-spin" />
+                Syncing…
+              </span>
+            </div>
           </div>
           <div v-else-if="previewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Preview unavailable.

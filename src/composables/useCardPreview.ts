@@ -7,7 +7,7 @@
 import { ref, watch, onBeforeUnmount, type Ref } from "vue";
 import { previewCard } from "@/api/renderJobs";
 
-const DEBOUNCE_MS = 1500;
+const DEBOUNCE_MS = 600;
 
 export function useCardPreview(
   draftId: Ref<string | undefined>,
