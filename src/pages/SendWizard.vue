@@ -56,6 +56,12 @@ onMounted(async () => {
     });
     // Hydrate brand kit with mock data so setup screen is skipped
     await brandKitStore.fetch();
+    if (!route.params.draftId && draftStore.draft?.id) {
+      await router.replace({
+        path: `/app/send/${draftStore.draft.id}`,
+        query: route.query,
+      });
+    }
     initializing.value = false;
     return;
   }
@@ -76,15 +82,6 @@ onMounted(async () => {
       await draftStore.resume(draftId);
     } else {
       await draftStore.startNew();
-      // Update URL with draft ID without adding history entry.
-      // Preserve query params (e.g. ?from=recommendation) so downstream
-      // steps can detect the entry-point signal.
-      if (draftStore.draft) {
-        router.replace({
-          path: `/app/send/${draftStore.draft.id}`,
-          query: route.query,
-        });
-      }
     }
     // Hydrate brand kit for design step
     if (!brandKitStore.hydrated) {
@@ -115,6 +112,17 @@ onMounted(async () => {
     });
     await brandKitStore.fetch();
   } finally {
+    // Single URL sync point: whichever path produced the draft (API or
+    // fallback), put the draft id in the URL before the wizard renders.
+    // Preserves query params (?templateId=…&goal=…, ?from=recommendation)
+    // and keeps refresh/deep-links resuming this draft instead of forking
+    // a new one.
+    if (!route.params.draftId && draftStore.draft?.id) {
+      await router.replace({
+        path: `/app/send/${draftStore.draft.id}`,
+        query: route.query,
+      });
+    }
     initializing.value = false;
   }
 });
