@@ -8,10 +8,25 @@ import type {
 } from "@/types/campaign";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { API_BASE } from "@/api/http";
+
+/**
+ * Brand-kit photos store relative /media/... URLs; the API host serves
+ * them. On same-origin deployments API_BASE is "" and this is a no-op; on
+ * cross-origin deployments (Vercel preview + Railway API) the browser
+ * would otherwise resolve them against the SPA host and 404 — which is
+ * why picker thumbnails showed alt text while the rendered card (whose
+ * URLs the server absolutizes) was fine.
+ */
+function mediaSrc(url: string): string {
+  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
+}
 
 const props = defineProps<{
   card: CardDesign;
   brandKit: BrandKit | null;
+  /** Click-to-edit: set by StepDesign when a card hotspot is clicked. */
+  requestedEditor?: { editor: "headline" | "offer" | "photo" | "review"; ts: number } | null;
 }>();
 
 const emit = defineEmits<{
@@ -28,6 +43,15 @@ const activeEditor = ref<EditorType>(null);
 function toggleEditor(editor: EditorType) {
   activeEditor.value = activeEditor.value === editor ? null : editor;
 }
+
+// Click-to-edit: open the editor the card hotspot asked for. The ts field
+// retriggers the watcher when the same zone is clicked twice.
+watch(
+  () => props.requestedEditor,
+  (req) => {
+    if (req?.editor) activeEditor.value = req.editor;
+  },
+);
 
 const editableHeadline = ref(props.card.resolvedContent.headline);
 const editableOffer = ref(props.card.resolvedContent.offerText);
@@ -331,7 +355,7 @@ async function saveNewReview() {
             :title="photo.alt"
             @click="applyPhoto(photo.url)"
           >
-            <img :src="photo.url" :alt="photo.alt" class="w-full h-full object-cover" />
+            <img :src="mediaSrc(photo.url)" :alt="photo.alt" class="w-full h-full object-cover" />
             <span
               v-if="photo.source === 'stock'"
               class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"

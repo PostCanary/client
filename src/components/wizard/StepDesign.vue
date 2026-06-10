@@ -11,6 +11,7 @@ import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { previewCard } from "@/api/renderJobs";
+import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -96,6 +97,18 @@ const currentLayout = ref<TemplateLayoutType>("full-bleed");
 const draftIdRef = computed(() => draftStore.draft?.id);
 const cardNumberRef = computed(() => activeCardIndex.value + 1);
 const activeCard = computed(() => cards.value[activeCardIndex.value]);
+
+// Click-to-edit: hotspot zones over the rendered preview, mapped from the
+// active card's template geometry. Clicking one opens the matching editor
+// in the EditPanel (requestedEditor is watched there; ts retriggers repeat
+// clicks on the same zone).
+const editZones = computed(() =>
+  editZonesFor(null, activeCard.value?.cardPurpose ?? null),
+);
+const requestedEditor = ref<{ editor: CardEditor; ts: number } | null>(null);
+function requestEditor(editor: CardEditor) {
+  requestedEditor.value = { editor, ts: Date.now() };
+}
 const { previewUrl, loading: previewLoading, error: previewError, refresh: refreshPreview } = useCardPreview(
   draftIdRef,
   cardNumberRef,
@@ -542,14 +555,43 @@ watch(
           <div v-else-if="previewLoading && !previewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <img
-            v-else-if="previewUrl"
-            :key="previewUrl"
-            :src="previewUrl"
-            alt="Postcard preview"
-            class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
-            :class="{ 'opacity-60': previewLoading }"
-          />
+          <div v-else-if="previewUrl" class="relative inline-block">
+            <img
+              :key="previewUrl"
+              :src="previewUrl"
+              alt="Postcard preview"
+              class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
+              :class="{ 'opacity-60': previewLoading }"
+            />
+            <!-- Click-to-edit hotspots: invisible until hover, mapped to the
+                 template's slot geometry. Clicking opens the matching editor
+                 in the Edit Card panel. -->
+            <button
+              v-for="zone in editZones"
+              :key="zone.editor"
+              type="button"
+              :data-testid="`card-zone-${zone.editor}`"
+              :title="zone.label"
+              :aria-label="zone.label"
+              class="absolute group cursor-pointer bg-transparent"
+              :style="{
+                left: zone.left + '%',
+                top: zone.top + '%',
+                width: zone.width + '%',
+                height: zone.height + '%',
+              }"
+              @click="requestEditor(zone.editor)"
+            >
+              <span
+                class="absolute inset-0 rounded border-2 border-transparent transition-colors group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+              />
+              <span
+                class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
+              >
+                {{ zone.label }}
+              </span>
+            </button>
+          </div>
           <div v-else-if="previewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Preview unavailable.
             <button class="ml-2 text-[#47bfa9] underline" @click="refreshPreview">Retry</button>
@@ -565,6 +607,7 @@ watch(
         v-if="activeCard"
         :card="activeCard"
         :brand-kit="brandKit"
+        :requested-editor="requestedEditor"
         @update-field="updateCardField"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
