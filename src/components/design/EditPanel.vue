@@ -7,6 +7,7 @@ import type {
   BrandKitReview,
 } from "@/types/campaign";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
+import { useBrandKitStore } from "@/stores/useBrandKitStore";
 
 const props = defineProps<{
   card: CardDesign;
@@ -96,13 +97,41 @@ function applyPhoto(url: string) {
   emit("update-photo", url);
 }
 
+// --- Photo upload (designer-side; Phase 0.2a) ------------------------------
+const brandKitStore = useBrandKitStore();
+const photoInput = ref<HTMLInputElement | null>(null);
+const uploadingPhoto = ref(false);
+const photoUploadError = ref<string | null>(null);
+
+function pickPhotoFile() {
+  photoInput.value?.click();
+}
+
+async function onPhotoFilePicked(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  photoUploadError.value = null;
+  uploadingPhoto.value = true;
+  try {
+    const url = await brandKitStore.uploadPhoto(file);
+    if (url) {
+      // Select the fresh upload for this card right away.
+      applyPhoto(url);
+    } else {
+      photoUploadError.value =
+        brandKitStore.error || "Upload failed — try a JPG, PNG, or WebP.";
+    }
+  } finally {
+    uploadingPhoto.value = false;
+  }
+}
+
 // --- Review picker --------------------------------------------------------
 const pickerReviews = computed<BrandKitReview[]>(
   () => props.brandKit?.reviews ?? [],
 );
-
-const reviewsEmptyCopy =
-  "Auto-pulled reviews coming soon — for now, add reviews manually in your brand kit.";
 
 const currentReviewQuote = computed(
   () => props.card.resolvedContent.reviewQuote ?? "",
@@ -111,6 +140,44 @@ const currentReviewQuote = computed(
 function applyReview(review: BrandKitReview) {
   emit("update-field", "reviewQuote", review.quote);
   emit("update-field", "reviewerName", review.reviewerName);
+}
+
+// --- Review add (designer-side; Phase 0.2b) --------------------------------
+const addingReview = ref(false);
+const newReviewText = ref("");
+const newReviewName = ref("");
+const newReviewRating = ref(5);
+const savingReview = ref(false);
+const reviewAddError = ref<string | null>(null);
+
+async function saveNewReview() {
+  const text = newReviewText.value.trim();
+  if (!text) return;
+  reviewAddError.value = null;
+  savingReview.value = true;
+  const countBefore = pickerReviews.value.length;
+  try {
+    await brandKitStore.addReview(
+      text,
+      newReviewName.value.trim(),
+      newReviewRating.value,
+    );
+    if (brandKitStore.error) {
+      reviewAddError.value = brandKitStore.error;
+      return;
+    }
+    // Apply the just-added review to the card and reset the form.
+    const added =
+      pickerReviews.value[countBefore] ??
+      pickerReviews.value[pickerReviews.value.length - 1];
+    if (added) applyReview(added);
+    newReviewText.value = "";
+    newReviewName.value = "";
+    newReviewRating.value = 5;
+    addingReview.value = false;
+  } finally {
+    savingReview.value = false;
+  }
 }
 </script>
 
@@ -170,9 +237,29 @@ function applyReview(review: BrandKitReview) {
       >
         📷 Change Photo
       </button>
-      <div v-if="activeEditor === 'photo'" class="px-3 pb-3">
-        <div v-if="pickerPhotos.length === 0" class="text-xs text-gray-400 py-2">
-          No photos available. Add brand photos in onboarding.
+      <div v-if="activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
+        <input
+          ref="photoInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+          class="hidden"
+          data-testid="photo-upload-input"
+          @change="onPhotoFilePicked"
+        />
+        <button
+          type="button"
+          data-testid="photo-upload-button"
+          class="w-full text-center px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors disabled:opacity-60"
+          :disabled="uploadingPhoto"
+          @click="pickPhotoFile"
+        >
+          {{ uploadingPhoto ? "Uploading…" : "⬆️ Upload a photo (JPG, PNG, WebP)" }}
+        </button>
+        <div v-if="photoUploadError" class="text-[11px] text-red-500">
+          {{ photoUploadError }}
+        </div>
+        <div v-if="pickerPhotos.length === 0" class="text-xs text-gray-400 py-1">
+          No photos yet — upload one above, or add brand photos in onboarding.
         </div>
         <div v-else class="grid grid-cols-3 gap-2">
           <button
@@ -204,11 +291,11 @@ function applyReview(review: BrandKitReview) {
       >
         ⭐ Change Review
       </button>
-      <div v-if="activeEditor === 'review'" class="px-3 pb-3">
-        <div v-if="pickerReviews.length === 0" class="text-xs text-gray-400 py-2">
-          {{ reviewsEmptyCopy }}
+      <div v-if="activeEditor === 'review'" class="px-3 pb-3 space-y-2">
+        <div v-if="pickerReviews.length === 0 && !addingReview" class="text-xs text-gray-400 py-1">
+          No reviews yet — add one below.
         </div>
-        <div v-else class="space-y-2">
+        <div v-if="pickerReviews.length > 0" class="space-y-2">
           <button
             v-for="(review, i) in pickerReviews"
             :key="i"
@@ -224,6 +311,64 @@ function applyReview(review: BrandKitReview) {
             </div>
             <div class="text-gray-600 line-clamp-2">"{{ review.quote }}"</div>
           </button>
+        </div>
+
+        <button
+          v-if="!addingReview"
+          type="button"
+          data-testid="review-add-button"
+          class="w-full text-center px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="addingReview = true"
+        >
+          ＋ Add a customer review
+        </button>
+        <div v-else class="space-y-2 border border-gray-200 rounded-lg p-2">
+          <textarea
+            v-model="newReviewText"
+            data-testid="review-add-text"
+            maxlength="500"
+            rows="3"
+            placeholder="Paste the customer's review…"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs resize-none"
+          />
+          <input
+            v-model="newReviewName"
+            data-testid="review-add-name"
+            type="text"
+            maxlength="60"
+            placeholder="Customer name (e.g. Maria S.)"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+          />
+          <select
+            v-model.number="newReviewRating"
+            data-testid="review-add-rating"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+          >
+            <option v-for="n in [5, 4, 3, 2, 1]" :key="n" :value="n">
+              {{ "★".repeat(n) }} ({{ n }}/5)
+            </option>
+          </select>
+          <div v-if="reviewAddError" class="text-[11px] text-red-500">
+            {{ reviewAddError }}
+          </div>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              data-testid="review-add-save"
+              class="flex-1 px-3 py-1.5 rounded-lg bg-[#47bfa9] text-white text-xs font-medium hover:bg-[#3aa893] transition-colors disabled:opacity-60"
+              :disabled="savingReview || !newReviewText.trim()"
+              @click="saveNewReview"
+            >
+              {{ savingReview ? "Saving…" : "Save review" }}
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:border-gray-300"
+              @click="addingReview = false; reviewAddError = null"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
 

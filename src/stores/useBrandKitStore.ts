@@ -8,6 +8,7 @@ import {
   triggerScrape,
   addManualReview,
   removeReview as apiRemoveReview,
+  uploadBrandPhoto,
 } from "@/api/brandKit";
 import { useAuthStore } from "@/stores/auth";
 
@@ -180,6 +181,40 @@ export const useBrandKitStore = defineStore("brandKit", {
     },
 
     // ----- Manual Review Management -----
+
+    async uploadPhoto(file: File): Promise<string | null> {
+      // Returns the new photo's URL on success (so the designer can select
+      // it immediately), null on failure (this.error is set).
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        // Mock mode: add a local object URL
+        const url = URL.createObjectURL(file);
+        const photos = [...(this.brandKit?.photos ?? [])];
+        photos.push({
+          url,
+          alt: file.name,
+          qualityScore: 100,
+          source: "upload",
+          printReady: true,
+        } as any);
+        this.brandKit = { ...this.brandKit, photos } as any;
+        return url;
+      }
+      this.error = null;
+      try {
+        const before = new Set(
+          (this.brandKit?.photos ?? []).map((p) => p.url),
+        );
+        this.brandKit = await uploadBrandPhoto(file);
+        const added = (this.brandKit?.photos ?? []).find(
+          (p) => !before.has(p.url),
+        );
+        return added?.url ?? null;
+      } catch (e: any) {
+        this.error =
+          e?.data?.error || e?.message || "Failed to upload photo";
+        return null;
+      }
+    },
 
     async addReview(reviewText: string, reviewerName: string, rating: number) {
       if (import.meta.env.VITE_SKIP_AUTH === "true") {
