@@ -7,7 +7,11 @@ import type {
   CardPurpose,
   RecipientBreakdown,
 } from "@/types/campaign";
-import { getRecommendedTemplateSet, ALL_TEMPLATES } from "@/data/templates";
+import {
+  getRecommendedTemplateSet,
+  ALL_TEMPLATES,
+  renderTemplateIdForTemplate,
+} from "@/data/templates";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { generateContent } from "@/api/brandKit";
 import type { GeneratedCardContent } from "@/api/brandKit";
@@ -339,6 +343,7 @@ function generateCardsLocal(
       cardNumber: i + 1,
       cardPurpose: purpose,
       templateId: template.id,
+      renderTemplateId: renderTemplateIdForTemplate(template.id),
       previewImageUrl: "",
       overrides: {},
       resolvedContent: {
@@ -438,6 +443,7 @@ function mapServerCardToDesign(
     cardNumber: index + 1,
     cardPurpose: purpose,
     templateId,
+    renderTemplateId: renderTemplateIdForTemplate(templateId),
     previewImageUrl: "",
     overrides: {},
     resolvedContent: {
