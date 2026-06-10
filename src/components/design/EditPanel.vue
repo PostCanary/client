@@ -19,6 +19,7 @@ const emit = defineEmits<{
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
   (e: "reset"): void;
+  (e: "info-saved"): void;
 }>();
 
 type EditorType = "headline" | "offer" | "review" | "photo" | null;
@@ -142,6 +143,33 @@ function applyReview(review: BrandKitReview) {
   emit("update-field", "reviewerName", review.reviewerName);
 }
 
+// --- Business info completion (skipped-onboarding rescue) ------------------
+// The card PRINTS the phone number and a QR code derived from phone/website.
+// A brand kit fresh out of a skipped onboarding has neither; instead of an
+// unexplained "Preview unavailable", collect it right here. Saving goes
+// through the normal brand-kit update path, which regenerates the QR.
+const missingPhone = computed(() => !(props.brandKit?.phone ?? "").trim());
+const infoPhone = ref("");
+const savingInfo = ref(false);
+const infoError = ref<string | null>(null);
+
+async function saveBusinessInfo() {
+  const phone = infoPhone.value.trim();
+  if (!phone) return;
+  infoError.value = null;
+  savingInfo.value = true;
+  try {
+    await brandKitStore.update({ phone });
+    if (brandKitStore.error) {
+      infoError.value = brandKitStore.error;
+      return;
+    }
+    emit("info-saved");
+  } finally {
+    savingInfo.value = false;
+  }
+}
+
 // --- Review add (designer-side; Phase 0.2b) --------------------------------
 const addingReview = ref(false);
 const newReviewText = ref("");
@@ -184,6 +212,36 @@ async function saveNewReview() {
 <template>
   <div class="w-80 border-l border-gray-200 p-4 overflow-y-auto bg-white">
     <h3 class="text-sm font-semibold text-[#0b2d50] mb-4">Edit Card</h3>
+
+    <!-- Business-info completion: the phone prints on the card; collect it
+         here when onboarding was skipped instead of failing the preview. -->
+    <div
+      v-if="missingPhone"
+      data-testid="business-info-prompt"
+      class="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 space-y-2"
+    >
+      <div class="text-xs font-medium text-amber-800">
+        Your phone number appears on the postcard — add it to finish your design.
+      </div>
+      <input
+        v-model="infoPhone"
+        data-testid="business-info-phone"
+        type="tel"
+        maxlength="20"
+        placeholder="(555) 555-0123"
+        class="w-full border border-amber-200 rounded-lg px-2 py-1.5 text-xs bg-white"
+      />
+      <div v-if="infoError" class="text-[11px] text-red-500">{{ infoError }}</div>
+      <button
+        type="button"
+        data-testid="business-info-save"
+        class="w-full px-3 py-1.5 rounded-lg bg-[#47bfa9] text-white text-xs font-medium hover:bg-[#3aa893] transition-colors disabled:opacity-60"
+        :disabled="savingInfo || !infoPhone.trim()"
+        @click="saveBusinessInfo"
+      >
+        {{ savingInfo ? "Saving…" : "Save & update preview" }}
+      </button>
+    </div>
 
     <div class="space-y-2">
       <!-- Edit Headline -->
