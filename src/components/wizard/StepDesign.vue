@@ -4,7 +4,7 @@ import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
 import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
-import { getTemplateSetsForGoal } from "@/data/templates";
+import { getTemplateSetsForGoal, renderTemplateIdForLayout } from "@/data/templates";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
@@ -103,7 +103,10 @@ const activeCard = computed(() => cards.value[activeCardIndex.value]);
 // in the EditPanel (requestedEditor is watched there; ts retriggers repeat
 // clicks on the same zone).
 const editZones = computed(() =>
-  editZonesFor(null, activeCard.value?.cardPurpose ?? null),
+  editZonesFor(
+    activeCard.value?.renderTemplateId ?? null,
+    activeCard.value?.cardPurpose ?? null,
+  ),
 );
 const requestedEditor = ref<{ editor: CardEditor; ts: number } | null>(null);
 function requestEditor(editor: CardEditor) {
@@ -366,12 +369,17 @@ async function generateCardsForLayout(
     (set) => set.layout === layout,
   );
 
-  return generated.map((card) => ({
-    ...card,
-    templateId:
+  return generated.map((card) => {
+    const templateId =
       templateSet?.templates.find((template) => template.cardPosition === card.cardPurpose)
-        ?.id ?? card.templateId,
-  }));
+        ?.id ?? card.templateId;
+    return {
+      ...card,
+      templateId,
+      renderTemplateId:
+        renderTemplateIdForLayout(layout) ?? card.renderTemplateId,
+    };
+  });
 }
 
 const PERSISTED_PREVIEW_REFRESH_MS = 650;
@@ -607,8 +615,8 @@ watch(
                  template's slot geometry. Clicking opens the matching editor
                  in the Edit Card panel. -->
             <button
-              v-for="zone in editZones"
-              :key="zone.editor"
+              v-for="(zone, zoneIdx) in editZones"
+              :key="`${zone.editor}-${zoneIdx}`"
               type="button"
               :data-testid="`card-zone-${zone.editor}`"
               :title="zone.label"

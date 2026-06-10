@@ -71,17 +71,51 @@ const LAYOUTS: {
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
 
-// D-02 (Phase 2, 2026-04-09): Only the Full-Bleed Photo layout is rebuilt
-// to Draplin standard for the 2026-04-20 demo. The other 5 layouts
-// (side-split, photo-top, bold-graphic, before-after, review-forward)
-// stay in the file so PostcardFront.vue's conditional chain still compiles
-// and the dev route layout selector still works — but they're filtered
-// out of the customer-facing template browser so demo viewers can't
-// accidentally pick an unfinished layout.
-//
-// Remove this constant (and revert the filter in getTemplateSetsForGoal)
-// as each additional layout gets rebuilt to Draplin standard post-demo.
-export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = ["full-bleed"];
+// D-02 (Phase 2, 2026-04-09): layouts are surfaced to customers only once
+// their render-worker template ships. The 4-layout set (2026-06-10) covers
+// full-bleed, side-split, bold-graphic, and review-forward; photo-top and
+// before-after stay hidden until their worker templates are built.
+export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
+  "full-bleed",
+  "side-split",
+  "bold-graphic",
+  "review-forward",
+];
+
+// Worker render template per layout — keys of the render worker's
+// TEMPLATE_REGISTRY (render_worker/services/postcard_renderer.py) and the
+// server's KNOWN_RENDER_TEMPLATE_IDS. Layouts without an entry render with
+// the server-side default (hac-1000).
+export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
+  Record<TemplateLayoutType, string>
+> = {
+  "full-bleed": "hac-1000-front-v1",
+  "side-split": "side-split-front-v1",
+  "bold-graphic": "bold-graphic-front-v1",
+  "review-forward": "review-forward-front-v1",
+};
+
+export function renderTemplateIdForLayout(
+  layout: TemplateLayoutType | null | undefined,
+): string | undefined {
+  return layout ? LAYOUT_RENDER_TEMPLATE_IDS[layout] : undefined;
+}
+
+/**
+ * Resolve the worker render template for a client template id (library id
+ * like "hvac-hac-1000-full-bleed-offer-v1" or layout id like
+ * "side-split-offer"). Library templates carry an explicit
+ * renderTemplateId; layout templates map through their layoutType.
+ */
+export function renderTemplateIdForTemplate(
+  templateId: string | null | undefined,
+): string | undefined {
+  if (!templateId) return undefined;
+  const library = DESIGN_LIBRARY_TEMPLATES.find((t) => t.id === templateId);
+  if (library) return library.renderTemplateId;
+  const layout = ALL_TEMPLATES.find((t) => t.id === templateId)?.layoutType;
+  return renderTemplateIdForLayout(layout);
+}
 
 // 18 templates: 6 layouts × 3 card positions
 export const ALL_TEMPLATES: TemplateDefinition[] = LAYOUTS.flatMap((layout) =>

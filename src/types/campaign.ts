@@ -260,6 +260,11 @@ export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
   templateId: string
+  // Worker render template (e.g. "side-split-front-v1"). Persisted on the
+  // card so the server's resolve_render_template_id picks the right layout.
+  // Optional for drafts saved before the 4-layout set; the server falls
+  // back to the default layout when absent.
+  renderTemplateId?: string
   previewImageUrl: string              // generated preview for Step 4
   overrides: {                         // only what customer CHANGED from auto-generated
     headline?: string

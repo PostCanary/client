@@ -53,18 +53,44 @@ describe("design library templates", () => {
     expect(templates).toEqual(visibleDesignLibraryTemplates);
   });
 
-  it("uses the launch set for generated recommendations while only full-bleed is approved", () => {
-    const targetAreaTemplates = getRecommendedTemplateSet("target_area");
-    const seasonalTemplates = getRecommendedTemplateSet("seasonal_tuneup");
+  it("recommends each goal's mapped layout now that the 4-layout set shipped", () => {
+    // GOAL_TEMPLATE_MAP routes these goals to the new worker-backed layouts.
+    expect(
+      getRecommendedTemplateSet("target_area").map((template) => template.id),
+    ).toEqual([
+      "bold-graphic-offer",
+      "bold-graphic-proof",
+      "bold-graphic-last_chance",
+    ]);
+    expect(
+      getRecommendedTemplateSet("seasonal_tuneup").map((template) => template.id),
+    ).toEqual([
+      "side-split-offer",
+      "side-split-proof",
+      "side-split-last_chance",
+    ]);
+    expect(
+      getRecommendedTemplateSet("win_back").map((template) => template.id),
+    ).toEqual([
+      "review-forward-offer",
+      "review-forward-proof",
+      "review-forward-last_chance",
+    ]);
+    // Goals mapped to full-bleed keep getting the curated library set.
+    expect(
+      getRecommendedTemplateSet("neighbor_marketing").map((template) => template.id),
+    ).toEqual(visibleDesignLibraryTemplates.map((template) => template.id));
 
-    expect(targetAreaTemplates.map((template) => template.id)).toEqual(
-      visibleDesignLibraryTemplates.map((template) => template.id),
-    );
-    expect(seasonalTemplates.map((template) => template.id)).toEqual(
-      visibleDesignLibraryTemplates.map((template) => template.id),
-    );
-    expect(getTemplateSetsForGoal("target_area")[0]?.recommended).toBe(true);
-    expect(getTemplateSetsForGoal("seasonal_tuneup")[0]?.recommended).toBe(true);
+    const targetAreaSets = getTemplateSetsForGoal("target_area");
+    expect(targetAreaSets.map((set) => set.layout)).toEqual([
+      "full-bleed",
+      "side-split",
+      "bold-graphic",
+      "review-forward",
+    ]);
+    expect(
+      targetAreaSets.find((set) => set.recommended)?.layout,
+    ).toBe("bold-graphic");
   });
 
   it("looks up only visible design library templates by id", () => {

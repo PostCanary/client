@@ -7,6 +7,7 @@ import type {
   BrandKitReview,
 } from "@/types/campaign";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
+import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { API_BASE } from "@/api/http";
 
@@ -39,6 +40,14 @@ const emit = defineEmits<{
 
 type EditorType = "headline" | "offer" | "review" | "photo" | null;
 const activeEditor = ref<EditorType>(null);
+
+// Photo-free layouts (bold-graphic, review-forward) have no photo slot —
+// the zone map is the single source of truth for which surfaces exist.
+const layoutUsesPhoto = computed(() =>
+  editZonesFor(props.card.renderTemplateId ?? null, props.card.cardPurpose).some(
+    (z) => z.editor === "photo",
+  ),
+);
 
 function toggleEditor(editor: EditorType) {
   activeEditor.value = activeEditor.value === editor ? null : editor;
@@ -310,8 +319,10 @@ async function saveNewReview() {
         </div>
       </div>
 
-      <!-- Change Photo -->
+      <!-- Change Photo (hidden on layouts with no photo slot —
+           bold-graphic / review-forward) -->
       <button
+        v-if="layoutUsesPhoto"
         data-testid="edit-photo-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'photo' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -319,7 +330,7 @@ async function saveNewReview() {
       >
         📷 Change Photo
       </button>
-      <div v-if="activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
+      <div v-if="layoutUsesPhoto && activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
         <input
           ref="photoInput"
           type="file"
