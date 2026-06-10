@@ -569,6 +569,7 @@ watch(
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
         @reset="resetCard"
+        @info-saved="refreshPreview"
       />
     </div>
 
