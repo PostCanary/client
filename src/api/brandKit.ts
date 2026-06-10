@@ -1,5 +1,5 @@
 // src/api/brandKit.ts
-import { get, putJson, postJson, del_ } from "@/api/http";
+import { get, post, putJson, postJson, del_ } from "@/api/http";
 import type { BrandKit } from "@/types/campaign";
 
 interface BrandKitResponse {
@@ -120,5 +120,24 @@ export async function addManualReview(
 
 export async function removeReview(index: number): Promise<BrandKit> {
   const res = await del_<BrandKitResponse>(`/api/brand-kit/reviews/${index}`);
+  return toBrandKit(res);
+}
+
+/**
+ * Designer "Change Photo" upload path. Multipart field name: photo.
+ * Server validates type/size/decodability and stores under the org's
+ * media directory; the new photo lands in brandKit.photos.
+ */
+export async function uploadBrandPhoto(file: File): Promise<BrandKit> {
+  const fd = new FormData();
+  fd.append("photo", file);
+  const res = await post<BrandKitResponse>("/api/brand-kit/photos", fd);
+  return toBrandKit(res.data);
+}
+
+export async function removeBrandPhoto(url: string): Promise<BrandKit> {
+  const res = await del_<BrandKitResponse>("/api/brand-kit/photos", {
+    data: { url },
+  });
   return toBrandKit(res);
 }
