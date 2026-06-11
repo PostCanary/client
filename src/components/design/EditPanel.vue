@@ -5,7 +5,9 @@ import type {
   BrandKit,
   BrandKitPhoto,
   BrandKitReview,
+  HeadlineLines,
 } from "@/types/campaign";
+import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -32,6 +34,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update-field", field: string, value: string): void;
+  (e: "update-headline-lines", lines: HeadlineLines): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
   (e: "reset"): void;
@@ -62,8 +65,30 @@ watch(
   },
 );
 
-const editableHeadline = ref(props.card.resolvedContent.headline);
+// Line-level editing (S72): the headline editor exposes the card's five
+// text slots directly — what you click is what you edit, empty slots stay
+// empty on the print (no template filler). Legacy cards that predate
+// headlineLines get their slots derived once from the joined headline.
+function linesForCard(): HeadlineLines {
+  const stored = props.card.resolvedContent.headlineLines;
+  if (hasAnyLine(stored)) return { ...(stored as HeadlineLines) };
+  return splitHeadline(props.card.resolvedContent.headline);
+}
+
+const editableLines = ref<HeadlineLines>(linesForCard());
 const editableOffer = ref(props.card.resolvedContent.offerText);
+
+const HEADLINE_LINE_FIELDS: {
+  key: keyof HeadlineLines;
+  label: string;
+  max: number;
+}[] = [
+  { key: "red1", label: "Top line", max: 26 },
+  { key: "red2", label: "Top line 2", max: 26 },
+  { key: "bridge", label: "Connector (small text)", max: 32 },
+  { key: "blue1", label: "Main line", max: 24 },
+  { key: "blue2", label: "Main line 2", max: 24 },
+];
 
 // Re-sync inline editor buffers when the active card changes OR when
 // the server-derived resolvedContent for the active card is replaced
@@ -82,16 +107,17 @@ watch(
   () => [
     props.card.cardNumber,
     props.card.resolvedContent.headline,
+    JSON.stringify(props.card.resolvedContent.headlineLines ?? null),
     props.card.resolvedContent.offerText,
   ],
   () => {
-    editableHeadline.value = props.card.resolvedContent.headline;
+    editableLines.value = linesForCard();
     editableOffer.value = props.card.resolvedContent.offerText;
   },
 );
 
-function applyHeadline() {
-  emit("update-field", "headline", editableHeadline.value);
+function applyLines() {
+  emit("update-headline-lines", { ...editableLines.value });
 }
 
 function applyOffer() {
@@ -285,16 +311,23 @@ async function saveNewReview() {
       >
         ✏️ Edit Headline
       </button>
-      <div v-if="activeEditor === 'headline'" class="px-3 pb-3">
-        <input
-          v-model="editableHeadline"
-          type="text"
-          maxlength="50"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          @input="applyHeadline"
-        />
-        <div class="text-[10px] text-gray-400 mt-1 text-right">
-          {{ editableHeadline.length }}/50
+      <div v-if="activeEditor === 'headline'" class="px-3 pb-3 space-y-2">
+        <p class="text-[11px] text-gray-500">
+          Each line below is one line on the card. Leave a line blank to
+          remove it from the card.
+        </p>
+        <div v-for="field in HEADLINE_LINE_FIELDS" :key="field.key">
+          <label class="text-[10px] uppercase tracking-wide text-gray-400">
+            {{ field.label }}
+          </label>
+          <input
+            v-model="editableLines[field.key]"
+            type="text"
+            :maxlength="field.max"
+            :data-testid="`headline-line-${field.key}`"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyLines"
+          />
         </div>
       </div>
 

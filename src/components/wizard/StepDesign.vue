@@ -2,7 +2,13 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import type { CardDesign, DesignSelection, TemplateLayoutType } from "@/types/campaign";
+import type {
+  CardDesign,
+  DesignSelection,
+  HeadlineLines,
+  TemplateLayoutType,
+} from "@/types/campaign";
+import { joinHeadlineLines, splitHeadline } from "@/utils/headlineSplit";
 import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
 import { getTemplateSetsForGoal, renderTemplateIdForLayout } from "@/data/templates";
 import SequenceView from "@/components/design/SequenceView.vue";
@@ -412,6 +418,30 @@ function queuePersistedPreviewRefresh() {
   }, PERSISTED_PREVIEW_REFRESH_MS);
 }
 
+function updateHeadlineLines(lines: HeadlineLines) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  const joined = joinHeadlineLines(lines);
+  liveOverlay.value = { zone: "headline", text: joined };
+  lastEditAt.value = Date.now();
+  replaceActiveCard({
+    ...card,
+    overrides: {
+      ...card.overrides,
+      headline: joined,
+      headlineLines: { ...lines },
+    },
+    resolvedContent: {
+      ...card.resolvedContent,
+      headline: joined,
+      headlineLines: { ...lines },
+    },
+  });
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
 function updateCardField(field: string, value: string) {
   const card = activeCard.value;
   if (!card) return;
@@ -424,14 +454,21 @@ function updateCardField(field: string, value: string) {
     liveOverlay.value = { zone: "offer", text: value };
     lastEditAt.value = Date.now();
   }
-  const overrides = {
+  const overrides: CardDesign["overrides"] = {
     ...card.overrides,
     [field]: value,
   };
-  const resolvedContent = {
+  const resolvedContent: CardDesign["resolvedContent"] = {
     ...card.resolvedContent,
     [field]: value,
   };
+  // A wholesale headline change (e.g. picking an AI candidate) re-seeds
+  // the per-line slots so the line editor and the print stay in sync.
+  if (field === "headline") {
+    const seeded = splitHeadline(value);
+    overrides.headlineLines = seeded;
+    resolvedContent.headlineLines = seeded;
+  }
   // When offerText changes, keep offerTeaser in sync so the front-of-card
   // badge doesn't show a stale teaser after the user edits the back offer.
   // (Fixes Codex Pass 2 HIGH finding — demo-visible contradiction.)
@@ -686,6 +723,7 @@ watch(
         :brand-kit="brandKit"
         :requested-editor="requestedEditor"
         @update-field="updateCardField"
+        @update-headline-lines="updateHeadlineLines"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
         @reset="resetCard"

@@ -96,9 +96,9 @@ test.describe("headline edit — live stack", () => {
     // that came AFTER the edit.
     editCommitted = true;
     await page.getByRole("button", { name: "✏️ Edit Headline" }).click();
-    const headlineInput = page
-      .locator('input[type="text"][maxlength="50"]')
-      .first();
+    // S72 line-level editing: the headline editor is now five per-line
+    // inputs; the first accent line drives this test.
+    const headlineInput = page.getByTestId("headline-line-red1");
     await expect(headlineInput).toBeVisible();
     await headlineInput.fill(UNIQUE_HEADLINE);
 

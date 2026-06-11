@@ -86,9 +86,8 @@ test.describe("reset regression — editor buffers", () => {
 
     // Open Edit Headline and capture the baseline (original) value.
     await page.getByRole("button", { name: /Edit Headline/i }).click();
-    const input = page.locator(
-      'input[type="text"][maxlength="50"]',
-    );
+    // S72 line-level editing: target the first accent-line input.
+    const input = page.getByTestId("headline-line-red1");
     await expect(input).toBeVisible();
     const originalHeadline = (await input.inputValue()).trim();
     expect(
