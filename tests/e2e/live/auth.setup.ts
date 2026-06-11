@@ -131,6 +131,16 @@ setup("authenticate against live dev stack", async ({ request, baseURL }) => {
   });
   expect(brandKitRes.ok(), `api/brand-kit put returned ${brandKitRes.status()}`).toBeTruthy();
 
+  // Seed demo reviews ONLY when absent — this setup runs before every live
+  // suite, and unconditional posts duplicated the same two reviews dozens
+  // of times in drake's brand kit (S73 cleanup pass removed 69 copies).
+  const existingBk = await request
+    .get("/api/brand-kit")
+    .then((r) => r.json())
+    .catch(() => ({}));
+  const existingQuotes = new Set(
+    (existingBk?.data?.reviews ?? []).map((r: any) => r.quote ?? ""),
+  );
   for (const review of [
     {
       review_text:
@@ -145,6 +155,7 @@ setup("authenticate against live dev stack", async ({ request, baseURL }) => {
       rating: 5,
     },
   ]) {
+    if (existingQuotes.has(review.review_text)) continue;
     const reviewRes = await request.post("/api/brand-kit/reviews", {
       data: review,
       headers: {
