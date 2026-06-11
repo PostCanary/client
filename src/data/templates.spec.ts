@@ -85,6 +85,7 @@ describe("design library templates", () => {
     expect(targetAreaSets.map((set) => set.layout)).toEqual([
       "full-bleed",
       "side-split",
+      "photo-top",
       "bold-graphic",
       "review-forward",
       "service-checklist",

@@ -74,12 +74,13 @@ const LAYOUTS: {
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
 
 // D-02 (Phase 2, 2026-04-09): layouts are surfaced to customers only once
-// their render-worker template ships. The 4-layout set (2026-06-10) covers
-// full-bleed, side-split, bold-graphic, and review-forward; photo-top and
-// before-after stay hidden until their worker templates are built.
+// their render-worker template ships. The 7-layout set (2026-06-11 adds
+// photo-top with its condensed 2-line headline); before-after stays
+// hidden until its worker template is built.
 export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
   "full-bleed",
   "side-split",
+  "photo-top",
   "bold-graphic",
   "review-forward",
   "service-checklist",
@@ -95,6 +96,7 @@ export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
 > = {
   "full-bleed": "hac-1000-front-v1",
   "side-split": "side-split-front-v1",
+  "photo-top": "photo-top-front-v1",
   "bold-graphic": "bold-graphic-front-v1",
   "review-forward": "review-forward-front-v1",
   "service-checklist": "service-checklist-front-v1",

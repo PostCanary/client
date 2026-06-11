@@ -32,6 +32,48 @@ export interface EditZone {
 export const DEFAULT_RENDER_TEMPLATE_ID = "hac-1000-front-v1";
 
 export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
+  // Geometry source: photo-top-front.html (S73) —
+  //   .photo            -1,-1  1202x311 (full-width banner)
+  //   .headline-zone-bg -1,318 1202x180 (condensed 2-line headline)
+  //   .proof-panel      -1,-1  1202x311 (proof cards; replaces the banner)
+  //   offer strips      0,498  1200x125
+  "photo-top-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 38.9,
+      proofOnly: true,
+    },
+    {
+      editor: "photo",
+      label: "Change photo",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 38.9,
+      hideOnProof: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 39.75,
+      width: 100,
+      height: 22.5,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
   // Geometry source: hac-1000-front.html CSS —
   //   text-zone-bg  0,0    614x499
   //   .photo        510,0  690x499
