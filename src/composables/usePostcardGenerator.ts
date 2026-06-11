@@ -13,6 +13,30 @@ import {
   renderTemplateIdForTemplate,
 } from "@/data/templates";
 import { splitHeadline } from "@/utils/headlineSplit";
+import type { HeadlineLines } from "@/types/campaign";
+
+/** S72: AI candidates carry the five card lines directly (snake_case from
+ * the server). Use them verbatim when present; fall back to splitting the
+ * flat text for legacy/fallback candidates. */
+function headlineLinesFromCandidate(
+  candidate: GeneratedCardContent["headlines"][number] | undefined,
+  fallbackText: string,
+): HeadlineLines {
+  const lines = candidate?.lines;
+  if (
+    lines &&
+    (lines.red_1 || lines.red_2 || lines.bridge || lines.blue_1 || lines.blue_2)
+  ) {
+    return {
+      red1: lines.red_1 ?? "",
+      red2: lines.red_2 ?? "",
+      bridge: lines.bridge ?? "",
+      blue1: lines.blue_1 ?? "",
+      blue2: lines.blue_2 ?? "",
+    };
+  }
+  return splitHeadline(candidate?.text ?? fallbackText);
+}
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { generateContent } from "@/api/brandKit";
 import type { GeneratedCardContent } from "@/api/brandKit";
@@ -450,8 +474,9 @@ function mapServerCardToDesign(
     overrides: {},
     resolvedContent: {
       headline: card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
-      headlineLines: splitHeadline(
-        card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
+      headlineLines: headlineLinesFromCandidate(
+        card.headlines[0],
+        `${brandKit.businessName} — Special Offer`,
       ),
       offerText: card.offer.text,
       offerTeaser: deriveTeaser(card.offer.text, goalType),

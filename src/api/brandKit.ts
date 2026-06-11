@@ -80,8 +80,24 @@ export interface GenerateContentRequest {
   recipient_type: string;
 }
 
+export interface GeneratedHeadlineLines {
+  red_1: string;
+  red_2: string;
+  bridge: string;
+  blue_1: string;
+  blue_2: string;
+}
+
 export interface GeneratedCardContent {
-  headlines: Array<{ text: string; formula: string; reason: string }>;
+  headlines: Array<{
+    text: string;
+    // S72: the AI writes the five card lines directly (per-slot caps
+    // enforced server-side). Absent on fallback candidates — the client
+    // seeds lines from `text` via splitHeadline in that case.
+    lines?: GeneratedHeadlineLines;
+    formula: string;
+    reason: string;
+  }>;
   offer: { text: string; reason: string };
   selectedReview: {
     quote: string;
