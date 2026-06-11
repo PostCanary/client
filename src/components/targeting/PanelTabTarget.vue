@@ -38,7 +38,7 @@ const emit = defineEmits<{
 
     <!-- Around My Jobs — coming soon tile (flag OFF) -->
     <div v-if="isNeighborGoal && !AROUND_MY_JOBS" class="rounded-xl border border-dashed border-gray-200 p-4 text-center space-y-1">
-      <p class="text-sm font-medium text-[#0b2d50]">📍 Around My Jobs</p>
+      <p class="text-sm font-medium text-[#0b2d50]">Around My Jobs</p>
       <p class="text-xs text-gray-400">Targeting by recent job locations is coming soon. Use the drawing tools or ZIP codes to target your area.</p>
     </div>
 

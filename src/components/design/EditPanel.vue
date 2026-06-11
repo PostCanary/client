@@ -485,7 +485,7 @@ async function saveNewReview() {
         :class="activeEditor === 'headline' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('headline')"
       >
-        ✏️ Edit Headline
+        Edit Headline
       </button>
       <div v-if="activeEditor === 'headline'" class="px-3 pb-3 space-y-2">
         <p class="text-[11px] text-gray-500">
@@ -513,7 +513,7 @@ async function saveNewReview() {
         :class="activeEditor === 'offer' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('offer')"
       >
-        🏷️ Edit Offer
+        Edit Offer
       </button>
       <div v-if="activeEditor === 'offer'" class="px-3 pb-3">
         <textarea
@@ -537,7 +537,7 @@ async function saveNewReview() {
         :class="activeEditor === 'photo' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('photo')"
       >
-        📷 Change Photo
+        Change Photo
       </button>
       <div v-if="layoutUsesPhoto && activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
         <input
@@ -555,7 +555,7 @@ async function saveNewReview() {
           :disabled="uploadingPhoto"
           @click="pickPhotoFile"
         >
-          {{ uploadingPhoto ? "Uploading…" : "⬆️ Upload a photo (JPG, PNG, WebP)" }}
+          {{ uploadingPhoto ? "Uploading…" : "Upload a photo (JPG, PNG, WebP)" }}
         </button>
         <div v-if="photoUploadError" class="text-[11px] text-red-500">
           {{ photoUploadError }}
@@ -656,7 +656,7 @@ async function saveNewReview() {
             :disabled="aiGenerating || !aiPrompt.trim()"
             @click="generateAiPhoto"
           >
-            {{ aiGenerating ? "Generating… (can take ~20s)" : "✨ Generate photo" }}
+            {{ aiGenerating ? "Generating… (can take ~20s)" : "Generate photo" }}
           </button>
           <div v-if="aiError" class="text-[11px] text-red-500 mt-1">
             {{ aiError }}
@@ -671,7 +671,7 @@ async function saveNewReview() {
         :class="activeEditor === 'colors' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('colors')"
       >
-        🎨 Colors
+        Colors
       </button>
       <div v-if="activeEditor === 'colors'" class="px-3 pb-3 space-y-2">
         <button
@@ -689,7 +689,7 @@ async function saveNewReview() {
           class="w-full text-left text-[11px] text-gray-500 hover:text-[#0b2d50] px-2"
           @click="toggleBrandColorEditor"
         >
-          ✏️ {{ editingBrandColors ? "Close brand color editor" : "Edit my brand colors" }}
+          {{ editingBrandColors ? "Close brand color editor" : "Edit my brand colors" }}
         </button>
         <div
           v-if="editingBrandColors"
@@ -773,7 +773,7 @@ async function saveNewReview() {
         :class="activeEditor === 'review' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('review')"
       >
-        ⭐ Change Review
+        Change Review
       </button>
       <div v-if="activeEditor === 'review'" class="px-3 pb-3 space-y-2">
         <div v-if="pickerReviews.length === 0 && !addingReview" class="text-xs text-gray-400 py-1">

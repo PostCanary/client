@@ -221,8 +221,7 @@ async function approve() {
     v-if="approved"
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
-    <div class="text-5xl mb-4">🎉</div>
-    <h2 class="text-2xl font-bold text-[#0b2d50] mb-2">
+        <h2 class="text-2xl font-bold text-[#0b2d50] mb-2">
       Your campaign is live!
     </h2>
     <p class="text-gray-500 mb-6 max-w-md">
@@ -403,7 +402,7 @@ async function approve() {
       <!-- Payment method (mock) -->
       <div class="mt-5 p-3 bg-white rounded-lg border border-gray-200">
         <div class="text-xs text-gray-400">Payment method</div>
-        <div class="text-sm text-[#0b2d50]">💳 Visa ending in 4242</div>
+        <div class="text-sm text-[#0b2d50]">Visa ending in 4242</div>
         <button class="text-xs text-[#47bfa9] mt-1">Change</button>
       </div>
 

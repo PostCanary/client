@@ -111,19 +111,19 @@ defineExpose({
             class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
             @click="dismissIntro('around_jobs')"
           >
-            📍 Around My Jobs
+            Around My Jobs
           </button>
           <button
             class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
             @click="dismissIntro('draw')"
           >
-            ✏️ I'll Draw on the Map
+            I'll Draw on the Map
           </button>
           <button
             class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
             @click="dismissIntro('zip')"
           >
-            📮 Enter ZIP Codes
+            Enter ZIP Codes
           </button>
         </div>
       </div>
