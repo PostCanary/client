@@ -21,7 +21,11 @@ import {
 } from "@/api/campaignDrafts";
 import { API_BASE } from "@/api/http";
 import { generateCards } from "@/composables/usePostcardGenerator";
-import { getRecommendedTemplateSet } from "@/data/templates";
+import {
+  getRecommendedTemplateSet,
+  getTemplateSetsForGoal,
+  renderTemplateIdForLayout,
+} from "@/data/templates";
 import type { CampaignGoalType } from "@/types/campaign";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
@@ -30,6 +34,11 @@ let _pendingSave = false;
 let _retryCount = 0;
 let _dirty = false;
 let _generatingCards = false;
+// Bumped on every setDesign. generateCardsForDraft captures it before its
+// AI calls and refuses to stomp a design the user modified meanwhile —
+// generation completing late used to silently revert e.g. a layout switch
+// made during the generation window (S73 live-observed race).
+let _designRevision = 0;
 let _saveChain: Promise<void> | null = null;
 let _saveRevision = 0;
 const MAX_RETRIES = 3;
@@ -174,6 +183,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     setDesign(design: DesignSelection) {
       if (!this.draft) return;
+      _designRevision++;
       this.draft.design = design;
       this._markComplete(3);
       this._clearReview(3);
@@ -310,6 +320,9 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async generateCardsForDraft() {
       if (!this.draft || _generatingCards) return;
+      // Captured before ANY await so every design edit after this call
+      // starts counts as a mid-generation modification.
+      const revisionAtStart = _designRevision;
 
       const { useBrandKitStore } = await import("@/stores/useBrandKitStore");
       const brandKitStore = useBrandKitStore();
@@ -332,13 +345,49 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           breakdown,
         );
 
+        // S73 race fix: the user edited the design while the AI calls were
+        // in flight. Their cards are what's on screen — never replace them
+        // silently. (Pre-fix this reverted e.g. a layout switch made
+        // during the generation window.)
+        const userModified = _designRevision !== revisionAtStart;
+        const currentCards = this.draft.design?.sequenceCards ?? [];
+        if (userModified && currentCards.length > 0) {
+          console.warn(
+            "generateCardsForDraft: design edited during generation — keeping the user's cards",
+          );
+          return;
+        }
+
         const templates = getRecommendedTemplateSet(goalType);
+        let layoutType = templates[0]?.layoutType ?? "full-bleed";
+        let outCards = cards;
+        // A card-less mid-generation edit is a layout pick (selectTemplate
+        // over zero cards stores only templateLayoutType): apply the
+        // generated cards but remap them onto the user's chosen layout.
+        if (userModified && this.draft.design?.templateLayoutType) {
+          const keptLayout = this.draft.design.templateLayoutType;
+          const set = getTemplateSetsForGoal(goalType).find(
+            (s) => s.layout === keptLayout,
+          );
+          const renderTemplateId = renderTemplateIdForLayout(keptLayout);
+          if (set) {
+            layoutType = keptLayout;
+            outCards = cards.map((card) => ({
+              ...card,
+              templateId:
+                set.templates.find(
+                  (template) => template.cardPosition === card.cardPurpose,
+                )?.id ?? card.templateId,
+              ...(renderTemplateId ? { renderTemplateId } : {}),
+            }));
+          }
+        }
         this.setDesign({
-          templateId: cards[0]?.templateId ?? "",
-          templateLayoutType: templates[0]?.layoutType ?? "full-bleed",
+          templateId: outCards[0]?.templateId ?? "",
+          templateLayoutType: layoutType,
           isCustomUpload: false,
           customUploadUrl: null,
-          sequenceCards: cards,
+          sequenceCards: outCards,
         });
       } catch (err) {
         console.error("Card generation failed in store:", err);
