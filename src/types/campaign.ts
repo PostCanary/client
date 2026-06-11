@@ -241,6 +241,8 @@ export type TemplateLayoutType =
   | 'bold-graphic'
   | 'before-after'
   | 'review-forward'
+  | 'service-checklist'
+  | 'urgency-notice'
 
 export type CardPurpose = 'offer' | 'proof' | 'last_chance'
 

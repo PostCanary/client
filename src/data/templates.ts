@@ -67,6 +67,8 @@ const LAYOUTS: {
   { type: "bold-graphic", name: "Bold Graphic", desc: "Minimal photo, bold headline and colors. Grabs attention.", bestFor: ["storm_response", "target_area"] },
   { type: "before-after", name: "Before / After", desc: "Two photos side by side showing transformation.", bestFor: ["neighbor_marketing", "target_area", "cross_service_promo"] },
   { type: "review-forward", name: "Review Forward", desc: "Customer review front and center. Trust-first approach.", bestFor: ["win_back", "seasonal_tuneup"] },
+  { type: "service-checklist", name: "Service Checklist", desc: "Your services as a bold checklist. Shows everything you do at a glance.", bestFor: ["cross_service_promo", "new_mover"] },
+  { type: "urgency-notice", name: "Urgency Notice", desc: "Official notice style with deadline. Grabs attention like important mail.", bestFor: ["storm_response", "seasonal_tuneup"] },
 ];
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
@@ -80,6 +82,8 @@ export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
   "side-split",
   "bold-graphic",
   "review-forward",
+  "service-checklist",
+  "urgency-notice",
 ];
 
 // Worker render template per layout — keys of the render worker's
@@ -93,6 +97,8 @@ export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
   "side-split": "side-split-front-v1",
   "bold-graphic": "bold-graphic-front-v1",
   "review-forward": "review-forward-front-v1",
+  "service-checklist": "service-checklist-front-v1",
+  "urgency-notice": "urgency-notice-front-v1",
 };
 
 export function renderTemplateIdForLayout(
@@ -212,8 +218,8 @@ export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
   target_area: "bold-graphic",
   storm_response: "bold-graphic",
   win_back: "review-forward",
-  cross_service_promo: "side-split",
-  new_mover: "photo-top",
+  cross_service_promo: "service-checklist",
+  new_mover: "service-checklist",
   other: "photo-top",
 };
 
