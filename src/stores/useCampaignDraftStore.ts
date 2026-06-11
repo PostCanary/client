@@ -358,7 +358,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           return;
         }
 
-        const templates = getRecommendedTemplateSet(goalType);
+        const templates = getRecommendedTemplateSet(
+          goalType,
+          brandKitStore.brandKit?.industry,
+        );
         let layoutType = templates[0]?.layoutType ?? "full-bleed";
         let outCards = cards;
         // A card-less mid-generation edit is a layout pick (selectTemplate
@@ -366,7 +369,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         // generated cards but remap them onto the user's chosen layout.
         if (userModified && this.draft.design?.templateLayoutType) {
           const keptLayout = this.draft.design.templateLayoutType;
-          const set = getTemplateSetsForGoal(goalType).find(
+          const set = getTemplateSetsForGoal(
+            goalType,
+            brandKitStore.brandKit?.industry,
+          ).find(
             (s) => s.layout === keptLayout,
           );
           const renderTemplateId = renderTemplateIdForLayout(keptLayout);

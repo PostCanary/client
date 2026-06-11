@@ -6,6 +6,7 @@ import {
   getTemplateSetsForGoal,
   getVisibleDesignLibraryTemplates,
   visibleDesignLibraryTemplates,
+  useCaseLabel,
 } from "./templates";
 
 describe("design library templates", () => {
@@ -104,5 +105,33 @@ describe("design library templates", () => {
     const template = getDesignLibraryTemplate("hvac-hac-1000-full-bleed-offer-v1");
 
     expect(template?.name).toBe("HVAC Neighborhood Offer");
+  });
+});
+
+describe("industry recommendations (S75-C)", () => {
+  it("roofing storm response recommends before-after", () => {
+    const sets = getTemplateSetsForGoal("storm_response", "roofing");
+    expect(sets.find((s) => s.recommended)?.layout).toBe("before-after");
+  });
+
+  it("no industry keeps the goal default", () => {
+    const sets = getTemplateSetsForGoal("storm_response", null);
+    expect(sets.find((s) => s.recommended)?.layout).toBe("bold-graphic");
+  });
+
+  it("unknown industry keeps the goal default", () => {
+    const sets = getTemplateSetsForGoal("seasonal_tuneup", "carrier-pigeons");
+    expect(sets.find((s) => s.recommended)?.layout).toBe("side-split");
+  });
+
+  it("recommended set follows the industry override", () => {
+    const set = getRecommendedTemplateSet("seasonal_tuneup", "hvac");
+    expect(set[0]?.layoutType).toBe("photo-top");
+  });
+
+  it("use-case labels sharpen per trade", () => {
+    expect(useCaseLabel("storm_response", "roofing")).toBe("Storm Damage Response");
+    expect(useCaseLabel("seasonal_tuneup", "hvac")).toBe("Beat-the-Season Tune-Up");
+    expect(useCaseLabel("win_back", null)).toBe("Win-Back Campaign");
   });
 });

@@ -236,16 +236,85 @@ export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
   other: "photo-top",
 };
 
+
+// S75 Phase C: per-industry recommendation overrides. The goal map stays
+// the generic default; a trade with a stronger-fit layout overrides it
+// (roofing sells with before/after proof, cleaning with visual results,
+// pest control with the official-notice register, etc.).
+export const INDUSTRY_GOAL_OVERRIDES: Partial<
+  Record<string, Partial<Record<CampaignGoalType, TemplateLayoutType>>>
+> = {
+  hvac: { seasonal_tuneup: "photo-top" },
+  plumbing: { seasonal_tuneup: "tips", neighbor_marketing: "photo-hero" },
+  roofing: {
+    storm_response: "before-after",
+    neighbor_marketing: "before-after",
+    target_area: "photo-hero",
+  },
+  cleaning: {
+    neighbor_marketing: "before-after",
+    seasonal_tuneup: "tips",
+    target_area: "photo-hero",
+  },
+  electrical: { seasonal_tuneup: "tips" },
+  pest_control: { seasonal_tuneup: "urgency-notice" },
+  landscaping: {
+    neighbor_marketing: "photo-hero",
+    seasonal_tuneup: "before-after",
+  },
+};
+
+function resolveRecommendedLayout(
+  goalType: CampaignGoalType,
+  industry?: string | null,
+): TemplateLayoutType {
+  const override =
+    INDUSTRY_GOAL_OVERRIDES[(industry ?? "").toLowerCase()]?.[goalType];
+  const mapped = override ?? GOAL_TEMPLATE_MAP[goalType];
+  return DEMO_VISIBLE_LAYOUTS.includes(mapped) ? mapped : DEMO_VISIBLE_LAYOUTS[0]!;
+}
+
+// Lob-style use-case merchandising: the recommended set carries a
+// campaign-shaped name, optionally sharpened per trade.
+const USE_CASE_NAMES: Record<CampaignGoalType, string> = {
+  neighbor_marketing: "Neighborhood Trust Builder",
+  send_to_list: "Your List, Your Offer",
+  seasonal_tuneup: "Seasonal Tune-Up Push",
+  target_area: "Own the Zip Code",
+  storm_response: "Storm Damage Response",
+  win_back: "Win-Back Campaign",
+  cross_service_promo: "Full-Service Showcase",
+  new_mover: "Welcome the New Movers",
+  other: "Local Awareness",
+};
+const INDUSTRY_USE_CASE_NAMES: Partial<
+  Record<string, Partial<Record<CampaignGoalType, string>>>
+> = {
+  hvac: { seasonal_tuneup: "Beat-the-Season Tune-Up" },
+  roofing: { storm_response: "Storm Damage Response", neighbor_marketing: "Before & After Proof" },
+  cleaning: { neighbor_marketing: "Spotless Before & After" },
+  pest_control: { seasonal_tuneup: "Season Pest Warning" },
+  landscaping: { seasonal_tuneup: "Spring/Fall Cleanup Push" },
+};
+
+export function useCaseLabel(
+  goalType: CampaignGoalType,
+  industry?: string | null,
+): string {
+  return (
+    INDUSTRY_USE_CASE_NAMES[(industry ?? "").toLowerCase()]?.[goalType] ??
+    USE_CASE_NAMES[goalType]
+  );
+}
+
 /**
  * Get the recommended 3-template set for a goal (one per card position).
  */
 export function getRecommendedTemplateSet(
   goalType: CampaignGoalType,
+  industry?: string | null,
 ): TemplateDefinition[] {
-  const mappedLayout = GOAL_TEMPLATE_MAP[goalType];
-  const layout = DEMO_VISIBLE_LAYOUTS.includes(mappedLayout)
-    ? mappedLayout
-    : DEMO_VISIBLE_LAYOUTS[0]!;
+  const layout = resolveRecommendedLayout(goalType, industry);
   return POSITIONS.map(
     (pos) =>
       getVisibleDesignLibraryTemplates(goalType).find(
@@ -262,11 +331,9 @@ export function getRecommendedTemplateSet(
  */
 export function getTemplateSetsForGoal(
   goalType: CampaignGoalType,
+  industry?: string | null,
 ): { layout: TemplateLayoutType; name: string; templates: TemplateDefinition[]; recommended: boolean }[] {
-  const mappedRecommended = GOAL_TEMPLATE_MAP[goalType];
-  const recommended = DEMO_VISIBLE_LAYOUTS.includes(mappedRecommended)
-    ? mappedRecommended
-    : DEMO_VISIBLE_LAYOUTS[0]!;
+  const recommended = resolveRecommendedLayout(goalType, industry);
   const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(goalType);
   // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
   // layouts in ALL_TEMPLATES (so code that references them still works)

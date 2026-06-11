@@ -582,7 +582,10 @@ function selectTemplate(layout: TemplateLayoutType) {
   // all survive the switch.
   invalidateProof();
   currentLayout.value = layout;
-  const templateSet = getTemplateSetsForGoal(goalType.value).find(
+  const templateSet = getTemplateSetsForGoal(
+    goalType.value,
+    brandKit.value?.industry,
+  ).find(
     (set) => set.layout === layout,
   );
   const renderTemplateId = renderTemplateIdForLayout(layout);
@@ -955,6 +958,7 @@ watch(
     <TemplateBrowser
       v-if="showTemplateBrowser"
       :goal-type="goalType"
+      :industry="brandKit?.industry ?? null"
       :current-layout="currentLayout"
       @select="selectTemplate"
       @close="showTemplateBrowser = false"
