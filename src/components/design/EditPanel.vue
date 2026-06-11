@@ -521,6 +521,17 @@ function applyPhoto(url: string) {
 }
 
 // --- Stock photo search (Pexels; S72) ---------------------------------------
+// S75: prefilled with a people-first trade query (the research's strongest
+// finding: faces sell) so the first search lands on usable results.
+const INDUSTRY_STOCK_QUERIES: Record<string, string> = {
+  hvac: "hvac technician smiling homeowner",
+  plumbing: "plumber working home",
+  roofing: "roofer working house",
+  cleaning: "house cleaner smiling",
+  electrical: "electrician working home",
+  pest_control: "pest control technician home",
+  landscaping: "landscaper lawn home",
+};
 const stockQuery = ref("");
 const stockResults = ref<StockPhotoResult[]>([]);
 const stockSearching = ref(false);
@@ -536,6 +547,11 @@ const aiGenerating = ref(false);
 const aiError = ref<string | null>(null);
 
 onMounted(async () => {
+  if (!stockQuery.value) {
+    stockQuery.value =
+      INDUSTRY_STOCK_QUERIES[(props.brandKit?.industry ?? "").toLowerCase()] ??
+      "friendly home service technician";
+  }
   try {
     const features = await getMediaFeatures();
     stockConfigured.value = features.stockConfigured;
