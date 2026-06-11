@@ -247,6 +247,7 @@ export type TemplateLayoutType =
   | 'new-mover'
   | 'tips'
   | 'letter-note'
+  | 'neighborhood-map'
 
 export type CardPurpose = 'offer' | 'proof' | 'last_chance'
 
@@ -311,6 +312,7 @@ export interface CardDesign {
     afterPhotoUrl?: string
     salutation?: string                // letter-note greeting the customer edited (S76)
     letterBody?: string                // letter-note body the customer edited (S76)
+    mapImageUrl?: string               // neighborhood-map service-area map (S76)
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
@@ -331,6 +333,7 @@ export interface CardDesign {
     afterPhotoUrl?: string
     salutation?: string                // letter-note greeting; absent → city-derived default
     letterBody?: string                // letter-note body; absent → worker synthesizes
+    mapImageUrl?: string               // neighborhood-map service-area map (S76)
   }
   backContent: {
     guarantee: string

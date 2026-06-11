@@ -17,7 +17,8 @@ import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useAuthStore } from "@/stores/auth";
 import {
-  getMediaFeatures,
+  generateMapImage,
+  getMediaFeaturesCached,
   searchStockPhotos,
   type StockPhotoResult,
 } from "@/api/brandKit";
@@ -68,6 +69,7 @@ type EditorType =
   | "notice"
   | "tips"
   | "letter"
+  | "map"
   | null;
 const activeEditor = ref<EditorType>(null);
 
@@ -616,6 +618,49 @@ const aiPrompt = ref("");
 const aiGenerating = ref(false);
 const aiError = ref<string | null>(null);
 
+// --- Service-area map (Geoapify; S76) ---------------------------------------
+const mapsConfigured = ref(false);
+const isMapLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("neighborhood-map"),
+);
+// The map zone is only editable on the non-proof positions (proof swaps the
+// band + map callout for the review panel).
+const showMapEditor = computed(
+  () => isMapLayout.value && props.card.cardPurpose !== "proof",
+);
+// Radius options offered in the selector (miles). Default 3 matches the server.
+const MAP_RADIUS_OPTIONS = [1, 2, 3, 5, 10];
+const mapRadiusMiles = ref<number>(3);
+const mapGenerating = ref(false);
+const mapError = ref<string | null>(null);
+const currentMapUrl = computed(
+  () =>
+    (props.card.overrides.mapImageUrl as string | undefined) ??
+    props.card.resolvedContent.mapImageUrl ??
+    "",
+);
+
+async function generateMap() {
+  if (mapGenerating.value) return;
+  mapGenerating.value = true;
+  mapError.value = null;
+  try {
+    const res = await generateMapImage(mapRadiusMiles.value);
+    if (res?.url) {
+      // Apply via the same update-field pattern as before-after's
+      // beforePhotoUrl flow — the card re-renders with the new map.
+      emit("update-field", "mapImageUrl", res.url);
+    } else {
+      mapError.value = "Map generation failed — try again.";
+    }
+  } catch (e: any) {
+    mapError.value =
+      e?.data?.error || e?.message || "Couldn't generate the map.";
+  } finally {
+    mapGenerating.value = false;
+  }
+}
+
 onMounted(async () => {
   if (!stockQuery.value) {
     stockQuery.value =
@@ -623,9 +668,10 @@ onMounted(async () => {
       "friendly home service technician";
   }
   try {
-    const features = await getMediaFeatures();
+    const features = await getMediaFeaturesCached();
     stockConfigured.value = features.stockConfigured;
     aiConfigured.value = features.aiConfigured;
+    mapsConfigured.value = features.mapsConfigured;
   } catch {
     // Feature probe failing should never break the panel — both sections
     // simply stay hidden.
@@ -1291,6 +1337,70 @@ async function saveNewReview() {
             {{ editableLetterBody.length }}/{{ LETTER_BODY_MAX }} characters. Your offer rides the P.S. line automatically.
           </p>
         </div>
+      <!-- Service Area Map (neighborhood-map layout; S76). Key-gated:
+           only shown when the layout is active AND mapsConfigured. -->
+      <button
+        v-if="showMapEditor"
+        data-testid="edit-map-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'map' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('map')"
+      >
+        Service Area Map
+      </button>
+      <div v-if="showMapEditor && activeEditor === 'map'" class="px-3 pb-3 space-y-3">
+        <div v-if="!mapsConfigured" class="text-xs text-gray-500">
+          Service-area maps aren't available right now.
+        </div>
+        <template v-else>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Service radius
+            </label>
+            <div class="flex gap-1.5" data-testid="map-radius-options">
+              <button
+                v-for="r in MAP_RADIUS_OPTIONS"
+                :key="r"
+                type="button"
+                :data-testid="`map-radius-${r}`"
+                class="flex-1 px-2 py-1.5 rounded-lg border text-xs transition-colors"
+                :class="mapRadiusMiles === r
+                  ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50] font-semibold'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+                @click="mapRadiusMiles = r"
+              >
+                {{ r }} mi
+              </button>
+            </div>
+          </div>
+
+          <img
+            v-if="currentMapUrl"
+            :src="mediaSrc(currentMapUrl)"
+            alt="Service area map preview"
+            data-testid="map-preview"
+            class="w-full rounded-lg border border-gray-200"
+          />
+
+          <button
+            type="button"
+            data-testid="map-generate"
+            :disabled="mapGenerating"
+            class="w-full px-3 py-2 rounded-lg bg-[#0b2d50] text-white text-sm font-medium disabled:opacity-60"
+            @click="generateMap"
+          >
+            {{ mapGenerating ? "Generating map…" : currentMapUrl ? "Regenerate map" : "Generate map" }}
+          </button>
+
+          <p v-if="mapError" data-testid="map-error" class="text-xs text-red-600">
+            {{ mapError }}
+          </p>
+
+          <p class="text-[10px] text-gray-400 leading-snug">
+            Map data © OpenStreetMap contributors © Geoapify. We use your
+            business address — update it in Business Info if the map is off.
+          </p>
+        </template>
       </div>
 
       <!-- Change Photo (hidden on layouts with no photo slot —

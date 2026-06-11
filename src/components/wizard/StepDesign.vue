@@ -20,6 +20,7 @@ import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { previewCard } from "@/api/renderJobs";
 import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
+import { generateMapImage, getMediaFeaturesCached } from "@/api/brandKit";
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -319,8 +320,21 @@ async function refreshOneThumbnail(idx: number) {
   if (url !== null) writeThumbnailSlot(idx, url);
 }
 
+// neighborhood-map gate (S76): probed once so the auto-generate path and
+// the TemplateBrowser know whether GEOAPIFY_API_KEY is set server-side.
+const mapsConfigured = ref(false);
+
 onMounted(() => {
   if (!brandKitStore.hydrated) brandKitStore.fetch();
+
+  // Fire-and-forget feature probe — never blocks the design step.
+  getMediaFeaturesCached()
+    .then((f) => {
+      mapsConfigured.value = f.mapsConfigured;
+    })
+    .catch(() => {
+      /* probe failure → layout stays gated off; no UX impact */
+    });
 
   if (draftStore.draft?.design?.sequenceCards?.length) {
     cards.value = [...draftStore.draft.design.sequenceCards];
@@ -617,6 +631,48 @@ function selectTemplate(layout: TemplateLayoutType) {
   }, 30_000);
   commitDesign();
   queuePersistedPreviewRefresh();
+
+  // S76: auto-generate the service-area map when switching to the
+  // neighborhood-map layout with no map yet. Fire-and-forget — the instant
+  // remap above already happened; this must NOT block the switch (PR #59
+  // made layout switches instant). On completion we apply the map URL to
+  // every card and re-render.
+  if (layout === "neighborhood-map" && mapsConfigured.value) {
+    maybeAutoGenerateMap();
+  }
+}
+
+// Tracks an in-flight auto-generate so a rapid re-switch doesn't double-fire.
+let autoMapInFlight = false;
+
+function maybeAutoGenerateMap() {
+  const anyHasMap = cards.value.some(
+    (c) =>
+      (c.overrides.mapImageUrl as string | undefined) ||
+      c.resolvedContent.mapImageUrl,
+  );
+  if (anyHasMap || autoMapInFlight) return;
+  autoMapInFlight = true;
+  generateMapImage()
+    .then((res) => {
+      if (!res?.url) return;
+      // Apply to all cards (the map is org-level, shared across the
+      // sequence), preserving any per-card overrides.
+      cards.value = cards.value.map((card) => ({
+        ...card,
+        overrides: { ...card.overrides, mapImageUrl: res.url },
+        resolvedContent: { ...card.resolvedContent, mapImageUrl: res.url },
+      }));
+      commitDesign();
+      queuePersistedPreviewRefresh();
+    })
+    .catch(() => {
+      /* auto-gen is best-effort; the user can still Generate from the
+         EditPanel, which surfaces the actual error */
+    })
+    .finally(() => {
+      autoMapInFlight = false;
+    });
 }
 
 function resetCard() {

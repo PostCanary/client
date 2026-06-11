@@ -100,6 +100,9 @@ describe("design library templates", () => {
       "urgency-notice",
       "tips",
       "letter-note",
+      // S76: neighborhood-map is in the visible set (gated to mapsConfigured
+      // in the TemplateBrowser, not here).
+      "neighborhood-map",
     ]);
     expect(
       targetAreaSets.find((set) => set.recommended)?.layout,
@@ -110,6 +113,16 @@ describe("design library templates", () => {
     const template = getDesignLibraryTemplate("hvac-hac-1000-full-bleed-offer-v1");
 
     expect(template?.name).toBe("HVAC Neighborhood Offer");
+  });
+
+  it("exposes the neighborhood-map layout mapped to its worker template (S76)", () => {
+    const sets = getTemplateSetsForGoal("neighbor_marketing");
+    const mapSet = sets.find((s) => s.layout === "neighborhood-map");
+    expect(mapSet).toBeTruthy();
+    expect(mapSet?.name).toBe("Neighborhood Map");
+    expect(
+      renderTemplateIdForLayout("neighborhood-map"),
+    ).toBe("neighborhood-map-front-v1");
   });
 });
 
