@@ -413,7 +413,7 @@ async function saveBusinessInfo() {
 }
 
 // --- Business Info editor (S72: name/phone/website/logo from the designer) -
-const bizDraft = ref({ businessName: "", phone: "", websiteUrl: "" });
+const bizDraft = ref({ businessName: "", phone: "", websiteUrl: "", tagline: "" });
 const savingBiz = ref(false);
 const bizError = ref<string | null>(null);
 const logoInput = ref<HTMLInputElement | null>(null);
@@ -421,12 +421,19 @@ const uploadingLogo = ref(false);
 const logoError = ref<string | null>(null);
 
 watch(
-  () => [props.brandKit?.businessName, props.brandKit?.phone, props.brandKit?.websiteUrl],
+  () => [
+    props.brandKit?.businessName,
+    props.brandKit?.phone,
+    props.brandKit?.websiteUrl,
+    props.brandKit?.tagline,
+  ],
   () => {
     bizDraft.value = {
       businessName: props.brandKit?.businessName ?? "",
       phone: props.brandKit?.phone ?? "",
       websiteUrl: props.brandKit?.websiteUrl ?? "",
+      // null = industry-derived default; show empty input with a hint.
+      tagline: props.brandKit?.tagline ?? "",
     };
   },
   { immediate: true },
@@ -437,7 +444,8 @@ const bizDirty = computed(() => {
   return (
     bizDraft.value.businessName.trim() !== (bk?.businessName ?? "").trim() ||
     bizDraft.value.phone.trim() !== (bk?.phone ?? "").trim() ||
-    bizDraft.value.websiteUrl.trim() !== (bk?.websiteUrl ?? "").trim()
+    bizDraft.value.websiteUrl.trim() !== (bk?.websiteUrl ?? "").trim() ||
+    bizDraft.value.tagline.trim() !== (bk?.tagline ?? "").trim()
   );
 });
 
@@ -451,11 +459,19 @@ async function saveBizInfo() {
   bizError.value = null;
   try {
     // QR regenerates server-side when phone/website change.
-    await brandKitStore.update({
+    const payload: Record<string, string> = {
       businessName: bizDraft.value.businessName.trim(),
       phone: bizDraft.value.phone.trim(),
       websiteUrl: bizDraft.value.websiteUrl.trim(),
-    });
+    };
+    // Only send the tagline when the user actually changed it — an
+    // untouched empty input on a brand with the industry-derived default
+    // (tagline === null) must NOT silently remove that default when
+    // saving other fields.
+    if (bizDraft.value.tagline.trim() !== (props.brandKit?.tagline ?? "").trim()) {
+      payload.tagline = bizDraft.value.tagline.trim();
+    }
+    await brandKitStore.update(payload);
     if (brandKitStore.error) {
       bizError.value = brandKitStore.error;
       return;
@@ -889,6 +905,20 @@ async function saveNewReview() {
             data-testid="biz-website-input"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
           />
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Tagline (under your name on the card)</span>
+          <input
+            v-model="bizDraft.tagline"
+            type="text"
+            maxlength="26"
+            data-testid="biz-tagline-input"
+            :placeholder="brandKit?.tagline == null ? 'Auto from your industry — type to replace' : ''"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <span class="block text-[10px] text-gray-400 mt-0.5">
+            Leave blank and save to remove it from the card.
+          </span>
         </label>
         <button
           type="button"

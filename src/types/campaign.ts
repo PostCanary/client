@@ -449,6 +449,7 @@ export interface BrandKit {
   phone: string | null
   websiteUrl: string | null            // cleaned: no https://, no www., no trailing slash
   logoUrl: string | null
+  tagline?: string | null              // null = industry default; '' = removed; set = verbatim
   logoPrintReady?: boolean              // false = logo under 600px wide, soft in print
   logoWidth?: number
   logoHeight?: number
