@@ -157,6 +157,24 @@ export async function importStockPhoto(
   return toBrandKit(res);
 }
 
+// --- AI image generation (fal.ai; S72) ---
+
+export interface MediaFeatures {
+  stockConfigured: boolean;
+  aiConfigured: boolean;
+}
+
+export async function getMediaFeatures(): Promise<MediaFeatures> {
+  return get<MediaFeatures>("/api/brand-kit/media-features");
+}
+
+export async function generateAiImage(prompt: string): Promise<BrandKit> {
+  const res = await postJson<BrandKitResponse>("/api/brand-kit/ai-images", {
+    prompt,
+  });
+  return toBrandKit(res);
+}
+
 // --- Manual Reviews ---
 
 export interface AddReviewRequest {
