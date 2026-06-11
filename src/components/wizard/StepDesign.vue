@@ -489,6 +489,17 @@ function updateTips(tips: string[]) {
   queuePersistedPreviewRefresh();
 }
 
+// Industry switcher (S75 test tool): full re-generation so the cards
+// demo the new trade end to end. Clearing local cards first lets the
+// store→local sync watch (cards.value.length === 0 guard) pick up the
+// fresh set when generation completes.
+async function regenerateCards() {
+  invalidateProof();
+  liveOverlay.value = null;
+  cards.value = [];
+  await draftStore.generateCardsForDraft();
+}
+
 function updateColors(colors: ColorOverride | null) {
   const card = activeCard.value;
   if (!card) return;
@@ -818,6 +829,7 @@ watch(
         @update-service-rows="updateServiceRows"
         @update-offer-items="updateOfferItems"
         @update-tips="updateTips"
+        @regenerate-cards="regenerateCards"
         @update-colors="updateColors"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"

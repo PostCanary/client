@@ -49,6 +49,7 @@ const emit = defineEmits<{
   (e: "update-service-rows", rows: string[]): void;
   (e: "update-offer-items", items: OfferStackItem[]): void;
   (e: "update-tips", tips: string[]): void;
+  (e: "regenerate-cards"): void;
   (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
@@ -796,9 +797,10 @@ async function switchIndustry(event: Event) {
   switchingIndustry.value = true;
   try {
     await brandKitStore.update({ industry: industry as Industry });
-    // Re-render so packs/tips/taglines/notice defaults reflect the trade
-    // immediately. AI copy only changes on regenerate — by design.
-    emit("info-saved");
+    // Full trade demo: regenerate the 3 cards so headlines/offers/tiers
+    // come from the new trade's playbook (replaces manual copy edits —
+    // it's a test tool). Packs/taglines/defaults follow on the render.
+    emit("regenerate-cards");
   } finally {
     switchingIndustry.value = false;
   }
@@ -1472,8 +1474,8 @@ async function saveNewReview() {
             </option>
           </select>
           <span class="block text-[10px] text-amber-600/80 mt-1">
-            Applies instantly: photo packs, tips, taglines, recommendations.
-            AI copy changes on the next generate.
+            Regenerates all 3 cards with the trade's copy, offers, and
+            defaults (~30s). Manual text edits are replaced.
           </span>
         </div>
         <label class="block">
