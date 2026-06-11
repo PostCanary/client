@@ -9,6 +9,7 @@ import {
   addManualReview,
   removeReview as apiRemoveReview,
   uploadBrandPhoto,
+  uploadBrandLogo,
   importStockPhoto as apiImportStockPhoto,
   generateAiImage as apiGenerateAiImage,
 } from "@/api/brandKit";
@@ -215,6 +216,19 @@ export const useBrandKitStore = defineStore("brandKit", {
         this.error =
           e?.data?.error || e?.message || "Failed to upload photo";
         return null;
+      }
+    },
+
+    /** S72 Business Info: upload an org logo. Returns true on success
+     * (this.error set on failure). */
+    async uploadLogo(file: File): Promise<boolean> {
+      this.error = null;
+      try {
+        this.brandKit = await uploadBrandLogo(file);
+        return true;
+      } catch (e: any) {
+        this.error = e?.data?.error || e?.message || "Failed to upload logo";
+        return false;
       }
     },
 

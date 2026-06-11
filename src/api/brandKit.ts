@@ -23,6 +23,9 @@ function toBrandKit(r: BrandKitResponse): BrandKit {
     phone: d.phone ?? null,
     websiteUrl: d.websiteUrl ?? null,
     logoUrl: d.logoUrl ?? null,
+    logoPrintReady: d.logoPrintReady ?? undefined,
+    logoWidth: d.logoWidth ?? undefined,
+    logoHeight: d.logoHeight ?? undefined,
     logoQualityScore: d.logoQualityScore ?? null,
     brandColors: d.brandColors ?? [],
     photos: d.photos ?? [],
@@ -204,6 +207,15 @@ export async function uploadBrandPhoto(file: File): Promise<BrandKit> {
   const fd = new FormData();
   fd.append("photo", file);
   const res = await post<BrandKitResponse>("/api/brand-kit/photos", fd);
+  return toBrandKit(res.data);
+}
+
+/** S72 Business Info: upload an org logo (validated server-side for
+ * print dimensions; logoPrintReady=false when under 600px wide). */
+export async function uploadBrandLogo(file: File): Promise<BrandKit> {
+  const fd = new FormData();
+  fd.append("logo", file);
+  const res = await post<BrandKitResponse>("/api/brand-kit/logo", fd);
   return toBrandKit(res.data);
 }
 
