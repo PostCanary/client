@@ -288,6 +288,16 @@ const DEFAULT_SERVICE_ROWS = [
   "Maintenance & Tune-Ups",
   "Free Estimates",
 ];
+// S75-D mirror of the worker's per-trade checklist padding.
+const INDUSTRY_SERVICE_ROWS: Record<string, string[]> = {
+  hvac: ["A/C & Heating Repairs", "New System Installs", "Seasonal Tune-Ups", "Free Estimates"],
+  plumbing: ["Drain Cleaning", "Water Heaters", "Leak Repairs", "Free Estimates"],
+  roofing: ["Roof Repairs", "Full Replacements", "Storm Inspections", "Insurance Claim Help"],
+  cleaning: ["Recurring Cleans", "Deep Cleans", "Move-In/Move-Out", "Supplies Included"],
+  electrical: ["Repairs & Troubleshooting", "Panel Upgrades", "EV Chargers", "Safety Inspections"],
+  pest_control: ["Quarterly Protection", "Termite Treatment", "Rodent Control", "Free Inspections"],
+  landscaping: ["Weekly Mowing", "Spring & Fall Cleanups", "Irrigation Service", "Free Design Quotes"],
+};
 
 function rowsForCard(): string[] {
   const stored = props.card.resolvedContent.serviceRows;
@@ -296,7 +306,10 @@ function rowsForCard(): string[] {
     .map((s) => s.trim().slice(0, 26))
     .filter(Boolean)
     .slice(0, 5);
-  for (const d of DEFAULT_SERVICE_ROWS) {
+  const pad =
+    INDUSTRY_SERVICE_ROWS[(props.brandKit?.industry ?? "").toLowerCase()] ??
+    DEFAULT_SERVICE_ROWS;
+  for (const d of pad) {
     if (rows.length >= 4) break;
     if (!rows.includes(d)) rows.push(d);
   }
@@ -304,8 +317,17 @@ function rowsForCard(): string[] {
 }
 
 // Worker defaults shown as placeholders so an untouched card reads true.
+const INDUSTRY_URGENCY: Record<string, string> = {
+  hvac: "Schedule before the seasonal rush - appointments are filling fast.",
+  plumbing: "Small leaks become big repairs - book your inspection this week.",
+  roofing: "Storm season is coming - get your roof inspected before leaks start.",
+  cleaning: "Holiday-ready homes book out early - reserve your deep clean now.",
+  electrical: "Outdated panels are fire risks - book a safety inspection this month.",
+  pest_control: "Pests are moving in this season - secure your home before they settle.",
+  landscaping: "The best lawns book early - reserve your seasonal cleanup now.",
+};
 const URGENCY_DEFAULT =
-  "Schedule before the seasonal rush — appointments are filling fast.";
+  "Schedule before the seasonal rush - appointments are filling fast.";
 const RISK_REVERSAL_DEFAULT = "100% Satisfaction Guarantee";
 
 const editableRows = ref<string[]>(rowsForCard());
@@ -380,6 +402,27 @@ const INDUSTRY_TIPS: Record<string, string[]> = {
     "Don't overload power strips",
     "Label your breaker panel",
     "Upgrade aging smoke detectors",
+  ],
+  cleaning: [
+    "Declutter before deep cleans",
+    "Microfiber beats paper towels",
+    "Vent bathrooms to stop mildew",
+    "Book recurring to keep it easy",
+    "Ask about move-out checklists",
+  ],
+  pest_control: [
+    "Seal gaps around doors and pipes",
+    "Keep firewood away from the house",
+    "Fix leaks - pests follow water",
+    "Trim branches touching the roof",
+    "Treat quarterly, not just once",
+  ],
+  landscaping: [
+    "Water deeply, not daily",
+    "Mow high in summer heat",
+    "Mulch beds to lock in moisture",
+    "Aerate compacted lawns each fall",
+    "Book spring cleanup early",
   ],
 };
 const DEFAULT_TIPS = [
@@ -974,7 +1017,7 @@ async function saveNewReview() {
             maxlength="110"
             rows="3"
             data-testid="notice-body-input"
-            :placeholder="URGENCY_DEFAULT"
+            :placeholder="INDUSTRY_URGENCY[(brandKit?.industry ?? '').toLowerCase()] ?? URGENCY_DEFAULT"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
             @input="applyUrgency"
           />
