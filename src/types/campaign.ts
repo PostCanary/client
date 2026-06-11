@@ -450,6 +450,7 @@ export interface BrandKit {
   websiteUrl: string | null            // cleaned: no https://, no www., no trailing slash
   logoUrl: string | null
   tagline?: string | null              // null = industry default; '' = removed; set = verbatim
+  licenseNumber?: string | null        // verbatim small print in the info bar (CA/FL contractor ads)
   logoPrintReady?: boolean              // false = logo under 600px wide, soft in print
   logoWidth?: number
   logoHeight?: number
