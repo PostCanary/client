@@ -789,6 +789,42 @@ const INDUSTRY_OPTIONS = [
   "landscaping",
   "other",
 ] as const;
+// The AI anchors copy in the kit's REAL services/offers (it refuses to
+// invent services a business doesn't perform), so a coherent trade demo
+// must swap those too — not just the industry label.
+const TEST_INDUSTRY_PRESETS: Record<
+  string,
+  { serviceTypes: string[]; currentOffers: string[] }
+> = {
+  hvac: {
+    serviceTypes: ["AC Repair", "Heating", "Maintenance"],
+    currentOffers: ["$79 seasonal tune-up"],
+  },
+  plumbing: {
+    serviceTypes: ["Drain Cleaning", "Water Heaters", "Leak Repair"],
+    currentOffers: ["$99 drain cleaning special"],
+  },
+  roofing: {
+    serviceTypes: ["Roof Repair", "Roof Replacement", "Storm Damage Inspections"],
+    currentOffers: ["Free storm damage inspection"],
+  },
+  cleaning: {
+    serviceTypes: ["Recurring House Cleaning", "Deep Cleans", "Move-Out Cleans"],
+    currentOffers: ["$50 off your first clean"],
+  },
+  electrical: {
+    serviceTypes: ["Electrical Repair", "Panel Upgrades", "EV Charger Installs"],
+    currentOffers: ["$99 electrical safety inspection"],
+  },
+  pest_control: {
+    serviceTypes: ["Quarterly Pest Control", "Termite Treatment", "Rodent Control"],
+    currentOffers: ["$49 initial treatment"],
+  },
+  landscaping: {
+    serviceTypes: ["Weekly Mowing", "Seasonal Cleanups", "Irrigation"],
+    currentOffers: ["$75 off spring cleanup"],
+  },
+};
 const switchingIndustry = ref(false);
 
 async function switchIndustry(event: Event) {
@@ -796,7 +832,11 @@ async function switchIndustry(event: Event) {
   if (!industry || switchingIndustry.value) return;
   switchingIndustry.value = true;
   try {
-    await brandKitStore.update({ industry: industry as Industry });
+    const preset = TEST_INDUSTRY_PRESETS[industry];
+    await brandKitStore.update({
+      industry: industry as Industry,
+      ...(preset ?? {}),
+    });
     // Full trade demo: regenerate the 3 cards so headlines/offers/tiers
     // come from the new trade's playbook (replaces manual copy edits —
     // it's a test tool). Packs/taglines/defaults follow on the render.
@@ -1474,8 +1514,9 @@ async function saveNewReview() {
             </option>
           </select>
           <span class="block text-[10px] text-amber-600/80 mt-1">
-            Regenerates all 3 cards with the trade's copy, offers, and
-            defaults (~30s). Manual text edits are replaced.
+            Swaps services + offers to the trade's preset and regenerates
+            all 3 cards (~30s). Manual edits are replaced; reviews keep
+            their original wording.
           </span>
         </div>
         <label class="block">
