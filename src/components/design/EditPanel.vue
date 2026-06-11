@@ -9,7 +9,7 @@ import type {
   HeadlineLines,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
-import { COLOR_PALETTES, isCompleteOverride } from "@/data/colorPalettes";
+import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -75,6 +75,58 @@ function isActivePalette(palette: ColorOverride): boolean {
       o.secondary === palette.secondary &&
       o.accent === palette.accent,
   );
+}
+
+// --- Brand color editing (S72: edit org colors from the designer) ----------
+// Saves to the brand kit (PUT /api/brand-kit), so EVERY card that uses
+// "my brand colors" picks the change up — unlike palettes, which are
+// per-card overrides.
+const editingBrandColors = ref(false);
+const savingBrandColors = ref(false);
+const brandColorError = ref<string | null>(null);
+const brandColorDraft = ref<ColorOverride>({
+  primary: "#d63a2f",
+  secondary: "#2a7de1",
+  accent: "#f5b50a",
+});
+
+function toggleBrandColorEditor() {
+  if (!editingBrandColors.value) {
+    const bc = props.brandKit?.brandColors ?? [];
+    brandColorDraft.value = {
+      primary: bc[0] && isValidHex(bc[0]) ? bc[0] : "#d63a2f",
+      secondary: bc[1] && isValidHex(bc[1]) ? bc[1] : "#2a7de1",
+      accent: bc[2] && isValidHex(bc[2]) ? bc[2] : "#f5b50a",
+    };
+    brandColorError.value = null;
+  }
+  editingBrandColors.value = !editingBrandColors.value;
+}
+
+async function saveBrandColors() {
+  if (savingBrandColors.value) return;
+  savingBrandColors.value = true;
+  brandColorError.value = null;
+  try {
+    await brandKitStore.update({
+      brandColors: [
+        brandColorDraft.value.primary,
+        brandColorDraft.value.secondary,
+        brandColorDraft.value.accent,
+      ],
+    });
+    if (brandKitStore.error) {
+      brandColorError.value = brandKitStore.error;
+      return;
+    }
+    editingBrandColors.value = false;
+    // Put the active card on brand colors so the change shows right away,
+    // and refresh the authoritative render.
+    emit("update-colors", null);
+    emit("info-saved");
+  } finally {
+    savingBrandColors.value = false;
+  }
 }
 
 function applyPalette(palette: ColorOverride | null) {
@@ -631,6 +683,50 @@ async function saveNewReview() {
           <span class="font-medium">My brand colors</span>
           <span class="text-gray-400 ml-1">(default)</span>
         </button>
+        <button
+          type="button"
+          data-testid="edit-brand-colors-toggle"
+          class="w-full text-left text-[11px] text-gray-500 hover:text-[#0b2d50] px-2"
+          @click="toggleBrandColorEditor"
+        >
+          ✏️ {{ editingBrandColors ? "Close brand color editor" : "Edit my brand colors" }}
+        </button>
+        <div
+          v-if="editingBrandColors"
+          class="p-2 rounded-md border border-gray-200 space-y-2"
+        >
+          <p class="text-[10px] text-gray-500">
+            These are your organization's colors — saving updates every card
+            that uses "My brand colors".
+          </p>
+          <div class="flex gap-2">
+            <label
+              v-for="slot in (['primary', 'secondary', 'accent'] as const)"
+              :key="slot"
+              class="flex-1"
+            >
+              <span class="block text-[10px] text-gray-400 capitalize">{{ slot }}</span>
+              <input
+                type="color"
+                v-model="brandColorDraft[slot]"
+                :data-testid="`brand-color-${slot}`"
+                class="w-full h-8 rounded border border-gray-200 cursor-pointer"
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            data-testid="brand-colors-save"
+            class="w-full px-3 py-2 rounded-lg bg-[#0b2d50] text-white text-xs disabled:opacity-50"
+            :disabled="savingBrandColors"
+            @click="saveBrandColors"
+          >
+            {{ savingBrandColors ? "Saving…" : "Save brand colors" }}
+          </button>
+          <div v-if="brandColorError" class="text-[11px] text-red-500">
+            {{ brandColorError }}
+          </div>
+        </div>
         <div class="grid grid-cols-2 gap-2">
           <button
             v-for="palette in COLOR_PALETTES"
