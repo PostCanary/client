@@ -7,6 +7,7 @@ import type {
   ColorOverride,
   DesignSelection,
   HeadlineLines,
+  OfferStackItem,
   TemplateLayoutType,
 } from "@/types/campaign";
 import { joinHeadlineLines, splitHeadline } from "@/utils/headlineSplit";
@@ -445,6 +446,28 @@ function updateServiceRows(rows: string[]) {
   queuePersistedPreviewRefresh();
 }
 
+// Offer coupon tiers (S74). Same shape as updateServiceRows: array
+// override, authoritative render carries the change.
+function updateOfferItems(items: OfferStackItem[]) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  lastEditAt.value = Date.now();
+  replaceActiveCard({
+    ...card,
+    overrides: {
+      ...card.overrides,
+      offerItems: items.map((tier) => ({ ...tier })),
+    },
+    resolvedContent: {
+      ...card.resolvedContent,
+      offerItems: items.map((tier) => ({ ...tier })),
+    },
+  });
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
 function updateColors(colors: ColorOverride | null) {
   const card = activeCard.value;
   if (!card) return;
@@ -769,6 +792,7 @@ watch(
         @update-field="updateCardField"
         @update-headline-lines="updateHeadlineLines"
         @update-service-rows="updateServiceRows"
+        @update-offer-items="updateOfferItems"
         @update-colors="updateColors"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
