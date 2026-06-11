@@ -5,9 +5,11 @@ import type {
   BrandKit,
   BrandKitPhoto,
   BrandKitReview,
+  ColorOverride,
   HeadlineLines,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
+import { COLOR_PALETTES, isCompleteOverride } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -35,14 +37,53 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update-field", field: string, value: string): void;
   (e: "update-headline-lines", lines: HeadlineLines): void;
+  (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
   (e: "reset"): void;
   (e: "info-saved"): void;
 }>();
 
-type EditorType = "headline" | "offer" | "review" | "photo" | null;
+type EditorType = "headline" | "offer" | "review" | "photo" | "colors" | null;
 const activeEditor = ref<EditorType>(null);
+
+// --- Color profiles (S72) --------------------------------------------------
+const customColors = ref<ColorOverride>({
+  primary: props.card.colorOverride?.primary ?? "#d63a2f",
+  secondary: props.card.colorOverride?.secondary ?? "#2a7de1",
+  accent: props.card.colorOverride?.accent ?? "#f5b50a",
+});
+
+watch(
+  () => props.card.colorOverride,
+  (next) => {
+    if (next) customColors.value = { ...next };
+  },
+);
+
+function isActivePalette(palette: ColorOverride): boolean {
+  const o = props.card.colorOverride;
+  return Boolean(
+    o &&
+      o.primary === palette.primary &&
+      o.secondary === palette.secondary &&
+      o.accent === palette.accent,
+  );
+}
+
+function applyPalette(palette: ColorOverride | null) {
+  emit(
+    "update-colors",
+    palette ? { primary: palette.primary, secondary: palette.secondary, accent: palette.accent } : null,
+  );
+}
+
+function onCustomColor(slot: keyof ColorOverride, value: string) {
+  customColors.value = { ...customColors.value, [slot]: value };
+  if (isCompleteOverride(customColors.value)) {
+    emit("update-colors", { ...customColors.value });
+  }
+}
 
 // Photo-free layouts (bold-graphic, review-forward) have no photo slot —
 // the zone map is the single source of truth for which surfaces exist.
@@ -405,6 +446,64 @@ async function saveNewReview() {
               class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
             >Stock</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Colors (S72 color profiles) -->
+      <button
+        data-testid="edit-colors-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'colors' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('colors')"
+      >
+        🎨 Colors
+      </button>
+      <div v-if="activeEditor === 'colors'" class="px-3 pb-3 space-y-2">
+        <button
+          data-testid="palette-brand"
+          class="w-full text-left p-2 rounded-md border text-xs transition-colors"
+          :class="!card.colorOverride ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+          @click="applyPalette(null)"
+        >
+          <span class="font-medium">My brand colors</span>
+          <span class="text-gray-400 ml-1">(default)</span>
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            v-for="palette in COLOR_PALETTES"
+            :key="palette.id"
+            :data-testid="`palette-${palette.id}`"
+            :data-active="isActivePalette(palette) ? 'true' : 'false'"
+            class="text-left p-2 rounded-md border text-xs transition-colors"
+            :class="isActivePalette(palette) ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+            @click="applyPalette(palette)"
+          >
+            <span class="flex gap-1 mb-1">
+              <span class="w-4 h-4 rounded-sm" :style="{ backgroundColor: palette.primary }" />
+              <span class="w-4 h-4 rounded-sm" :style="{ backgroundColor: palette.secondary }" />
+              <span class="w-4 h-4 rounded-sm" :style="{ backgroundColor: palette.accent }" />
+            </span>
+            {{ palette.name }}
+          </button>
+        </div>
+        <div class="pt-1">
+          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Custom</p>
+          <div class="flex gap-2">
+            <label
+              v-for="slot in (['primary', 'secondary', 'accent'] as const)"
+              :key="slot"
+              class="flex-1"
+            >
+              <span class="block text-[10px] text-gray-400 capitalize">{{ slot }}</span>
+              <input
+                type="color"
+                :value="customColors[slot]"
+                :data-testid="`custom-color-${slot}`"
+                class="w-full h-8 rounded border border-gray-200 cursor-pointer"
+                @input="onCustomColor(slot, ($event.target as HTMLInputElement).value)"
+              />
+            </label>
+          </div>
         </div>
       </div>
 

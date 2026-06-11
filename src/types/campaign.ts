@@ -268,10 +268,20 @@ export interface HeadlineLines {
   blue2: string
 }
 
+// Per-card palette override (S72 color profiles). Absent → brand kit
+// colors. Server validates hex format; renderer resolves any palette to
+// print-safe zone colors.
+export interface ColorOverride {
+  primary: string
+  secondary: string
+  accent: string
+}
+
 export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
   templateId: string
+  colorOverride?: ColorOverride
   // Worker render template (e.g. "side-split-front-v1"). Persisted on the
   // card so the server's resolve_render_template_id picks the right layout.
   // Optional for drafts saved before the 4-layout set; the server falls

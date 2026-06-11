@@ -4,6 +4,7 @@ import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type {
   CardDesign,
+  ColorOverride,
   DesignSelection,
   HeadlineLines,
   TemplateLayoutType,
@@ -442,6 +443,21 @@ function updateHeadlineLines(lines: HeadlineLines) {
   queuePersistedPreviewRefresh();
 }
 
+function updateColors(colors: ColorOverride | null) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  const next: CardDesign = { ...card };
+  if (colors) {
+    next.colorOverride = { ...colors };
+  } else {
+    delete next.colorOverride;
+  }
+  replaceActiveCard(next);
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
 function updateCardField(field: string, value: string) {
   const card = activeCard.value;
   if (!card) return;
@@ -724,6 +740,7 @@ watch(
         :requested-editor="requestedEditor"
         @update-field="updateCardField"
         @update-headline-lines="updateHeadlineLines"
+        @update-colors="updateColors"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
         @reset="resetCard"
