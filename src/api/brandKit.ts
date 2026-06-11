@@ -24,6 +24,7 @@ function toBrandKit(r: BrandKitResponse): BrandKit {
     websiteUrl: d.websiteUrl ?? null,
     logoUrl: d.logoUrl ?? null,
     tagline: d.tagline ?? null,
+    licenseNumber: d.licenseNumber ?? null,
     logoPrintReady: d.logoPrintReady ?? undefined,
     logoWidth: d.logoWidth ?? undefined,
     logoHeight: d.logoHeight ?? undefined,

@@ -413,7 +413,13 @@ async function saveBusinessInfo() {
 }
 
 // --- Business Info editor (S72: name/phone/website/logo from the designer) -
-const bizDraft = ref({ businessName: "", phone: "", websiteUrl: "", tagline: "" });
+const bizDraft = ref({
+  businessName: "",
+  phone: "",
+  websiteUrl: "",
+  tagline: "",
+  licenseNumber: "",
+});
 const savingBiz = ref(false);
 const bizError = ref<string | null>(null);
 const logoInput = ref<HTMLInputElement | null>(null);
@@ -426,6 +432,7 @@ watch(
     props.brandKit?.phone,
     props.brandKit?.websiteUrl,
     props.brandKit?.tagline,
+    props.brandKit?.licenseNumber,
   ],
   () => {
     bizDraft.value = {
@@ -434,6 +441,7 @@ watch(
       websiteUrl: props.brandKit?.websiteUrl ?? "",
       // null = industry-derived default; show empty input with a hint.
       tagline: props.brandKit?.tagline ?? "",
+      licenseNumber: props.brandKit?.licenseNumber ?? "",
     };
   },
   { immediate: true },
@@ -445,7 +453,8 @@ const bizDirty = computed(() => {
     bizDraft.value.businessName.trim() !== (bk?.businessName ?? "").trim() ||
     bizDraft.value.phone.trim() !== (bk?.phone ?? "").trim() ||
     bizDraft.value.websiteUrl.trim() !== (bk?.websiteUrl ?? "").trim() ||
-    bizDraft.value.tagline.trim() !== (bk?.tagline ?? "").trim()
+    bizDraft.value.tagline.trim() !== (bk?.tagline ?? "").trim() ||
+    bizDraft.value.licenseNumber.trim() !== (bk?.licenseNumber ?? "").trim()
   );
 });
 
@@ -463,6 +472,7 @@ async function saveBizInfo() {
       businessName: bizDraft.value.businessName.trim(),
       phone: bizDraft.value.phone.trim(),
       websiteUrl: bizDraft.value.websiteUrl.trim(),
+      licenseNumber: bizDraft.value.licenseNumber.trim(),
     };
     // Only send the tagline when the user actually changed it — an
     // untouched empty input on a brand with the industry-derived default
@@ -918,6 +928,20 @@ async function saveNewReview() {
           />
           <span class="block text-[10px] text-gray-400 mt-0.5">
             Leave blank and save to remove it from the card.
+          </span>
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">License number (small print on the card)</span>
+          <input
+            v-model="bizDraft.licenseNumber"
+            type="text"
+            maxlength="32"
+            data-testid="biz-license-input"
+            placeholder="e.g. CSLB #1042689"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <span class="block text-[10px] text-gray-400 mt-0.5">
+            Required on contractor ads in some states (incl. CA and FL).
           </span>
         </label>
         <button
