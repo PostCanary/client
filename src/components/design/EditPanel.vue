@@ -7,6 +7,7 @@ import type {
   BrandKitReview,
   ColorOverride,
   HeadlineLines,
+  Industry,
   OfferStackItem,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
@@ -14,6 +15,7 @@ import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPale
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { useAuthStore } from "@/stores/auth";
 import {
   getMediaFeatures,
   searchStockPhotos,
@@ -765,6 +767,43 @@ async function saveBizInfo() {
   }
 }
 
+// --- Industry switcher (S75: internal test tool) ----------------------------
+// Visible only to allowlisted internal accounts. Cosmetic gate: the
+// brand-kit PUT already accepts industry from any org member; this just
+// keeps the control out of customers' sight.
+const TEST_TOOLS_EMAILS = new Set([
+  "dustin@postcanary.com",
+  "dthompson@2020tek.com",
+]);
+const showIndustrySwitcher = computed(() =>
+  TEST_TOOLS_EMAILS.has((useAuthStore().userEmail ?? "").toLowerCase()),
+);
+const INDUSTRY_OPTIONS = [
+  "hvac",
+  "plumbing",
+  "roofing",
+  "cleaning",
+  "electrical",
+  "pest_control",
+  "landscaping",
+  "other",
+] as const;
+const switchingIndustry = ref(false);
+
+async function switchIndustry(event: Event) {
+  const industry = (event.target as HTMLSelectElement).value;
+  if (!industry || switchingIndustry.value) return;
+  switchingIndustry.value = true;
+  try {
+    await brandKitStore.update({ industry: industry as Industry });
+    // Re-render so packs/tips/taglines/notice defaults reflect the trade
+    // immediately. AI copy only changes on regenerate — by design.
+    emit("info-saved");
+  } finally {
+    switchingIndustry.value = false;
+  }
+}
+
 function pickLogoFile() {
   logoInput.value?.click();
 }
@@ -1416,6 +1455,27 @@ async function saveNewReview() {
             Leave blank and save to remove it from the card.
           </span>
         </label>
+        <div
+          v-if="showIndustrySwitcher"
+          class="rounded-lg border border-dashed border-amber-300 bg-amber-50/50 px-3 py-2"
+        >
+          <span class="text-[10px] uppercase tracking-wide text-amber-600">Industry (internal test tool)</span>
+          <select
+            data-testid="industry-switcher"
+            :value="brandKit?.industry ?? 'other'"
+            :disabled="switchingIndustry"
+            class="w-full mt-1 border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white"
+            @change="switchIndustry"
+          >
+            <option v-for="ind in INDUSTRY_OPTIONS" :key="ind" :value="ind">
+              {{ ind.replace("_", " ") }}
+            </option>
+          </select>
+          <span class="block text-[10px] text-amber-600/80 mt-1">
+            Applies instantly: photo packs, tips, taglines, recommendations.
+            AI copy changes on the next generate.
+          </span>
+        </div>
         <label class="block">
           <span class="text-[10px] uppercase tracking-wide text-gray-400">License number (small print on the card)</span>
           <input
