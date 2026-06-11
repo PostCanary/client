@@ -46,6 +46,7 @@ const emit = defineEmits<{
   (e: "update-headline-lines", lines: HeadlineLines): void;
   (e: "update-service-rows", rows: string[]): void;
   (e: "update-offer-items", items: OfferStackItem[]): void;
+  (e: "update-tips", tips: string[]): void;
   (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
@@ -62,6 +63,7 @@ type EditorType =
   | "business"
   | "checklist"
   | "notice"
+  | "tips"
   | null;
 const activeEditor = ref<EditorType>(null);
 
@@ -340,6 +342,93 @@ function removeChecklistRow(index: number) {
   applyRows();
 }
 
+// --- Tips editor (S74 wave 3: tips-card layout) ------------------------------
+const isTipsLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("tips-card"),
+);
+const showTipsEditor = computed(
+  () => isTipsLayout.value && props.card.cardPurpose !== "proof",
+);
+
+// Mirrors the worker's industry tip packs so the editor opens showing
+// exactly what prints before any edit exists.
+const INDUSTRY_TIPS: Record<string, string[]> = {
+  hvac: [
+    "Replace filters every 60-90 days",
+    "Clear debris around the outdoor unit",
+    "Keep vents open in every room",
+    "Book a tune-up before peak season",
+    "Listen for new rattles or buzzing",
+  ],
+  plumbing: [
+    "Know where your water shut-off is",
+    "Never pour grease down the drain",
+    "Fix dripping faucets early",
+    "Insulate pipes before winter",
+    "Watch your water bill for spikes",
+  ],
+  roofing: [
+    "Check shingles after every storm",
+    "Keep gutters clear year-round",
+    "Look for ceiling stains early",
+    "Trim branches over the roof",
+    "Get an inspection every 2 years",
+  ],
+  electrical: [
+    "Test GFCI outlets twice a year",
+    "Never ignore flickering lights",
+    "Don't overload power strips",
+    "Label your breaker panel",
+    "Upgrade aging smoke detectors",
+  ],
+};
+const DEFAULT_TIPS = [
+  "Book service before peak season",
+  "Ask about maintenance plans",
+  "Don't ignore small problems",
+  "Keep equipment areas clear",
+  "Save your service records",
+];
+
+function tipsForCard(): string[] {
+  const stored = props.card.resolvedContent.tips;
+  if (stored && stored.filter((t) => t.trim()).length >= 3) return [...stored];
+  const industry = (props.brandKit?.industry ?? "").toLowerCase();
+  return [...(INDUSTRY_TIPS[industry] ?? DEFAULT_TIPS)];
+}
+
+const editableTips = ref<string[]>(tipsForCard());
+
+watch(
+  () => [
+    props.card.cardNumber,
+    JSON.stringify(props.card.resolvedContent.tips ?? null),
+  ],
+  () => {
+    editableTips.value = tipsForCard();
+  },
+);
+
+function applyTips() {
+  emit("update-tips", [...editableTips.value]);
+}
+
+function addTip() {
+  if (editableTips.value.length >= 5) return;
+  editableTips.value.push("");
+}
+
+function removeTip(index: number) {
+  editableTips.value.splice(index, 1);
+  applyTips();
+}
+
+// --- Before/after photo slots (S74 wave 3) ----------------------------------
+const isBeforeAfterLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("before-after"),
+);
+const photoSlot = ref<"after" | "before">("after");
+
 function applyUrgency() {
   emit("update-field", "urgencyText", editableUrgency.value);
 }
@@ -378,6 +467,13 @@ const currentPhotoUrl = computed(
 );
 
 function applyPhoto(url: string) {
+  // before-after: the Before slot writes its own field; the After slot
+  // uses the standard photo path (after_photo_url falls back to photoUrl
+  // worker-side, so the classic flow keeps working).
+  if (isBeforeAfterLayout.value && photoSlot.value === "before") {
+    emit("update-field", "beforePhotoUrl", url);
+    return;
+  }
   emit("update-photo", url);
 }
 
@@ -900,6 +996,54 @@ async function saveNewReview() {
         </label>
       </div>
 
+      <!-- Tips (S74: tips-card layout; panel replaced by review on proof) -->
+      <button
+        v-if="showTipsEditor"
+        data-testid="edit-tips-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'tips' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('tips')"
+      >
+        Edit Tips
+      </button>
+      <div v-if="showTipsEditor && activeEditor === 'tips'" class="px-3 pb-3 space-y-2">
+        <div
+          v-for="(_tip, i) in editableTips"
+          :key="i"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-model="editableTips[i]"
+            type="text"
+            maxlength="38"
+            :data-testid="`tip-row-${i}`"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyTips"
+          />
+          <button
+            type="button"
+            :data-testid="`tip-row-remove-${i}`"
+            class="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+            aria-label="Remove tip"
+            @click="removeTip(i)"
+          >
+            &times;
+          </button>
+        </div>
+        <button
+          v-if="editableTips.length < 5"
+          type="button"
+          data-testid="tip-row-add"
+          class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="addTip"
+        >
+          + Add tip
+        </button>
+        <p class="text-[10px] text-gray-400">
+          3-5 tips. Fewer than 3 prints your industry's standard tips.
+        </p>
+      </div>
+
       <!-- Change Photo (hidden on layouts with no photo slot —
            bold-graphic / review-forward) -->
       <button
@@ -912,6 +1056,27 @@ async function saveNewReview() {
         Change Photo
       </button>
       <div v-if="layoutUsesPhoto && activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
+        <!-- before-after: pick which half the next photo applies to -->
+        <div v-if="isBeforeAfterLayout" class="flex gap-2 mb-1">
+          <button
+            type="button"
+            data-testid="photo-slot-after"
+            class="flex-1 px-3 py-1.5 rounded-lg border text-xs transition-colors"
+            :class="photoSlot === 'after' ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]' : 'border-gray-200 text-gray-500'"
+            @click="photoSlot = 'after'"
+          >
+            After photo
+          </button>
+          <button
+            type="button"
+            data-testid="photo-slot-before"
+            class="flex-1 px-3 py-1.5 rounded-lg border text-xs transition-colors"
+            :class="photoSlot === 'before' ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]' : 'border-gray-200 text-gray-500'"
+            @click="photoSlot = 'before'"
+          >
+            Before photo
+          </button>
+        </div>
         <input
           ref="photoInput"
           type="file"

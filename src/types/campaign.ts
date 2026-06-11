@@ -238,11 +238,14 @@ export type TemplateLayoutType =
   | 'full-bleed'
   | 'side-split'
   | 'photo-top'
+  | 'photo-hero'
   | 'bold-graphic'
   | 'before-after'
   | 'review-forward'
   | 'service-checklist'
   | 'urgency-notice'
+  | 'new-mover'
+  | 'tips'
 
 export type CardPurpose = 'offer' | 'proof' | 'last_chance'
 
@@ -302,6 +305,9 @@ export interface CardDesign {
     riskReversal?: string
     photoUrl?: string
     serviceRows?: string[]             // service-checklist rows the customer edited (S73)
+    tips?: string[]                    // tips-card rows the customer edited (S74)
+    beforePhotoUrl?: string            // before-after split (S74)
+    afterPhotoUrl?: string
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
@@ -317,6 +323,9 @@ export interface CardDesign {
     riskReversal: string
     trustSignals: string[]
     serviceRows?: string[]             // absent → worker derives from brand serviceTypes
+    tips?: string[]                    // absent → worker uses the industry tip pack
+    beforePhotoUrl?: string            // before-after split; falls back to photoUrl
+    afterPhotoUrl?: string
   }
   backContent: {
     guarantee: string

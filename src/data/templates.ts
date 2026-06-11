@@ -64,11 +64,14 @@ const LAYOUTS: {
   { type: "full-bleed", name: "Full-Bleed Photo", desc: "Big photo fills the card. Great for before/after or dramatic visuals.", bestFor: ["neighbor_marketing", "target_area"] },
   { type: "side-split", name: "Side Split", desc: "Photo on one side, messaging on the other. Clean and professional.", bestFor: ["seasonal_tuneup", "cross_service_promo"] },
   { type: "photo-top", name: "Photo Top", desc: "Photo across the top, details below. Works for any service.", bestFor: ["neighbor_marketing", "win_back"] },
+  { type: "photo-hero", name: "Photo Hero", desc: "One big photo with bold text right on it. Maximum visual impact.", bestFor: ["neighbor_marketing", "target_area"] },
+  { type: "new-mover", name: "New Mover Welcome", desc: "A warm welcome for families who just moved in.", bestFor: ["new_mover"] },
   { type: "bold-graphic", name: "Bold Graphic", desc: "Minimal photo, bold headline and colors. Grabs attention.", bestFor: ["storm_response", "target_area"] },
   { type: "before-after", name: "Before / After", desc: "Two photos side by side showing transformation.", bestFor: ["neighbor_marketing", "target_area", "cross_service_promo"] },
   { type: "review-forward", name: "Review Forward", desc: "Customer review front and center. Trust-first approach.", bestFor: ["win_back", "seasonal_tuneup"] },
   { type: "service-checklist", name: "Service Checklist", desc: "Your services as a bold checklist. Shows everything you do at a glance.", bestFor: ["cross_service_promo", "new_mover"] },
   { type: "urgency-notice", name: "Urgency Notice", desc: "Official notice style with deadline. Grabs attention like important mail.", bestFor: ["storm_response", "seasonal_tuneup"] },
+  { type: "tips", name: "Quick Tips", desc: "Helpful seasonal tips with your offer as the payoff. Builds goodwill.", bestFor: ["seasonal_tuneup", "neighbor_marketing"] },
 ];
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
@@ -79,12 +82,16 @@ const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
 // hidden until its worker template is built.
 export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
   "full-bleed",
+  "photo-hero",
   "side-split",
   "photo-top",
   "bold-graphic",
   "review-forward",
   "service-checklist",
   "urgency-notice",
+  "new-mover",
+  "before-after",
+  "tips",
 ];
 
 // Worker render template per layout — keys of the render worker's
@@ -97,6 +104,10 @@ export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
   "full-bleed": "hac-1000-front-v1",
   "side-split": "side-split-front-v1",
   "photo-top": "photo-top-front-v1",
+  "photo-hero": "photo-hero-front-v1",
+  "new-mover": "new-mover-front-v1",
+  "before-after": "before-after-front-v1",
+  "tips": "tips-card-front-v1",
   "bold-graphic": "bold-graphic-front-v1",
   "review-forward": "review-forward-front-v1",
   "service-checklist": "service-checklist-front-v1",
@@ -221,7 +232,7 @@ export const GOAL_TEMPLATE_MAP: Record<CampaignGoalType, TemplateLayoutType> = {
   storm_response: "bold-graphic",
   win_back: "review-forward",
   cross_service_promo: "service-checklist",
-  new_mover: "service-checklist",
+  new_mover: "new-mover",
   other: "photo-top",
 };
 

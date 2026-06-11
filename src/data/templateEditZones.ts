@@ -13,7 +13,8 @@ export type CardEditor =
   | "photo"
   | "review"
   | "checklist"
-  | "notice";
+  | "notice"
+  | "tips";
 
 export interface EditZone {
   editor: CardEditor;
@@ -32,6 +33,172 @@ export interface EditZone {
 export const DEFAULT_RENDER_TEMPLATE_ID = "hac-1000-front-v1";
 
 export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
+  // Geometry source: tips-card-front.html (S74 wave 3) — checklist base,
+  // right panel = numbered tips (dedicated editor).
+  "tips-card-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      proofOnly: true,
+    },
+    {
+      editor: "tips",
+      label: "Edit tips",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      hideOnProof: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 0,
+      width: 51,
+      height: 62.3,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
+  // Geometry source: before-after-front.html (S74 wave 3) — split banner
+  // (before 0-50%, after 50-100%), photo-top body below.
+  "before-after-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 38.9,
+      proofOnly: true,
+    },
+    {
+      editor: "photo",
+      label: "Change before photo",
+      left: 0,
+      top: 0,
+      width: 50,
+      height: 38.9,
+      hideOnProof: true,
+    },
+    {
+      editor: "photo",
+      label: "Change after photo",
+      left: 50,
+      top: 0,
+      width: 50,
+      height: 38.9,
+      hideOnProof: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 39.75,
+      width: 100,
+      height: 22.5,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
+  // Geometry source: photo-hero-front.html (S74 wave 3) —
+  //   .photo/.hero-scrim 0,0 1200x499 (photo IS the top zone)
+  //   headline overlay   60,46 -> ~1160x190 (white knockout)
+  //   .proof-panel       560,206 600x258 (floating review card)
+  "photo-hero-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 46.7,
+      top: 25.75,
+      width: 50,
+      height: 32.25,
+      proofOnly: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 24,
+    },
+    {
+      editor: "photo",
+      label: "Change photo",
+      left: 0,
+      top: 24,
+      width: 100,
+      height: 38.3,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
+  // Geometry source: new-mover-front.html — photo-top base + greeting
+  // chrome over the banner (greeting is template chrome, not editable).
+  "new-mover-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 38.9,
+      proofOnly: true,
+    },
+    {
+      editor: "photo",
+      label: "Change photo",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 38.9,
+      hideOnProof: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 39.75,
+      width: 100,
+      height: 22.5,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
   // Geometry source: photo-top-front.html (S73) —
   //   .photo            -1,-1  1202x311 (full-width banner)
   //   .headline-zone-bg -1,318 1202x180 (condensed 2-line headline)

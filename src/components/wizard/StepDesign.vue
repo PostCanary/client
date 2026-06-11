@@ -468,6 +468,27 @@ function updateOfferItems(items: OfferStackItem[]) {
   queuePersistedPreviewRefresh();
 }
 
+// Tips rows (S74 wave 3, tips-card layout).
+function updateTips(tips: string[]) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  lastEditAt.value = Date.now();
+  replaceActiveCard({
+    ...card,
+    overrides: {
+      ...card.overrides,
+      tips: [...tips],
+    },
+    resolvedContent: {
+      ...card.resolvedContent,
+      tips: [...tips],
+    },
+  });
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
 function updateColors(colors: ColorOverride | null) {
   const card = activeCard.value;
   if (!card) return;
@@ -793,6 +814,7 @@ watch(
         @update-headline-lines="updateHeadlineLines"
         @update-service-rows="updateServiceRows"
         @update-offer-items="updateOfferItems"
+        @update-tips="updateTips"
         @update-colors="updateColors"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"

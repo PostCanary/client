@@ -86,10 +86,14 @@ describe("design library templates", () => {
       "full-bleed",
       "side-split",
       "photo-top",
+      "photo-hero",
+      "new-mover",
       "bold-graphic",
+      "before-after",
       "review-forward",
       "service-checklist",
       "urgency-notice",
+      "tips",
     ]);
     expect(
       targetAreaSets.find((set) => set.recommended)?.layout,
