@@ -66,11 +66,13 @@ onMounted(async () => {
     return;
   }
 
-  // Onboarding gate: WizardLayout doesn't render OnboardingModal
-  if (!auth.profileComplete) {
-    router.replace("/app/dashboard");
-    return;
-  }
+  // S72 gate removal: users who skipped onboarding may use the wizard.
+  // Every formerly-onboarding-only input now has an in-designer rescue
+  // path (photo upload/stock/AI, inline review add, business-info prompt,
+  // color presets), the targeting map has a US-wide default view, and the
+  // server renders previews from a minimal brand kit with warnings instead
+  // of 400s. Blocking here forced users back to a flow they already chose
+  // to skip.
 
   try {
     // Org gate: no org means API calls will fail — let catch handle it
