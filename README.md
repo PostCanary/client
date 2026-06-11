@@ -76,3 +76,4 @@ client/
 │   └── styles/       # Global styles
 └── public/           # Static assets
 ```
+
