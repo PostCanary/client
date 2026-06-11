@@ -301,6 +301,7 @@ export interface CardDesign {
     urgencyText?: string
     riskReversal?: string
     photoUrl?: string
+    serviceRows?: string[]             // service-checklist rows the customer edited (S73)
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
@@ -315,6 +316,7 @@ export interface CardDesign {
     urgencyText: string
     riskReversal: string
     trustSignals: string[]
+    serviceRows?: string[]             // absent → worker derives from brand serviceTypes
   }
   backContent: {
     guarantee: string

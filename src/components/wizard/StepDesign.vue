@@ -415,6 +415,29 @@ function updateHeadlineLines(lines: HeadlineLines) {
   queuePersistedPreviewRefresh();
 }
 
+// Checklist rows (S73, service-checklist layout). No live-text overlay —
+// the checklist panel isn't an overlay zone; the authoritative render
+// carries the change.
+function updateServiceRows(rows: string[]) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  lastEditAt.value = Date.now();
+  replaceActiveCard({
+    ...card,
+    overrides: {
+      ...card.overrides,
+      serviceRows: [...rows],
+    },
+    resolvedContent: {
+      ...card.resolvedContent,
+      serviceRows: [...rows],
+    },
+  });
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
 function updateColors(colors: ColorOverride | null) {
   const card = activeCard.value;
   if (!card) return;
@@ -738,6 +761,7 @@ watch(
         :requested-editor="requestedEditor"
         @update-field="updateCardField"
         @update-headline-lines="updateHeadlineLines"
+        @update-service-rows="updateServiceRows"
         @update-colors="updateColors"
         @update-photo="updatePhoto"
         @open-template-browser="showTemplateBrowser = true"
