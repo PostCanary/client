@@ -7,7 +7,13 @@
 // displayed image. New render templates must ship their own zone map here,
 // keyed by their renderTemplateId.
 
-export type CardEditor = "headline" | "offer" | "photo" | "review";
+export type CardEditor =
+  | "headline"
+  | "offer"
+  | "photo"
+  | "review"
+  | "checklist"
+  | "notice";
 
 export interface EditZone {
   editor: CardEditor;
@@ -152,9 +158,8 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
   ],
 
   // Geometry source: service-checklist-front.html — no photo. The right
-  // panel is the services checklist (content from the brand kit's service
-  // types; no dedicated editor yet). Proof cards swap it for the review
-  // panel.
+  // panel is the services checklist (customer-editable rows, S73). Proof
+  // cards swap it for the review panel.
   "service-checklist-front-v1": [
     {
       editor: "review",
@@ -164,6 +169,15 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
       width: 48.3,
       height: 62.3,
       proofOnly: true,
+    },
+    {
+      editor: "checklist",
+      label: "Edit checklist",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      hideOnProof: true,
     },
     {
       editor: "headline",
@@ -184,7 +198,7 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
   ],
 
   // Geometry source: urgency-notice-front.html — no photo. Notice panel
-  // body = urgencyText (no dedicated editor yet). Proof swaps to review.
+  // body = urgencyText (dedicated editor, S73). Proof swaps to review.
   "urgency-notice-front-v1": [
     {
       editor: "review",
@@ -194,6 +208,15 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
       width: 48.3,
       height: 62.3,
       proofOnly: true,
+    },
+    {
+      editor: "notice",
+      label: "Edit notice text",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      hideOnProof: true,
     },
     {
       editor: "headline",

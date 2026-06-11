@@ -11,7 +11,7 @@ import type {
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
 import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
-import { editZonesFor } from "@/data/templateEditZones";
+import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import {
   getMediaFeatures,
@@ -37,12 +37,13 @@ const props = defineProps<{
   card: CardDesign;
   brandKit: BrandKit | null;
   /** Click-to-edit: set by StepDesign when a card hotspot is clicked. */
-  requestedEditor?: { editor: "headline" | "offer" | "photo" | "review"; ts: number } | null;
+  requestedEditor?: { editor: CardEditor; ts: number } | null;
 }>();
 
 const emit = defineEmits<{
   (e: "update-field", field: string, value: string): void;
   (e: "update-headline-lines", lines: HeadlineLines): void;
+  (e: "update-service-rows", rows: string[]): void;
   (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
@@ -57,6 +58,8 @@ type EditorType =
   | "photo"
   | "colors"
   | "business"
+  | "checklist"
+  | "notice"
   | null;
 const activeEditor = ref<EditorType>(null);
 
@@ -228,6 +231,91 @@ function applyLines() {
 
 function applyOffer() {
   emit("update-field", "offerText", editableOffer.value);
+}
+
+// --- Checklist rows + notice text (S73: layout-specific editors) ------------
+const isChecklistLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("service-checklist"),
+);
+const isNoticeLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("urgency-notice"),
+);
+// Both panels are replaced by the review panel on proof cards.
+const showChecklistEditor = computed(
+  () => isChecklistLayout.value && props.card.cardPurpose !== "proof",
+);
+const showNoticeEditor = computed(
+  () => isNoticeLayout.value && props.card.cardPurpose !== "proof",
+);
+
+// Mirrors the worker derivation (postcard_renderer._service_rows) so the
+// editor opens showing exactly what's printed before any edit exists.
+const DEFAULT_SERVICE_ROWS = [
+  "Repairs & Service",
+  "New Installations",
+  "Maintenance & Tune-Ups",
+  "Free Estimates",
+];
+
+function rowsForCard(): string[] {
+  const stored = props.card.resolvedContent.serviceRows;
+  if (stored?.some((r) => r.trim())) return [...stored];
+  const rows = (props.brandKit?.serviceTypes ?? [])
+    .map((s) => s.trim().slice(0, 26))
+    .filter(Boolean)
+    .slice(0, 5);
+  for (const d of DEFAULT_SERVICE_ROWS) {
+    if (rows.length >= 4) break;
+    if (!rows.includes(d)) rows.push(d);
+  }
+  return rows;
+}
+
+// Worker defaults shown as placeholders so an untouched card reads true.
+const URGENCY_DEFAULT =
+  "Schedule before the seasonal rush — appointments are filling fast.";
+const RISK_REVERSAL_DEFAULT = "100% Satisfaction Guarantee";
+
+const editableRows = ref<string[]>(rowsForCard());
+const editableUrgency = ref(props.card.resolvedContent.urgencyText);
+const editableRiskReversal = ref(props.card.resolvedContent.riskReversal);
+
+// Same typing-loop-safe shape as the headline watch above: the emitted
+// value round-trips through resolvedContent identical to what was typed.
+watch(
+  () => [
+    props.card.cardNumber,
+    JSON.stringify(props.card.resolvedContent.serviceRows ?? null),
+    props.card.resolvedContent.urgencyText,
+    props.card.resolvedContent.riskReversal,
+  ],
+  () => {
+    editableRows.value = rowsForCard();
+    editableUrgency.value = props.card.resolvedContent.urgencyText;
+    editableRiskReversal.value = props.card.resolvedContent.riskReversal;
+  },
+);
+
+function applyRows() {
+  emit("update-service-rows", [...editableRows.value]);
+}
+
+function addChecklistRow() {
+  if (editableRows.value.length >= 5) return;
+  editableRows.value.push("");
+}
+
+function removeChecklistRow(index: number) {
+  editableRows.value.splice(index, 1);
+  applyRows();
+}
+
+function applyUrgency() {
+  emit("update-field", "urgencyText", editableUrgency.value);
+}
+
+function applyRiskReversal() {
+  emit("update-field", "riskReversal", editableRiskReversal.value);
 }
 
 // --- Photo picker ---------------------------------------------------------
@@ -636,6 +724,96 @@ async function saveNewReview() {
         <div class="text-[10px] text-gray-400 mt-1 text-right">
           {{ editableOffer.length }}/200
         </div>
+      </div>
+
+      <!-- Checklist rows (S73: service-checklist layout; panel is replaced
+           by the review panel on proof cards) -->
+      <button
+        v-if="showChecklistEditor"
+        data-testid="edit-checklist-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'checklist' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('checklist')"
+      >
+        Edit Checklist
+      </button>
+      <div v-if="showChecklistEditor && activeEditor === 'checklist'" class="px-3 pb-3 space-y-2">
+        <div
+          v-for="(_row, i) in editableRows"
+          :key="i"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-model="editableRows[i]"
+            type="text"
+            maxlength="26"
+            :data-testid="`checklist-row-${i}`"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyRows"
+          />
+          <button
+            type="button"
+            :data-testid="`checklist-row-remove-${i}`"
+            class="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+            aria-label="Remove row"
+            @click="removeChecklistRow(i)"
+          >
+            &times;
+          </button>
+        </div>
+        <button
+          v-if="editableRows.length < 5"
+          type="button"
+          data-testid="checklist-row-add"
+          class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="addChecklistRow"
+        >
+          + Add row
+        </button>
+        <p class="text-[10px] text-gray-400">
+          Up to 5 rows. Remove every row to reset to your services list.
+        </p>
+      </div>
+
+      <!-- Notice text (S73: urgency-notice layout; panel is replaced by
+           the review panel on proof cards) -->
+      <button
+        v-if="showNoticeEditor"
+        data-testid="edit-notice-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'notice' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('notice')"
+      >
+        Edit Notice Text
+      </button>
+      <div v-if="showNoticeEditor && activeEditor === 'notice'" class="px-3 pb-3 space-y-2">
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Notice body</span>
+          <textarea
+            v-model="editableUrgency"
+            maxlength="110"
+            rows="3"
+            data-testid="notice-body-input"
+            :placeholder="URGENCY_DEFAULT"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+            @input="applyUrgency"
+          />
+          <span class="block text-[10px] text-gray-400 mt-0.5 text-right">
+            {{ editableUrgency.length }}/110 — blank prints the default above
+          </span>
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Guarantee chip</span>
+          <input
+            v-model="editableRiskReversal"
+            type="text"
+            maxlength="60"
+            data-testid="notice-guarantee-input"
+            :placeholder="RISK_REVERSAL_DEFAULT"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyRiskReversal"
+          />
+        </label>
       </div>
 
       <!-- Change Photo (hidden on layouts with no photo slot —
