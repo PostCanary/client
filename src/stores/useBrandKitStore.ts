@@ -9,6 +9,7 @@ import {
   addManualReview,
   removeReview as apiRemoveReview,
   uploadBrandPhoto,
+  importStockPhoto as apiImportStockPhoto,
 } from "@/api/brandKit";
 import { useAuthStore } from "@/stores/auth";
 
@@ -212,6 +213,27 @@ export const useBrandKitStore = defineStore("brandKit", {
       } catch (e: any) {
         this.error =
           e?.data?.error || e?.message || "Failed to upload photo";
+        return null;
+      }
+    },
+
+    /** S72 stock photos: copy a Pexels image into the brand library.
+     * Returns the new photo's /media URL (so the designer can apply it
+     * to the card immediately), null on failure (this.error set). */
+    async importStockPhoto(url: string, alt: string): Promise<string | null> {
+      this.error = null;
+      try {
+        const before = new Set(
+          (this.brandKit?.photos ?? []).map((p) => p.url),
+        );
+        this.brandKit = await apiImportStockPhoto(url, alt);
+        const added = (this.brandKit?.photos ?? []).find(
+          (p) => !before.has(p.url),
+        );
+        return added?.url ?? null;
+      } catch (e: any) {
+        this.error =
+          e?.data?.error || e?.message || "Failed to import stock photo";
         return null;
       }
     },

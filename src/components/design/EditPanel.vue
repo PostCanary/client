@@ -13,6 +13,7 @@ import { COLOR_PALETTES, isCompleteOverride } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { searchStockPhotos, type StockPhotoResult } from "@/api/brandKit";
 import { API_BASE } from "@/api/http";
 
 /**
@@ -196,6 +197,48 @@ const currentPhotoUrl = computed(
 
 function applyPhoto(url: string) {
   emit("update-photo", url);
+}
+
+// --- Stock photo search (Pexels; S72) ---------------------------------------
+const stockQuery = ref("");
+const stockResults = ref<StockPhotoResult[]>([]);
+const stockSearching = ref(false);
+const stockImportingId = ref<number | null>(null);
+const stockError = ref<string | null>(null);
+const stockConfigured = ref(true);
+const stockSearched = ref(false);
+
+async function searchStock() {
+  const q = stockQuery.value.trim();
+  if (!q || stockSearching.value) return;
+  stockSearching.value = true;
+  stockError.value = null;
+  try {
+    const res = await searchStockPhotos(q);
+    stockConfigured.value = res.configured;
+    stockResults.value = res.photos;
+    stockSearched.value = true;
+  } catch (e: any) {
+    stockError.value = e?.data?.error || e?.message || "Search failed";
+  } finally {
+    stockSearching.value = false;
+  }
+}
+
+async function importStock(photo: StockPhotoResult) {
+  if (stockImportingId.value !== null) return;
+  stockImportingId.value = photo.id;
+  stockError.value = null;
+  try {
+    const url = await brandKitStore.importStockPhoto(photo.fullUrl, photo.alt);
+    if (url) {
+      applyPhoto(url);
+    } else {
+      stockError.value = brandKitStore.error || "Import failed";
+    }
+  } finally {
+    stockImportingId.value = null;
+  }
 }
 
 // --- Photo upload (designer-side; Phase 0.2a) ------------------------------
@@ -446,6 +489,59 @@ async function saveNewReview() {
               class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
             >Stock</span>
           </button>
+        </div>
+
+        <!-- Stock photo search (Pexels; S72) -->
+        <div v-if="stockConfigured" class="pt-2 border-t border-gray-100">
+          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+            Search stock photos
+          </p>
+          <div class="flex gap-1">
+            <input
+              v-model="stockQuery"
+              type="text"
+              placeholder="e.g. AC technician, cozy living room"
+              data-testid="stock-search-input"
+              class="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs"
+              @keydown.enter.prevent="searchStock"
+            />
+            <button
+              type="button"
+              data-testid="stock-search-button"
+              class="px-3 py-1.5 rounded-lg bg-[#0b2d50] text-white text-xs disabled:opacity-50"
+              :disabled="stockSearching || !stockQuery.trim()"
+              @click="searchStock"
+            >
+              {{ stockSearching ? "…" : "Search" }}
+            </button>
+          </div>
+          <div v-if="stockError" class="text-[11px] text-red-500 mt-1">
+            {{ stockError }}
+          </div>
+          <div
+            v-if="stockSearched && stockResults.length === 0 && !stockSearching"
+            class="text-xs text-gray-400 mt-2"
+          >
+            No results — try a different search.
+          </div>
+          <div v-if="stockResults.length" class="grid grid-cols-3 gap-1.5 mt-2 max-h-56 overflow-y-auto">
+            <button
+              v-for="photo in stockResults"
+              :key="photo.id"
+              type="button"
+              :data-testid="`stock-result-${photo.id}`"
+              class="relative aspect-square rounded-md overflow-hidden border-2 border-transparent hover:border-[#47bfa9] transition-colors disabled:opacity-60"
+              :disabled="stockImportingId !== null"
+              :title="photo.alt || photo.photographer"
+              @click="importStock(photo)"
+            >
+              <img :src="photo.thumbUrl" :alt="photo.alt" class="w-full h-full object-cover" loading="lazy" />
+              <span
+                v-if="stockImportingId === photo.id"
+                class="absolute inset-0 grid place-items-center bg-white/70 text-[10px] font-medium text-gray-700"
+              >Adding…</span>
+            </button>
+          </div>
         </div>
       </div>
 

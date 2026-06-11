@@ -119,6 +119,44 @@ export async function generateContent(
   return postJson<GeneratedContent>("/api/brand-kit/generate", data);
 }
 
+// --- Stock photos (Pexels-backed; S72) ---
+
+export interface StockPhotoResult {
+  id: number;
+  alt: string;
+  photographer: string;
+  thumbUrl: string;
+  fullUrl: string;
+  width: number;
+  height: number;
+}
+
+export interface StockSearchResponse {
+  configured: boolean;
+  photos: StockPhotoResult[];
+  totalResults: number;
+  page?: number;
+}
+
+export async function searchStockPhotos(
+  query: string,
+  page = 1,
+): Promise<StockSearchResponse> {
+  const params = new URLSearchParams({ query, page: String(page) });
+  return get<StockSearchResponse>(`/api/brand-kit/stock-photos?${params}`);
+}
+
+export async function importStockPhoto(
+  url: string,
+  alt: string,
+): Promise<BrandKit> {
+  const res = await postJson<BrandKitResponse>(
+    "/api/brand-kit/stock-photos/import",
+    { url, alt },
+  );
+  return toBrandKit(res);
+}
+
 // --- Manual Reviews ---
 
 export interface AddReviewRequest {
