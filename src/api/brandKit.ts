@@ -115,6 +115,11 @@ export interface GeneratedCardContent {
   } | null;
   templateRecommendation: string;
   templateReason: string;
+  // S76-C: letter-note copy. Present when the AI recommends (or could
+  // recommend) the personal-letter layout; the server always emits a
+  // well-formed object (salutation city-defaulted, body synthesized from
+  // offer + review when the model omits it). Optional for older payloads.
+  letter?: { salutation: string; body: string };
 }
 
 export interface GeneratedContent {

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEMO_VISIBLE_LAYOUTS,
+  GOAL_TEMPLATE_MAP,
+  LAYOUT_RENDER_TEMPLATE_IDS,
   getDesignLibraryTemplate,
   getRecommendedTemplateSet,
   getTemplateSetsForGoal,
   getVisibleDesignLibraryTemplates,
+  renderTemplateIdForLayout,
   visibleDesignLibraryTemplates,
   useCaseLabel,
 } from "./templates";
@@ -95,6 +99,7 @@ describe("design library templates", () => {
       "service-checklist",
       "urgency-notice",
       "tips",
+      "letter-note",
     ]);
     expect(
       targetAreaSets.find((set) => set.recommended)?.layout,
@@ -133,5 +138,31 @@ describe("industry recommendations (S75-C)", () => {
     expect(useCaseLabel("storm_response", "roofing")).toBe("Storm Damage Response");
     expect(useCaseLabel("seasonal_tuneup", "hvac")).toBe("Beat-the-Season Tune-Up");
     expect(useCaseLabel("win_back", null)).toBe("Win-Back Campaign");
+  });
+});
+
+describe("letter-note layout (S76-C)", () => {
+  it("is browsable in the demo-visible set", () => {
+    expect(DEMO_VISIBLE_LAYOUTS).toContain("letter-note");
+  });
+
+  it("maps to its render-worker template", () => {
+    expect(LAYOUT_RENDER_TEMPLATE_IDS["letter-note"]).toBe("letter-note-front-v1");
+    expect(renderTemplateIdForLayout("letter-note")).toBe("letter-note-front-v1");
+  });
+
+  it("surfaces in every goal's browsable set", () => {
+    const sets = getTemplateSetsForGoal("win_back");
+    expect(sets.map((s) => s.layout)).toContain("letter-note");
+  });
+
+  it("is NOT the default recommendation for any goal", () => {
+    // letter is bestFor-recommended + browsable, never a goal default.
+    expect(Object.values(GOAL_TEMPLATE_MAP)).not.toContain("letter-note");
+  });
+
+  it("does not become the recommended set for win_back", () => {
+    const set = getRecommendedTemplateSet("win_back");
+    expect(set[0]?.layoutType).not.toBe("letter-note");
   });
 });

@@ -311,6 +311,25 @@ function fillTemplate(tmpl: string, vars: Record<string, string>): string {
   return result;
 }
 
+// S76-C letter-note: default salutation from the org's city. Mirrors the
+// server (ai_generator._default_salutation / EditPanel.defaultSalutation):
+// "Dear {City} Neighbor," when the location parses, else "Dear Neighbor,".
+const GENERIC_LOCATIONS = new Set([
+  "",
+  "your area",
+  "your city",
+  "your town",
+  "your neighborhood",
+  "local",
+]);
+function defaultSalutation(location: string | null | undefined): string {
+  const loc = (location ?? "").trim();
+  if (GENERIC_LOCATIONS.has(loc.toLowerCase())) return "Dear Neighbor,";
+  const city = loc.split(",", 1)[0]!.trim();
+  if (!city || /\d/.test(city)) return "Dear Neighbor,";
+  return `Dear ${city} Neighbor,`;
+}
+
 // ---------------------------------------------------------------------------
 // Local fallback generator (same as Round 1)
 // ---------------------------------------------------------------------------
@@ -397,6 +416,10 @@ function generateCardsLocal(
         trustSignals: brandKit.certifications?.slice(0, 3) ?? [
           "Licensed & Insured",
         ],
+        // S76-C letter-note: city-derived greeting; body left empty so the
+        // worker synthesizes one from offer + review (it never prints blank).
+        salutation: defaultSalutation(brandKit.location),
+        letterBody: "",
       },
       backContent: {
         guarantee:
@@ -499,6 +522,13 @@ function mapServerCardToDesign(
       trustSignals: brandKit.certifications?.slice(0, 3) ?? [
         "Licensed & Insured",
       ],
+      // S76-C letter-note: AI-written greeting + body when present; the
+      // salutation falls back to the city-derived default, the body to ""
+      // (the worker then synthesizes one from offer + review).
+      salutation:
+        card.letter?.salutation?.trim() ||
+        defaultSalutation(brandKit.location),
+      letterBody: card.letter?.body ?? "",
     },
     backContent: {
       guarantee:

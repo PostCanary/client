@@ -72,6 +72,7 @@ const LAYOUTS: {
   { type: "service-checklist", name: "Service Checklist", desc: "Your services as a bold checklist. Shows everything you do at a glance.", bestFor: ["cross_service_promo", "new_mover"] },
   { type: "urgency-notice", name: "Urgency Notice", desc: "Official notice style with deadline. Grabs attention like important mail.", bestFor: ["storm_response", "seasonal_tuneup"] },
   { type: "tips", name: "Quick Tips", desc: "Helpful seasonal tips with your offer as the payoff. Builds goodwill.", bestFor: ["seasonal_tuneup", "neighbor_marketing"] },
+  { type: "letter-note", name: "Personal Letter", desc: "A warm handwritten-style note with your offer in the P.S. Feels personal, not promotional.", bestFor: ["win_back", "neighbor_marketing"] },
 ];
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
@@ -92,6 +93,7 @@ export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
   "new-mover",
   "before-after",
   "tips",
+  "letter-note",
 ];
 
 // Worker render template per layout — keys of the render worker's
@@ -108,6 +110,7 @@ export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
   "new-mover": "new-mover-front-v1",
   "before-after": "before-after-front-v1",
   "tips": "tips-card-front-v1",
+  "letter-note": "letter-note-front-v1",
   "bold-graphic": "bold-graphic-front-v1",
   "review-forward": "review-forward-front-v1",
   "service-checklist": "service-checklist-front-v1",

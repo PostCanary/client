@@ -14,7 +14,8 @@ export type CardEditor =
   | "review"
   | "checklist"
   | "notice"
-  | "tips";
+  | "tips"
+  | "letter";
 
 export interface EditZone {
   editor: CardEditor;
@@ -434,6 +435,39 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
       top: 0,
       width: 51,
       height: 62.3,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
+  // Geometry source: letter-note-front.html (S76-C) — no photo. The full
+  // note field (salutation + body, 0-62.3% top) is one "letter" editor;
+  // proof swaps it for the review panel. The offer/P.S. rides the bottom
+  // strip like every other template.
+  "letter-note-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 62.3,
+      proofOnly: true,
+    },
+    {
+      editor: "letter",
+      label: "Edit letter",
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 62.3,
+      hideOnProof: true,
     },
     {
       editor: "offer",
