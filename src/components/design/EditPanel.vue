@@ -7,6 +7,7 @@ import type {
   BrandKitReview,
   ColorOverride,
   HeadlineLines,
+  OfferStackItem,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
 import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPalettes";
@@ -44,6 +45,7 @@ const emit = defineEmits<{
   (e: "update-field", field: string, value: string): void;
   (e: "update-headline-lines", lines: HeadlineLines): void;
   (e: "update-service-rows", rows: string[]): void;
+  (e: "update-offer-items", items: OfferStackItem[]): void;
   (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
   (e: "open-template-browser"): void;
@@ -218,10 +220,14 @@ watch(
     props.card.resolvedContent.headline,
     JSON.stringify(props.card.resolvedContent.headlineLines ?? null),
     props.card.resolvedContent.offerText,
+    JSON.stringify(props.card.resolvedContent.offerItems ?? []),
   ],
   () => {
     editableLines.value = linesForCard();
     editableOffer.value = props.card.resolvedContent.offerText;
+    editableTiers.value = (props.card.resolvedContent.offerItems ?? []).map(
+      (tier) => ({ ...tier }),
+    );
   },
 );
 
@@ -231,6 +237,30 @@ function applyLines() {
 
 function applyOffer() {
   emit("update-field", "offerText", editableOffer.value);
+}
+
+// --- Offer tiers (S74: good/better/best coupon row) -------------------------
+// 2-3 tiers render the coupon strip on the card; 0-1 keeps the classic
+// single-offer strip (which the textarea above edits).
+const editableTiers = ref<OfferStackItem[]>(
+  (props.card.resolvedContent.offerItems ?? []).map((tier) => ({ ...tier })),
+);
+
+function applyTiers() {
+  emit(
+    "update-offer-items",
+    editableTiers.value.map((tier) => ({ ...tier })),
+  );
+}
+
+function addTier() {
+  if (editableTiers.value.length >= 3) return;
+  editableTiers.value.push({ label: "", value: "" });
+}
+
+function removeTier(index: number) {
+  editableTiers.value.splice(index, 1);
+  applyTiers();
 }
 
 // --- Checklist rows + notice text (S73: layout-specific editors) ------------
@@ -723,6 +753,60 @@ async function saveNewReview() {
         />
         <div class="text-[10px] text-gray-400 mt-1 text-right">
           {{ editableOffer.length }}/200
+        </div>
+
+        <!-- Coupon tiers (S74: good/better/best row). 2-3 tiers replace the
+             single offer strip on the card; below 2 the text above prints. -->
+        <div class="pt-2 mt-1 border-t border-gray-100 space-y-2">
+          <p class="text-[10px] uppercase tracking-wide text-gray-400">
+            Coupon tiers (2&ndash;3 print as cut-out coupons)
+          </p>
+          <div
+            v-for="(tier, i) in editableTiers"
+            :key="i"
+            class="flex items-center gap-2"
+          >
+            <input
+              v-model="tier.value"
+              type="text"
+              maxlength="10"
+              placeholder="$79"
+              :data-testid="`offer-tier-value-${i}`"
+              class="w-24 border border-gray-200 rounded-lg px-2 py-2 text-sm"
+              @input="applyTiers"
+            />
+            <input
+              v-model="tier.label"
+              type="text"
+              maxlength="30"
+              placeholder="A/C Tune-Up & Safety Check"
+              :data-testid="`offer-tier-label-${i}`"
+              class="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-sm"
+              @input="applyTiers"
+            />
+            <button
+              type="button"
+              :data-testid="`offer-tier-remove-${i}`"
+              class="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+              aria-label="Remove tier"
+              @click="removeTier(i)"
+            >
+              &times;
+            </button>
+          </div>
+          <button
+            v-if="editableTiers.length < 3"
+            type="button"
+            data-testid="offer-tier-add"
+            class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+            @click="addTier"
+          >
+            + Add coupon tier
+          </button>
+          <p v-if="editableTiers.length === 1" class="text-[10px] text-amber-600">
+            One tier isn't enough for the coupon row — add a second, or
+            remove it to print the single offer above.
+          </p>
         </div>
       </div>
 

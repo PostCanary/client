@@ -104,6 +104,9 @@ export interface GeneratedCardContent {
     reason: string;
   }>;
   offer: { text: string; reason: string };
+  // S74: good/better/best coupon tiers — 2-3 validated entries or [] (the
+  // single-offer strip renders below 2).
+  offerTiers?: Array<{ value: string; label: string }>;
   selectedReview: {
     quote: string;
     reviewerName: string;

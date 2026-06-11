@@ -480,14 +480,13 @@ function mapServerCardToDesign(
       ),
       offerText: card.offer.text,
       offerTeaser: deriveTeaser(card.offer.text, goalType),
-      // Server mapper for AI-generated cards. The server currently does
-      // not return structured offer stack items (Brief #6 Task 10 is
-      // where that gets wired — the Kennedy/Halbert "anchored value
-      // stack" work). Until the server emits items, mapServerCardToDesign
-      // falls back to empty, same as the local generator. When the server
-      // adds an `offer_stack` field, map it here:
-      //     offerItems: (card.offer.stack ?? []).map(...)
-      offerItems: [],
+      // S74: the server's offerTiers (good/better/best coupon row) map
+      // straight onto offerItems; 2-3 entries render the tiered coupon
+      // strip, empty keeps the classic single-offer strip.
+      offerItems: (card.offerTiers ?? []).map((tier) => ({
+        label: tier.label,
+        value: tier.value,
+      })),
       photoUrl: photo?.url ?? "",
       reviewQuote:
         selectedReview?.quote ?? "Professional, reliable service!",
