@@ -10,7 +10,7 @@ import type {
   TemplateLayoutType,
 } from "@/types/campaign";
 import { joinHeadlineLines, splitHeadline } from "@/utils/headlineSplit";
-import { generateCards, deriveTeaser } from "@/composables/usePostcardGenerator";
+import { deriveTeaser } from "@/composables/usePostcardGenerator";
 import { getTemplateSetsForGoal, renderTemplateIdForLayout } from "@/data/templates";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
@@ -146,13 +146,18 @@ const { previewUrl, loading: previewLoading, error: previewError, refresh: refre
   cardNumberRef,
   activeCard,
 );
-watch(previewUrl, () => {
+watch(previewUrl, (url) => {
   // Hybrid overlay reconciliation: a fresh render arriving after the
   // debounce window closed includes the latest text. (900ms = 600ms
   // debounce + slack; a render that raced a newer keystroke keeps the
   // overlay until its own follow-up render lands.)
   if (liveOverlay.value && Date.now() - lastEditAt.value > 900) {
     liveOverlay.value = null;
+  }
+  // Layout switch completes when the re-render lands.
+  if (url && switchingLayout.value) {
+    switchingLayout.value = false;
+    if (switchingLayoutFallback) clearTimeout(switchingLayoutFallback);
   }
 });
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
@@ -355,39 +360,6 @@ watch(
   },
 );
 
-async function generateCardsForLayout(
-  layout: TemplateLayoutType,
-): Promise<CardDesign[] | null> {
-  if (!brandKit.value) return null;
-  const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
-  const breakdown = draftStore.draft?.targeting?.recipientBreakdown ?? {
-    newProspects: 400,
-    pastCustomers: 30,
-    pastCustomersIncluded: false,
-  };
-
-  const generated = await generateCards(
-    brandKit.value,
-    goalType.value,
-    seqLen,
-    breakdown,
-  );
-  const templateSet = getTemplateSetsForGoal(goalType.value).find(
-    (set) => set.layout === layout,
-  );
-
-  return generated.map((card) => {
-    const templateId =
-      templateSet?.templates.find((template) => template.cardPosition === card.cardPurpose)
-        ?.id ?? card.templateId;
-    return {
-      ...card,
-      templateId,
-      renderTemplateId:
-        renderTemplateIdForLayout(layout) ?? card.renderTemplateId,
-    };
-  });
-}
 
 const PERSISTED_PREVIEW_REFRESH_MS = 650;
 let persistedPreviewRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -522,25 +494,39 @@ function updatePhoto(url: string) {
   queuePersistedPreviewRefresh();
 }
 
-async function selectTemplate(layout: TemplateLayoutType) {
+// Layout switch state: drives the "Applying new layout…" overlay so the
+// preview never sits silent (users read silence as broken and re-click).
+const switchingLayout = ref(false);
+let switchingLayoutFallback: ReturnType<typeof setTimeout> | null = null;
+
+function selectTemplate(layout: TemplateLayoutType) {
+  // S72 perf fix: a layout switch changes WHICH TEMPLATE renders the
+  // cards, not their copy — so we remap template ids on the existing
+  // cards instead of regenerating content through the AI (which took
+  // 3 cards × up to 20s before any visual feedback; users re-clicked
+  // thinking the picker was broken). Content, overrides, photos, colors
+  // all survive the switch.
   invalidateProof();
   currentLayout.value = layout;
-  const overrides = cards.value.map((c) => ({ ...c.overrides }));
-  const generated = await generateCardsForLayout(layout);
-  if (generated) {
-    cards.value = generated.map((card, i) => {
-      const cardOverrides = overrides[i] ?? {};
-      return {
-        ...card,
-        overrides: { ...cardOverrides },
-        resolvedContent: {
-          ...card.resolvedContent,
-          ...cardOverrides,
-        },
-      };
-    });
-  }
+  const templateSet = getTemplateSetsForGoal(goalType.value).find(
+    (set) => set.layout === layout,
+  );
+  const renderTemplateId = renderTemplateIdForLayout(layout);
+  cards.value = cards.value.map((card) => ({
+    ...card,
+    templateId:
+      templateSet?.templates.find(
+        (template) => template.cardPosition === card.cardPurpose,
+      )?.id ?? card.templateId,
+    ...(renderTemplateId ? { renderTemplateId } : {}),
+  }));
   showTemplateBrowser.value = false;
+  switchingLayout.value = true;
+  if (switchingLayoutFallback) clearTimeout(switchingLayoutFallback);
+  // Safety: never strand the overlay if a render errors out.
+  switchingLayoutFallback = setTimeout(() => {
+    switchingLayout.value = false;
+  }, 30_000);
   commitDesign();
   queuePersistedPreviewRefresh();
 }
@@ -662,8 +648,20 @@ watch(
               :src="previewUrl"
               alt="Postcard preview"
               class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
-              :class="{ 'opacity-60': previewLoading }"
+              :class="{ 'opacity-60': previewLoading || switchingLayout }"
             />
+            <!-- Layout switch feedback: the old render stays visible but
+                 clearly transitional, so users don't re-click the picker. -->
+            <div
+              v-if="switchingLayout"
+              data-testid="layout-switch-overlay"
+              class="absolute inset-0 grid place-items-center bg-white/50 rounded"
+            >
+              <div class="flex items-center gap-2 bg-[#0b2d50]/90 text-white text-xs font-medium px-3 py-2 rounded-full shadow">
+                <span class="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Applying new layout…
+              </div>
+            </div>
             <!-- Click-to-edit hotspots: invisible until hover, mapped to the
                  template's slot geometry. Clicking opens the matching editor
                  in the Edit Card panel. -->
