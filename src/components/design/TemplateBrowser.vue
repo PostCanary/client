@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { CampaignGoalType, TemplateLayoutType } from "@/types/campaign";
-import { getTemplateSetsForGoal } from "@/data/templates";
+import { getTemplateSetsForGoal, useCaseLabel } from "@/data/templates";
 
 const props = defineProps<{
   goalType: CampaignGoalType;
+  industry?: string | null;
   currentLayout: TemplateLayoutType;
 }>();
 
@@ -13,7 +14,9 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
-const sets = getTemplateSetsForGoal(props.goalType);
+const sets = getTemplateSetsForGoal(props.goalType, props.industry);
+// Lob-style merchandising: the recommended set carries a use-case name.
+const recommendedUseCase = useCaseLabel(props.goalType, props.industry);
 const showMore = ref(false);
 
 // Show recommended + 2 others by default
@@ -83,7 +86,7 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
                 v-if="set.recommended"
                 class="text-[10px] bg-[#47bfa9]/15 text-[#47bfa9] px-2 py-0.5 rounded-full font-medium"
               >
-                ★ Best Match
+                ★ Best for: {{ recommendedUseCase }}
               </span>
             </div>
             <!-- 3 mini thumbnails -->

@@ -321,7 +321,7 @@ function generateCardsLocal(
   sequenceLength: number,
   recipientBreakdown: RecipientBreakdown,
 ): CardDesign[] {
-  const templates = getRecommendedTemplateSet(goalType);
+  const templates = getRecommendedTemplateSet(goalType, brandKit.industry);
   const photos = [
     ...(brandKit.photos ?? [])
       .filter((p) => p.printReady !== false)
@@ -543,7 +543,7 @@ export async function generateCards(
       recipient_type: recipientBreakdown.pastCustomersIncluded ? "warm" : "cold",
     });
 
-    const fallbackTemplates = getRecommendedTemplateSet(goalType);
+    const fallbackTemplates = getRecommendedTemplateSet(goalType, brandKit.industry);
 
     return response.cards.map((card, i) =>
       {
