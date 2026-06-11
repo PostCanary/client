@@ -140,8 +140,7 @@ onBeforeUnmount(() => {
     v-if="isMobile"
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
-    <div class="text-4xl mb-4">💻</div>
-    <h2 class="text-lg font-semibold text-[#0b2d50] mb-2">
+        <h2 class="text-lg font-semibold text-[#0b2d50] mb-2">
       Screen too small
     </h2>
     <p class="text-sm text-gray-500 mb-6">
