@@ -382,7 +382,14 @@ function queuePersistedPreviewRefresh() {
       await waitForDraftSaveIdle();
       if (seq !== persistedPreviewRefreshSeq) return;
       await refreshPreview();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // S73 render-speed pass: the save above is awaited to idle BEFORE
+      // the render, so the render already reflects the persisted draft.
+      // The old unconditional sleep(1s) + save + second render added ~4s
+      // to every reconcile. A second pass is only needed when the draft
+      // went dirty again DURING the render without queueing a new cycle
+      // (any normal edit re-queues and bumps seq, aborting this one).
+      if (seq !== persistedPreviewRefreshSeq) return;
+      if (!draftStore.saving && !draftStore.isDirty) return;
       await draftStore.saveNow();
       await waitForDraftSaveIdle();
       if (seq !== persistedPreviewRefreshSeq) return;
