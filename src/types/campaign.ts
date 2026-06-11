@@ -256,6 +256,18 @@ export interface OfferStackItem {
   value?: string
 }
 
+// The 5-slot headline system: two accent lines, a small connector, two
+// main lines. Line-level editing (S72): the customer edits these slots
+// directly; the renderer prints them verbatim (empty slot = empty space,
+// never filler). Seeded once from the AI headline by splitHeadline().
+export interface HeadlineLines {
+  red1: string
+  red2: string
+  bridge: string
+  blue1: string
+  blue2: string
+}
+
 export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
@@ -268,6 +280,7 @@ export interface CardDesign {
   previewImageUrl: string              // generated preview for Step 4
   overrides: {                         // only what customer CHANGED from auto-generated
     headline?: string
+    headlineLines?: HeadlineLines
     offerText?: string
     offerTeaser?: string               // NEW 2026-04-09: short (≤4 word) front-of-card teaser
     offerItems?: OfferStackItem[]      // NEW 2026-04-10: stacked value items on back OfferBox
@@ -279,6 +292,7 @@ export interface CardDesign {
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
+    headlineLines?: HeadlineLines
     offerText: string                  // full stacked offer (back)
     offerTeaser: string                // short front-of-card teaser, e.g. "$79 TUNE-UP"
     offerItems: OfferStackItem[]       // stacked value items (≥0, usually 3-5)

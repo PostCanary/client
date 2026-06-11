@@ -12,6 +12,7 @@ import {
   ALL_TEMPLATES,
   renderTemplateIdForTemplate,
 } from "@/data/templates";
+import { splitHeadline } from "@/utils/headlineSplit";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { generateContent } from "@/api/brandKit";
 import type { GeneratedCardContent } from "@/api/brandKit";
@@ -348,6 +349,7 @@ function generateCardsLocal(
       overrides: {},
       resolvedContent: {
         headline,
+        headlineLines: splitHeadline(headline),
         offerText:
           isWarm && purpose === "offer"
             ? `Welcome back! ${offerText}`
@@ -448,6 +450,9 @@ function mapServerCardToDesign(
     overrides: {},
     resolvedContent: {
       headline: card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
+      headlineLines: splitHeadline(
+        card.headlines[0]?.text ?? `${brandKit.businessName} — Special Offer`,
+      ),
       offerText: card.offer.text,
       offerTeaser: deriveTeaser(card.offer.text, goalType),
       // Server mapper for AI-generated cards. The server currently does
