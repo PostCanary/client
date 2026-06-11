@@ -10,6 +10,7 @@ import {
   removeReview as apiRemoveReview,
   uploadBrandPhoto,
   importStockPhoto as apiImportStockPhoto,
+  generateAiImage as apiGenerateAiImage,
 } from "@/api/brandKit";
 import { useAuthStore } from "@/stores/auth";
 
@@ -234,6 +235,26 @@ export const useBrandKitStore = defineStore("brandKit", {
       } catch (e: any) {
         this.error =
           e?.data?.error || e?.message || "Failed to import stock photo";
+        return null;
+      }
+    },
+
+    /** S72 AI images: generate a photo from a prompt into the brand
+     * library. Returns the new photo's /media URL, null on failure. */
+    async generateAiPhoto(prompt: string): Promise<string | null> {
+      this.error = null;
+      try {
+        const before = new Set(
+          (this.brandKit?.photos ?? []).map((p) => p.url),
+        );
+        this.brandKit = await apiGenerateAiImage(prompt);
+        const added = (this.brandKit?.photos ?? []).find(
+          (p) => !before.has(p.url),
+        );
+        return added?.url ?? null;
+      } catch (e: any) {
+        this.error =
+          e?.data?.error || e?.message || "Image generation failed";
         return null;
       }
     },

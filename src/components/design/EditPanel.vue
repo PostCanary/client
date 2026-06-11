@@ -13,7 +13,12 @@ import { COLOR_PALETTES, isCompleteOverride } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor } from "@/data/templateEditZones";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import { searchStockPhotos, type StockPhotoResult } from "@/api/brandKit";
+import {
+  getMediaFeatures,
+  searchStockPhotos,
+  type StockPhotoResult,
+} from "@/api/brandKit";
+import { onMounted } from "vue";
 import { API_BASE } from "@/api/http";
 
 /**
@@ -205,8 +210,43 @@ const stockResults = ref<StockPhotoResult[]>([]);
 const stockSearching = ref(false);
 const stockImportingId = ref<number | null>(null);
 const stockError = ref<string | null>(null);
-const stockConfigured = ref(true);
+const stockConfigured = ref(false);
 const stockSearched = ref(false);
+
+// --- AI image generation (fal.ai; S72) --------------------------------------
+const aiConfigured = ref(false);
+const aiPrompt = ref("");
+const aiGenerating = ref(false);
+const aiError = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    const features = await getMediaFeatures();
+    stockConfigured.value = features.stockConfigured;
+    aiConfigured.value = features.aiConfigured;
+  } catch {
+    // Feature probe failing should never break the panel — both sections
+    // simply stay hidden.
+  }
+});
+
+async function generateAiPhoto() {
+  const prompt = aiPrompt.value.trim();
+  if (!prompt || aiGenerating.value) return;
+  aiGenerating.value = true;
+  aiError.value = null;
+  try {
+    const url = await brandKitStore.generateAiPhoto(prompt);
+    if (url) {
+      applyPhoto(url);
+      aiPrompt.value = "";
+    } else {
+      aiError.value = brandKitStore.error || "Image generation failed";
+    }
+  } finally {
+    aiGenerating.value = false;
+  }
+}
 
 async function searchStock() {
   const q = stockQuery.value.trim();
@@ -541,6 +581,33 @@ async function saveNewReview() {
                 class="absolute inset-0 grid place-items-center bg-white/70 text-[10px] font-medium text-gray-700"
               >Adding…</span>
             </button>
+          </div>
+        </div>
+
+        <!-- AI image generation (fal.ai; S72) -->
+        <div v-if="aiConfigured" class="pt-2 border-t border-gray-100">
+          <p class="text-[10px] uppercase tracking-wide text-gray-400 mb-1">
+            Generate a photo with AI
+          </p>
+          <textarea
+            v-model="aiPrompt"
+            rows="2"
+            maxlength="400"
+            placeholder="Describe the photo — e.g. technician installing an AC unit outside a sunny suburban home"
+            data-testid="ai-image-prompt"
+            class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs resize-none"
+          />
+          <button
+            type="button"
+            data-testid="ai-image-generate"
+            class="w-full mt-1 px-3 py-2 rounded-lg bg-[#0b2d50] text-white text-xs disabled:opacity-50"
+            :disabled="aiGenerating || !aiPrompt.trim()"
+            @click="generateAiPhoto"
+          >
+            {{ aiGenerating ? "Generating… (can take ~20s)" : "✨ Generate photo" }}
+          </button>
+          <div v-if="aiError" class="text-[11px] text-red-500 mt-1">
+            {{ aiError }}
           </div>
         </div>
       </div>
