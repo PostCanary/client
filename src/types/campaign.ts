@@ -449,6 +449,9 @@ export interface BrandKit {
   phone: string | null
   websiteUrl: string | null            // cleaned: no https://, no www., no trailing slash
   logoUrl: string | null
+  logoPrintReady?: boolean              // false = logo under 600px wide, soft in print
+  logoWidth?: number
+  logoHeight?: number
   logoQualityScore: number | null
   brandColors: string[]                // hex codes extracted from website (2-3)
   photos: BrandKitPhoto[]

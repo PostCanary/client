@@ -50,7 +50,14 @@ const emit = defineEmits<{
   (e: "info-saved"): void;
 }>();
 
-type EditorType = "headline" | "offer" | "review" | "photo" | "colors" | null;
+type EditorType =
+  | "headline"
+  | "offer"
+  | "review"
+  | "photo"
+  | "colors"
+  | "business"
+  | null;
 const activeEditor = ref<EditorType>(null);
 
 // --- Color profiles (S72) --------------------------------------------------
@@ -402,6 +409,83 @@ async function saveBusinessInfo() {
     emit("info-saved");
   } finally {
     savingInfo.value = false;
+  }
+}
+
+// --- Business Info editor (S72: name/phone/website/logo from the designer) -
+const bizDraft = ref({ businessName: "", phone: "", websiteUrl: "" });
+const savingBiz = ref(false);
+const bizError = ref<string | null>(null);
+const logoInput = ref<HTMLInputElement | null>(null);
+const uploadingLogo = ref(false);
+const logoError = ref<string | null>(null);
+
+watch(
+  () => [props.brandKit?.businessName, props.brandKit?.phone, props.brandKit?.websiteUrl],
+  () => {
+    bizDraft.value = {
+      businessName: props.brandKit?.businessName ?? "",
+      phone: props.brandKit?.phone ?? "",
+      websiteUrl: props.brandKit?.websiteUrl ?? "",
+    };
+  },
+  { immediate: true },
+);
+
+const bizDirty = computed(() => {
+  const bk = props.brandKit;
+  return (
+    bizDraft.value.businessName.trim() !== (bk?.businessName ?? "").trim() ||
+    bizDraft.value.phone.trim() !== (bk?.phone ?? "").trim() ||
+    bizDraft.value.websiteUrl.trim() !== (bk?.websiteUrl ?? "").trim()
+  );
+});
+
+async function saveBizInfo() {
+  if (savingBiz.value || !bizDirty.value) return;
+  if (!bizDraft.value.businessName.trim()) {
+    bizError.value = "Business name can't be empty — it prints on every card.";
+    return;
+  }
+  savingBiz.value = true;
+  bizError.value = null;
+  try {
+    // QR regenerates server-side when phone/website change.
+    await brandKitStore.update({
+      businessName: bizDraft.value.businessName.trim(),
+      phone: bizDraft.value.phone.trim(),
+      websiteUrl: bizDraft.value.websiteUrl.trim(),
+    });
+    if (brandKitStore.error) {
+      bizError.value = brandKitStore.error;
+      return;
+    }
+    emit("info-saved");
+  } finally {
+    savingBiz.value = false;
+  }
+}
+
+function pickLogoFile() {
+  logoInput.value?.click();
+}
+
+async function onLogoFilePicked(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) return;
+  logoError.value = null;
+  uploadingLogo.value = true;
+  try {
+    const ok = await brandKitStore.uploadLogo(file);
+    if (!ok) {
+      logoError.value = brandKitStore.error || "Logo upload failed.";
+      return;
+    }
+    emit("info-saved");
+  } finally {
+    uploadingLogo.value = false;
   }
 }
 
@@ -763,6 +847,107 @@ async function saveNewReview() {
               />
             </label>
           </div>
+        </div>
+      </div>
+
+      <!-- Business Info (S72: org profile editable from the designer) -->
+      <button
+        data-testid="edit-business-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'business' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('business')"
+      >
+        Business Info
+      </button>
+      <div v-if="activeEditor === 'business'" class="px-3 pb-3 space-y-2">
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Business name</span>
+          <input
+            v-model="bizDraft.businessName"
+            type="text"
+            maxlength="60"
+            data-testid="biz-name-input"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Phone (prints on the card)</span>
+          <input
+            v-model="bizDraft.phone"
+            type="tel"
+            maxlength="20"
+            data-testid="biz-phone-input"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Website (drives the QR code)</span>
+          <input
+            v-model="bizDraft.websiteUrl"
+            type="text"
+            maxlength="120"
+            data-testid="biz-website-input"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </label>
+        <button
+          type="button"
+          data-testid="biz-save"
+          class="w-full px-3 py-2 rounded-lg bg-[#0b2d50] text-white text-xs disabled:opacity-50"
+          :disabled="savingBiz || !bizDirty"
+          @click="saveBizInfo"
+        >
+          {{ savingBiz ? "Saving…" : "Save business info" }}
+        </button>
+        <div v-if="bizError" class="text-[11px] text-red-500">{{ bizError }}</div>
+
+        <div class="pt-2 border-t border-gray-100 space-y-2">
+          <p class="text-[10px] uppercase tracking-wide text-gray-400">Logo</p>
+          <div class="flex items-center gap-3">
+            <div class="w-24 h-14 rounded border border-gray-200 bg-white grid place-items-center overflow-hidden">
+              <img
+                v-if="brandKit?.logoUrl"
+                :src="mediaSrc(brandKit.logoUrl)"
+                alt="Current logo"
+                class="max-w-full max-h-full object-contain"
+              />
+              <span v-else class="text-[10px] text-gray-400">No logo</span>
+            </div>
+            <div class="flex-1">
+              <input
+                ref="logoInput"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                class="hidden"
+                data-testid="logo-upload-input"
+                @change="onLogoFilePicked"
+              />
+              <button
+                type="button"
+                data-testid="logo-upload-button"
+                class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors disabled:opacity-60"
+                :disabled="uploadingLogo"
+                @click="pickLogoFile"
+              >
+                {{ uploadingLogo ? "Uploading…" : brandKit?.logoUrl ? "Replace logo" : "Upload logo" }}
+              </button>
+            </div>
+          </div>
+          <p class="text-[10px] text-gray-500 leading-relaxed">
+            For crisp print: PNG with a transparent background, at least
+            <strong>600px wide</strong> (it prints about 2.3in wide on the
+            card). Wide/horizontal logos fit the layout best. JPG, PNG, or
+            WebP, 15MB max.
+          </p>
+          <div
+            v-if="brandKit?.logoUrl && brandKit?.logoPrintReady === false"
+            class="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5"
+            data-testid="logo-lowres-warning"
+          >
+            This logo is {{ brandKit?.logoWidth }}px wide — it may look soft
+            when printed. A version at 600px or wider is recommended.
+          </div>
+          <div v-if="logoError" class="text-[11px] text-red-500">{{ logoError }}</div>
         </div>
       </div>
 
