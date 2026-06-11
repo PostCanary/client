@@ -31,6 +31,8 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
   "bold-graphic": "#e74c3c",
   "before-after": "#8e44ad",
   "review-forward": "#27ae60",
+  "service-checklist": "#2980b9",
+  "urgency-notice": "#1c1c1c",
 };
 </script>
 

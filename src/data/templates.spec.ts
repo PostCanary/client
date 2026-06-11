@@ -87,6 +87,8 @@ describe("design library templates", () => {
       "side-split",
       "bold-graphic",
       "review-forward",
+      "service-checklist",
+      "urgency-notice",
     ]);
     expect(
       targetAreaSets.find((set) => set.recommended)?.layout,

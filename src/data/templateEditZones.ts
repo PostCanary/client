@@ -151,6 +151,68 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
     },
   ],
 
+  // Geometry source: service-checklist-front.html — no photo. The right
+  // panel is the services checklist (content from the brand kit's service
+  // types; no dedicated editor yet). Proof cards swap it for the review
+  // panel.
+  "service-checklist-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      proofOnly: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 0,
+      width: 51,
+      height: 62.3,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
+  // Geometry source: urgency-notice-front.html — no photo. Notice panel
+  // body = urgencyText (no dedicated editor yet). Proof swaps to review.
+  "urgency-notice-front-v1": [
+    {
+      editor: "review",
+      label: "Change review",
+      left: 51.7,
+      top: 0,
+      width: 48.3,
+      height: 62.3,
+      proofOnly: true,
+    },
+    {
+      editor: "headline",
+      label: "Edit headline",
+      left: 0,
+      top: 0,
+      width: 51,
+      height: 62.3,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
   // Geometry source: review-forward-front.html — no photo on this layout.
   //   .review-hero     0,0   701x499 (white; the review is the lead on
   //                    every card purpose, so the zone is always active)
