@@ -59,6 +59,8 @@ const emit = defineEmits<{
   (e: "reset"): void;
   /** Commit + exit (Done button). */
   (e: "done"): void;
+  /** Commit + exit, then open the photo gallery for this slot. */
+  (e: "change-photo"): void;
 }>();
 
 // Map the zone % box onto the rendered img box, REUSING the popover anchoring
@@ -183,6 +185,14 @@ function onZoomInput(e: Event) {
         @input="onZoomInput"
       />
       <span class="text-[10px] text-white/60">{{ CROP_MAX_ZOOM }}×</span>
+      <button
+        type="button"
+        data-testid="photo-adjust-change"
+        class="text-[11px] font-medium text-white/70 hover:text-white whitespace-nowrap"
+        @click="emit('change-photo')"
+      >
+        Change photo
+      </button>
       <button
         type="button"
         data-testid="photo-adjust-reset"

@@ -171,7 +171,14 @@ const drawerTab = ref<DrawerTab | null>(null);
 // region), so the anchoring math needs both: the card box size + its offset
 // within the region, plus the region bounds for clamping.
 const canvasRegion = ref<HTMLElement | null>(null);
-const cardBoxEl = ref<HTMLElement | null>(null);
+// The front and back card boxes need SEPARATE refs: the front surface stays
+// mounted (v-show) behind the back view for the flip animation, and two
+// elements sharing one ref name let the later-in-template (hidden, 0x0) front
+// box win the binding — which fed degenerate geometry to every back-side
+// anchor (adjust overlay invisible, chip under the page header, popovers
+// clamped to the corner).
+const frontCardBoxEl = ref<HTMLElement | null>(null);
+const backCardBoxEl = ref<HTMLElement | null>(null);
 const canvasViewport = ref({
   width: 1,
   height: 1,
@@ -182,7 +189,10 @@ const canvasViewport = ref({
 });
 function measureCanvas() {
   const region = canvasRegion.value;
-  const card = cardBoxEl.value;
+  // Measure the card box of the side actually SHOWING — the other side's box
+  // is either unmounted (back, v-if) or display:none (front, v-show) and
+  // measures 0x0.
+  const card = isBack.value ? backCardBoxEl.value : frontCardBoxEl.value;
   if (!region) return;
   const rr = region.getBoundingClientRect();
   if (card) {
@@ -1086,6 +1096,15 @@ function exitPhotoAdjust() {
   photoAdjust.exit();
 }
 
+// Chip "Change photo": the user wants a DIFFERENT photo, not a reposition —
+// commit any pending crop, leave adjust mode, and open the gallery drawer for
+// the side being edited (Dustin 2026-06-12: clicking the back photo gave no
+// path to the picker).
+function onAdjustChangePhoto() {
+  photoAdjust.exit();
+  openDrawer("photo");
+}
+
 // Entry from the photo drawer's "Adjust position on the card" button. The panel
 // passes the slot's crop field; we find the matching photo zone and enter
 // adjust mode (then close the drawer so the canvas is unobstructed).
@@ -1435,7 +1454,7 @@ watch(
           <div v-if="backPreviewLoading && !backPreviewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div v-else-if="backPreviewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
+          <div v-else-if="backPreviewUrl" ref="backCardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <!-- S79 Phase-3: flip wrapper — ONLY the img lives here so the
                  CSS 3D transform never disturbs the zone hotspot layer. -->
             <div ref="canvasFlipWrapperEl" :class="flipWrapperClass" class="absolute inset-0">
@@ -1512,7 +1531,7 @@ watch(
                EXACTLY 3:2 so the %-positioned hotspots + live overlay align
                with the painted artwork (the server PNG is exactly 1200×800,
                so the img fills the box with no letterbox/crop). -->
-          <div v-else-if="previewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
+          <div v-else-if="previewUrl" ref="frontCardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <!-- S79 Phase-3: flip wrapper — ONLY the img lives here so the
                  CSS 3D transform never disturbs the zone hotspot layer.
                  ref="canvasFlipWrapperEl" assigns when front is active. -->
@@ -1624,6 +1643,7 @@ watch(
           @zoom-by="(d) => photoAdjust.zoomBy(d)"
           @reset="photoAdjust.reset()"
           @done="exitPhotoAdjust()"
+          @change-photo="onAdjustChangePhoto()"
         />
 
         <!-- First-run coach mark (S79 Phase-3): "Click any part of the card to
