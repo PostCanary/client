@@ -770,96 +770,147 @@ watch(
 </script>
 
 <template>
-  <div class="grid grid-rows-[auto_1fr_auto_auto] min-h-full">
+  <!-- S79 Phase-1 — the design step is a fixed-height, NON-scrolling flex
+       column inside the wizard viewport. The canvas region never scrolls;
+       only the right rail scrolls internally. This kills the old
+       `grid-rows-[auto_1fr_auto_auto] min-h-full` stack that grew past the
+       viewport (tall BackEditPanel drove page height; the canvas fell below
+       the fold). h-full pins us to WizardShell's `flex-1` step viewport. -->
+  <div class="flex flex-col h-full min-h-0">
     <!-- No brand kit warning -->
     <div
       v-if="!brandKit"
-      class="bg-amber-50 border-b border-amber-200 px-6 py-3 text-center text-sm text-amber-700"
+      class="shrink-0 bg-amber-50 border-b border-amber-200 px-6 py-3 text-center text-sm text-amber-700"
     >
       Brand info is loading... Postcard will be generated with placeholder content.
     </div>
 
-    <!-- Main content: 2-column grid. SequenceView lives INSIDE the left
-         column above the preview so the carousel and the preview share
-         the same horizontal center axis — fixes the ~160px misalignment
-         caused by SequenceView being centered on the full page width
-         while the preview was centered in the left-of-sidebar column
-         (Session 59 layout polish). -->
-    <div class="grid grid-cols-[1fr_20rem] min-h-0">
-      <!-- Left column: SequenceView (top) + Preview (fills remaining) -->
-      <div class="flex flex-col min-w-0">
-        <SequenceView
-          v-if="cards.length > 1"
-          :cards="cards"
-          :active-card-index="activeCardIndex"
-          :thumbnail-urls="thumbnailUrls"
-          :brand-colors="brandKit?.brandColors"
-          :business-name="brandKit?.businessName"
-          :business-address="brandKit?.address ?? ''"
-          :logo-url="brandKit?.logoUrl"
-          :rating="brandKit?.googleRating ?? null"
-          :review-count="brandKit?.reviewCount ?? null"
-          :trust-badges="brandKit?.trustBadges ?? []"
-          :years-in-business="brandKit?.yearsInBusiness ?? null"
-          :city="brandKitCity"
-          :credibility-line="brandKitCredibility"
-          class="px-6 pt-6 pb-4"
-          @select="activeCardIndex = $event"
-        />
+    <!-- SLIM TOOLBAR — one row merges the card sequence (filmstrip),
+         the Front/Back side toggle, and the global canvas actions
+         (Try Different Template, Generate Proof). Replaces the old
+         full-size thumbnail strip + caption + separate centered toggle. -->
+    <div
+      v-if="cardsReady"
+      class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-white px-4 sm:px-6 py-2"
+    >
+      <!-- Card sequence (only when >1 card) -->
+      <SequenceView
+        v-if="cards.length > 1"
+        :cards="cards"
+        :active-card-index="activeCardIndex"
+        :thumbnail-urls="thumbnailUrls"
+        :brand-colors="brandKit?.brandColors"
+        :business-name="brandKit?.businessName"
+        :business-address="brandKit?.address ?? ''"
+        :logo-url="brandKit?.logoUrl"
+        :rating="brandKit?.googleRating ?? null"
+        :review-count="brandKit?.reviewCount ?? null"
+        :trust-badges="brandKit?.trustBadges ?? []"
+        :years-in-business="brandKit?.yearsInBusiness ?? null"
+        :city="brandKitCity"
+        :credibility-line="brandKitCredibility"
+        @select="activeCardIndex = $event"
+      />
 
-        <!-- Front/Back surface toggle (S76 Phase-5). The back is ONE design
-             for the whole sequence — switching here swaps the preview + the
-             edit panel between the front card and the shared back. -->
-        <div v-if="cardsReady" class="flex justify-center pt-4 pb-1">
-          <div
-            class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5"
-            role="tablist"
-            aria-label="Postcard side"
-          >
-            <button
-              type="button"
-              role="tab"
-              data-testid="side-toggle-front"
-              :aria-selected="activeSide === 'front'"
-              class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-              :class="activeSide === 'front'
-                ? 'bg-[#0b2d50] text-white'
-                : 'text-gray-600 hover:text-gray-900'"
-              @click="activeSide = 'front'"
-            >
-              Front
-            </button>
-            <button
-              type="button"
-              role="tab"
-              data-testid="side-toggle-back"
-              :aria-selected="activeSide === 'back'"
-              class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
-              :class="activeSide === 'back'
-                ? 'bg-[#0b2d50] text-white'
-                : 'text-gray-600 hover:text-gray-900'"
-              @click="activeSide = 'back'"
-            >
-              Back
-            </button>
-          </div>
-        </div>
+      <!-- Front/Back surface toggle (S76 Phase-5). The back is ONE design
+           for the whole sequence — switching here swaps the preview + the
+           edit panel between the front card and the shared back. -->
+      <div
+        class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5"
+        role="tablist"
+        aria-label="Postcard side"
+      >
+        <button
+          type="button"
+          role="tab"
+          data-testid="side-toggle-front"
+          :aria-selected="activeSide === 'front'"
+          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+          :class="activeSide === 'front'
+            ? 'bg-[#0b2d50] text-white'
+            : 'text-gray-600 hover:text-gray-900'"
+          @click="activeSide = 'front'"
+        >
+          Front
+        </button>
+        <button
+          type="button"
+          role="tab"
+          data-testid="side-toggle-back"
+          :aria-selected="activeSide === 'back'"
+          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+          :class="activeSide === 'back'
+            ? 'bg-[#0b2d50] text-white'
+            : 'text-gray-600 hover:text-gray-900'"
+          @click="activeSide = 'back'"
+        >
+          Back
+        </button>
+      </div>
 
+      <!-- Global canvas actions, pushed to the right edge of the toolbar. -->
+      <div class="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          data-testid="toolbar-try-template"
+          class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="showTemplateBrowser = true"
+        >
+          Try Different Template
+        </button>
+        <button
+          type="button"
+          class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          :disabled="
+            renderPhase === 'starting' ||
+            renderPhase === 'queued' ||
+            renderPhase === 'rendering' ||
+            !draftStore.draft ||
+            !cardsReady
+          "
+          @click="handleGenerateProof"
+        >
+          <template v-if="renderPhase === 'starting' || renderPhase === 'queued' || renderPhase === 'rendering'">
+            <span
+              class="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-1.5"
+            />
+            Generating…
+          </template>
+          <template v-else-if="renderPhase === 'done'">
+            Regenerate Proof
+          </template>
+          <template v-else>
+            Generate Proof
+          </template>
+        </button>
+      </div>
+    </div>
+
+    <!-- BODY — fixed-height 2-column flex. Canvas column fills and NEVER
+         scrolls; the right rail is width-constrained and scrolls itself.
+         `min-h-0` is essential so the children can shrink below content
+         height and the rail's internal overflow takes effect. -->
+    <div class="flex-1 min-h-0 flex">
+      <!-- CANVAS COLUMN: the server-PNG card as hero, centered in a calm
+           neutral surround, sized to fit the viewport (object-contain,
+           height- OR width-bound — whichever binds — via max-h-full /
+           max-w-full). No magic `calc(100vh-400px)` cap. -->
+      <div class="flex-1 min-w-0 min-h-0 flex flex-col bg-gray-50">
         <!-- BACK preview surface (S76 Phase-5) -->
         <div
           v-if="isBack"
-          class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden"
+          class="flex-1 min-h-0 flex items-center justify-center p-6 overflow-hidden"
           data-testid="back-preview-surface"
         >
           <div v-if="backPreviewLoading && !backPreviewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div v-else-if="backPreviewUrl" class="relative inline-block">
+          <div v-else-if="backPreviewUrl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <img
               :key="backPreviewUrl"
               :src="backPreviewUrl"
               alt="Postcard back preview"
-              class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
+              class="w-full h-full object-cover rounded-lg"
               :class="{ 'opacity-60': backPreviewLoading }"
             />
           </div>
@@ -872,7 +923,7 @@ watch(
           </div>
         </div>
 
-        <div v-show="!isBack" class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden">
+        <div v-show="!isBack" class="flex-1 min-h-0 flex items-center justify-center p-6 overflow-hidden">
           <!-- Pre-generation loading state. User reached Step 3 before
                auto-populate finished (fires from Step 1 goal commit in
                useCampaignDraftStore.setGoal → generateCardsForDraft).
@@ -890,12 +941,18 @@ watch(
           <div v-else-if="previewLoading && !previewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div v-else-if="previewUrl" class="relative inline-block">
+          <!-- 3:2 wrapper sized to fit the viewport: `aspect-[3/2] h-full
+               max-w-full` makes the box height-bound but clamps to the
+               column width — whichever binds wins, and the box stays
+               EXACTLY 3:2 so the %-positioned hotspots + live overlay align
+               with the painted artwork (the server PNG is exactly 1200×800,
+               so the img fills the box with no letterbox/crop). -->
+          <div v-else-if="previewUrl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <img
               :key="previewUrl"
               :src="previewUrl"
               alt="Postcard preview"
-              class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
+              class="w-full h-full object-cover rounded-lg"
               :class="{ 'opacity-60': previewLoading || switchingLayout }"
             />
             <!-- Layout switch feedback: the old render stays visible but
@@ -978,100 +1035,83 @@ watch(
         </div>
       </div>
 
-      <!-- Right column: Edit panel. Back tab swaps in the back editor
-           (guarantee + read-only Business Info), S76 Phase-5. -->
-      <BackEditPanel
-        v-if="isBack && backContent"
-        :back-content="backContent"
-        :brand-kit="brandKit"
-        @update-back="updateBack"
-      />
-      <EditPanel
-        v-else-if="activeCard"
-        :card="activeCard"
-        :brand-kit="brandKit"
-        :requested-editor="requestedEditor"
-        @update-field="updateCardField"
-        @update-headline-lines="updateHeadlineLines"
-        @update-service-rows="updateServiceRows"
-        @update-offer-items="updateOfferItems"
-        @update-tips="updateTips"
-        @regenerate-cards="regenerateCards"
-        @update-colors="updateColors"
-        @update-photo="updatePhoto"
-        @open-template-browser="showTemplateBrowser = true"
-        @reset="resetCard"
-        @info-saved="refreshPreview"
-      />
-    </div>
-
-    <!-- Generate Proof bar (Phase 4D task 28) — sits between the
-         editing surface and the render panel so it's visible after the
-         customer has done their pass on the Vue preview. -->
-    <div
-      class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between gap-4"
-    >
-      <!-- Status strip. Empty on idle (no happy-talk per Krug's rule —
-           the button label is self-explanatory). Populated with active
-           state for starting/queued/rendering/done/failed. `min-w-0 flex-1`
-           lets long error messages wrap or truncate without pushing the
-           button offscreen at 1280×720. -->
-      <div class="text-sm text-gray-500 min-w-0 flex-1">
-        <template v-if="!cardsReady">
-          <span class="inline-block w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin align-middle mr-2" />
-          Generating your postcards…
-        </template>
-        <template v-else-if="renderPhase === 'starting' || renderPhase === 'queued'">
-          Queueing render…
-        </template>
-        <template v-else-if="renderPhase === 'rendering'">
-          Rendering postcard{{ renderProgress && renderProgress.total > 1 ? "s" : "" }}…
-          <span v-if="renderProgress" class="text-gray-400">
-            ({{ renderProgress.completed }}/{{ renderProgress.total }})
-          </span>
-        </template>
-        <template v-else-if="renderPhase === 'done'">
-          Proof ready — review below.
-        </template>
-        <template v-else-if="renderPhase === 'failed'">
-          <span class="text-red-600 break-words">
-            Render failed: {{ renderError?.message }}
-          </span>
-        </template>
+      <!-- RIGHT RAIL — width-constrained, height-bounded, scrolls itself.
+           `min-h-0` lets the inner panel's `overflow-y-auto` engage so the
+           tall BackEditPanel/EditPanel never drives page height (the cause
+           of the old below-the-fold canvas). The panel internals are
+           unchanged this phase. Back tab swaps in the back editor. -->
+      <div class="w-80 shrink-0 min-h-0 flex flex-col">
+        <BackEditPanel
+          v-if="isBack && backContent"
+          :back-content="backContent"
+          :brand-kit="brandKit"
+          @update-back="updateBack"
+        />
+        <EditPanel
+          v-else-if="activeCard"
+          :card="activeCard"
+          :brand-kit="brandKit"
+          :requested-editor="requestedEditor"
+          @update-field="updateCardField"
+          @update-headline-lines="updateHeadlineLines"
+          @update-service-rows="updateServiceRows"
+          @update-offer-items="updateOfferItems"
+          @update-tips="updateTips"
+          @regenerate-cards="regenerateCards"
+          @update-colors="updateColors"
+          @update-photo="updatePhoto"
+          @open-template-browser="showTemplateBrowser = true"
+          @reset="resetCard"
+          @info-saved="refreshPreview"
+        />
       </div>
-      <button
-        class="bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        :disabled="
-          renderPhase === 'starting' ||
-          renderPhase === 'queued' ||
-          renderPhase === 'rendering' ||
-          !draftStore.draft ||
-          !cardsReady
-        "
-        @click="handleGenerateProof"
-      >
-        <template v-if="renderPhase === 'starting' || renderPhase === 'queued' || renderPhase === 'rendering'">
-          <span
-            class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-2"
-          />
-          Generating…
-        </template>
-        <template v-else-if="renderPhase === 'done'">
-          Regenerate Proof
-        </template>
-        <template v-else>
-          Generate Proof
-        </template>
-      </button>
     </div>
 
-    <!-- Proof panel — shows PNG previews of all cards from the same
-         preview-card endpoint (ONE RENDERING RULE: on-screen = PNG,
-         PDF = download only). -->
+    <!-- Proof panel (S79 Phase-1) — relocated OUT of the always-rendered
+         stack into a centered overlay modal. Previously it lived as two
+         full-width grid rows (proof bar + proof grid) under the canvas,
+         which pushed the card up and forced page scroll. The Generate
+         Proof action now lives in the slim toolbar; clicking it renders the
+         proof previews here on top of the editing surface, so the canvas
+         layout is never disturbed. The render-status text moved here too.
+         PNG previews + per-card PDF links unchanged (ONE RENDERING RULE). -->
     <div
       v-if="showProofPanel"
-      class="border-t border-gray-200 bg-gray-50 px-6 py-4"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      data-testid="proof-overlay"
+      @click.self="showProofPanel = false"
     >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3">
+          <div class="text-sm text-gray-500 min-w-0 flex-1">
+            <template v-if="renderPhase === 'starting' || renderPhase === 'queued'">
+              Queueing render…
+            </template>
+            <template v-else-if="renderPhase === 'rendering'">
+              Rendering postcard{{ renderProgress && renderProgress.total > 1 ? "s" : "" }}…
+              <span v-if="renderProgress" class="text-gray-400">
+                ({{ renderProgress.completed }}/{{ renderProgress.total }})
+              </span>
+            </template>
+            <template v-else-if="renderPhase === 'done'">
+              Proof ready.
+            </template>
+            <template v-else-if="renderPhase === 'failed'">
+              <span class="text-red-600 break-words">
+                Render failed: {{ renderError?.message }}
+              </span>
+            </template>
+          </div>
+          <button
+            type="button"
+            data-testid="proof-overlay-close"
+            class="text-gray-400 hover:text-gray-700 text-sm font-medium"
+            @click="showProofPanel = false"
+          >
+            Close
+          </button>
+        </div>
+        <div class="px-6 py-4">
       <div v-if="proofImages.length > 0" class="space-y-3">
         <div class="flex items-center justify-between">
           <div class="text-sm font-semibold text-[#0b2d50]">
@@ -1130,6 +1170,8 @@ watch(
       </div>
       <div v-else class="text-sm text-gray-400">
         Proof will appear here once rendering finishes.
+      </div>
+        </div>
       </div>
     </div>
 
