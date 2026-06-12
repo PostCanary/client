@@ -39,11 +39,18 @@ describe("PhotoAdjustOverlay", () => {
     expect(style).toContain("scale(2)");
   });
 
-  it("renders the zoom slider, Reset, and Done in the chip", () => {
+  it("renders the zoom slider, Change photo, Reset, and Done in the chip", () => {
     const w = mount(PhotoAdjustOverlay, { props: baseProps });
     expect(w.find('[data-testid="photo-adjust-zoom"]').exists()).toBe(true);
+    expect(w.find('[data-testid="photo-adjust-change"]').exists()).toBe(true);
     expect(w.find('[data-testid="photo-adjust-reset"]').exists()).toBe(true);
     expect(w.find('[data-testid="photo-adjust-done"]').exists()).toBe(true);
+  });
+
+  it("emits change-photo when the Change photo chip button is clicked", async () => {
+    const w = mount(PhotoAdjustOverlay, { props: baseProps });
+    await w.find('[data-testid="photo-adjust-change"]').trigger("click");
+    expect(w.emitted("change-photo")).toHaveLength(1);
   });
 
   it("emits pan with the raw delta and rect size on drag", async () => {
