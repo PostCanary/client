@@ -261,6 +261,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
     meta: { title: "Step Review Approval Flow (dev)", marketing: false },
   },
+  {
+    path: "/dev/step-design-fold",
+    name: "DevStepDesignFold",
+    component: () => import("@/pages/dev/StepDesignFold.vue"),
+    meta: { title: "Step Design Fold (dev)", marketing: false },
+  },
 
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

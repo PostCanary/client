@@ -1989,14 +1989,6 @@ async function saveNewReview() {
         </div>
       </div>
 
-      <!-- Template browser -->
-      <button
-        class="w-full text-center px-3 py-2.5 rounded-lg bg-[#47bfa9] text-white text-sm font-medium hover:bg-[#3aa893] transition-colors mt-4"
-        @click="emit('open-template-browser')"
-      >
-        Try Different Template
-      </button>
-
       <!-- Reset -->
       <button
         data-testid="reset-to-original"
