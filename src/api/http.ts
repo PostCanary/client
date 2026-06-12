@@ -137,12 +137,27 @@ http.interceptors.response.use(
     log.info("HTTP ← response", { url: res.config?.url, status: res.status });
     return res;
   },
-  (err: AxiosError) => {
+  async (err: AxiosError) => {
     inflight = Math.max(0, inflight - 1);
     notify();
 
     const status = err.response?.status ?? 0;
-    const data: any = err.response?.data;
+    let data: any = err.response?.data;
+    // Blob endpoints (preview-card/preview-back use responseType:"blob")
+    // receive ERROR bodies as Blobs too, which blinded the CSRF-retry
+    // check below — the rotating token made the back preview fail
+    // permanently after ~2min idle (S77, Dustin). Parse JSON error blobs
+    // so retry + message normalization work for every endpoint.
+    if (
+      data instanceof Blob &&
+      (data.type.includes("json") || status === 403)
+    ) {
+      try {
+        data = JSON.parse(await data.text());
+      } catch {
+        /* not JSON — keep the original blob */
+      }
+    }
     const url = err.config?.url;
     const method = err.config?.method;
 
