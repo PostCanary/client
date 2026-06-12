@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import type { CampaignGoalType, TemplateLayoutType } from "@/types/campaign";
 import { getTemplateSetsForGoal, useCaseLabel } from "@/data/templates";
+import { getMediaFeaturesCached } from "@/api/brandKit";
 
 const props = defineProps<{
   goalType: CampaignGoalType;
@@ -14,17 +15,45 @@ const emit = defineEmits<{
   (e: "close"): void;
 }>();
 
-const sets = getTemplateSetsForGoal(props.goalType, props.industry);
+const allSets = getTemplateSetsForGoal(props.goalType, props.industry);
 // Lob-style merchandising: the recommended set carries a use-case name.
 const recommendedUseCase = useCaseLabel(props.goalType, props.industry);
 const showMore = ref(false);
 
-// Show recommended + 2 others by default
-const primarySets = sets.filter((s) => s.recommended).concat(
-  sets.filter((s) => !s.recommended).slice(0, 2),
+// neighborhood-map gate (S76): the layout is key-gated server-side
+// (GEOAPIFY_API_KEY). Hide it from the browser until the probe confirms
+// it's configured — a direct switch to it when unconfigured is never
+// reachable from here. Default false → hidden until proven available.
+const mapsConfigured = ref(false);
+onMounted(() => {
+  getMediaFeaturesCached()
+    .then((f) => {
+      mapsConfigured.value = f.mapsConfigured;
+    })
+    .catch(() => {
+      /* probe failure → layout stays hidden */
+    });
+});
+
+const GATED_LAYOUTS: Partial<Record<TemplateLayoutType, () => boolean>> = {
+  "neighborhood-map": () => mapsConfigured.value,
+};
+
+const sets = computed(() =>
+  allSets.filter((s) => {
+    const gate = GATED_LAYOUTS[s.layout];
+    return gate ? gate() : true;
+  }),
 );
-const moreSets = sets.filter(
-  (s) => !primarySets.includes(s),
+
+// Show recommended + 2 others by default
+const primarySets = computed(() =>
+  sets.value
+    .filter((s) => s.recommended)
+    .concat(sets.value.filter((s) => !s.recommended).slice(0, 2)),
+);
+const moreSets = computed(() =>
+  sets.value.filter((s) => !primarySets.value.includes(s)),
 );
 
 const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
@@ -40,6 +69,7 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
   "service-checklist": "#2980b9",
   "urgency-notice": "#1c1c1c",
   "letter-note": "#b5651d",
+  "neighborhood-map": "#1f7a8c",
 };
 </script>
 

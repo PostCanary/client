@@ -73,6 +73,7 @@ const LAYOUTS: {
   { type: "urgency-notice", name: "Urgency Notice", desc: "Official notice style with deadline. Grabs attention like important mail.", bestFor: ["storm_response", "seasonal_tuneup"] },
   { type: "tips", name: "Quick Tips", desc: "Helpful seasonal tips with your offer as the payoff. Builds goodwill.", bestFor: ["seasonal_tuneup", "neighbor_marketing"] },
   { type: "letter-note", name: "Personal Letter", desc: "A warm handwritten-style note with your offer in the P.S. Feels personal, not promotional.", bestFor: ["win_back", "neighbor_marketing"] },
+  { type: "neighborhood-map", name: "Neighborhood Map", desc: "A real map of your service area with a 'we're in your neighborhood' message. Proves you're local.", bestFor: ["neighbor_marketing", "target_area"] },
 ];
 
 const POSITIONS: CardPurpose[] = ["offer", "proof", "last_chance"];
@@ -94,6 +95,10 @@ export const DEMO_VISIBLE_LAYOUTS: TemplateLayoutType[] = [
   "before-after",
   "tips",
   "letter-note",
+  // S76: neighborhood-map is key-gated (GEOAPIFY_API_KEY) — it is in the
+  // visible set, but the TemplateBrowser additionally hides it when
+  // mediaFeatures.mapsConfigured is false (probed there).
+  "neighborhood-map",
 ];
 
 // Worker render template per layout — keys of the render worker's
@@ -115,6 +120,7 @@ export const LAYOUT_RENDER_TEMPLATE_IDS: Partial<
   "review-forward": "review-forward-front-v1",
   "service-checklist": "service-checklist-front-v1",
   "urgency-notice": "urgency-notice-front-v1",
+  "neighborhood-map": "neighborhood-map-front-v1",
 };
 
 export function renderTemplateIdForLayout(

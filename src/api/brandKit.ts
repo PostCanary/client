@@ -175,10 +175,55 @@ export async function importStockPhoto(
 export interface MediaFeatures {
   stockConfigured: boolean;
   aiConfigured: boolean;
+  // neighborhood-map layout gate (S76): true only when GEOAPIFY_API_KEY is
+  // set server-side. The TemplateBrowser hides the layout when false.
+  mapsConfigured: boolean;
 }
 
 export async function getMediaFeatures(): Promise<MediaFeatures> {
   return get<MediaFeatures>("/api/brand-kit/media-features");
+}
+
+// Cached media-features probe. The flags are server-config (env keys), so
+// they don't change within a session — caching avoids re-probing from every
+// component (TemplateBrowser, EditPanel, StepDesign) that needs the gate.
+let _mediaFeaturesCache: Promise<MediaFeatures> | null = null;
+export function getMediaFeaturesCached(): Promise<MediaFeatures> {
+  if (!_mediaFeaturesCache) {
+    _mediaFeaturesCache = getMediaFeatures().catch((e) => {
+      // Don't poison the cache on a transient failure — let the next caller
+      // retry. Re-throw so callers can fall back to "gated off".
+      _mediaFeaturesCache = null;
+      throw e;
+    });
+  }
+  return _mediaFeaturesCache;
+}
+
+// --- Service-area map (Geoapify-backed; S76) ---
+
+export interface MapImageResult {
+  ok: boolean;
+  url: string;
+  lat: number;
+  lng: number;
+  radiusMiles: number;
+  attribution: string;
+  cached: boolean;
+}
+
+/**
+ * Generate (or reuse a cached) service-area map for the org. Returns the
+ * license-stable /media URL to store on CardDesign.mapImageUrl. Key-gated:
+ * the server returns 503 when GEOAPIFY_API_KEY is unset, but the client hides
+ * the layout in that case so this is a safety net.
+ */
+export async function generateMapImage(
+  radiusMiles?: number,
+): Promise<MapImageResult> {
+  return postJson<MapImageResult>("/api/brand-kit/map-image", {
+    radiusMiles,
+  });
 }
 
 export async function generateAiImage(prompt: string): Promise<BrandKit> {
