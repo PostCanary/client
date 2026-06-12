@@ -1,19 +1,20 @@
 <script setup lang="ts">
 /**
- * ZonePopover (S79 Phase-2) — a compact editor popover anchored NEXT TO the
- * card zone the user clicked, instead of in a far-away rail. It hosts a single
- * editor section (EditPanel/BackEditPanel in section mode) so editing happens
- * in the object's native context (direct manipulation).
+ * ZonePopover (S79 Phase-2 / Phase-3) — a compact editor popover anchored
+ * NEXT TO the card zone the user clicked. Hosts a single editor section in
+ * section mode so editing happens in the object's native context.
  *
- * Positioning is pure math (usePopoverAnchor): the zone's percentage box →
- * pixel rect within the canvas viewport, then a flip/clamp so the popover is
- * never clipped (zones near the right edge open leftward; bottom zones get
- * pushed upward by the clamp).
+ * Positioning: usePopoverAnchor → pixel rect + flip/clamp (zones near the
+ * right edge open leftward; bottom zones get pushed upward by the clamp).
  *
- * Close UX: Esc and outside-click close. Clicks INSIDE the popover (inputs,
- * buttons, color pickers, file dialogs) NEVER close it — the close handler is
- * registered on the document with a contains() guard, and the popover stops
- * pointerdown propagation. Typing therefore never dismisses the popover.
+ * Close UX: Esc is handled centrally by useDesignKeyboard in StepDesign
+ * (Esc → close popover first, then drawer). Outside-click also closes.
+ * Clicks INSIDE the popover NEVER close it — the close handler is registered
+ * on the document with a contains() guard; the popover stops pointerdown
+ * propagation. Typing therefore never dismisses the popover.
+ *
+ * Transition: the parent wraps this in <Transition name="popover"> using the
+ * .popover-* classes declared in index.css (fade+scale 150ms).
  */
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { anchorPopover, type ZoneBox } from "@/composables/usePopoverAnchor";
@@ -66,22 +67,14 @@ function onDocPointerDown(ev: PointerEvent) {
   if (el.contains(ev.target as Node)) return; // click inside → keep open
   emit("close");
 }
-function onKeydown(ev: KeyboardEvent) {
-  if (ev.key === "Escape") {
-    ev.stopPropagation();
-    emit("close");
-  }
-}
 
 onMounted(() => {
   nextTick(remeasure);
-  // pointerdown (capture phase off) on the document closes on outside clicks.
+  // pointerdown on the document closes on outside clicks.
   document.addEventListener("pointerdown", onDocPointerDown);
-  document.addEventListener("keydown", onKeydown);
 });
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", onDocPointerDown);
-  document.removeEventListener("keydown", onKeydown);
 });
 </script>
 
