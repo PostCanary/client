@@ -654,8 +654,13 @@ async function generateMap() {
       mapError.value = "Map generation failed — try again.";
     }
   } catch (e: any) {
+    // APIError JSON shape is {error: {type, message}} — show the message,
+    // not "[object Object]" or a bare status code.
     mapError.value =
-      e?.data?.error || e?.message || "Couldn't generate the map.";
+      e?.data?.error?.message ||
+      (typeof e?.data?.error === "string" ? e.data.error : null) ||
+      e?.message ||
+      "Couldn't generate the map.";
   } finally {
     mapGenerating.value = false;
   }
@@ -806,6 +811,7 @@ const bizDraft = ref({
   businessName: "",
   phone: "",
   websiteUrl: "",
+  address: "",
   tagline: "",
   licenseNumber: "",
 });
@@ -820,6 +826,7 @@ watch(
     props.brandKit?.businessName,
     props.brandKit?.phone,
     props.brandKit?.websiteUrl,
+    props.brandKit?.address,
     props.brandKit?.tagline,
     props.brandKit?.licenseNumber,
   ],
@@ -828,6 +835,7 @@ watch(
       businessName: props.brandKit?.businessName ?? "",
       phone: props.brandKit?.phone ?? "",
       websiteUrl: props.brandKit?.websiteUrl ?? "",
+      address: props.brandKit?.address ?? "",
       // null = industry-derived default; show empty input with a hint.
       tagline: props.brandKit?.tagline ?? "",
       licenseNumber: props.brandKit?.licenseNumber ?? "",
@@ -842,6 +850,7 @@ const bizDirty = computed(() => {
     bizDraft.value.businessName.trim() !== (bk?.businessName ?? "").trim() ||
     bizDraft.value.phone.trim() !== (bk?.phone ?? "").trim() ||
     bizDraft.value.websiteUrl.trim() !== (bk?.websiteUrl ?? "").trim() ||
+    bizDraft.value.address.trim() !== (bk?.address ?? "").trim() ||
     bizDraft.value.tagline.trim() !== (bk?.tagline ?? "").trim() ||
     bizDraft.value.licenseNumber.trim() !== (bk?.licenseNumber ?? "").trim()
   );
@@ -861,6 +870,7 @@ async function saveBizInfo() {
       businessName: bizDraft.value.businessName.trim(),
       phone: bizDraft.value.phone.trim(),
       websiteUrl: bizDraft.value.websiteUrl.trim(),
+      address: bizDraft.value.address.trim(),
       licenseNumber: bizDraft.value.licenseNumber.trim(),
     };
     // Only send the tagline when the user actually changed it — an
@@ -1701,6 +1711,17 @@ async function saveNewReview() {
             type="text"
             maxlength="120"
             data-testid="biz-website-input"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="block">
+          <span class="text-[10px] uppercase tracking-wide text-gray-400">Business address (return address + service-area map)</span>
+          <input
+            v-model="bizDraft.address"
+            type="text"
+            maxlength="140"
+            placeholder="2200 E Camelback Rd, Phoenix, AZ 85016"
+            data-testid="biz-address-input"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
           />
         </label>
