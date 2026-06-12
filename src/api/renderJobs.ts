@@ -192,3 +192,27 @@ export async function previewCard(
     .filter((w) => w.length > 0);
   return { blob: res.data as Blob, warnings };
 }
+
+/**
+ * Fetch the PNG preview of the postcard BACK (S76 Phase-5). ONE back serves
+ * the whole draft — backs don't vary by card position — so this endpoint
+ * takes no card number. The back artwork is sourced from card 1's guarantee
+ * override + the org's Business Info (address, license, website, certs, QR).
+ * Synchronous server call, same warnings contract as `previewCard`.
+ */
+export async function previewBack(
+  draftId: string,
+  signal?: AbortSignal,
+): Promise<PreviewCardResult> {
+  const res = await http.post(
+    `/api/campaign-drafts/${draftId}/preview-back`,
+    {},
+    { responseType: "blob", signal },
+  );
+  const warningsHeader = (res.headers?.["x-render-warnings"] ?? "") as string;
+  const warnings = warningsHeader
+    .split(",")
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  return { blob: res.data as Blob, warnings };
+}

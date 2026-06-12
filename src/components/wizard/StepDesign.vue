@@ -15,9 +15,11 @@ import { deriveTeaser } from "@/composables/usePostcardGenerator";
 import { getTemplateSetsForGoal, renderTemplateIdForLayout } from "@/data/templates";
 import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
+import BackEditPanel from "@/components/design/BackEditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
+import { useBackPreview } from "@/composables/useBackPreview";
 import { previewCard } from "@/api/renderJobs";
 import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
 import { generateMapImage, getMediaFeaturesCached } from "@/api/brandKit";
@@ -162,6 +164,40 @@ watch(previewUrl, (url) => {
     if (switchingLayoutFallback) clearTimeout(switchingLayoutFallback);
   }
 });
+
+// --- Front/Back surface toggle (S76 Phase-5) -------------------------------
+// ONE back per draft (backs don't vary by card position), so the back preview
+// is keyed on the draft + the guarantee, not the active card index.
+const activeSide = ref<"front" | "back">("front");
+const isBack = computed(() => activeSide.value === "back");
+// The guarantee is the only back-editable content this pass; it lives on
+// card 1's backContent. Re-render the back when it changes.
+const backGuarantee = computed(
+  () => cards.value[0]?.backContent?.guarantee ?? "",
+);
+const {
+  previewUrl: backPreviewUrl,
+  loading: backPreviewLoading,
+  error: backPreviewError,
+  refresh: refreshBackPreview,
+} = useBackPreview(draftIdRef, backGuarantee, isBack);
+
+function updateBackGuarantee(value: string) {
+  const card = cards.value[0];
+  if (!card) return;
+  invalidateProof();
+  // The back is a per-draft surface; the guarantee lives on card 1's
+  // backContent (the server reads backContent.guarantee from card 1).
+  replaceCardAt(0, {
+    ...card,
+    backContent: {
+      ...card.backContent,
+      guarantee: value,
+    },
+  });
+  commitDesign();
+}
+
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
 const brandKit = computed(() => brandKitStore.brandKit);
 // City is derived from brandKit.location which is "City, ST" — split on
@@ -687,7 +723,10 @@ function resetCard() {
 }
 
 function replaceActiveCard(nextCard: CardDesign) {
-  const idx = activeCardIndex.value;
+  replaceCardAt(activeCardIndex.value, nextCard);
+}
+
+function replaceCardAt(idx: number, nextCard: CardDesign) {
   cards.value = cards.value.map((card, i) => (i === idx ? nextCard : card));
 }
 
@@ -768,7 +807,73 @@ watch(
           class="px-6 pt-6 pb-4"
           @select="activeCardIndex = $event"
         />
-        <div class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden">
+
+        <!-- Front/Back surface toggle (S76 Phase-5). The back is ONE design
+             for the whole sequence — switching here swaps the preview + the
+             edit panel between the front card and the shared back. -->
+        <div v-if="cardsReady" class="flex justify-center pt-4 pb-1">
+          <div
+            class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5"
+            role="tablist"
+            aria-label="Postcard side"
+          >
+            <button
+              type="button"
+              role="tab"
+              data-testid="side-toggle-front"
+              :aria-selected="activeSide === 'front'"
+              class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+              :class="activeSide === 'front'
+                ? 'bg-[#0b2d50] text-white'
+                : 'text-gray-600 hover:text-gray-900'"
+              @click="activeSide = 'front'"
+            >
+              Front
+            </button>
+            <button
+              type="button"
+              role="tab"
+              data-testid="side-toggle-back"
+              :aria-selected="activeSide === 'back'"
+              class="px-4 py-1.5 text-sm font-medium rounded-md transition-colors"
+              :class="activeSide === 'back'
+                ? 'bg-[#0b2d50] text-white'
+                : 'text-gray-600 hover:text-gray-900'"
+              @click="activeSide = 'back'"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+
+        <!-- BACK preview surface (S76 Phase-5) -->
+        <div
+          v-if="isBack"
+          class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden"
+          data-testid="back-preview-surface"
+        >
+          <div v-if="backPreviewLoading && !backPreviewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
+            <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div v-else-if="backPreviewUrl" class="relative inline-block">
+            <img
+              :key="backPreviewUrl"
+              :src="backPreviewUrl"
+              alt="Postcard back preview"
+              class="max-w-full w-auto h-auto object-contain rounded shadow-sm max-h-[calc(100vh-400px)]"
+              :class="{ 'opacity-60': backPreviewLoading }"
+            />
+          </div>
+          <div v-else-if="backPreviewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
+            Back preview unavailable.
+            <button class="ml-2 text-[#47bfa9] underline" @click="refreshBackPreview">Retry</button>
+          </div>
+          <div v-else class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
+            Loading back…
+          </div>
+        </div>
+
+        <div v-show="!isBack" class="flex-1 min-h-0 flex items-center justify-center p-6 bg-gray-50 overflow-hidden">
           <!-- Pre-generation loading state. User reached Step 3 before
                auto-populate finished (fires from Step 1 goal commit in
                useCampaignDraftStore.setGoal → generateCardsForDraft).
@@ -874,9 +979,16 @@ watch(
         </div>
       </div>
 
-      <!-- Right column: Edit panel -->
+      <!-- Right column: Edit panel. Back tab swaps in the back editor
+           (guarantee + read-only Business Info), S76 Phase-5. -->
+      <BackEditPanel
+        v-if="isBack"
+        :guarantee="backGuarantee"
+        :brand-kit="brandKit"
+        @update-guarantee="updateBackGuarantee"
+      />
       <EditPanel
-        v-if="activeCard"
+        v-else-if="activeCard"
         :card="activeCard"
         :brand-kit="brandKit"
         :requested-editor="requestedEditor"
