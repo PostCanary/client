@@ -39,6 +39,7 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
   "review-forward": "#27ae60",
   "service-checklist": "#2980b9",
   "urgency-notice": "#1c1c1c",
+  "letter-note": "#b5651d",
 };
 </script>
 

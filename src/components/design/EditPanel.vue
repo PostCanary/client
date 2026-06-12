@@ -67,6 +67,7 @@ type EditorType =
   | "checklist"
   | "notice"
   | "tips"
+  | "letter"
   | null;
 const activeEditor = ref<EditorType>(null);
 
@@ -467,6 +468,72 @@ function addTip() {
 function removeTip(index: number) {
   editableTips.value.splice(index, 1);
   applyTips();
+}
+
+// --- Letter editor (S76-C: letter-note layout) ------------------------------
+const isLetterLayout = computed(() =>
+  (props.card.renderTemplateId ?? "").startsWith("letter-note"),
+);
+const showLetterEditor = computed(
+  () => isLetterLayout.value && props.card.cardPurpose !== "proof",
+);
+
+const LETTER_BODY_MAX = 520;
+const SALUTATION_MAX = 48;
+
+// Mirror the server-side default so the panel opens showing exactly what
+// prints before any edit exists. Mirrors ai_generator._default_salutation:
+// "Dear {City} Neighbor," when the brand kit location parses, else the
+// city-less floor.
+const GENERIC_LOCATIONS = new Set([
+  "",
+  "your area",
+  "your city",
+  "your town",
+  "your neighborhood",
+  "local",
+]);
+function defaultSalutation(): string {
+  const loc = (props.brandKit?.location ?? "").trim();
+  if (GENERIC_LOCATIONS.has(loc.toLowerCase())) return "Dear Neighbor,";
+  const city = loc.split(",", 1)[0]!.trim();
+  if (!city || /\d/.test(city)) return "Dear Neighbor,";
+  return `Dear ${city} Neighbor,`;
+}
+
+function salutationForCard(): string {
+  const stored = props.card.resolvedContent.salutation;
+  return stored && stored.trim() ? stored : defaultSalutation();
+}
+
+function letterBodyForCard(): string {
+  // The body is synthesized server-side when empty; until the customer
+  // edits, the resolvedContent value is what prints. Empty placeholder is
+  // fine here — the textarea placeholder explains the auto-fill.
+  return props.card.resolvedContent.letterBody ?? "";
+}
+
+const editableSalutation = ref(salutationForCard());
+const editableLetterBody = ref(letterBodyForCard());
+
+watch(
+  () => [
+    props.card.cardNumber,
+    props.card.resolvedContent.salutation,
+    props.card.resolvedContent.letterBody,
+  ],
+  () => {
+    editableSalutation.value = salutationForCard();
+    editableLetterBody.value = letterBodyForCard();
+  },
+);
+
+function applySalutation() {
+  emit("update-field", "salutation", editableSalutation.value);
+}
+
+function applyLetterBody() {
+  emit("update-field", "letterBody", editableLetterBody.value);
 }
 
 // --- Before/after photo slots (S74 wave 3) ----------------------------------
@@ -1182,6 +1249,48 @@ async function saveNewReview() {
         <p class="text-[10px] text-gray-400">
           3-5 tips. Fewer than 3 prints your industry's standard tips.
         </p>
+      </div>
+
+      <!-- Letter (S76-C: letter-note layout; panel replaced by review on proof) -->
+      <button
+        v-if="showLetterEditor"
+        data-testid="edit-letter-toggle"
+        class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
+        :class="activeEditor === 'letter' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+        @click="toggleEditor('letter')"
+      >
+        Edit Letter
+      </button>
+      <div v-if="showLetterEditor && activeEditor === 'letter'" class="px-3 pb-3 space-y-3">
+        <div class="space-y-1">
+          <label class="block text-xs font-medium text-gray-600">Greeting</label>
+          <input
+            v-model="editableSalutation"
+            type="text"
+            :maxlength="SALUTATION_MAX"
+            data-testid="letter-salutation"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applySalutation"
+          />
+          <p class="text-[10px] text-gray-400">
+            Defaults from your city, e.g. "Dear {{ (brandKit?.location ?? '').split(',')[0] || 'Phoenix' }} Neighbor,". This version greets the whole neighborhood, not a specific name.
+          </p>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-xs font-medium text-gray-600">Letter body</label>
+          <textarea
+            v-model="editableLetterBody"
+            rows="6"
+            :maxlength="LETTER_BODY_MAX"
+            data-testid="letter-body"
+            placeholder="Leave blank to auto-write a warm note from your offer and reviews."
+            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+            @input="applyLetterBody"
+          ></textarea>
+          <p class="text-[10px] text-gray-400">
+            {{ editableLetterBody.length }}/{{ LETTER_BODY_MAX }} characters. Your offer rides the P.S. line automatically.
+          </p>
+        </div>
       </div>
 
       <!-- Change Photo (hidden on layouts with no photo slot —

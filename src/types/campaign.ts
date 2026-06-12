@@ -246,6 +246,7 @@ export type TemplateLayoutType =
   | 'urgency-notice'
   | 'new-mover'
   | 'tips'
+  | 'letter-note'
 
 export type CardPurpose = 'offer' | 'proof' | 'last_chance'
 
@@ -308,6 +309,8 @@ export interface CardDesign {
     tips?: string[]                    // tips-card rows the customer edited (S74)
     beforePhotoUrl?: string            // before-after split (S74)
     afterPhotoUrl?: string
+    salutation?: string                // letter-note greeting the customer edited (S76)
+    letterBody?: string                // letter-note body the customer edited (S76)
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
@@ -326,6 +329,8 @@ export interface CardDesign {
     tips?: string[]                    // absent → worker uses the industry tip pack
     beforePhotoUrl?: string            // before-after split; falls back to photoUrl
     afterPhotoUrl?: string
+    salutation?: string                // letter-note greeting; absent → city-derived default
+    letterBody?: string                // letter-note body; absent → worker synthesizes
   }
   backContent: {
     guarantee: string
