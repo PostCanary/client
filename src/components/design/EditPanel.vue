@@ -1337,6 +1337,8 @@ async function saveNewReview() {
             {{ editableLetterBody.length }}/{{ LETTER_BODY_MAX }} characters. Your offer rides the P.S. line automatically.
           </p>
         </div>
+      </div>
+
       <!-- Service Area Map (neighborhood-map layout; S76). Key-gated:
            only shown when the layout is active AND mapsConfigured. -->
       <button
