@@ -15,10 +15,19 @@
 import { ref, watch, computed } from "vue";
 import type {
   BrandKit,
+  BrandKitPhoto,
   BackTemplateId,
   BackTestimonial,
   CardDesign,
 } from "@/types/campaign";
+import { getPhotosForIndustry } from "@/data/stockPhotos";
+import { API_BASE } from "@/api/http";
+
+// Brand-kit photos store relative /media/... URLs; resolve cross-origin (mirrors
+// EditPanel's Change Photo gallery so thumbnails load on Vercel previews).
+function mediaSrc(url: string): string {
+  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
+}
 
 // The editable slice of card 1's backContent.
 type BackPatch = Partial<CardDesign["backContent"]>;
@@ -35,16 +44,64 @@ const emit = defineEmits<{
 }>();
 
 // --- Back style selector ----------------------------------------------------
+// S78 grew this to 5 styles; a 5-up segmented control is cramped, so it renders
+// as a 2-column pill grid instead.
 const BACK_STYLES: Array<{ id: BackTemplateId; label: string }> = [
   { id: "standard-back-v2", label: "Standard" },
   { id: "testimonial-back-v1", label: "Testimonial" },
   { id: "service-area-back-v1", label: "Service Area" },
+  { id: "photo-back-v1", label: "Photo" },
+  { id: "brand-bold-back-v1", label: "Bold" },
 ];
 const activeStyle = computed<BackTemplateId>(
   () => (props.backContent.backTemplateId as BackTemplateId) || "standard-back-v2",
 );
 function selectStyle(id: BackTemplateId) {
   if (id !== activeStyle.value) emit("update-back", { backTemplateId: id });
+}
+// The back-photo picker is only relevant when the Photo style is selected.
+const isPhotoStyle = computed(() => activeStyle.value === "photo-back-v1");
+
+// --- Back photo picker (S78) — reuses the Change Photo gallery pattern -------
+type PickerPhoto = {
+  url: string;
+  alt: string;
+  source: "brand" | "stock";
+  lowRes?: boolean;
+};
+// Customer-deliberate sources are never filtered out of the gallery (mirrors
+// EditPanel: AI/stock/upload images must always remain selectable).
+const DELIBERATE_PHOTO_SOURCES = new Set(["ai", "stock", "upload"]);
+const backPickerPhotos = computed<PickerPhoto[]>(() => {
+  const bk = props.brandKit;
+  if (!bk) return [];
+  const brand: PickerPhoto[] = (bk.photos ?? [])
+    .filter(
+      (p: BrandKitPhoto) =>
+        p.printReady !== false ||
+        DELIBERATE_PHOTO_SOURCES.has((p as unknown as { source?: string }).source ?? ""),
+    )
+    .sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0))
+    .map((p) => ({
+      url: p.url,
+      alt: p.alt,
+      source: "brand" as const,
+      lowRes: p.printReady === false,
+    }));
+  const stock: PickerPhoto[] = getPhotosForIndustry(bk.industry).map((p) => ({
+    url: p.url,
+    alt: p.description,
+    source: "stock" as const,
+  }));
+  return [...brand, ...stock];
+});
+const currentBackPhotoUrl = computed(() => props.backContent.backPhotoUrl ?? "");
+function applyBackPhoto(url: string) {
+  // Toggle off when re-clicking the active photo → falls back to the card
+  // photo / industry pack (the worker's fallback chain fills it, never empty).
+  emit("update-back", {
+    backPhotoUrl: url === currentBackPhotoUrl.value ? "" : url,
+  });
 }
 
 // --- Subhead (char counter) -------------------------------------------------
@@ -187,13 +244,13 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       One back is printed for every card in this campaign.
     </p>
 
-    <!-- Back style selector (segmented control) -->
+    <!-- Back style selector (pill grid — 5 styles, segmented gets cramped) -->
     <div class="mb-5">
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Back Style
       </label>
       <div
-        class="flex rounded-lg border border-gray-200 overflow-hidden"
+        class="grid grid-cols-2 gap-2"
         data-testid="back-style-selector"
         role="tablist"
       >
@@ -203,15 +260,71 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
           type="button"
           :data-testid="`back-style-${style.id}`"
           :aria-selected="activeStyle === style.id"
-          class="flex-1 px-2 py-1.5 text-xs font-medium transition-colors"
+          role="tab"
+          class="px-2 py-1.5 text-xs font-medium rounded-lg border transition-colors"
           :class="
             activeStyle === style.id
-              ? 'bg-[#47bfa9] text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-50'
+              ? 'bg-[#47bfa9] text-white border-[#47bfa9]'
+              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
           "
           @click="selectStyle(style.id)"
         >
           {{ style.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Back photo picker (S78) — only when the Photo style is selected.
+         Reuses the Change Photo gallery grid (brand + stock, Low-res badge). -->
+    <div v-if="isPhotoStyle" class="mb-5" data-testid="back-photo-section">
+      <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
+        Back Photo
+      </label>
+      <p class="text-[11px] text-gray-500 mb-2">
+        Fills the left side of the back. Leave unset to reuse this campaign's
+        front photo.
+      </p>
+      <div
+        v-if="backPickerPhotos.length === 0"
+        class="text-xs text-gray-400 py-1"
+      >
+        No photos yet — add brand photos in onboarding, or pick a card photo on
+        the front.
+      </div>
+      <div v-else class="grid grid-cols-3 gap-2" data-testid="back-photo-grid">
+        <button
+          v-for="(photo, i) in backPickerPhotos"
+          :key="photo.url"
+          type="button"
+          :data-testid="`back-photo-option-${i}`"
+          :data-source="photo.source"
+          :data-active="photo.url === currentBackPhotoUrl ? 'true' : 'false'"
+          class="relative aspect-square rounded-md overflow-hidden border-2 transition-colors"
+          :class="
+            photo.url === currentBackPhotoUrl
+              ? 'border-[#47bfa9]'
+              : 'border-transparent hover:border-gray-300'
+          "
+          :title="photo.alt"
+          @click="applyBackPhoto(photo.url)"
+        >
+          <img
+            :src="mediaSrc(photo.url)"
+            :alt="photo.alt"
+            class="w-full h-full object-cover"
+          />
+          <span
+            v-if="photo.source === 'stock'"
+            class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
+            >Stock</span
+          >
+          <span
+            v-if="photo.lowRes"
+            data-testid="back-photo-lowres-badge"
+            class="absolute top-0 left-0 text-[8px] font-medium bg-amber-500/90 text-white px-1 rounded-br"
+            title="Below print resolution — may look soft when printed"
+            >Low res</span
+          >
         </button>
       </div>
     </div>
