@@ -8,6 +8,8 @@ import type {
   DesignSelection,
   HeadlineLines,
   OfferStackItem,
+  PhotoCrop,
+  MapSettings,
   TemplateLayoutType,
 } from "@/types/campaign";
 import { joinHeadlineLines, splitHeadline } from "@/utils/headlineSplit";
@@ -909,6 +911,45 @@ function updatePhoto(url: string) {
   queuePersistedPreviewRefresh();
 }
 
+// S80 photo positioning/cropping. `field` is one of photoCrop |
+// beforePhotoCrop | afterPhotoCrop. `crop` undefined → reset (drop the
+// override so the worker renders the cover-center default). Mirrors the
+// override into resolvedContent so the orchestrator bridge picks it up.
+function updateCrop(field: string, crop: PhotoCrop | undefined) {
+  const card = activeCard.value;
+  if (!card) return;
+  invalidateProof();
+  const overrides: CardDesign["overrides"] = { ...card.overrides };
+  const resolvedContent: CardDesign["resolvedContent"] = {
+    ...card.resolvedContent,
+  };
+  if (crop === undefined) {
+    delete (overrides as Record<string, unknown>)[field];
+    delete (resolvedContent as Record<string, unknown>)[field];
+  } else {
+    (overrides as Record<string, unknown>)[field] = crop;
+    (resolvedContent as Record<string, unknown>)[field] = crop;
+  }
+  replaceActiveCard({ ...card, overrides, resolvedContent });
+  commitDesign();
+  queuePersistedPreviewRefresh();
+}
+
+// S80 persist the neighborhood-map view controls on the card so a Regenerate
+// after reload reuses them. Stored on overrides.mapSettings only — the bridge
+// ignores it (the worker consumes map_image_url); these are client/endpoint
+// params. No preview refresh here: generateMap already emitted update-field
+// mapImageUrl, which triggers the re-render.
+function updateMapSettings(settings: MapSettings) {
+  const card = activeCard.value;
+  if (!card) return;
+  replaceActiveCard({
+    ...card,
+    overrides: { ...card.overrides, mapSettings: settings },
+  });
+  commitDesign();
+}
+
 // Layout switch state: drives the "Applying new layout…" overlay so the
 // preview never sits silent (users read silence as broken and re-click).
 const switchingLayout = ref(false);
@@ -1452,6 +1493,8 @@ watch(
               @regenerate-cards="regenerateCards"
               @update-colors="updateColors"
               @update-photo="updatePhoto"
+              @update-crop="updateCrop"
+              @update-map-settings="updateMapSettings"
               @open-template-browser="showTemplateBrowser = true"
               @reset="resetCard"
               @info-saved="refreshPreview"
@@ -1492,6 +1535,8 @@ watch(
               @regenerate-cards="regenerateCards"
               @update-colors="updateColors"
               @update-photo="updatePhoto"
+              @update-crop="updateCrop"
+              @update-map-settings="updateMapSettings"
               @open-template-browser="showTemplateBrowser = true"
               @reset="resetCard"
               @info-saved="refreshPreview"

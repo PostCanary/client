@@ -9,8 +9,12 @@ import type {
   HeadlineLines,
   Industry,
   OfferStackItem,
+  PhotoCrop,
+  MapSettings,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
+import PhotoCropAdjuster from "@/components/design/PhotoCropAdjuster.vue";
+import { normalizeCrop } from "@/utils/photoCrop";
 import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
@@ -77,6 +81,11 @@ const emit = defineEmits<{
   (e: "regenerate-cards"): void;
   (e: "update-colors", colors: ColorOverride | null): void;
   (e: "update-photo", url: string): void;
+  // S80 photo positioning/cropping. `field` is the override key to write
+  // (photoCrop | beforePhotoCrop | afterPhotoCrop); `crop` undefined = reset.
+  (e: "update-crop", field: string, crop: PhotoCrop | undefined): void;
+  // S80 persist the chosen neighborhood-map view controls on the card.
+  (e: "update-map-settings", settings: MapSettings): void;
   (e: "open-template-browser"): void;
   (e: "reset"): void;
   (e: "info-saved"): void;
@@ -667,6 +676,62 @@ function applyPhoto(url: string) {
   emit("update-photo", url);
 }
 
+// --- S80 photo positioning/cropping ----------------------------------------
+// Which override key the crop writes, scoped to the active slot. On
+// before-after the slot toggle (before/after) picks the field; otherwise the
+// main photoCrop.
+const cropField = computed(() => {
+  if (isBeforeAfterLayout.value) {
+    return photoSlot.value === "before" ? "beforePhotoCrop" : "afterPhotoCrop";
+  }
+  return "photoCrop";
+});
+
+// The current crop for the active slot (override → resolved → identity).
+const activeCrop = computed<PhotoCrop>(() => {
+  const ov = props.card.overrides as Record<string, unknown>;
+  const rc = props.card.resolvedContent as Record<string, unknown>;
+  const key = cropField.value;
+  return normalizeCrop(
+    (ov[key] as PhotoCrop | undefined) ?? (rc[key] as PhotoCrop | undefined),
+  );
+});
+
+// The photo the adjuster previews — the active slot's resolved URL.
+const activePhotoSrc = computed(() => {
+  if (isBeforeAfterLayout.value) {
+    const ov = props.card.overrides;
+    const rc = props.card.resolvedContent;
+    const url =
+      photoSlot.value === "before"
+        ? (ov.beforePhotoUrl ?? rc.beforePhotoUrl ?? rc.photoUrl)
+        : (ov.afterPhotoUrl ?? rc.afterPhotoUrl ?? rc.photoUrl);
+    return url ? mediaSrc(url) : "";
+  }
+  return currentPhotoUrl.value ? mediaSrc(currentPhotoUrl.value) : "";
+});
+
+// The photo zone's aspect ratio (width/height) so the mini frame matches the
+// printed crop. Derived from the template's photo edit zone (percent of the
+// 1200x800 card); falls back to a 3:2 landscape if no zone is mapped.
+const CARD_W = 1200;
+const CARD_H = 800;
+const photoZoneAspect = computed(() => {
+  const zones = editZonesFor(
+    props.card.renderTemplateId ?? null,
+    props.card.cardPurpose,
+  );
+  const z = zones.find((zone) => zone.editor === "photo");
+  if (!z || !z.width || !z.height) return 1.5;
+  const wpx = (z.width / 100) * CARD_W;
+  const hpx = (z.height / 100) * CARD_H;
+  return hpx > 0 ? wpx / hpx : 1.5;
+});
+
+function onCropChange(crop: PhotoCrop | undefined) {
+  emit("update-crop", cropField.value, crop);
+}
+
 // --- Stock photo search (Pexels; S72) ---------------------------------------
 // S75: prefilled with a people-first trade query (the research's strongest
 // finding: faces sell) so the first search lands on usable results.
@@ -705,7 +770,58 @@ const showMapEditor = computed(
 );
 // Radius options offered in the selector (miles). Default 3 matches the server.
 const MAP_RADIUS_OPTIONS = [1, 2, 3, 5, 10];
-const mapRadiusMiles = ref<number>(3);
+// S80 view controls. Seeded from the persisted mapSettings so a reload reuses
+// the customer's choices (radius + zoom + ring + offset).
+const persistedMapSettings = (props.card.overrides.mapSettings ??
+  null) as MapSettings | null;
+const mapRadiusMiles = ref<number>(persistedMapSettings?.radiusMiles ?? 3);
+const mapZoomDelta = ref<-1 | 0 | 1>(persistedMapSettings?.zoomDelta ?? 0);
+const mapShowRing = ref<boolean>(persistedMapSettings?.showRing ?? true);
+const mapOffsetX = ref<number>(
+  persistedMapSettings?.centerOffset?.dxMiles ?? 0,
+);
+const mapOffsetY = ref<number>(
+  persistedMapSettings?.centerOffset?.dyMiles ?? 0,
+);
+const MAP_ZOOM_OPTIONS: Array<{ label: string; value: -1 | 0 | 1 }> = [
+  { label: "Close-up", value: 1 },
+  { label: "Standard", value: 0 },
+  { label: "Wide", value: -1 },
+];
+const MAP_MAX_OFFSET = 5;
+
+// Nudge the view center by 1-mile steps, clamped to ±5mi. Pure so it is
+// unit-tested in EditPanel.map.spec.
+function nudgeMap(dx: number, dy: number) {
+  mapOffsetX.value = Math.max(
+    -MAP_MAX_OFFSET,
+    Math.min(MAP_MAX_OFFSET, mapOffsetX.value + dx),
+  );
+  mapOffsetY.value = Math.max(
+    -MAP_MAX_OFFSET,
+    Math.min(MAP_MAX_OFFSET, mapOffsetY.value + dy),
+  );
+  void generateMap();
+}
+
+function resetMapView() {
+  mapZoomDelta.value = 0;
+  mapShowRing.value = true;
+  mapOffsetX.value = 0;
+  mapOffsetY.value = 0;
+  void generateMap();
+}
+
+function setMapZoom(value: -1 | 0 | 1) {
+  mapZoomDelta.value = value;
+  void generateMap();
+}
+
+function toggleMapRing() {
+  mapShowRing.value = !mapShowRing.value;
+  void generateMap();
+}
+
 const mapGenerating = ref(false);
 const mapError = ref<string | null>(null);
 const currentMapUrl = computed(
@@ -730,11 +846,27 @@ async function generateMap() {
         return;
       }
     }
-    const res = await generateMapImage(mapRadiusMiles.value);
+    const res = await generateMapImage(mapRadiusMiles.value, {
+      zoomDelta: mapZoomDelta.value,
+      showRing: mapShowRing.value,
+      centerOffset: { dxMiles: mapOffsetX.value, dyMiles: mapOffsetY.value },
+    });
     if (res?.url) {
       // Apply via the same update-field pattern as before-after's
       // beforePhotoUrl flow — the card re-renders with the new map.
       emit("update-field", "mapImageUrl", res.url);
+      // Persist the chosen view controls so Regenerate after reload reuses
+      // them (S80). Stored on overrides.mapSettings; the worker ignores it
+      // (it only consumes map_image_url) — these are client/endpoint params.
+      emit("update-map-settings", {
+        radiusMiles: mapRadiusMiles.value,
+        zoomDelta: mapZoomDelta.value,
+        showRing: mapShowRing.value,
+        centerOffset: {
+          dxMiles: mapOffsetX.value,
+          dyMiles: mapOffsetY.value,
+        },
+      });
     } else {
       mapError.value = "Map generation failed — try again.";
     }
@@ -1495,6 +1627,112 @@ async function saveNewReview() {
             </div>
           </div>
 
+          <!-- S80 zoom level (segmented). Close-up / Standard / Wide map to
+               +1 / 0 / -1 zoomDelta on the server. -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Zoom level
+            </label>
+            <div class="flex gap-1.5" data-testid="map-zoom-options">
+              <button
+                v-for="opt in MAP_ZOOM_OPTIONS"
+                :key="opt.value"
+                type="button"
+                :data-testid="`map-zoom-${opt.value}`"
+                class="flex-1 px-2 py-1.5 rounded-lg border text-xs transition-colors"
+                :class="mapZoomDelta === opt.value
+                  ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50] font-semibold'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+                @click="setMapZoom(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- S80 radius-ring toggle -->
+          <label
+            class="flex items-center justify-between text-xs font-medium text-gray-600"
+          >
+            <span>Show radius ring</span>
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="mapShowRing"
+              data-testid="map-ring-toggle"
+              class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+              :class="mapShowRing ? 'bg-[#47bfa9]' : 'bg-gray-300'"
+              @click="toggleMapRing"
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                :class="mapShowRing ? 'translate-x-4' : 'translate-x-0.5'"
+              />
+            </button>
+          </label>
+
+          <!-- S80 3x3 nudge pad: shift the view center by 1-mile steps.
+               The business pin stays put; only the framing moves. -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Recenter view
+            </label>
+            <div
+              class="grid grid-cols-3 gap-1 w-28"
+              data-testid="map-nudge-pad"
+            >
+              <span></span>
+              <button
+                type="button"
+                data-testid="map-nudge-n"
+                class="px-2 py-1.5 rounded border border-gray-200 text-gray-600 hover:border-[#47bfa9]"
+                aria-label="Nudge north"
+                @click="nudgeMap(0, 1)"
+              >↑</button>
+              <span></span>
+              <button
+                type="button"
+                data-testid="map-nudge-w"
+                class="px-2 py-1.5 rounded border border-gray-200 text-gray-600 hover:border-[#47bfa9]"
+                aria-label="Nudge west"
+                @click="nudgeMap(-1, 0)"
+              >←</button>
+              <button
+                type="button"
+                data-testid="map-nudge-center"
+                class="px-2 py-1.5 rounded border border-gray-200 text-gray-400 hover:border-[#47bfa9] text-[10px]"
+                aria-label="Reset center"
+                @click="nudgeMap(-mapOffsetX, -mapOffsetY)"
+              >•</button>
+              <button
+                type="button"
+                data-testid="map-nudge-e"
+                class="px-2 py-1.5 rounded border border-gray-200 text-gray-600 hover:border-[#47bfa9]"
+                aria-label="Nudge east"
+                @click="nudgeMap(1, 0)"
+              >→</button>
+              <span></span>
+              <button
+                type="button"
+                data-testid="map-nudge-s"
+                class="px-2 py-1.5 rounded border border-gray-200 text-gray-600 hover:border-[#47bfa9]"
+                aria-label="Nudge south"
+                @click="nudgeMap(0, -1)"
+              >↓</button>
+              <span></span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1">
+              Offset: {{ mapOffsetX }}mi E/W, {{ mapOffsetY }}mi N/S
+              <button
+                type="button"
+                data-testid="map-view-reset"
+                class="ml-1 text-[#0b2d50] underline disabled:opacity-40 disabled:no-underline"
+                :disabled="mapZoomDelta === 0 && mapShowRing && mapOffsetX === 0 && mapOffsetY === 0"
+                @click="resetMapView"
+              >Reset view</button>
+            </p>
+          </div>
+
           <img
             v-if="currentMapUrl"
             :src="mediaSrc(currentMapUrl)"
@@ -1604,6 +1842,21 @@ async function saveNewReview() {
               title="Below print resolution — may look soft when printed"
             >Low res</span>
           </button>
+        </div>
+
+        <!-- S80 Adjust position: drag-to-pan + zoom for the active photo slot.
+             Shown only once a photo is applied so there is something to crop. -->
+        <div
+          v-if="activePhotoSrc"
+          class="pt-2 border-t border-gray-100"
+          data-testid="photo-adjust-section"
+        >
+          <PhotoCropAdjuster
+            :src="activePhotoSrc"
+            :model-value="activeCrop"
+            :aspect="photoZoneAspect"
+            @update:model-value="onCropChange"
+          />
         </div>
 
         <!-- Stock photo search (Pexels; S72) -->

@@ -109,4 +109,61 @@ describe("EditPanel — section mode (S79 Phase-2)", () => {
     expect(wrapper.find('[data-testid="edit-colors-toggle"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="reset-to-original"]').exists()).toBe(true);
   });
+
+  // --- S80 photo positioning/cropping ---
+
+  it("photo section shows the Adjust position control once a photo is applied", async () => {
+    const card = makeCard();
+    card.resolvedContent.photoUrl = "/media/brand-photos/o/p.jpg";
+    const wrapper = mount(EditPanel, {
+      props: {
+        card,
+        brandKit: null,
+        requestedEditor: null,
+        mode: "section",
+        section: "photo" as any,
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="photo-adjust-section"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="photo-crop-adjuster"]').exists()).toBe(true);
+  });
+
+  it("hides Adjust position when no photo is applied", async () => {
+    const wrapper = mount(EditPanel, {
+      props: {
+        card: makeCard(),
+        brandKit: null,
+        requestedEditor: null,
+        mode: "section",
+        section: "photo" as any,
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="photo-adjust-section"]').exists()).toBe(false);
+  });
+
+  it("emits update-crop with the photoCrop field when the adjuster commits", async () => {
+    const card = makeCard();
+    card.resolvedContent.photoUrl = "/media/brand-photos/o/p.jpg";
+    const wrapper = mount(EditPanel, {
+      props: {
+        card,
+        brandKit: null,
+        requestedEditor: null,
+        mode: "section",
+        section: "photo" as any,
+      },
+    });
+    await flushPromises();
+    const slider = wrapper.find('[data-testid="crop-zoom"]');
+    (slider.element as HTMLInputElement).value = "2";
+    await slider.trigger("input");
+    await new Promise((r) => setTimeout(r, 300));
+    const emitted = wrapper.emitted("update-crop");
+    expect(emitted).toBeTruthy();
+    const last = emitted![emitted!.length - 1]!;
+    expect(last[0]).toBe("photoCrop");
+    expect((last[1] as { zoom: number }).zoom).toBe(2);
+  });
 });

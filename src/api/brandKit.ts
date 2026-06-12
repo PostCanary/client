@@ -213,8 +213,22 @@ export interface MapImageResult {
   lat: number;
   lng: number;
   radiusMiles: number;
+  // S80 view controls echoed back (clamped) for client persistence.
+  zoomDelta?: -1 | 0 | 1;
+  showRing?: boolean;
+  centerOffset?: { dxMiles: number; dyMiles: number };
   attribution: string;
   cached: boolean;
+}
+
+/**
+ * S80 optional view controls forwarded to the map endpoint. All validated +
+ * clamped server-side, so an out-of-range value never errors — it just clamps.
+ */
+export interface MapImageOptions {
+  zoomDelta?: -1 | 0 | 1; // Wide / Standard / Close-up
+  showRing?: boolean; // draw the radius ring (default true)
+  centerOffset?: { dxMiles: number; dyMiles: number }; // ±5mi view nudge
 }
 
 /**
@@ -222,12 +236,17 @@ export interface MapImageResult {
  * license-stable /media URL to store on CardDesign.mapImageUrl. Key-gated:
  * the server returns 503 when GEOAPIFY_API_KEY is unset, but the client hides
  * the layout in that case so this is a safety net.
+ *
+ * S80: pass `options` to control zoom (Close-up/Standard/Wide), the radius
+ * ring, and a center nudge. Omitting `options` reproduces the legacy request.
  */
 export async function generateMapImage(
   radiusMiles?: number,
+  options?: MapImageOptions,
 ): Promise<MapImageResult> {
   return postJson<MapImageResult>("/api/brand-kit/map-image", {
     radiusMiles,
+    ...(options ?? {}),
   });
 }
 
