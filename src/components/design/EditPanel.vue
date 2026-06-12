@@ -557,15 +557,35 @@ function applyRiskReversal() {
 // so operators never see low-quality scraped icons as pickable options).
 // Stock photos from the industry fallback are appended so customers with a
 // photo-poor brand kit still have options beyond their own library.
-type PickerPhoto = { url: string; alt: string; source: "brand" | "stock" };
+type PickerPhoto = {
+  url: string;
+  alt: string;
+  source: "brand" | "stock";
+  lowRes?: boolean;
+};
+
+// Sources a customer added on purpose (AI generation, stock import, upload).
+// These must never silently vanish from the gallery — the printReady filter
+// exists to hide low-quality SCRAPED icons, not the customer's own photos
+// (S77: AI images were generated below the print bar and disappeared).
+const DELIBERATE_PHOTO_SOURCES = new Set(["ai", "stock", "upload"]);
 
 const pickerPhotos = computed<PickerPhoto[]>(() => {
   const bk = props.brandKit;
   if (!bk) return [];
   const brand: PickerPhoto[] = (bk.photos ?? [])
-    .filter((p: BrandKitPhoto) => p.printReady !== false)
-    .sort((a, b) => b.qualityScore - a.qualityScore)
-    .map((p) => ({ url: p.url, alt: p.alt, source: "brand" as const }));
+    .filter(
+      (p: BrandKitPhoto) =>
+        p.printReady !== false ||
+        DELIBERATE_PHOTO_SOURCES.has((p as any).source ?? ""),
+    )
+    .sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0))
+    .map((p) => ({
+      url: p.url,
+      alt: p.alt,
+      source: "brand" as const,
+      lowRes: p.printReady === false,
+    }));
   const stock: PickerPhoto[] = getPhotosForIndustry(bk.industry).map((p) => ({
     url: p.url,
     alt: p.description,
@@ -582,11 +602,16 @@ const currentPhotoUrl = computed(
 );
 
 function applyPhoto(url: string) {
-  // before-after: the Before slot writes its own field; the After slot
-  // uses the standard photo path (after_photo_url falls back to photoUrl
-  // worker-side, so the classic flow keeps working).
-  if (isBeforeAfterLayout.value && photoSlot.value === "before") {
-    emit("update-field", "beforePhotoUrl", url);
+  // before-after: each slot writes its OWN field. The After slot used to
+  // write the generic photoUrl, which the worker uses as the BEFORE half's
+  // fallback too — so changing After visually changed both halves until
+  // Before was explicitly set (Dustin, S77).
+  if (isBeforeAfterLayout.value) {
+    emit(
+      "update-field",
+      photoSlot.value === "before" ? "beforePhotoUrl" : "afterPhotoUrl",
+      url,
+    );
     return;
   }
   emit("update-photo", url);
@@ -640,11 +665,21 @@ const currentMapUrl = computed(
     "",
 );
 
+const mapAddressDraft = ref("");
+
 async function generateMap() {
   if (mapGenerating.value) return;
   mapGenerating.value = true;
   mapError.value = null;
   try {
+    // Inline rescue path: save the freshly-typed address before generating.
+    if (!props.brandKit?.address && mapAddressDraft.value.trim()) {
+      await brandKitStore.update({ address: mapAddressDraft.value.trim() });
+      if (brandKitStore.error) {
+        mapError.value = brandKitStore.error;
+        return;
+      }
+    }
     const res = await generateMapImage(mapRadiusMiles.value);
     if (res?.url) {
       // Apply via the same update-field pattern as before-after's
@@ -858,6 +893,8 @@ const bizDirty = computed(() => {
 
 async function saveBizInfo() {
   if (savingBiz.value || !bizDirty.value) return;
+  const addressChanged =
+    bizDraft.value.address.trim() !== (props.brandKit?.address ?? "").trim();
   if (!bizDraft.value.businessName.trim()) {
     bizError.value = "Business name can't be empty — it prints on every card.";
     return;
@@ -886,6 +923,11 @@ async function saveBizInfo() {
       return;
     }
     emit("info-saved");
+    // A changed address moves the map's center — regenerate it in place so
+    // the customer never has to find the Service Area Map section (S77 UX).
+    if (addressChanged && isMapLayout.value && bizDraft.value.address.trim()) {
+      void generateMap();
+    }
   } finally {
     savingBiz.value = false;
   }
@@ -1365,6 +1407,21 @@ async function saveNewReview() {
           Service-area maps aren't available right now.
         </div>
         <template v-else>
+          <!-- No address yet: collect it INLINE — customers shouldn't have
+               to discover that Business Info feeds the map (Dustin S77). -->
+          <div v-if="!props.brandKit?.address" class="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+            <p class="text-xs text-amber-800 font-medium">
+              First, where's your business? The map centers on your address.
+            </p>
+            <input
+              v-model="mapAddressDraft"
+              type="text"
+              maxlength="140"
+              placeholder="2200 E Camelback Rd, Phoenix, AZ 85016"
+              data-testid="map-address-input"
+              class="w-full border border-amber-200 rounded-lg px-3 py-2 text-sm bg-white"
+            />
+          </div>
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">
               Service radius
@@ -1488,6 +1545,12 @@ async function saveNewReview() {
               v-if="photo.source === 'stock'"
               class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
             >Stock</span>
+            <span
+              v-if="photo.lowRes"
+              data-testid="photo-lowres-badge"
+              class="absolute top-0 left-0 text-[8px] font-medium bg-amber-500/90 text-white px-1 rounded-br"
+              title="Below print resolution — may look soft when printed"
+            >Low res</span>
           </button>
         </div>
 
