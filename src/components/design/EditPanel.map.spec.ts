@@ -103,10 +103,55 @@ describe("EditPanel — Service Area Map (S76)", () => {
     await wrapper.find('[data-testid="map-generate"]').trigger("click");
     await flushPromises();
 
-    expect(generateMapImage).toHaveBeenCalledWith(5);
+    // S80: radius + the default view controls (Standard zoom, ring on, no
+    // offset) are forwarded.
+    expect(generateMapImage).toHaveBeenCalledWith(5, {
+      zoomDelta: 0,
+      showRing: true,
+      centerOffset: { dxMiles: 0, dyMiles: 0 },
+    });
     // The new map URL is emitted via the update-field pattern.
     const emitted = wrapper.emitted("update-field");
     expect(emitted).toBeTruthy();
     expect(emitted!.some((e) => e[0] === "mapImageUrl" && e[1] === "/media/brand-photos/o/map-x.png")).toBe(true);
+    // S80: the chosen view controls are persisted via update-map-settings.
+    const settings = wrapper.emitted("update-map-settings");
+    expect(settings).toBeTruthy();
+    expect(settings![0]![0]).toMatchObject({ radiusMiles: 5, zoomDelta: 0, showRing: true });
+  });
+
+  it("forwards zoom, ring, and nudge controls and clamps the offset", async () => {
+    generateMapImage.mockResolvedValue({
+      ok: true,
+      url: "/media/brand-photos/o/map-y.png",
+      lat: 33.4,
+      lng: -112.0,
+      radiusMiles: 3,
+      zoomDelta: 1,
+      showRing: false,
+      centerOffset: { dxMiles: 1, dyMiles: 0 },
+      attribution: "x",
+      cached: false,
+    });
+    const wrapper = mountPanel(makeCard("offer"));
+    await flushPromises();
+    await wrapper.find('[data-testid="edit-map-toggle"]').trigger("click");
+
+    // Close-up zoom → +1
+    await wrapper.find('[data-testid="map-zoom-1"]').trigger("click");
+    await flushPromises();
+    // Toggle the ring off
+    await wrapper.find('[data-testid="map-ring-toggle"]').trigger("click");
+    await flushPromises();
+    // Nudge east once → dxMiles 1
+    await wrapper.find('[data-testid="map-nudge-e"]').trigger("click");
+    await flushPromises();
+
+    const lastCall = generateMapImage.mock.calls[generateMapImage.mock.calls.length - 1];
+    expect(lastCall?.[1]).toMatchObject({
+      zoomDelta: 1,
+      showRing: false,
+      centerOffset: { dxMiles: 1, dyMiles: 0 },
+    });
   });
 });

@@ -300,6 +300,31 @@ export interface BackTestimonial {
   rating: number                        // 1-5
 }
 
+/**
+ * S80 photo positioning/cropping. A focal point + zoom applied to a photo
+ * inside its fixed (clipped) zone. `x`/`y` are percentages 0-100 (50/50 =
+ * center = today's cover-center default); `zoom` is 1.0-2.5. The worker
+ * translates this to object-position + transform:scale on the photo img.
+ * Absent / identity (50,50,1) → the photo renders exactly as it does today.
+ */
+export interface PhotoCrop {
+  x: number                            // focal X percent, 0-100
+  y: number                            // focal Y percent, 0-100
+  zoom: number                         // 1.0 (fit) – 2.5 (max magnification)
+}
+
+/**
+ * S80 neighborhood-map view controls the customer chose, persisted so a
+ * Regenerate after reload reuses them. These are client + endpoint params
+ * only — the worker just consumes the resulting mapImageUrl.
+ */
+export interface MapSettings {
+  radiusMiles: number                  // 1-10 service radius
+  zoomDelta: -1 | 0 | 1                // Wide / Standard / Close-up
+  showRing: boolean                    // draw the radius ring
+  centerOffset: { dxMiles: number; dyMiles: number } // ±5mi view nudge
+}
+
 export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
@@ -322,6 +347,9 @@ export interface CardDesign {
     urgencyText?: string
     riskReversal?: string
     photoUrl?: string
+    photoCrop?: PhotoCrop              // S80 photo positioning/cropping (main slot)
+    beforePhotoCrop?: PhotoCrop        // S80 before-after before-half crop
+    afterPhotoCrop?: PhotoCrop         // S80 before-after after-half crop
     serviceRows?: string[]             // service-checklist rows the customer edited (S73)
     tips?: string[]                    // tips-card rows the customer edited (S74)
     beforePhotoUrl?: string            // before-after split (S74)
@@ -329,6 +357,7 @@ export interface CardDesign {
     salutation?: string                // letter-note greeting the customer edited (S76)
     letterBody?: string                // letter-note body the customer edited (S76)
     mapImageUrl?: string               // neighborhood-map service-area map (S76)
+    mapSettings?: MapSettings          // S80 chosen map view controls (persisted)
   }
   resolvedContent: {                   // template defaults + overrides merged
     headline: string
@@ -337,6 +366,9 @@ export interface CardDesign {
     offerTeaser: string                // short front-of-card teaser, e.g. "$79 TUNE-UP"
     offerItems: OfferStackItem[]       // stacked value items (≥0, usually 3-5)
     photoUrl: string
+    photoCrop?: PhotoCrop              // S80 main-photo pan/zoom (mirrors override)
+    beforePhotoCrop?: PhotoCrop        // S80 before-after before-half crop
+    afterPhotoCrop?: PhotoCrop         // S80 before-after after-half crop
     reviewQuote: string
     reviewerName: string
     phoneNumber: string                // always from brand kit
@@ -371,6 +403,7 @@ export interface CardDesign {
     // falls back through the card photo → industry pack hero (never an empty
     // hole). Only meaningful for the Photo back style.
     backPhotoUrl?: string
+    backPhotoCrop?: PhotoCrop          // S80 photo-back left-column photo pan/zoom
   }
   // AI generation metadata (populated when using server AI, empty for local fallback)
   headlineCandidates: Array<{ text: string; formula: string; reason: string }>  // 3 options from AI
