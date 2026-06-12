@@ -37,11 +37,35 @@ function mediaSrc(url: string): string {
   return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
 }
 
+type EditorType =
+  | "headline"
+  | "offer"
+  | "review"
+  | "photo"
+  | "colors"
+  | "business"
+  | "checklist"
+  | "notice"
+  | "tips"
+  | "letter"
+  | "map"
+  | null;
+
 const props = defineProps<{
   card: CardDesign;
   brandKit: BrandKit | null;
   /** Click-to-edit: set by StepDesign when a card hotspot is clicked. */
   requestedEditor?: { editor: CardEditor; ts: number } | null;
+  /**
+   * S79 Phase-2: "panel" = the legacy accordion (still used by specs and as a
+   * fallback). "section" = render ONLY the `section` editor's inputs (no
+   * accordion buttons, no outer rail chrome) so the ZonePopover / ContextDrawer
+   * can host a single editor in-context. The editor internals/emits are reused
+   * verbatim — this just chooses which subset is visible.
+   */
+  mode?: "panel" | "section";
+  /** Which editor to render in section mode. */
+  section?: EditorType;
 }>();
 
 const emit = defineEmits<{
@@ -58,20 +82,28 @@ const emit = defineEmits<{
   (e: "info-saved"): void;
 }>();
 
-type EditorType =
-  | "headline"
-  | "offer"
-  | "review"
-  | "photo"
-  | "colors"
-  | "business"
-  | "checklist"
-  | "notice"
-  | "tips"
-  | "letter"
-  | "map"
-  | null;
 const activeEditor = ref<EditorType>(null);
+
+// S79 Phase-2 section mode. In section mode the panel is hosted inside a
+// popover/drawer and shows exactly one editor's inputs.
+const isSectionMode = computed(() => props.mode === "section");
+// Accordion toggle buttons + outer rail chrome are hidden in section mode.
+const showToggles = computed(() => !isSectionMode.value);
+// Is the given editor's content currently visible?
+function isOpen(editor: EditorType): boolean {
+  return isSectionMode.value
+    ? props.section === editor
+    : activeEditor.value === editor;
+}
+// In section mode the parent picks the editor; keep activeEditor mirrored so
+// any internal reads stay consistent.
+watch(
+  () => [props.mode, props.section] as const,
+  ([m, s]) => {
+    if (m === "section") activeEditor.value = (s ?? null) as EditorType;
+  },
+  { immediate: true },
+);
 
 // --- Color profiles (S72) --------------------------------------------------
 const customColors = ref<ColorOverride>({
@@ -177,10 +209,28 @@ function toggleEditor(editor: EditorType) {
 
 // Click-to-edit: open the editor the card hotspot asked for. The ts field
 // retriggers the watcher when the same zone is clicked twice.
+const PANEL_EDITORS = new Set<EditorType>([
+  "headline",
+  "offer",
+  "review",
+  "photo",
+  "colors",
+  "business",
+  "checklist",
+  "notice",
+  "tips",
+  "letter",
+  "map",
+]);
 watch(
   () => props.requestedEditor,
   (req) => {
-    if (req?.editor) activeEditor.value = req.editor;
+    // Only honor editors this panel actually hosts (back-* editors are routed
+    // elsewhere); narrows the wider CardEditor union to EditorType.
+    const e = req?.editor;
+    if (e && PANEL_EDITORS.has(e as EditorType)) {
+      activeEditor.value = e as EditorType;
+    }
   },
 );
 
@@ -1074,13 +1124,13 @@ async function saveNewReview() {
 </script>
 
 <template>
-  <div class="w-80 border-l border-gray-200 p-4 overflow-y-auto bg-white">
-    <h3 class="text-sm font-semibold text-[#0b2d50] mb-4">Edit Card</h3>
+  <div :class="isSectionMode ? '' : 'w-80 border-l border-gray-200 p-4 overflow-y-auto bg-white'">
+    <h3 v-if="!isSectionMode" class="text-sm font-semibold text-[#0b2d50] mb-4">Edit Card</h3>
 
     <!-- Business-info completion: the phone prints on the card; collect it
          here when onboarding was skipped instead of failing the preview. -->
     <div
-      v-if="missingPhone"
+      v-if="missingPhone && !isSectionMode"
       data-testid="business-info-prompt"
       class="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 space-y-2"
     >
@@ -1110,13 +1160,14 @@ async function saveNewReview() {
     <div class="space-y-2">
       <!-- Edit Headline -->
       <button
+        v-if="showToggles"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'headline' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('headline')"
       >
         Edit Headline
       </button>
-      <div v-if="activeEditor === 'headline'" class="px-3 pb-3 space-y-2">
+      <div v-if="isOpen('headline')" class="px-3 pb-3 space-y-2">
         <p class="text-[11px] text-gray-500">
           Each line below is one line on the card. Leave a line blank to
           remove it from the card.
@@ -1138,13 +1189,14 @@ async function saveNewReview() {
 
       <!-- Edit Offer -->
       <button
+        v-if="showToggles"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'offer' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
         @click="toggleEditor('offer')"
       >
         Edit Offer
       </button>
-      <div v-if="activeEditor === 'offer'" class="px-3 pb-3">
+      <div v-if="isOpen('offer')" class="px-3 pb-3">
         <textarea
           v-model="editableOffer"
           maxlength="200"
@@ -1214,7 +1266,7 @@ async function saveNewReview() {
       <!-- Checklist rows (S73: service-checklist layout; panel is replaced
            by the review panel on proof cards) -->
       <button
-        v-if="showChecklistEditor"
+        v-if="showChecklistEditor && showToggles"
         data-testid="edit-checklist-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'checklist' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1222,7 +1274,7 @@ async function saveNewReview() {
       >
         Edit Checklist
       </button>
-      <div v-if="showChecklistEditor && activeEditor === 'checklist'" class="px-3 pb-3 space-y-2">
+      <div v-if="showChecklistEditor && isOpen('checklist')" class="px-3 pb-3 space-y-2">
         <div
           v-for="(_row, i) in editableRows"
           :key="i"
@@ -1263,7 +1315,7 @@ async function saveNewReview() {
       <!-- Notice text (S73: urgency-notice layout; panel is replaced by
            the review panel on proof cards) -->
       <button
-        v-if="showNoticeEditor"
+        v-if="showNoticeEditor && showToggles"
         data-testid="edit-notice-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'notice' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1271,7 +1323,7 @@ async function saveNewReview() {
       >
         Edit Notice Text
       </button>
-      <div v-if="showNoticeEditor && activeEditor === 'notice'" class="px-3 pb-3 space-y-2">
+      <div v-if="showNoticeEditor && isOpen('notice')" class="px-3 pb-3 space-y-2">
         <label class="block">
           <span class="text-[10px] uppercase tracking-wide text-gray-400">Notice body</span>
           <textarea
@@ -1303,7 +1355,7 @@ async function saveNewReview() {
 
       <!-- Tips (S74: tips-card layout; panel replaced by review on proof) -->
       <button
-        v-if="showTipsEditor"
+        v-if="showTipsEditor && showToggles"
         data-testid="edit-tips-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'tips' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1311,7 +1363,7 @@ async function saveNewReview() {
       >
         Edit Tips
       </button>
-      <div v-if="showTipsEditor && activeEditor === 'tips'" class="px-3 pb-3 space-y-2">
+      <div v-if="showTipsEditor && isOpen('tips')" class="px-3 pb-3 space-y-2">
         <div
           v-for="(_tip, i) in editableTips"
           :key="i"
@@ -1351,7 +1403,7 @@ async function saveNewReview() {
 
       <!-- Letter (S76-C: letter-note layout; panel replaced by review on proof) -->
       <button
-        v-if="showLetterEditor"
+        v-if="showLetterEditor && showToggles"
         data-testid="edit-letter-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'letter' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1359,7 +1411,7 @@ async function saveNewReview() {
       >
         Edit Letter
       </button>
-      <div v-if="showLetterEditor && activeEditor === 'letter'" class="px-3 pb-3 space-y-3">
+      <div v-if="showLetterEditor && isOpen('letter')" class="px-3 pb-3 space-y-3">
         <div class="space-y-1">
           <label class="block text-xs font-medium text-gray-600">Greeting</label>
           <input
@@ -1394,7 +1446,7 @@ async function saveNewReview() {
       <!-- Service Area Map (neighborhood-map layout; S76). Key-gated:
            only shown when the layout is active AND mapsConfigured. -->
       <button
-        v-if="showMapEditor"
+        v-if="showMapEditor && showToggles"
         data-testid="edit-map-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'map' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1402,7 +1454,7 @@ async function saveNewReview() {
       >
         Service Area Map
       </button>
-      <div v-if="showMapEditor && activeEditor === 'map'" class="px-3 pb-3 space-y-3">
+      <div v-if="showMapEditor && isOpen('map')" class="px-3 pb-3 space-y-3">
         <div v-if="!mapsConfigured" class="text-xs text-gray-500">
           Service-area maps aren't available right now.
         </div>
@@ -1475,7 +1527,7 @@ async function saveNewReview() {
       <!-- Change Photo (hidden on layouts with no photo slot —
            bold-graphic / review-forward) -->
       <button
-        v-if="layoutUsesPhoto"
+        v-if="layoutUsesPhoto && showToggles"
         data-testid="edit-photo-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'photo' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1483,7 +1535,7 @@ async function saveNewReview() {
       >
         Change Photo
       </button>
-      <div v-if="layoutUsesPhoto && activeEditor === 'photo'" class="px-3 pb-3 space-y-2">
+      <div v-if="isOpen('photo')" class="px-3 pb-3 space-y-2">
         <!-- before-after: pick which half the next photo applies to -->
         <div v-if="isBeforeAfterLayout" class="flex gap-2 mb-1">
           <button
@@ -1637,6 +1689,7 @@ async function saveNewReview() {
 
       <!-- Colors (S72 color profiles) -->
       <button
+        v-if="showToggles"
         data-testid="edit-colors-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'colors' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1644,7 +1697,7 @@ async function saveNewReview() {
       >
         Colors
       </button>
-      <div v-if="activeEditor === 'colors'" class="px-3 pb-3 space-y-2">
+      <div v-if="isOpen('colors')" class="px-3 pb-3 space-y-2">
         <button
           data-testid="palette-brand"
           class="w-full text-left p-2 rounded-md border text-xs transition-colors"
@@ -1739,6 +1792,7 @@ async function saveNewReview() {
 
       <!-- Business Info (S72: org profile editable from the designer) -->
       <button
+        v-if="showToggles"
         data-testid="edit-business-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'business' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1746,7 +1800,7 @@ async function saveNewReview() {
       >
         Business Info
       </button>
-      <div v-if="activeEditor === 'business'" class="px-3 pb-3 space-y-2">
+      <div v-if="isOpen('business')" class="px-3 pb-3 space-y-2">
         <label class="block">
           <span class="text-[10px] uppercase tracking-wide text-gray-400">Business name</span>
           <input
@@ -1901,6 +1955,7 @@ async function saveNewReview() {
 
       <!-- Change Review -->
       <button
+        v-if="showToggles"
         data-testid="edit-review-toggle"
         class="w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors"
         :class="activeEditor === 'review' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
@@ -1908,7 +1963,7 @@ async function saveNewReview() {
       >
         Change Review
       </button>
-      <div v-if="activeEditor === 'review'" class="px-3 pb-3 space-y-2">
+      <div v-if="isOpen('review')" class="px-3 pb-3 space-y-2">
         <div v-if="pickerReviews.length === 0 && !addingReview" class="text-xs text-gray-400 py-1">
           No reviews yet — add one below.
         </div>
@@ -1991,6 +2046,7 @@ async function saveNewReview() {
 
       <!-- Reset -->
       <button
+        v-if="showToggles"
         data-testid="reset-to-original"
         class="w-full text-center text-xs text-gray-400 hover:text-gray-600 mt-2"
         @click="emit('reset')"
