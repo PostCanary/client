@@ -15,7 +15,7 @@ export type CardEditor =
   | "checklist"
   | "notice"
   | "tips"
-  | "letter";
+  | "letter"
   | "map";
 
 export interface EditZone {
@@ -468,6 +468,18 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
       top: 0,
       width: 100,
       height: 62.3,
+      hideOnProof: true,
+    },
+    {
+      editor: "offer",
+      label: "Edit offer",
+      left: 0,
+      top: 62.3,
+      width: 100,
+      height: 15.6,
+    },
+  ],
+
   // Geometry source: neighborhood-map-front.html (S76-D) —
   //   .map           -1,-1   1202x470 (the service-area map is the hero)
   //   .headline-band -1,-1   1202x150 (brand-color band over the map top)
@@ -505,9 +517,6 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
       editor: "offer",
       label: "Edit offer",
       left: 0,
-      top: 62.3,
-      width: 100,
-      height: 15.6,
       top: 58.6,
       width: 100,
       height: 16.3,
