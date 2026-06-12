@@ -29,3 +29,6 @@ test-results-live/
 playwright-report-live/
 .auth/
 
+
+# firecrawl scrape cache (research artifacts, not source)
+.firecrawl/
