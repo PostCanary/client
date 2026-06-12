@@ -13,8 +13,6 @@ import type {
   MapSettings,
 } from "@/types/campaign";
 import { hasAnyLine, splitHeadline } from "@/utils/headlineSplit";
-import PhotoCropAdjuster from "@/components/design/PhotoCropAdjuster.vue";
-import { normalizeCrop } from "@/utils/photoCrop";
 import { COLOR_PALETTES, isCompleteOverride, isValidHex } from "@/data/colorPalettes";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
 import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
@@ -84,6 +82,10 @@ const emit = defineEmits<{
   // S80 photo positioning/cropping. `field` is the override key to write
   // (photoCrop | beforePhotoCrop | afterPhotoCrop); `crop` undefined = reset.
   (e: "update-crop", field: string, crop: PhotoCrop | undefined): void;
+  // S81: enter ON-CANVAS adjust mode for the active photo slot. The S80
+  // in-panel mini-frame is replaced by this entry button — direct manipulation
+  // over the rendered card happens in StepDesign. `field` scopes the slot.
+  (e: "enter-photo-adjust", field: string): void;
   // S80 persist the chosen neighborhood-map view controls on the card.
   (e: "update-map-settings", settings: MapSettings): void;
   (e: "open-template-browser"): void;
@@ -687,17 +689,9 @@ const cropField = computed(() => {
   return "photoCrop";
 });
 
-// The current crop for the active slot (override → resolved → identity).
-const activeCrop = computed<PhotoCrop>(() => {
-  const ov = props.card.overrides as Record<string, unknown>;
-  const rc = props.card.resolvedContent as Record<string, unknown>;
-  const key = cropField.value;
-  return normalizeCrop(
-    (ov[key] as PhotoCrop | undefined) ?? (rc[key] as PhotoCrop | undefined),
-  );
-});
-
-// The photo the adjuster previews — the active slot's resolved URL.
+// The photo the active slot resolves to — gates the Adjust-position entry
+// button (no photo → nothing to position). The crop itself is resolved + edited
+// on the canvas (S81), so the panel no longer needs the per-slot crop value.
 const activePhotoSrc = computed(() => {
   if (isBeforeAfterLayout.value) {
     const ov = props.card.overrides;
@@ -711,25 +705,11 @@ const activePhotoSrc = computed(() => {
   return currentPhotoUrl.value ? mediaSrc(currentPhotoUrl.value) : "";
 });
 
-// The photo zone's aspect ratio (width/height) so the mini frame matches the
-// printed crop. Derived from the template's photo edit zone (percent of the
-// 1200x800 card); falls back to a 3:2 landscape if no zone is mapped.
-const CARD_W = 1200;
-const CARD_H = 800;
-const photoZoneAspect = computed(() => {
-  const zones = editZonesFor(
-    props.card.renderTemplateId ?? null,
-    props.card.cardPurpose,
-  );
-  const z = zones.find((zone) => zone.editor === "photo");
-  if (!z || !z.width || !z.height) return 1.5;
-  const wpx = (z.width / 100) * CARD_W;
-  const hpx = (z.height / 100) * CARD_H;
-  return hpx > 0 ? wpx / hpx : 1.5;
-});
-
-function onCropChange(crop: PhotoCrop | undefined) {
-  emit("update-crop", cropField.value, crop);
+// S81: entry point — ask the host to start ON-CANVAS adjust mode for the
+// active slot (the panel no longer hosts the mini-frame). The slot's crop is
+// then dragged/zoomed directly over the rendered card.
+function onEnterAdjust() {
+  emit("enter-photo-adjust", cropField.value);
 }
 
 // --- Stock photo search (Pexels; S72) ---------------------------------------
@@ -1844,19 +1824,31 @@ async function saveNewReview() {
           </button>
         </div>
 
-        <!-- S80 Adjust position: drag-to-pan + zoom for the active photo slot.
-             Shown only once a photo is applied so there is something to crop. -->
+        <!-- S81 Adjust position: ENTRY BUTTON. Direct manipulation moved onto
+             the canvas (Dustin's S80 feedback: the side-panel mini-frame was
+             small/hard to use and every nudge waited on a re-render). Clicking
+             this enters on-canvas adjust mode for the active slot. Shown only
+             once a photo is applied so there is something to position. -->
         <div
           v-if="activePhotoSrc"
           class="pt-2 border-t border-gray-100"
           data-testid="photo-adjust-section"
         >
-          <PhotoCropAdjuster
-            :src="activePhotoSrc"
-            :model-value="activeCrop"
-            :aspect="photoZoneAspect"
-            @update:model-value="onCropChange"
-          />
+          <button
+            type="button"
+            data-testid="photo-adjust-entry"
+            class="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-[#47bfa9] hover:text-[#0b2d50]"
+            @click="onEnterAdjust"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M10 3v14M3 10h14" stroke-linecap="round" />
+              <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />
+            </svg>
+            Adjust position on the card
+          </button>
+          <p class="mt-1 text-[10px] leading-snug text-gray-400">
+            Drag the photo on the card to reposition; scroll or use the slider to zoom.
+          </p>
         </div>
 
         <!-- Stock photo search (Pexels; S72) -->
