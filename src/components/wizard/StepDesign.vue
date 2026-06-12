@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import type {
@@ -17,11 +17,18 @@ import SequenceView from "@/components/design/SequenceView.vue";
 import EditPanel from "@/components/design/EditPanel.vue";
 import BackEditPanel from "@/components/design/BackEditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
+import ZonePopover from "@/components/design/ZonePopover.vue";
+import ContextDrawer from "@/components/design/ContextDrawer.vue";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { useBackPreview } from "@/composables/useBackPreview";
 import { previewCard } from "@/api/renderJobs";
-import { editZonesFor, type CardEditor } from "@/data/templateEditZones";
+import {
+  editZonesFor,
+  backEditZonesFor,
+  type CardEditor,
+  type EditZone,
+} from "@/data/templateEditZones";
 import { generateMapImage, getMediaFeaturesCached } from "@/api/brandKit";
 
 const draftStore = useCampaignDraftStore();
@@ -120,9 +127,152 @@ const editZones = computed(() =>
   ),
 );
 const requestedEditor = ref<{ editor: CardEditor; ts: number } | null>(null);
-function requestEditor(editor: CardEditor) {
+
+// --- S79 Phase-2 contextual editing ----------------------------------------
+// Front zone hotspots split into two tiers:
+//   Tier 1 (popover): the small, common slot edits anchored at the card —
+//     headline / offer / review / checklist / notice / tips / letter / map.
+//   Tier 2 (drawer): the heavy editors — photo + colors + business.
+// The drawer also opens from the toolbar (Photo / Colors / Business) and from
+// the photo zone click.
+const DRAWER_EDITORS = new Set<CardEditor>([
+  "photo",
+  "colors",
+  "business",
+  "back-style",
+  "back-photo",
+]);
+
+// The currently-open anchored popover: which editor + which zone box it's
+// anchored to. One at a time.
+const popover = ref<{ editor: CardEditor; zone: EditZone } | null>(null);
+// The currently-open drawer tab (null = collapsed).
+type DrawerTab = "photo" | "colors" | "business" | "back-style";
+const drawerTab = ref<DrawerTab | null>(null);
+
+// The canvas region is the popover/drawer positioning container. The zone
+// percentages are relative to the CARD IMAGE box (centered, narrower than the
+// region), so the anchoring math needs both: the card box size + its offset
+// within the region, plus the region bounds for clamping.
+const canvasRegion = ref<HTMLElement | null>(null);
+const cardBoxEl = ref<HTMLElement | null>(null);
+const canvasViewport = ref({
+  width: 1,
+  height: 1,
+  offsetX: 0,
+  offsetY: 0,
+  containerWidth: 1,
+  containerHeight: 1,
+});
+function measureCanvas() {
+  const region = canvasRegion.value;
+  const card = cardBoxEl.value;
+  if (!region) return;
+  const rr = region.getBoundingClientRect();
+  if (card) {
+    const cr = card.getBoundingClientRect();
+    canvasViewport.value = {
+      width: cr.width,
+      height: cr.height,
+      offsetX: cr.left - rr.left,
+      offsetY: cr.top - rr.top,
+      containerWidth: rr.width,
+      containerHeight: rr.height,
+    };
+  } else {
+    canvasViewport.value = {
+      width: rr.width,
+      height: rr.height,
+      offsetX: 0,
+      offsetY: 0,
+      containerWidth: rr.width,
+      containerHeight: rr.height,
+    };
+  }
+}
+
+// Open the right editor for a clicked zone (front or back). Drawer editors
+// route to the drawer; everything else opens an anchored popover.
+function openZone(zone: EditZone) {
+  const editor = zone.editor;
+  if (DRAWER_EDITORS.has(editor)) {
+    popover.value = null;
+    if (editor === "photo" || editor === "back-photo") drawerTab.value = "photo";
+    else if (editor === "colors") drawerTab.value = "colors";
+    else if (editor === "business") drawerTab.value = "business";
+    else if (editor === "back-style") drawerTab.value = "back-style";
+    // legacy EditPanel watch hook (kept for fallback/specs)
+    requestedEditor.value = { editor, ts: Date.now() };
+    return;
+  }
+  // Popover editor.
+  drawerTab.value = null;
+  popover.value = { editor, zone };
   requestedEditor.value = { editor, ts: Date.now() };
 }
+
+function openDrawer(tab: DrawerTab) {
+  popover.value = null;
+  drawerTab.value = tab;
+}
+function closeDrawer() {
+  drawerTab.value = null;
+}
+function closePopover() {
+  popover.value = null;
+}
+
+// The drawer's title + which section the hosted editor renders.
+const drawerTitle = computed(() => {
+  switch (drawerTab.value) {
+    case "photo":
+      return isBack.value ? "Back Photo" : "Photo";
+    case "colors":
+      return "Colors";
+    case "business":
+      return "Business Info";
+    case "back-style":
+      return "Back Style";
+    default:
+      return "";
+  }
+});
+// Map the front drawer tab to the EditPanel section it should render.
+const drawerFrontSection = computed(() => {
+  switch (drawerTab.value) {
+    case "photo":
+      return "photo" as const;
+    case "colors":
+      return "colors" as const;
+    case "business":
+      return "business" as const;
+    default:
+      return null;
+  }
+});
+// Map the back drawer tab to the BackEditPanel section it should render.
+const drawerBackSection = computed(() => {
+  switch (drawerTab.value) {
+    case "photo":
+      return "back-photo" as const;
+    case "back-style":
+      return "back-style" as const;
+    case "business":
+      // Business Info is read-only on the back; route to the style section
+      // which surfaces the read-only block, plus offer a deep-link.
+      return "back-style" as const;
+    default:
+      return null;
+  }
+});
+
+// Back zone hotspots over the back PNG.
+const backEditZones = computed(() =>
+  backEditZonesFor(backContent.value?.backTemplateId ?? null),
+);
+
+// The popover label (for its header) from the active zone.
+const popoverLabel = computed(() => popover.value?.zone.label ?? "");
 
 // --- Hybrid live-edit overlay ----------------------------------------------
 // The server PNG stays the ONLY card imagery (ONE RENDERING RULE, S67 —
@@ -142,6 +292,9 @@ const liveOverlayZone = computed(() => {
 
 watch(activeCardIndex, () => {
   liveOverlay.value = null;
+  // Close any open contextual editor when the surface under it changes.
+  popover.value = null;
+  drawerTab.value = null;
 });
 // NOTE: the previewUrl reconciliation watch lives just below the
 // useCardPreview destructure (declaration order).
@@ -170,6 +323,13 @@ watch(previewUrl, (url) => {
 // is keyed on the draft + the guarantee, not the active card index.
 const activeSide = ref<"front" | "back">("front");
 const isBack = computed(() => activeSide.value === "back");
+// Flipping sides closes the contextual editors (their zones no longer exist).
+watch(activeSide, () => {
+  popover.value = null;
+  drawerTab.value = null;
+  // The back/front canvases can differ in available height; re-measure.
+  void nextTick(measureCanvas);
+});
 // S77 BACK v2: the whole backContent of card 1 is editable. Re-render the back
 // when ANY back field changes (style, subhead, benefits, testimonial,
 // services, hours, guarantee).
@@ -360,6 +520,11 @@ async function refreshOneThumbnail(idx: number) {
 const mapsConfigured = ref(false);
 
 onMounted(() => {
+  // Measure the canvas region for popover anchoring + keep it current on
+  // resize (the popover math is pixel-based against this rect).
+  void nextTick(measureCanvas);
+  window.addEventListener("resize", measureCanvas);
+
   if (!brandKitStore.hydrated) brandKitStore.fetch();
 
   // Fire-and-forget feature probe — never blocks the design step.
@@ -385,6 +550,7 @@ onBeforeUnmount(() => {
   if (persistedPreviewRefreshTimer) clearTimeout(persistedPreviewRefreshTimer);
   revokeThumbnailUrls();
   invalidateProof();
+  window.removeEventListener("resize", measureCanvas);
 });
 
 // S70 — when the active card's main preview updates (edit or card
@@ -848,6 +1014,57 @@ watch(
         </button>
       </div>
 
+      <!-- Heavy-editor launchers (S79 Phase-2). These open the ContextDrawer
+           rather than crowding a popover. Photo/Colors apply to the active
+           surface; Business Info is org-wide. -->
+      <div class="flex items-center gap-1.5">
+        <button
+          type="button"
+          data-testid="toolbar-photo"
+          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+          :class="drawerTab === 'photo'
+            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+          @click="openDrawer('photo')"
+        >
+          Photo
+        </button>
+        <button
+          type="button"
+          data-testid="toolbar-colors"
+          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+          :class="drawerTab === 'colors'
+            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+          @click="openDrawer('colors')"
+        >
+          Colors
+        </button>
+        <button
+          type="button"
+          data-testid="toolbar-business"
+          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+          :class="drawerTab === 'business'
+            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+          @click="openDrawer('business')"
+        >
+          Business
+        </button>
+        <button
+          v-if="isBack"
+          type="button"
+          data-testid="toolbar-back-style"
+          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+          :class="drawerTab === 'back-style'
+            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+          @click="openDrawer('back-style')"
+        >
+          Back Style
+        </button>
+      </div>
+
       <!-- Global canvas actions, pushed to the right edge of the toolbar. -->
       <div class="ml-auto flex items-center gap-2">
         <button
@@ -891,11 +1108,14 @@ watch(
          `min-h-0` is essential so the children can shrink below content
          height and the rail's internal overflow takes effect. -->
     <div class="flex-1 min-h-0 flex">
-      <!-- CANVAS COLUMN: the server-PNG card as hero, centered in a calm
-           neutral surround, sized to fit the viewport (object-contain,
-           height- OR width-bound — whichever binds — via max-h-full /
-           max-w-full). No magic `calc(100vh-400px)` cap. -->
-      <div class="flex-1 min-w-0 min-h-0 flex flex-col bg-gray-50">
+      <!-- CANVAS REGION (S79 Phase-2): the server-PNG card as hero, centered in
+           a calm neutral surround. This element is the popover/drawer anchor —
+           `relative` so the ContextDrawer overlays the right edge WITHOUT
+           reflowing the canvas, and `canvasRegion` is measured so the zone
+           popover anchoring math works in this element's pixel space. -->
+      <div
+        ref="canvasRegion"
+        class="relative flex-1 min-w-0 min-h-0 flex flex-col bg-gray-50">
         <!-- BACK preview surface (S76 Phase-5) -->
         <div
           v-if="isBack"
@@ -905,14 +1125,43 @@ watch(
           <div v-if="backPreviewLoading && !backPreviewUrl" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center">
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
-          <div v-else-if="backPreviewUrl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
+          <div v-else-if="backPreviewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <img
               :key="backPreviewUrl"
               :src="backPreviewUrl"
               alt="Postcard back preview"
               class="w-full h-full object-cover rounded-lg"
               :class="{ 'opacity-60': backPreviewLoading }"
+              @load="measureCanvas"
             />
+            <!-- Back click-to-edit hotspots (S79 Phase-2): same model as the
+                 front — click a back zone → its editor opens in a popover
+                 (or the drawer for Back Style / Back Photo). -->
+            <button
+              v-for="(zone, zoneIdx) in backEditZones"
+              :key="`back-${zone.editor}-${zoneIdx}`"
+              type="button"
+              :data-testid="`card-zone-${zone.editor}`"
+              :title="zone.label"
+              :aria-label="zone.label"
+              class="absolute group cursor-pointer bg-transparent"
+              :style="{
+                left: zone.left + '%',
+                top: zone.top + '%',
+                width: zone.width + '%',
+                height: zone.height + '%',
+              }"
+              @click="openZone(zone)"
+            >
+              <span
+                class="absolute inset-0 rounded border-2 border-transparent transition-colors group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+              />
+              <span
+                class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
+              >
+                {{ zone.label }}
+              </span>
+            </button>
           </div>
           <div v-else-if="backPreviewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Back preview unavailable.
@@ -947,13 +1196,14 @@ watch(
                EXACTLY 3:2 so the %-positioned hotspots + live overlay align
                with the painted artwork (the server PNG is exactly 1200×800,
                so the img fills the box with no letterbox/crop). -->
-          <div v-else-if="previewUrl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
+          <div v-else-if="previewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
             <img
               :key="previewUrl"
               :src="previewUrl"
               alt="Postcard preview"
               class="w-full h-full object-cover rounded-lg"
               :class="{ 'opacity-60': previewLoading || switchingLayout }"
+              @load="measureCanvas"
             />
             <!-- Layout switch feedback: the old render stays visible but
                  clearly transitional, so users don't re-click the picker. -->
@@ -984,7 +1234,7 @@ watch(
                 width: zone.width + '%',
                 height: zone.height + '%',
               }"
-              @click="requestEditor(zone.editor)"
+              @click="openZone(zone)"
             >
               <span
                 class="absolute inset-0 rounded border-2 border-transparent transition-colors group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
@@ -1033,37 +1283,84 @@ watch(
             Waiting for card data…
           </div>
         </div>
-      </div>
 
-      <!-- RIGHT RAIL — width-constrained, height-bounded, scrolls itself.
-           `min-h-0` lets the inner panel's `overflow-y-auto` engage so the
-           tall BackEditPanel/EditPanel never drives page height (the cause
-           of the old below-the-fold canvas). The panel internals are
-           unchanged this phase. Back tab swaps in the back editor. -->
-      <div class="w-80 shrink-0 min-h-0 flex flex-col">
-        <BackEditPanel
-          v-if="isBack && backContent"
-          :back-content="backContent"
-          :brand-kit="brandKit"
-          @update-back="updateBack"
-        />
-        <EditPanel
-          v-else-if="activeCard"
-          :card="activeCard"
-          :brand-kit="brandKit"
-          :requested-editor="requestedEditor"
-          @update-field="updateCardField"
-          @update-headline-lines="updateHeadlineLines"
-          @update-service-rows="updateServiceRows"
-          @update-offer-items="updateOfferItems"
-          @update-tips="updateTips"
-          @regenerate-cards="regenerateCards"
-          @update-colors="updateColors"
-          @update-photo="updatePhoto"
-          @open-template-browser="showTemplateBrowser = true"
-          @reset="resetCard"
-          @info-saved="refreshPreview"
-        />
+        <!-- TIER-1 ANCHORED POPOVER (S79 Phase-2): hosts a single editor
+             section next to the clicked zone. Front popovers wrap EditPanel in
+             section mode; back popovers wrap BackEditPanel. Esc / outside-click
+             close; clicks inside never close (typing-safe). -->
+        <ZonePopover
+          v-if="popover"
+          :zone="popover.zone"
+          :viewport="canvasViewport"
+          :label="popoverLabel"
+          @close="closePopover"
+        >
+          <BackEditPanel
+            v-if="isBack && backContent"
+            mode="section"
+            :section="(popover.editor as any)"
+            :back-content="backContent"
+            :brand-kit="brandKit"
+            @update-back="updateBack"
+          />
+          <EditPanel
+            v-else-if="activeCard"
+            mode="section"
+            :section="(popover.editor as any)"
+            :card="activeCard"
+            :brand-kit="brandKit"
+            :requested-editor="requestedEditor"
+            @update-field="updateCardField"
+            @update-headline-lines="updateHeadlineLines"
+            @update-service-rows="updateServiceRows"
+            @update-offer-items="updateOfferItems"
+            @update-tips="updateTips"
+            @regenerate-cards="regenerateCards"
+            @update-colors="updateColors"
+            @update-photo="updatePhoto"
+            @open-template-browser="showTemplateBrowser = true"
+            @reset="resetCard"
+            @info-saved="refreshPreview"
+          />
+        </ZonePopover>
+
+        <!-- TIER-2 CONTEXT DRAWER (S79 Phase-2): the heavy editors — Photo,
+             Colors, Business Info, Back Style. Overlays the canvas region's
+             right edge WITHOUT reflowing the hero (absolute). Collapsed by
+             default. -->
+        <ContextDrawer
+          v-if="drawerTab"
+          :title="drawerTitle"
+          @close="closeDrawer"
+        >
+          <BackEditPanel
+            v-if="isBack && backContent"
+            mode="section"
+            :section="(drawerBackSection as any)"
+            :back-content="backContent"
+            :brand-kit="brandKit"
+            @update-back="updateBack"
+          />
+          <EditPanel
+            v-else-if="activeCard && drawerFrontSection"
+            mode="section"
+            :section="(drawerFrontSection as any)"
+            :card="activeCard"
+            :brand-kit="brandKit"
+            :requested-editor="requestedEditor"
+            @update-field="updateCardField"
+            @update-headline-lines="updateHeadlineLines"
+            @update-service-rows="updateServiceRows"
+            @update-offer-items="updateOfferItems"
+            @update-tips="updateTips"
+            @regenerate-cards="regenerateCards"
+            @update-colors="updateColors"
+            @update-photo="updatePhoto"
+            @open-template-browser="showTemplateBrowser = true"
+            @reset="resetCard"
+            @info-saved="refreshPreview"
+          />
+        </ContextDrawer>
       </div>
     </div>
 

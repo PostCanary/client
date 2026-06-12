@@ -24,8 +24,10 @@ function makeCard(cardNumber: number, purpose: CardPurpose): CardDesign {
   return {
     cardNumber,
     cardPurpose: purpose,
-    templateId: "full-bleed-" + purpose,
-    renderTemplateId: "full-bleed-front-v1",
+    templateId: "hac-1000-" + purpose,
+    // hac-1000 has a real zone map (headline / photo / offer / review), so the
+    // S79 Phase-2 hotspots + popover/drawer are exercisable in the harness.
+    renderTemplateId: "hac-1000-front-v1",
     previewImageUrl: "",
     overrides: {},
     resolvedContent: {

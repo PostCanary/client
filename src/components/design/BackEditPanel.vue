@@ -32,10 +32,35 @@ function mediaSrc(url: string): string {
 // The editable slice of card 1's backContent.
 type BackPatch = Partial<CardDesign["backContent"]>;
 
+// S79 Phase-2 section keys — which slice of the back to render in section mode.
+export type BackSection =
+  | "back-style"
+  | "back-subhead"
+  | "back-benefits"
+  | "back-testimonial"
+  | "back-services"
+  | "back-hours"
+  | "back-guarantee"
+  | "back-photo";
+
 const props = defineProps<{
   backContent: CardDesign["backContent"];
   brandKit: BrandKit | null;
+  /**
+   * S79 Phase-2: "panel" = the full stacked editor (specs + fallback). "section"
+   * = render only the `section` slice (for the ContextDrawer / zone popovers).
+   * Editor internals/emits are reused verbatim.
+   */
+  mode?: "panel" | "section";
+  section?: BackSection;
 }>();
+
+const isSectionMode = computed(() => props.mode === "section");
+// In section mode a slice is visible only when it's the requested section.
+// In panel mode every slice is visible (the legacy flat stack).
+function showSlice(name: BackSection): boolean {
+  return !isSectionMode.value || props.section === name;
+}
 
 const emit = defineEmits<{
   // A single merge-patch onto card 1's backContent (the parent persists +
@@ -238,14 +263,16 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
 </script>
 
 <template>
-  <div class="w-80 border-l border-gray-200 p-4 overflow-y-auto bg-white">
-    <h3 class="text-sm font-semibold text-[#0b2d50] mb-1">Edit Back</h3>
-    <p class="text-[11px] text-gray-500 mb-4">
-      One back is printed for every card in this campaign.
-    </p>
+  <div :class="isSectionMode ? '' : 'w-80 border-l border-gray-200 p-4 overflow-y-auto bg-white'">
+    <template v-if="!isSectionMode">
+      <h3 class="text-sm font-semibold text-[#0b2d50] mb-1">Edit Back</h3>
+      <p class="text-[11px] text-gray-500 mb-4">
+        One back is printed for every card in this campaign.
+      </p>
+    </template>
 
     <!-- Back style selector (pill grid — 5 styles, segmented gets cramped) -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-style')" class="mb-5">
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Back Style
       </label>
@@ -276,7 +303,11 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
 
     <!-- Back photo picker (S78) — only when the Photo style is selected.
          Reuses the Change Photo gallery grid (brand + stock, Low-res badge). -->
-    <div v-if="isPhotoStyle" class="mb-5" data-testid="back-photo-section">
+    <div
+      v-if="isPhotoStyle && (showSlice('back-style') || showSlice('back-photo'))"
+      class="mb-5"
+      data-testid="back-photo-section"
+    >
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Back Photo
       </label>
@@ -330,7 +361,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Subhead -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-subhead')" class="mb-5">
       <label
         class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
         for="back-subhead"
@@ -353,7 +384,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Benefits editor -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-benefits')" class="mb-5">
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Benefits
       </label>
@@ -395,7 +426,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Testimonial picker -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-testimonial')" class="mb-5">
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Testimonial
       </label>
@@ -439,7 +470,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Services editor -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-services')" class="mb-5">
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Services ("We also do")
       </label>
@@ -480,7 +511,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Hours -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-hours') || showSlice('back-services')" class="mb-5">
       <label
         class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
         for="back-hours"
@@ -500,7 +531,7 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Guarantee -->
-    <div class="mb-5">
+    <div v-if="showSlice('back-guarantee')" class="mb-5">
       <label
         class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
         for="back-guarantee"
@@ -523,7 +554,10 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     </div>
 
     <!-- Read-only Business Info block -->
-    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+    <div
+      v-if="!isSectionMode || showSlice('back-style')"
+      class="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2"
+    >
       <div class="flex items-center justify-between">
         <span class="text-[10px] uppercase tracking-wide text-gray-400">
           From Business Info
