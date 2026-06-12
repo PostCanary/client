@@ -1,43 +1,179 @@
 <script setup lang="ts">
-// BackEditPanel — the right-column editor for the postcard BACK (S76 Phase-5).
+// BackEditPanel — the right-column editor for the postcard BACK.
 //
-// Scope this pass: the customer edits the GUARANTEE text only. Everything else
-// on the back (return address, license, website, certifications) is sourced
-// from Business Info and shown here read-only with a link to edit it there —
-// mirrors EditPanel's "single source of truth" stance for brand data.
+// S76 Phase-5 shipped guarantee-only. S77 BACK v2 makes the back richly
+// editable: a back-style selector (Standard / Testimonial / Service Area), a
+// recap subhead, a benefits editor (3-5 rows), a testimonial picker (chosen
+// from the SAME brand-kit reviews the front review picker uses, plus a
+// "none — show rating chip" option), services + hours editors, and the
+// existing guarantee. Return address / license / website / certifications stay
+// sourced from Business Info (read-only here) — single source of truth.
+//
+// One back is printed for every card in the campaign, so everything here
+// persists onto card 1's backContent (the parent owns persistence + render).
 
 import { ref, watch, computed } from "vue";
-import type { BrandKit } from "@/types/campaign";
+import type {
+  BrandKit,
+  BackTemplateId,
+  BackTestimonial,
+  CardDesign,
+} from "@/types/campaign";
+
+// The editable slice of card 1's backContent.
+type BackPatch = Partial<CardDesign["backContent"]>;
 
 const props = defineProps<{
-  guarantee: string;
+  backContent: CardDesign["backContent"];
   brandKit: BrandKit | null;
 }>();
 
 const emit = defineEmits<{
-  (e: "update-guarantee", value: string): void;
+  // A single merge-patch onto card 1's backContent (the parent persists +
+  // re-renders the back).
+  (e: "update-back", patch: BackPatch): void;
 }>();
 
-// Local mirror so typing is smooth; the parent persists (debounced render).
-const localGuarantee = ref(props.guarantee);
-watch(
-  () => props.guarantee,
-  (val) => {
-    if (val !== localGuarantee.value) localGuarantee.value = val;
-  },
+// --- Back style selector ----------------------------------------------------
+const BACK_STYLES: Array<{ id: BackTemplateId; label: string }> = [
+  { id: "standard-back-v2", label: "Standard" },
+  { id: "testimonial-back-v1", label: "Testimonial" },
+  { id: "service-area-back-v1", label: "Service Area" },
+];
+const activeStyle = computed<BackTemplateId>(
+  () => (props.backContent.backTemplateId as BackTemplateId) || "standard-back-v2",
 );
-
-const GUARANTEE_MAX = 180;
-
-function onInput(e: Event) {
-  const value = (e.target as HTMLTextAreaElement).value.slice(0, GUARANTEE_MAX);
-  localGuarantee.value = value;
-  emit("update-guarantee", value);
+function selectStyle(id: BackTemplateId) {
+  if (id !== activeStyle.value) emit("update-back", { backTemplateId: id });
 }
 
-const remaining = computed(() => GUARANTEE_MAX - localGuarantee.value.length);
+// --- Subhead (char counter) -------------------------------------------------
+const SUBHEAD_MAX = 70;
+const localSubhead = ref(props.backContent.backSubhead ?? "");
+watch(
+  () => props.backContent.backSubhead,
+  (val) => {
+    if ((val ?? "") !== localSubhead.value) localSubhead.value = val ?? "";
+  },
+);
+function onSubheadInput(e: Event) {
+  const value = (e.target as HTMLTextAreaElement).value.slice(0, SUBHEAD_MAX);
+  localSubhead.value = value;
+  emit("update-back", { backSubhead: value });
+}
+const subheadRemaining = computed(() => SUBHEAD_MAX - localSubhead.value.length);
 
-// Read-only Business-Info-sourced fields shown on the back.
+// --- Benefits editor (3-5 rows, 5 max) --------------------------------------
+const BENEFIT_MAX = 48;
+const BENEFITS_MAX_ROWS = 5;
+const benefits = ref<string[]>([...(props.backContent.backBenefits ?? [])]);
+watch(
+  () => JSON.stringify(props.backContent.backBenefits ?? []),
+  () => {
+    benefits.value = [...(props.backContent.backBenefits ?? [])];
+  },
+);
+function applyBenefits() {
+  emit("update-back", {
+    backBenefits: benefits.value.map((b) => b.slice(0, BENEFIT_MAX)),
+  });
+}
+function addBenefit() {
+  if (benefits.value.length >= BENEFITS_MAX_ROWS) return;
+  benefits.value.push("");
+}
+function removeBenefit(i: number) {
+  benefits.value.splice(i, 1);
+  applyBenefits();
+}
+
+// --- Testimonial picker -----------------------------------------------------
+// Same review list the front review picker uses + a "none (rating chip)" opt.
+const reviews = computed(() => props.brandKit?.reviews ?? []);
+const selectedTestimonial = computed<BackTestimonial | null>(
+  () => props.backContent.backTestimonial ?? null,
+);
+function isSelectedReview(quote: string): boolean {
+  return (selectedTestimonial.value?.quote ?? "") === quote;
+}
+function pickReview(r: { quote: string; reviewerName: string; rating: number }) {
+  emit("update-back", {
+    backTestimonial: {
+      quote: r.quote,
+      reviewerName: r.reviewerName,
+      rating: r.rating ?? 5,
+    },
+  });
+}
+function clearTestimonial() {
+  // "none — show rating chip": an empty quote tells the renderer to render the
+  // rating-chip fallback rather than a fabricated quote.
+  emit("update-back", {
+    backTestimonial: { quote: "", reviewerName: "", rating: 0 },
+  });
+}
+const testimonialIsNone = computed(
+  () => !(selectedTestimonial.value?.quote ?? "").trim(),
+);
+
+// --- Services editor (6 max) ------------------------------------------------
+const SERVICE_MAX = 18;
+const SERVICES_MAX_ROWS = 6;
+const services = ref<string[]>([...(props.backContent.backServices ?? [])]);
+watch(
+  () => JSON.stringify(props.backContent.backServices ?? []),
+  () => {
+    services.value = [...(props.backContent.backServices ?? [])];
+  },
+);
+function applyServices() {
+  emit("update-back", {
+    backServices: services.value.map((s) => s.slice(0, SERVICE_MAX)),
+  });
+}
+function addService() {
+  if (services.value.length >= SERVICES_MAX_ROWS) return;
+  services.value.push("");
+}
+function removeService(i: number) {
+  services.value.splice(i, 1);
+  applyServices();
+}
+
+// --- Hours ------------------------------------------------------------------
+const HOURS_MAX = 60;
+const localHours = ref(props.backContent.backHours ?? "");
+watch(
+  () => props.backContent.backHours,
+  (val) => {
+    if ((val ?? "") !== localHours.value) localHours.value = val ?? "";
+  },
+);
+function onHoursInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value.slice(0, HOURS_MAX);
+  localHours.value = value;
+  emit("update-back", { backHours: value });
+}
+
+// --- Guarantee (existing) ---------------------------------------------------
+const GUARANTEE_MAX = 180;
+const localGuarantee = ref(props.backContent.guarantee ?? "");
+watch(
+  () => props.backContent.guarantee,
+  (val) => {
+    if ((val ?? "") !== localGuarantee.value) localGuarantee.value = val ?? "";
+  },
+);
+function onGuaranteeInput(e: Event) {
+  const value = (e.target as HTMLTextAreaElement).value.slice(0, GUARANTEE_MAX);
+  localGuarantee.value = value;
+  emit("update-back", { guarantee: value });
+}
+const guaranteeRemaining = computed(
+  () => GUARANTEE_MAX - localGuarantee.value.length,
+);
+
+// --- Read-only Business-Info-sourced fields ---------------------------------
 const companyAddress = computed(() => props.brandKit?.address || "");
 const licenseNumber = computed(() => props.brandKit?.licenseNumber || "");
 const websiteUrl = computed(() => props.brandKit?.websiteUrl || "");
@@ -51,7 +187,206 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       One back is printed for every card in this campaign.
     </p>
 
-    <!-- Guarantee (the only editable back field this pass) -->
+    <!-- Back style selector (segmented control) -->
+    <div class="mb-5">
+      <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
+        Back Style
+      </label>
+      <div
+        class="flex rounded-lg border border-gray-200 overflow-hidden"
+        data-testid="back-style-selector"
+        role="tablist"
+      >
+        <button
+          v-for="style in BACK_STYLES"
+          :key="style.id"
+          type="button"
+          :data-testid="`back-style-${style.id}`"
+          :aria-selected="activeStyle === style.id"
+          class="flex-1 px-2 py-1.5 text-xs font-medium transition-colors"
+          :class="
+            activeStyle === style.id
+              ? 'bg-[#47bfa9] text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          "
+          @click="selectStyle(style.id)"
+        >
+          {{ style.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Subhead -->
+    <div class="mb-5">
+      <label
+        class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
+        for="back-subhead"
+      >
+        Subheadline
+      </label>
+      <textarea
+        id="back-subhead"
+        data-testid="back-subhead-input"
+        :value="localSubhead"
+        rows="2"
+        :maxlength="SUBHEAD_MAX"
+        placeholder="Still on the fence? Here's why neighbors choose us."
+        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[#47bfa9]"
+        @input="onSubheadInput"
+      />
+      <div class="text-[10px] text-gray-400 mt-1 text-right">
+        {{ subheadRemaining }} characters left
+      </div>
+    </div>
+
+    <!-- Benefits editor -->
+    <div class="mb-5">
+      <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
+        Benefits
+      </label>
+      <div class="space-y-2">
+        <div
+          v-for="(_b, i) in benefits"
+          :key="i"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-model="benefits[i]"
+            type="text"
+            :maxlength="BENEFIT_MAX"
+            :data-testid="`back-benefit-${i}`"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyBenefits"
+          />
+          <button
+            type="button"
+            :data-testid="`back-benefit-remove-${i}`"
+            class="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+            aria-label="Remove benefit"
+            @click="removeBenefit(i)"
+          >
+            &times;
+          </button>
+        </div>
+        <button
+          v-if="benefits.length < BENEFITS_MAX_ROWS"
+          type="button"
+          data-testid="back-benefit-add"
+          class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="addBenefit"
+        >
+          + Add benefit
+        </button>
+      </div>
+      <p class="text-[10px] text-gray-400 mt-1">3-5 short why-us benefits.</p>
+    </div>
+
+    <!-- Testimonial picker -->
+    <div class="mb-5">
+      <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
+        Testimonial
+      </label>
+      <div class="space-y-1.5" data-testid="back-testimonial-picker">
+        <button
+          type="button"
+          data-testid="back-testimonial-none"
+          class="w-full text-left px-3 py-2 rounded-lg border text-xs transition-colors"
+          :class="
+            testimonialIsNone
+              ? 'border-[#47bfa9] bg-[#47bfa9]/5'
+              : 'border-gray-200 hover:border-gray-300'
+          "
+          @click="clearTestimonial"
+        >
+          None — show rating chip
+        </button>
+        <button
+          v-for="(review, i) in reviews"
+          :key="i"
+          type="button"
+          :data-testid="`back-testimonial-${i}`"
+          class="w-full text-left px-3 py-2 rounded-lg border text-xs transition-colors"
+          :class="
+            isSelectedReview(review.quote)
+              ? 'border-[#47bfa9] bg-[#47bfa9]/5'
+              : 'border-gray-200 hover:border-gray-300'
+          "
+          @click="pickReview(review)"
+        >
+          <span class="line-clamp-2">{{ review.quote }}</span>
+          <span class="text-gray-500 font-normal">
+            — {{ review.reviewerName || "Anon" }}</span
+          >
+        </button>
+        <p v-if="reviews.length === 0" class="text-[10px] text-gray-400 px-1">
+          No reviews yet — the back shows a rating chip. Add reviews in Business
+          Info.
+        </p>
+      </div>
+    </div>
+
+    <!-- Services editor -->
+    <div class="mb-5">
+      <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
+        Services ("We also do")
+      </label>
+      <div class="space-y-2">
+        <div
+          v-for="(_s, i) in services"
+          :key="i"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-model="services[i]"
+            type="text"
+            :maxlength="SERVICE_MAX"
+            :data-testid="`back-service-${i}`"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            @input="applyServices"
+          />
+          <button
+            type="button"
+            :data-testid="`back-service-remove-${i}`"
+            class="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
+            aria-label="Remove service"
+            @click="removeService(i)"
+          >
+            &times;
+          </button>
+        </div>
+        <button
+          v-if="services.length < SERVICES_MAX_ROWS"
+          type="button"
+          data-testid="back-service-add"
+          class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="addService"
+        >
+          + Add service
+        </button>
+      </div>
+    </div>
+
+    <!-- Hours -->
+    <div class="mb-5">
+      <label
+        class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
+        for="back-hours"
+      >
+        Hours
+      </label>
+      <input
+        id="back-hours"
+        data-testid="back-hours-input"
+        :value="localHours"
+        type="text"
+        :maxlength="HOURS_MAX"
+        placeholder="Mon-Sat 7am-7pm • 24/7 Emergency"
+        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#47bfa9]"
+        @input="onHoursInput"
+      />
+    </div>
+
+    <!-- Guarantee -->
     <div class="mb-5">
       <label
         class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1"
@@ -67,10 +402,10 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
         :maxlength="GUARANTEE_MAX"
         placeholder="100% Satisfaction Guaranteed"
         class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[#47bfa9]"
-        @input="onInput"
+        @input="onGuaranteeInput"
       />
       <div class="text-[10px] text-gray-400 mt-1 text-right">
-        {{ remaining }} characters left
+        {{ guaranteeRemaining }} characters left
       </div>
     </div>
 

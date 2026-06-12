@@ -303,6 +303,30 @@ const URGENCY: Record<CardPurpose, string> = {
   last_chance: "Offer expires in 7 days",
 };
 
+// S77 BACK v2: evergreen why-us benefit bullets per trade (mirrors the
+// server's _INDUSTRY_BACK_BENEFITS so the local fallback matches what the AI
+// path seeds). Used only when there's no AI `back` object.
+const INDUSTRY_BACK_BENEFITS: Record<string, string[]> = {
+  hvac: ["Same-day service available", "Upfront pricing, no surprises", "Licensed & insured technicians"],
+  plumbing: ["Same-day & emergency service", "Upfront flat-rate pricing", "Licensed & insured plumbers"],
+  roofing: ["Free, no-obligation inspections", "Insurance-claim help included", "Licensed, insured & guaranteed"],
+  cleaning: ["Background-checked cleaners", "Supplies & equipment included", "Satisfaction guaranteed"],
+  electrical: ["Licensed master electricians", "Upfront, code-compliant pricing", "Safety-first, guaranteed work"],
+  pest_control: ["Licensed, family-safe treatments", "Free inspections & re-treatments", "Satisfaction guaranteed"],
+  landscaping: ["Reliable weekly service", "Free design consultations", "Satisfaction guaranteed"],
+};
+const GENERIC_BACK_BENEFITS = [
+  "Licensed & insured",
+  "Upfront, honest pricing",
+  "Satisfaction guaranteed",
+];
+
+function fallbackBackBenefits(industry: string | null | undefined): string[] {
+  return [
+    ...(INDUSTRY_BACK_BENEFITS[(industry ?? "").toLowerCase()] ?? GENERIC_BACK_BENEFITS),
+  ];
+}
+
 function fillTemplate(tmpl: string, vars: Record<string, string>): string {
   let result = tmpl;
   for (const [key, val] of Object.entries(vars)) {
@@ -432,6 +456,29 @@ function generateCardsLocal(
         // (brand_kit._scrape_job / update_brand_kit). Null when neither
         // websiteUrl nor phone yields a target; CTABox handles empty string.
         qrCodeUrl: brandKit.qrCodeImageUrl ?? "",
+        // S77 BACK v2: seed a complete static back on card 1 even in the local
+        // (no-AI) fallback, so the richer back is never empty.
+        backTemplateId: "standard-back-v2",
+        ...(i === 0
+          ? {
+              backSubhead: offerText
+                ? `Don't miss out — ${offerText}`.slice(0, 70)
+                : "Trusted by your neighbors — here's why.",
+              backBenefits: fallbackBackBenefits(brandKit.industry),
+              ...(brandKit.serviceTypes && brandKit.serviceTypes.length
+                ? { backServices: brandKit.serviceTypes.slice(0, 6) }
+                : {}),
+              ...(review
+                ? {
+                    backTestimonial: {
+                      quote: review.quote,
+                      reviewerName: review.reviewerName,
+                      rating: review.rating ?? 5,
+                    },
+                  }
+                : {}),
+            }
+          : {}),
       },
       headlineCandidates: [],
       offerReason: "",
@@ -540,6 +587,28 @@ function mapServerCardToDesign(
       // Brief #6 P0 #3: QR from brand kit (server-generated). See note
       // in generateCardsLocal above for rationale.
       qrCodeUrl: brandKit.qrCodeImageUrl ?? "",
+      // S77 BACK v2: seed the richer back from the AI `back` object (card 1
+      // only — the back is a per-draft surface). Default design = v2; the
+      // testimonial seeds from the same selected review the front uses.
+      backTemplateId: "standard-back-v2",
+      ...(index === 0 && card.back
+        ? {
+            backSubhead: card.back.subhead,
+            backBenefits: card.back.benefits,
+            ...(card.back.services && card.back.services.length
+              ? { backServices: card.back.services }
+              : {}),
+            ...(selectedReview
+              ? {
+                  backTestimonial: {
+                    quote: selectedReview.quote,
+                    reviewerName: selectedReview.reviewerName,
+                    rating: selectedReview.rating ?? 5,
+                  },
+                }
+              : {}),
+          }
+        : {}),
     },
     headlineCandidates: card.headlines,
     offerReason: card.offer.reason,
