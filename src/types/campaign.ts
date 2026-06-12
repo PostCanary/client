@@ -290,6 +290,8 @@ export type BackTemplateId =
   | "standard-back-v2"
   | "testimonial-back-v1"
   | "service-area-back-v1"
+  | "photo-back-v1"                     // S78 — full-bleed photo left column
+  | "brand-bold-back-v1"                // S78 — full brand-color left field
   | "standard-back-v1"                  // legacy; old drafts may still pin it
 
 export interface BackTestimonial {
@@ -365,6 +367,10 @@ export interface CardDesign {
     backTestimonial?: BackTestimonial // chosen real review, or omitted → rating chip
     backServices?: string[]           // "we also do" list (≤6, ≤18 chars each)
     backHours?: string                // hours / "24-7 emergency" line
+    // S78 photo-back-v1: the full-bleed left-column photo. Absent → the worker
+    // falls back through the card photo → industry pack hero (never an empty
+    // hole). Only meaningful for the Photo back style.
+    backPhotoUrl?: string
   }
   // AI generation metadata (populated when using server AI, empty for local fallback)
   headlineCandidates: Array<{ text: string; formula: string; reason: string }>  // 3 options from AI

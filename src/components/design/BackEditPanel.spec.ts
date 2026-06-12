@@ -227,4 +227,123 @@ describe("BackEditPanel v2 (S77)", () => {
     const wrapper = mountPanel({ brandKit: null });
     expect(wrapper.get('[data-testid="back-info-website"]').text()).toContain("—");
   });
+
+  // --- S78: the two visually-rich back styles ---
+  it("renders all five back styles including Photo and Bold", () => {
+    const wrapper = mountPanel();
+    for (const id of [
+      "standard-back-v2",
+      "testimonial-back-v1",
+      "service-area-back-v1",
+      "photo-back-v1",
+      "brand-bold-back-v1",
+    ]) {
+      expect(wrapper.find(`[data-testid="back-style-${id}"]`).exists()).toBe(true);
+    }
+  });
+
+  it("emits the Photo back style when picked", async () => {
+    const wrapper = mountPanel();
+    await wrapper.get('[data-testid="back-style-photo-back-v1"]').trigger("click");
+    const emitted = wrapper.emitted("update-back");
+    expect(
+      emitted?.some((e) => (e[0] as any).backTemplateId === "photo-back-v1"),
+    ).toBe(true);
+  });
+
+  it("emits the Bold back style when picked", async () => {
+    const wrapper = mountPanel();
+    await wrapper
+      .get('[data-testid="back-style-brand-bold-back-v1"]')
+      .trigger("click");
+    const emitted = wrapper.emitted("update-back");
+    expect(
+      emitted?.some((e) => (e[0] as any).backTemplateId === "brand-bold-back-v1"),
+    ).toBe(true);
+  });
+
+  // --- S78: back-photo picker (only on the Photo style) ---
+  it("hides the back-photo picker unless the Photo style is active", () => {
+    const wrapper = mountPanel({ backContent: { backTemplateId: "standard-back-v2" } });
+    expect(wrapper.find('[data-testid="back-photo-section"]').exists()).toBe(false);
+  });
+
+  it("shows the back-photo picker when the Photo style is active", () => {
+    const wrapper = mountPanel({ backContent: { backTemplateId: "photo-back-v1" } });
+    expect(wrapper.find('[data-testid="back-photo-section"]').exists()).toBe(true);
+  });
+
+  it("renders brand + stock photos in the back-photo grid with a Low-res badge", () => {
+    const wrapper = mountPanel({
+      backContent: { backTemplateId: "photo-back-v1" },
+      brandKit: makeBrandKit({
+        industry: "hvac",
+        photos: [
+          {
+            url: "/media/brand-photos/org-1/sharp.jpg",
+            alt: "Sharp truck",
+            qualityScore: 90,
+            source: "upload",
+            printReady: true,
+          },
+          {
+            url: "/media/brand-photos/org-1/soft.jpg",
+            alt: "Soft scan",
+            qualityScore: 40,
+            source: "upload",
+            printReady: false,
+          },
+        ] as BrandKit["photos"],
+      }),
+    });
+    const grid = wrapper.get('[data-testid="back-photo-grid"]');
+    // 2 brand photos + the hvac stock pack (non-empty).
+    expect(grid.findAll("button").length).toBeGreaterThan(2);
+    expect(wrapper.find('[data-testid="back-photo-lowres-badge"]').exists()).toBe(true);
+  });
+
+  it("emits backPhotoUrl when a back photo is picked", async () => {
+    const wrapper = mountPanel({
+      backContent: { backTemplateId: "photo-back-v1" },
+      brandKit: makeBrandKit({
+        photos: [
+          {
+            url: "/media/brand-photos/org-1/pick.jpg",
+            alt: "Pick me",
+            qualityScore: 90,
+            source: "upload",
+            printReady: true,
+          },
+        ] as BrandKit["photos"],
+      }),
+    });
+    await wrapper.get('[data-testid="back-photo-option-0"]').trigger("click");
+    const emitted = wrapper.emitted("update-back");
+    expect(
+      emitted?.some(
+        (e) => (e[0] as any).backPhotoUrl === "/media/brand-photos/org-1/pick.jpg",
+      ),
+    ).toBe(true);
+  });
+
+  it("clears backPhotoUrl when the active photo is re-clicked", async () => {
+    const url = "/media/brand-photos/org-1/pick.jpg";
+    const wrapper = mountPanel({
+      backContent: { backTemplateId: "photo-back-v1", backPhotoUrl: url },
+      brandKit: makeBrandKit({
+        photos: [
+          {
+            url,
+            alt: "Pick me",
+            qualityScore: 90,
+            source: "upload",
+            printReady: true,
+          },
+        ] as BrandKit["photos"],
+      }),
+    });
+    await wrapper.get('[data-testid="back-photo-option-0"]').trigger("click");
+    const emitted = wrapper.emitted("update-back");
+    expect(emitted?.some((e) => (e[0] as any).backPhotoUrl === "")).toBe(true);
+  });
 });
