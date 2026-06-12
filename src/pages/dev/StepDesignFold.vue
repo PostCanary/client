@@ -35,7 +35,10 @@ function makeCard(cardNumber: number, purpose: CardPurpose): CardDesign {
       offerText: "$50 OFF a Tune-Up",
       offerTeaser: "$50 OFF",
       offerItems: [],
-      photoUrl: "",
+      // S81: seed a real photo so the on-canvas Adjust-position overlay is
+      // exercisable in the harness. /dev-photo.jpg is served from /public so
+      // the overlay loads it with NO backend (Playwright can also route it).
+      photoUrl: "/dev-photo.jpg",
       reviewQuote: "Great service, on time and tidy.",
       reviewerName: "J. Smith",
       phoneNumber: "(612) 887-2109",

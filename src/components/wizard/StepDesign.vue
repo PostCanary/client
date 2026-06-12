@@ -22,6 +22,11 @@ import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
 import ZonePopover from "@/components/design/ZonePopover.vue";
 import ContextDrawer from "@/components/design/ContextDrawer.vue";
 import CanvasCoachMark from "@/components/design/CanvasCoachMark.vue";
+import PhotoAdjustOverlay from "@/components/design/PhotoAdjustOverlay.vue";
+import { usePhotoAdjust } from "@/composables/usePhotoAdjust";
+import type { ZoneBox } from "@/composables/usePopoverAnchor";
+import { normalizeCrop } from "@/utils/photoCrop";
+import { API_BASE } from "@/api/http";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { useBackPreview } from "@/composables/useBackPreview";
@@ -34,6 +39,13 @@ import {
   type EditZone,
 } from "@/data/templateEditZones";
 import { generateMapImage, getMediaFeaturesCached } from "@/api/brandKit";
+
+// Resolve a possibly-relative media path against the API base (mirrors
+// EditPanel.mediaSrc) so the on-canvas adjust overlay loads the same bytes the
+// worker renders. Same-origin deployments have API_BASE === "" (no-op).
+function mediaSrc(url: string): string {
+  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
+}
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -199,6 +211,12 @@ function measureCanvas() {
 // route to the drawer; everything else opens an anchored popover.
 function openZone(zone: EditZone) {
   const editor = zone.editor;
+  // S81: a photo / back-photo zone click enters ON-CANVAS adjust mode (direct
+  // manipulation) instead of opening the photo drawer. If there's no photo yet
+  // to position, fall through to the drawer so the user can pick one first.
+  if (editor === "photo" || editor === "back-photo") {
+    if (enterPhotoAdjust(zone)) return;
+  }
   if (DRAWER_EDITORS.has(editor)) {
     popover.value = null;
     if (editor === "photo" || editor === "back-photo") drawerTab.value = "photo";
@@ -300,6 +318,8 @@ watch(activeCardIndex, () => {
   // Close any open contextual editor when the surface under it changes.
   popover.value = null;
   drawerTab.value = null;
+  // S81: the photo under the adjust overlay belongs to the old card — drop it.
+  photoAdjust.exit();
 });
 // NOTE: the previewUrl reconciliation watch lives just below the
 // useCardPreview destructure (declaration order).
@@ -316,6 +336,11 @@ watch(previewUrl, (url) => {
   if (liveOverlay.value && Date.now() - lastEditAt.value > 900) {
     liveOverlay.value = null;
   }
+  // S81 photo-adjust reconcile: the fresh PNG now carries the committed crop.
+  // onRenderArrived drops the awaiting flag (the overlay can clear) only after
+  // the debounce window closed; a render that raced a newer nudge keeps the
+  // overlay until its own follow-up lands → no flicker, no waiting.
+  if (url) photoAdjust.onRenderArrived();
   // Layout switch completes when the re-render lands.
   if (url && switchingLayout.value) {
     switchingLayout.value = false;
@@ -430,9 +455,19 @@ useDesignKeyboard({
   setActiveCardIndex: (i) => { activeCardIndex.value = i; },
   activeSide: () => activeSide.value,
   setActiveSide: (side) => { activeSide.value = side; },
-  popoverOpen: () => popover.value !== null,
+  // S81: on-canvas adjust mode behaves like a popover-open state — arrow/F
+  // card-cycling is suppressed and Esc dismisses it. We report it through
+  // popoverOpen so the existing gate (and Esc-closes-popover-first) applies,
+  // and route closePopover to exit adjust mode when it's the active overlay.
+  popoverOpen: () => popover.value !== null || photoAdjust.active.value,
   drawerOpen: () => drawerTab.value !== null,
-  closePopover,
+  closePopover: () => {
+    if (photoAdjust.active.value) {
+      exitPhotoAdjust();
+      return;
+    }
+    closePopover();
+  },
   closeDrawer,
 });
 
@@ -442,6 +477,8 @@ useDesignKeyboard({
 watch(activeSide, (newSide) => {
   popover.value = null;
   drawerTab.value = null;
+  // S81: front/back adjust overlays target different surfaces — exit on flip.
+  photoAdjust.exit();
   triggerFlip(newSide);
   // The back/front canvases can differ in available height; re-measure after
   // the flip settles.
@@ -457,6 +494,12 @@ const {
   error: backPreviewError,
   refresh: refreshBackPreview,
 } = useBackPreview(draftIdRef, backContent, isBack);
+
+// S81: reconcile the back-photo adjust overlay against the fresh back render
+// (same no-flicker handoff as the front previewUrl watch).
+watch(backPreviewUrl, (url) => {
+  if (url) photoAdjust.onRenderArrived();
+});
 
 function updateBack(patch: Partial<CardDesign["backContent"]>) {
   const card = cards.value[0];
@@ -667,6 +710,7 @@ onBeforeUnmount(() => {
   if (persistedPreviewRefreshTimer) clearTimeout(persistedPreviewRefreshTimer);
   revokeThumbnailUrls();
   invalidateProof();
+  photoAdjust.dispose();
   window.removeEventListener("resize", measureCanvas);
 });
 
@@ -948,6 +992,116 @@ function updateMapSettings(settings: MapSettings) {
     overrides: { ...card.overrides, mapSettings: settings },
   });
   commitDesign();
+}
+
+// --- S81 on-canvas photo position/crop -------------------------------------
+// Dustin's S80 feedback: adjusting the photo in the side panel was slow (every
+// nudge waited on a server re-render) and the mini-frame was small/hard to use.
+// S81 moves positioning ONTO the canvas: clicking a photo zone enters an adjust
+// mode that overlays the zone with a live, client-side crop (the text-overlay
+// pattern). Pan/zoom are INSTANT (pure CSS); the crop persists on a debounce and
+// the authoritative render reconciles WITHOUT flicker.
+//
+// onCommit routes the crop to the right persistence path:
+//   - front main / before / after  → updateCrop (active card overrides)
+//   - back-photo                    → updateBack (card 1 backContent.backPhotoCrop)
+const photoAdjust = usePhotoAdjust({
+  onCommit(field, crop) {
+    if (field === "backPhotoCrop") {
+      updateBack({ backPhotoCrop: crop });
+    } else {
+      updateCrop(field, crop);
+    }
+  },
+  debounceMs: 800,
+});
+
+// Map a clicked PHOTO zone → the adjust target (field + photo src + zone rect +
+// starting crop). The zone label/geometry already encodes the before/after half
+// (split banner zones are left 0-50% / 50-100%), so the clicked zone alone
+// disambiguates the slot — no separate photoSlot toggle needed on the canvas.
+function photoAdjustTargetForZone(zone: EditZone) {
+  const card = activeCard.value;
+  if (!card) return null;
+  const ov = card.overrides as Record<string, unknown>;
+  const rc = card.resolvedContent as Record<string, unknown>;
+  const isBeforeAfter = (card.renderTemplateId ?? "").startsWith("before-after");
+
+  let field: string;
+  let url: string | undefined;
+  if (isBeforeAfter) {
+    // The before half sits at left 0; the after half at left ≥ 50.
+    const isBefore = zone.left < 25;
+    field = isBefore ? "beforePhotoCrop" : "afterPhotoCrop";
+    url = isBefore
+      ? ((ov.beforePhotoUrl as string) ?? (rc.beforePhotoUrl as string) ?? rc.photoUrl as string)
+      : ((ov.afterPhotoUrl as string) ?? (rc.afterPhotoUrl as string) ?? rc.photoUrl as string);
+  } else {
+    field = "photoCrop";
+    url = (ov.photoUrl as string) ?? (rc.photoUrl as string);
+  }
+  if (!url) return null;
+  const crop = normalizeCrop((ov[field] as PhotoCrop) ?? (rc[field] as PhotoCrop));
+  return {
+    field,
+    src: mediaSrc(url),
+    zone: { left: zone.left, top: zone.top, width: zone.width, height: zone.height } as ZoneBox,
+    crop,
+    label: zone.label,
+  };
+}
+
+// Back-photo adjust target. The photo-back left column is one photo spanning
+// x 0–53% (two hotspot sub-zones map to it); adjust clips to that full column.
+const BACK_PHOTO_ZONE: ZoneBox = { left: 0, top: 0, width: 53, height: 100 };
+function backPhotoAdjustTarget() {
+  const bc = cards.value[0]?.backContent;
+  if (!bc) return null;
+  const url = (bc.backPhotoUrl as string) || (cards.value[0]?.resolvedContent.photoUrl as string);
+  if (!url) return null;
+  return {
+    field: "backPhotoCrop",
+    src: mediaSrc(url),
+    zone: { ...BACK_PHOTO_ZONE },
+    crop: normalizeCrop(bc.backPhotoCrop),
+    label: "Back photo",
+  };
+}
+
+// Enter adjust mode for a photo/back-photo zone click. Returns true if it
+// handled the click (so openZone can skip the drawer route).
+function enterPhotoAdjust(zone: EditZone): boolean {
+  const t = zone.editor === "back-photo" ? backPhotoAdjustTarget()
+    : photoAdjustTargetForZone(zone);
+  if (!t) return false;
+  // Direct manipulation replaces the popover/drawer — close them.
+  popover.value = null;
+  drawerTab.value = null;
+  photoAdjust.enter(t);
+  return true;
+}
+
+// Done / Esc / clicking another surface commits + exits adjust mode.
+function exitPhotoAdjust() {
+  photoAdjust.exit();
+}
+
+// Entry from the photo drawer's "Adjust position on the card" button. The panel
+// passes the slot's crop field; we find the matching photo zone and enter
+// adjust mode (then close the drawer so the canvas is unobstructed).
+function onEnterPhotoAdjustFromPanel(field: string) {
+  const zones = isBack.value ? backEditZones.value : editZones.value;
+  let zone: EditZone | undefined;
+  if (field === "beforePhotoCrop") {
+    zone = zones.find((z) => z.editor === "photo" && z.left < 25);
+  } else if (field === "afterPhotoCrop") {
+    zone = zones.find((z) => z.editor === "photo" && z.left >= 25);
+  } else if (field === "backPhotoCrop") {
+    zone = zones.find((z) => z.editor === "back-photo");
+  } else {
+    zone = zones.find((z) => z.editor === "photo");
+  }
+  if (zone) enterPhotoAdjust(zone);
 }
 
 // Layout switch state: drives the "Applying new layout…" overlay so the
@@ -1453,6 +1607,25 @@ watch(
           </div>
         </div>
 
+        <!-- S81 ON-CANVAS photo adjust overlay. Sits ABOVE the card PNG but
+             BELOW the popover/drawer layers (its internal z-20 is under the
+             popover/drawer transitions that follow). Painted whenever adjust
+             mode is active OR lingering through a reconcile (no flicker). The
+             zone rect is mapped with the SAME canvasViewport the popover uses. -->
+        <PhotoAdjustOverlay
+          v-if="photoAdjust.overlayVisible.value && photoAdjust.target.value"
+          :src="photoAdjust.target.value.src"
+          :zone="photoAdjust.target.value.zone"
+          :viewport="canvasViewport"
+          :crop="photoAdjust.crop.value"
+          :label="photoAdjust.target.value.label"
+          @pan="(p) => photoAdjust.panBy(p.startCrop, p.dx, p.dy, p.w, p.h)"
+          @zoom="(z) => photoAdjust.setZoom(z)"
+          @zoom-by="(d) => photoAdjust.zoomBy(d)"
+          @reset="photoAdjust.reset()"
+          @done="exitPhotoAdjust()"
+        />
+
         <!-- First-run coach mark (S79 Phase-3): "Click any part of the card to
              edit it." One-time hint, stored in localStorage. -->
         <CanvasCoachMark />
@@ -1494,6 +1667,7 @@ watch(
               @update-colors="updateColors"
               @update-photo="updatePhoto"
               @update-crop="updateCrop"
+              @enter-photo-adjust="onEnterPhotoAdjustFromPanel"
               @update-map-settings="updateMapSettings"
               @open-template-browser="showTemplateBrowser = true"
               @reset="resetCard"
@@ -1536,6 +1710,7 @@ watch(
               @update-colors="updateColors"
               @update-photo="updatePhoto"
               @update-crop="updateCrop"
+              @enter-photo-adjust="onEnterPhotoAdjustFromPanel"
               @update-map-settings="updateMapSettings"
               @open-template-browser="showTemplateBrowser = true"
               @reset="resetCard"

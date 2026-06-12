@@ -110,9 +110,9 @@ describe("EditPanel — section mode (S79 Phase-2)", () => {
     expect(wrapper.find('[data-testid="reset-to-original"]').exists()).toBe(true);
   });
 
-  // --- S80 photo positioning/cropping ---
+  // --- S81 ON-CANVAS photo positioning (entry button replaces S80 mini-frame) ---
 
-  it("photo section shows the Adjust position control once a photo is applied", async () => {
+  it("photo section shows the on-canvas Adjust-position entry once a photo is applied", async () => {
     const card = makeCard();
     card.resolvedContent.photoUrl = "/media/brand-photos/o/p.jpg";
     const wrapper = mount(EditPanel, {
@@ -126,10 +126,12 @@ describe("EditPanel — section mode (S79 Phase-2)", () => {
     });
     await flushPromises();
     expect(wrapper.find('[data-testid="photo-adjust-section"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="photo-crop-adjuster"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="photo-adjust-entry"]').exists()).toBe(true);
+    // The S80 in-panel mini-frame is gone — direct manipulation lives on the canvas.
+    expect(wrapper.find('[data-testid="photo-crop-adjuster"]').exists()).toBe(false);
   });
 
-  it("hides Adjust position when no photo is applied", async () => {
+  it("hides the Adjust-position entry when no photo is applied", async () => {
     const wrapper = mount(EditPanel, {
       props: {
         card: makeCard(),
@@ -143,7 +145,7 @@ describe("EditPanel — section mode (S79 Phase-2)", () => {
     expect(wrapper.find('[data-testid="photo-adjust-section"]').exists()).toBe(false);
   });
 
-  it("emits update-crop with the photoCrop field when the adjuster commits", async () => {
+  it("emits enter-photo-adjust with the photoCrop field when the entry button is clicked", async () => {
     const card = makeCard();
     card.resolvedContent.photoUrl = "/media/brand-photos/o/p.jpg";
     const wrapper = mount(EditPanel, {
@@ -156,14 +158,9 @@ describe("EditPanel — section mode (S79 Phase-2)", () => {
       },
     });
     await flushPromises();
-    const slider = wrapper.find('[data-testid="crop-zoom"]');
-    (slider.element as HTMLInputElement).value = "2";
-    await slider.trigger("input");
-    await new Promise((r) => setTimeout(r, 300));
-    const emitted = wrapper.emitted("update-crop");
+    await wrapper.find('[data-testid="photo-adjust-entry"]').trigger("click");
+    const emitted = wrapper.emitted("enter-photo-adjust");
     expect(emitted).toBeTruthy();
-    const last = emitted![emitted!.length - 1]!;
-    expect(last[0]).toBe("photoCrop");
-    expect((last[1] as { zoom: number }).zoom).toBe(2);
+    expect(emitted![emitted!.length - 1]![0]).toBe("photoCrop");
   });
 });
