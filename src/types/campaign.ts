@@ -284,6 +284,20 @@ export interface ColorOverride {
   accent: string
 }
 
+// S77 BACK v2 — the selectable back designs (mirrors the worker's
+// BACK_TEMPLATE_REGISTRY). Default is standard-back-v2.
+export type BackTemplateId =
+  | "standard-back-v2"
+  | "testimonial-back-v1"
+  | "service-area-back-v1"
+  | "standard-back-v1"                  // legacy; old drafts may still pin it
+
+export interface BackTestimonial {
+  quote: string
+  reviewerName: string
+  rating: number                        // 1-5
+}
+
 export interface CardDesign {
   cardNumber: number                   // 1, 2, or 3
   cardPurpose: CardPurpose
@@ -342,6 +356,15 @@ export interface CardDesign {
     companyAddress: string
     websiteUrl: string
     qrCodeUrl: string
+    // --- S77 BACK v2 richer, editable back zones (all optional; absent →
+    // the worker collapses the zone / uses defaults). Persisted on card 1
+    // only — the back is a per-draft surface. ---
+    backTemplateId?: BackTemplateId   // which back design renders (default v2)
+    backSubhead?: string              // recap subhead (≤70 chars)
+    backBenefits?: string[]           // 3-5 why-us bullets (≤48 chars each)
+    backTestimonial?: BackTestimonial // chosen real review, or omitted → rating chip
+    backServices?: string[]           // "we also do" list (≤6, ≤18 chars each)
+    backHours?: string                // hours / "24-7 emergency" line
   }
   // AI generation metadata (populated when using server AI, empty for local fallback)
   headlineCandidates: Array<{ text: string; formula: string; reason: string }>  // 3 options from AI

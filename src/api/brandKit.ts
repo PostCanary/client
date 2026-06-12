@@ -120,6 +120,11 @@ export interface GeneratedCardContent {
   // well-formed object (salutation city-defaulted, body synthesized from
   // offer + review when the model omits it). Optional for older payloads.
   letter?: { salutation: string; body: string };
+  // S77 BACK v2: draft-level back content, emitted on card #1 only. The
+  // server fills it (model output or static fallback) so card 1 always has a
+  // complete back to seed. subhead recaps the front; benefits are 3-5 why-us
+  // bullets; services is an optional "we also do" list.
+  back?: { subhead: string; benefits: string[]; services?: string[] };
 }
 
 export interface GeneratedContent {

@@ -170,29 +170,28 @@ watch(previewUrl, (url) => {
 // is keyed on the draft + the guarantee, not the active card index.
 const activeSide = ref<"front" | "back">("front");
 const isBack = computed(() => activeSide.value === "back");
-// The guarantee is the only back-editable content this pass; it lives on
-// card 1's backContent. Re-render the back when it changes.
-const backGuarantee = computed(
-  () => cards.value[0]?.backContent?.guarantee ?? "",
-);
+// S77 BACK v2: the whole backContent of card 1 is editable. Re-render the back
+// when ANY back field changes (style, subhead, benefits, testimonial,
+// services, hours, guarantee).
+const backContent = computed(() => cards.value[0]?.backContent ?? null);
 const {
   previewUrl: backPreviewUrl,
   loading: backPreviewLoading,
   error: backPreviewError,
   refresh: refreshBackPreview,
-} = useBackPreview(draftIdRef, backGuarantee, isBack);
+} = useBackPreview(draftIdRef, backContent, isBack);
 
-function updateBackGuarantee(value: string) {
+function updateBack(patch: Partial<CardDesign["backContent"]>) {
   const card = cards.value[0];
   if (!card) return;
   invalidateProof();
-  // The back is a per-draft surface; the guarantee lives on card 1's
-  // backContent (the server reads backContent.guarantee from card 1).
+  // The back is a per-draft surface; all back fields live on card 1's
+  // backContent (the server reads backContent from card 1 for the back).
   replaceCardAt(0, {
     ...card,
     backContent: {
       ...card.backContent,
-      guarantee: value,
+      ...patch,
     },
   });
   commitDesign();
@@ -982,10 +981,10 @@ watch(
       <!-- Right column: Edit panel. Back tab swaps in the back editor
            (guarantee + read-only Business Info), S76 Phase-5. -->
       <BackEditPanel
-        v-if="isBack"
-        :guarantee="backGuarantee"
+        v-if="isBack && backContent"
+        :back-content="backContent"
         :brand-kit="brandKit"
-        @update-guarantee="updateBackGuarantee"
+        @update-back="updateBack"
       />
       <EditPanel
         v-else-if="activeCard"
