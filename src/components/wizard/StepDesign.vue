@@ -19,9 +19,11 @@ import BackEditPanel from "@/components/design/BackEditPanel.vue";
 import TemplateBrowser from "@/components/design/TemplateBrowser.vue";
 import ZonePopover from "@/components/design/ZonePopover.vue";
 import ContextDrawer from "@/components/design/ContextDrawer.vue";
+import CanvasCoachMark from "@/components/design/CanvasCoachMark.vue";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { useBackPreview } from "@/composables/useBackPreview";
+import { useDesignKeyboard } from "@/composables/useDesignKeyboard";
 import { previewCard } from "@/api/renderJobs";
 import {
   editZonesFor,
@@ -223,6 +225,7 @@ function closePopover() {
 }
 
 // The drawer's title + which section the hosted editor renders.
+// (useDesignKeyboard is wired below, after activeSide/flipState are declared)
 const drawerTitle = computed(() => {
   switch (drawerTab.value) {
     case "photo":
@@ -318,16 +321,128 @@ watch(previewUrl, (url) => {
   }
 });
 
-// --- Front/Back surface toggle (S76 Phase-5) -------------------------------
-// ONE back per draft (backs don't vary by card position), so the back preview
-// is keyed on the draft + the guarantee, not the active card index.
+// --- Front/Back surface toggle (S76 Phase-5 + S79 Phase-3 flip) ------------
+// activeSide: the user-facing selection ("which side am I on?").
+// renderSide: what the canvas ACTUALLY renders — follows activeSide but lags
+//   during the flip animation (swaps at the invisible 90° midpoint so no
+//   wrong-side image ever shows). Outside the animation window they are equal.
+// isBack: derived from renderSide (used by canvas, zone maps, drawer routing).
 const activeSide = ref<"front" | "back">("front");
-const isBack = computed(() => activeSide.value === "back");
-// Flipping sides closes the contextual editors (their zones no longer exist).
-watch(activeSide, () => {
+const renderSide = ref<"front" | "back">("front");
+const isBack = computed(() => renderSide.value === "back");
+
+// Canvas flip wrapper element ref (the div that carries the CSS animation).
+const canvasFlipWrapperEl = ref<HTMLElement | null>(null);
+// Current CSS class state for the flip wrapper.
+const flipState = ref<"idle" | "flipping" | "flipped-in">("idle");
+const flipWrapperClass = computed(() => ({
+  "canvas-flip-wrapper": true,
+  "is-flipping": flipState.value === "flipping",
+  "is-flipped-in": flipState.value === "flipped-in",
+}));
+
+/**
+ * Trigger the 3D CSS flip animation when activeSide changes.
+ *
+ *  1. Apply "is-flipping" → animates rotateY(0→90°) in 200ms
+ *  2. On animationend (or 250ms safety timeout): swap renderSide (card is
+ *     invisible at 90°), apply "is-flipped-in" → rotateY(-90°→0°) in 200ms
+ *  3. On second animationend: back to idle. Total ≈ 400ms.
+ *
+ * prefers-reduced-motion: CSS declares animation:none so animationend fires
+ * immediately — the swap is instant, no wrong side ever shows.
+ */
+function triggerFlip(newSide: "front" | "back") {
+  if (flipState.value !== "idle") {
+    // Another flip was already in progress — snap immediately.
+    renderSide.value = newSide;
+    flipState.value = "idle";
+    return;
+  }
+
+  // Check for prefers-reduced-motion or no animation support (JSDOM, SSR).
+  // When animations are disabled, snap the renderSide immediately.
+  const wrapper = canvasFlipWrapperEl.value;
+  const prefersReduced =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  // In JSDOM, animation-name will be empty string (CSS never runs) — detect via
+  // getComputedStyle. If the computed animationDuration is "0s" or absent,
+  // treat as no-animation (tests + reduced-motion users get instant swap).
+  const animated =
+    !prefersReduced &&
+    wrapper !== null &&
+    (() => {
+      try {
+        const dur = window.getComputedStyle(wrapper).animationDuration;
+        return dur && dur !== "0s";
+      } catch {
+        return false;
+      }
+    })();
+
+  if (!animated) {
+    // No animation: snap the side instantly (reduced-motion, JSDOM, no wrapper).
+    renderSide.value = newSide;
+    return;
+  }
+
+  flipState.value = "flipping";
+
+  function onFlipInEnd() {
+    flipState.value = "idle";
+  }
+  function onFlipOutEnd() {
+    // At the invisible 90° midpoint: swap the rendered side.
+    renderSide.value = newSide;
+    flipState.value = "flipped-in";
+    const safetyIn = setTimeout(onFlipInEnd, 250);
+    const wrapperIn = canvasFlipWrapperEl.value;
+    if (wrapperIn) {
+      wrapperIn.addEventListener("animationend", () => {
+        clearTimeout(safetyIn);
+        onFlipInEnd();
+      }, { once: true });
+    }
+  }
+
+  const safetyOut = setTimeout(onFlipOutEnd, 250);
+  if (wrapper) {
+    wrapper.addEventListener("animationend", () => {
+      clearTimeout(safetyOut);
+      onFlipOutEnd();
+    }, { once: true });
+  } else {
+    // Wrapper disappeared — snap.
+    clearTimeout(safetyOut);
+    renderSide.value = newSide;
+  }
+}
+
+// Wire keyboard navigation (S79 Phase-3): ArrowLeft/Right, F, Esc.
+// Declared here so all state refs (activeSide, popover, drawerTab) are already
+// in scope. The composable self-registers on document in onMounted.
+useDesignKeyboard({
+  cardCount: () => cards.value.length,
+  activeCardIndex: () => activeCardIndex.value,
+  setActiveCardIndex: (i) => { activeCardIndex.value = i; },
+  activeSide: () => activeSide.value,
+  setActiveSide: (side) => { activeSide.value = side; },
+  popoverOpen: () => popover.value !== null,
+  drawerOpen: () => drawerTab.value !== null,
+  closePopover,
+  closeDrawer,
+});
+
+// Flipping sides closes the contextual editors (their zones no longer exist)
+// and triggers the 3D CSS flip animation (S79 Phase-3). The rendered side
+// (`renderSide`) lags activeSide slightly while the card is in mid-flip.
+watch(activeSide, (newSide) => {
   popover.value = null;
   drawerTab.value = null;
-  // The back/front canvases can differ in available height; re-measure.
+  triggerFlip(newSide);
+  // The back/front canvases can differ in available height; re-measure after
+  // the flip settles.
   void nextTick(measureCanvas);
 });
 // S77 BACK v2: the whole backContent of card 1 is editable. Re-render the back
@@ -1126,17 +1241,22 @@ watch(
             <span class="inline-block w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           </div>
           <div v-else-if="backPreviewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
-            <img
-              :key="backPreviewUrl"
-              :src="backPreviewUrl"
-              alt="Postcard back preview"
-              class="w-full h-full object-cover rounded-lg"
-              :class="{ 'opacity-60': backPreviewLoading }"
-              @load="measureCanvas"
-            />
+            <!-- S79 Phase-3: flip wrapper — ONLY the img lives here so the
+                 CSS 3D transform never disturbs the zone hotspot layer. -->
+            <div ref="canvasFlipWrapperEl" :class="flipWrapperClass" class="absolute inset-0">
+              <img
+                :key="backPreviewUrl"
+                :src="backPreviewUrl"
+                alt="Postcard back preview"
+                class="w-full h-full object-cover rounded-lg"
+                :class="{ 'opacity-60': backPreviewLoading }"
+                @load="measureCanvas"
+              />
+            </div>
             <!-- Back click-to-edit hotspots (S79 Phase-2): same model as the
                  front — click a back zone → its editor opens in a popover
-                 (or the drawer for Back Style / Back Photo). -->
+                 (or the drawer for Back Style / Back Photo).
+                 tabindex + focus ring added for a11y (S79 Phase-3). -->
             <button
               v-for="(zone, zoneIdx) in backEditZones"
               :key="`back-${zone.editor}-${zoneIdx}`"
@@ -1144,7 +1264,8 @@ watch(
               :data-testid="`card-zone-${zone.editor}`"
               :title="zone.label"
               :aria-label="zone.label"
-              class="absolute group cursor-pointer bg-transparent"
+              tabindex="0"
+              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-1 rounded"
               :style="{
                 left: zone.left + '%',
                 top: zone.top + '%',
@@ -1154,7 +1275,7 @@ watch(
               @click="openZone(zone)"
             >
               <span
-                class="absolute inset-0 rounded border-2 border-transparent transition-colors group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
               />
               <span
                 class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
@@ -1197,29 +1318,35 @@ watch(
                with the painted artwork (the server PNG is exactly 1200×800,
                so the img fills the box with no letterbox/crop). -->
           <div v-else-if="previewUrl" ref="cardBoxEl" class="relative aspect-[3/2] h-full max-w-full rounded-lg shadow-lg ring-1 ring-black/5">
-            <img
-              :key="previewUrl"
-              :src="previewUrl"
-              alt="Postcard preview"
-              class="w-full h-full object-cover rounded-lg"
-              :class="{ 'opacity-60': previewLoading || switchingLayout }"
-              @load="measureCanvas"
-            />
-            <!-- Layout switch feedback: the old render stays visible but
-                 clearly transitional, so users don't re-click the picker. -->
-            <div
-              v-if="switchingLayout"
-              data-testid="layout-switch-overlay"
-              class="absolute inset-0 grid place-items-center bg-white/50 rounded"
-            >
-              <div class="flex items-center gap-2 bg-[#0b2d50]/90 text-white text-xs font-medium px-3 py-2 rounded-full shadow">
-                <span class="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Applying new layout…
+            <!-- S79 Phase-3: flip wrapper — ONLY the img lives here so the
+                 CSS 3D transform never disturbs the zone hotspot layer.
+                 ref="canvasFlipWrapperEl" assigns when front is active. -->
+            <div ref="canvasFlipWrapperEl" :class="flipWrapperClass" class="absolute inset-0">
+              <img
+                :key="previewUrl"
+                :src="previewUrl"
+                alt="Postcard preview"
+                class="w-full h-full object-cover rounded-lg"
+                :class="{ 'opacity-60': previewLoading || switchingLayout }"
+                @load="measureCanvas"
+              />
+              <!-- Layout switch feedback: the old render stays visible but
+                   clearly transitional, so users don't re-click the picker. -->
+              <div
+                v-if="switchingLayout"
+                data-testid="layout-switch-overlay"
+                class="absolute inset-0 grid place-items-center bg-white/50 rounded"
+              >
+                <div class="flex items-center gap-2 bg-[#0b2d50]/90 text-white text-xs font-medium px-3 py-2 rounded-full shadow">
+                  <span class="inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Applying new layout…
+                </div>
               </div>
             </div>
             <!-- Click-to-edit hotspots: invisible until hover, mapped to the
-                 template's slot geometry. Clicking opens the matching editor
-                 in the Edit Card panel. -->
+                 template's slot geometry. Lives OUTSIDE the flip wrapper so
+                 hit-areas are NEVER transformed (S79 Phase-3 guard).
+                 tabindex + focus ring added for a11y. -->
             <button
               v-for="(zone, zoneIdx) in editZones"
               :key="`${zone.editor}-${zoneIdx}`"
@@ -1227,7 +1354,8 @@ watch(
               :data-testid="`card-zone-${zone.editor}`"
               :title="zone.label"
               :aria-label="zone.label"
-              class="absolute group cursor-pointer bg-transparent"
+              tabindex="0"
+              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-1 rounded"
               :style="{
                 left: zone.left + '%',
                 top: zone.top + '%',
@@ -1237,7 +1365,7 @@ watch(
               @click="openZone(zone)"
             >
               <span
-                class="absolute inset-0 rounded border-2 border-transparent transition-colors group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
               />
               <span
                 class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
@@ -1284,83 +1412,92 @@ watch(
           </div>
         </div>
 
-        <!-- TIER-1 ANCHORED POPOVER (S79 Phase-2): hosts a single editor
-             section next to the clicked zone. Front popovers wrap EditPanel in
-             section mode; back popovers wrap BackEditPanel. Esc / outside-click
-             close; clicks inside never close (typing-safe). -->
-        <ZonePopover
-          v-if="popover"
-          :zone="popover.zone"
-          :viewport="canvasViewport"
-          :label="popoverLabel"
-          @close="closePopover"
-        >
-          <BackEditPanel
-            v-if="isBack && backContent"
-            mode="section"
-            :section="(popover.editor as any)"
-            :back-content="backContent"
-            :brand-kit="brandKit"
-            @update-back="updateBack"
-          />
-          <EditPanel
-            v-else-if="activeCard"
-            mode="section"
-            :section="(popover.editor as any)"
-            :card="activeCard"
-            :brand-kit="brandKit"
-            :requested-editor="requestedEditor"
-            @update-field="updateCardField"
-            @update-headline-lines="updateHeadlineLines"
-            @update-service-rows="updateServiceRows"
-            @update-offer-items="updateOfferItems"
-            @update-tips="updateTips"
-            @regenerate-cards="regenerateCards"
-            @update-colors="updateColors"
-            @update-photo="updatePhoto"
-            @open-template-browser="showTemplateBrowser = true"
-            @reset="resetCard"
-            @info-saved="refreshPreview"
-          />
-        </ZonePopover>
+        <!-- First-run coach mark (S79 Phase-3): "Click any part of the card to
+             edit it." One-time hint, stored in localStorage. -->
+        <CanvasCoachMark />
 
-        <!-- TIER-2 CONTEXT DRAWER (S79 Phase-2): the heavy editors — Photo,
-             Colors, Business Info, Back Style. Overlays the canvas region's
-             right edge WITHOUT reflowing the hero (absolute). Collapsed by
-             default. -->
-        <ContextDrawer
-          v-if="drawerTab"
-          :title="drawerTitle"
-          @close="closeDrawer"
-        >
-          <BackEditPanel
-            v-if="isBack && backContent"
-            mode="section"
-            :section="(drawerBackSection as any)"
-            :back-content="backContent"
-            :brand-kit="brandKit"
-            @update-back="updateBack"
-          />
-          <EditPanel
-            v-else-if="activeCard && drawerFrontSection"
-            mode="section"
-            :section="(drawerFrontSection as any)"
-            :card="activeCard"
-            :brand-kit="brandKit"
-            :requested-editor="requestedEditor"
-            @update-field="updateCardField"
-            @update-headline-lines="updateHeadlineLines"
-            @update-service-rows="updateServiceRows"
-            @update-offer-items="updateOfferItems"
-            @update-tips="updateTips"
-            @regenerate-cards="regenerateCards"
-            @update-colors="updateColors"
-            @update-photo="updatePhoto"
-            @open-template-browser="showTemplateBrowser = true"
-            @reset="resetCard"
-            @info-saved="refreshPreview"
-          />
-        </ContextDrawer>
+        <!-- TIER-1 ANCHORED POPOVER (S79 Phase-2 / Phase-3): hosts a single
+             editor section next to the clicked zone. Front popovers wrap
+             EditPanel in section mode; back popovers wrap BackEditPanel.
+             Esc / outside-click close; clicks inside never close (typing-safe).
+             Wrapped in <Transition name="popover"> for 150ms fade+scale. -->
+        <Transition name="popover">
+          <ZonePopover
+            v-if="popover"
+            :zone="popover.zone"
+            :viewport="canvasViewport"
+            :label="popoverLabel"
+            @close="closePopover"
+          >
+            <BackEditPanel
+              v-if="isBack && backContent"
+              mode="section"
+              :section="(popover.editor as any)"
+              :back-content="backContent"
+              :brand-kit="brandKit"
+              @update-back="updateBack"
+            />
+            <EditPanel
+              v-else-if="activeCard"
+              mode="section"
+              :section="(popover.editor as any)"
+              :card="activeCard"
+              :brand-kit="brandKit"
+              :requested-editor="requestedEditor"
+              @update-field="updateCardField"
+              @update-headline-lines="updateHeadlineLines"
+              @update-service-rows="updateServiceRows"
+              @update-offer-items="updateOfferItems"
+              @update-tips="updateTips"
+              @regenerate-cards="regenerateCards"
+              @update-colors="updateColors"
+              @update-photo="updatePhoto"
+              @open-template-browser="showTemplateBrowser = true"
+              @reset="resetCard"
+              @info-saved="refreshPreview"
+            />
+          </ZonePopover>
+        </Transition>
+
+        <!-- TIER-2 CONTEXT DRAWER (S79 Phase-2 / Phase-3): the heavy editors —
+             Photo, Colors, Business Info, Back Style. Overlays the canvas
+             region's right edge WITHOUT reflowing the hero (absolute). Collapsed
+             by default. Wrapped in <Transition name="drawer"> for 200ms slide. -->
+        <Transition name="drawer">
+          <ContextDrawer
+            v-if="drawerTab"
+            :title="drawerTitle"
+            @close="closeDrawer"
+          >
+            <BackEditPanel
+              v-if="isBack && backContent"
+              mode="section"
+              :section="(drawerBackSection as any)"
+              :back-content="backContent"
+              :brand-kit="brandKit"
+              @update-back="updateBack"
+            />
+            <EditPanel
+              v-else-if="activeCard && drawerFrontSection"
+              mode="section"
+              :section="(drawerFrontSection as any)"
+              :card="activeCard"
+              :brand-kit="brandKit"
+              :requested-editor="requestedEditor"
+              @update-field="updateCardField"
+              @update-headline-lines="updateHeadlineLines"
+              @update-service-rows="updateServiceRows"
+              @update-offer-items="updateOfferItems"
+              @update-tips="updateTips"
+              @regenerate-cards="regenerateCards"
+              @update-colors="updateColors"
+              @update-photo="updatePhoto"
+              @open-template-browser="showTemplateBrowser = true"
+              @reset="resetCard"
+              @info-saved="refreshPreview"
+            />
+          </ContextDrawer>
+        </Transition>
       </div>
     </div>
 

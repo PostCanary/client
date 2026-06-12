@@ -1,19 +1,18 @@
 <script setup lang="ts">
 /**
- * ContextDrawer (S79 Phase-2) — a docked right-side drawer for the HEAVY /
- * global editors that don't belong in a compact popover: Photo (gallery +
- * upload + stock + AI), Colors (palettes + custom), Business Info, and the
- * Back-style picker. It overlays the right edge of the canvas region WITHOUT
- * shifting the canvas (absolute, so the hero never reflows), is collapsed by
- * default, and scrolls itself.
+ * ContextDrawer (S79 Phase-2 / Phase-3) — a docked right-side drawer for the
+ * HEAVY / global editors: Photo, Colors, Business Info, and Back-style.
+ * It overlays the right edge of the canvas region WITHOUT shifting the canvas
+ * (absolute positioning), is collapsed by default, and scrolls itself.
  *
- * Open/close: opened from toolbar buttons and from relevant zone clicks (photo
- * zone → Photo tab; map zone keeps its existing in-popover editor). Esc and the
- * close button dismiss; the backdrop is intentionally non-modal (a faint scrim
- * only over the drawer's own gutter) so the canvas stays visible and the
- * customer keeps their place. Clicks inside never close it.
+ * Open/close: opened from toolbar buttons and zone clicks. Esc is handled
+ * centrally by useDesignKeyboard in StepDesign (Esc → close popover first,
+ * then drawer); the close button is the in-component affordance.
+ * Clicks inside never close it.
+ *
+ * Transition: the parent wraps this component in <Transition name="drawer">
+ * using the .drawer-* classes declared in index.css (slide-in 200ms ease).
  */
-import { onMounted, onBeforeUnmount } from "vue";
 
 defineProps<{
   /** drawer title shown in the header */
@@ -21,20 +20,12 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{ (e: "close"): void }>();
-
-function onKeydown(ev: KeyboardEvent) {
-  if (ev.key === "Escape") {
-    ev.stopPropagation();
-    emit("close");
-  }
-}
-onMounted(() => document.addEventListener("keydown", onKeydown));
-onBeforeUnmount(() => document.removeEventListener("keydown", onKeydown));
 </script>
 
 <template>
   <!-- Positioned absolutely inside the (relative) canvas region so it overlays
-       the right side without reflowing the hero. -->
+       the right side without reflowing the hero. The drawer slides in from the
+       right (~200ms ease-in-out) and slides out on close. -->
   <aside
     data-testid="context-drawer"
     class="absolute inset-y-0 right-0 z-20 flex w-[360px] max-w-[88%] flex-col border-l border-gray-200 bg-white shadow-2xl"
@@ -58,3 +49,4 @@ onBeforeUnmount(() => document.removeEventListener("keydown", onKeydown));
     </div>
   </aside>
 </template>
+
