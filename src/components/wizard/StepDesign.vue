@@ -630,7 +630,26 @@ function revokeThumbnailUrls() {
 const THUMB_RETRY_DELAYS_MS = [1500, 3000, 6000];
 const THUMB_MAX_ATTEMPTS = 4;
 
+// The retry ladder masked a GUARANTEED first-attempt 400 on fresh drafts:
+// generated cards land via setDesign + a 500ms debounced PUT, and the
+// thumbnail fetches raced that save — the server had no cards yet
+// ("Card N not found in draft" ×3 in the console on every new campaign;
+// S82 QA fleet hit it in 4 of 7 walks). Hold the FIRST attempt until the
+// store finishes persisting; the ladder stays as backstop for anything
+// slower server-side. Times out into the normal retry path so a stuck
+// save can't wedge the thumbnails.
+async function waitForDraftPersisted(timeoutMs = 8000): Promise<void> {
+  const start = Date.now();
+  while (
+    (draftStore.isDirty || draftStore.saving) &&
+    Date.now() - start < timeoutMs
+  ) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
 async function fetchThumbnail(idx: number, attempt = 0): Promise<string | null> {
+  if (attempt === 0) await waitForDraftPersisted();
   const id = draftStore.draft?.id;
   if (!id) return null;
   const cardNum = idx + 1;

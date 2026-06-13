@@ -132,13 +132,18 @@ const seedAddress = computed(
   () => brandKitStore.brandKit?.address ?? "Your address on file",
 );
 
-// Approve — gated on P0 #4 consolidated confirmation
+// Approve — gated on P0 #4 consolidated confirmation, AND on a non-empty
+// audience: an empty custom-area draw used to sail through to an active
+// Approve at "0 households / $0.00" (S82 QA fleet — 2 of 7 walks hit it
+// independently). A campaign to nobody is never approvable; the free
+// send-to-yourself copy alone doesn't make it one.
 const canApprove = computed(
   () =>
     !approving.value &&
     Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
     schedules.value.length > 0 &&
+    householdCount.value > 0 &&
     acknowledgedAccuracy.value,
 );
 
@@ -366,6 +371,24 @@ async function approve() {
         </div>
         <div class="text-xs text-gray-400">
           {{ targetingMethodLabel }}
+        </div>
+        <!-- Empty-audience rescue: explains WHY Approve is disabled and
+             points back at Step 2 (an empty custom draw is easy to do
+             without noticing). -->
+        <div
+          v-if="householdCount === 0"
+          data-testid="zero-households-warning"
+          class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+        >
+          Your target area has no households, so this campaign can't be
+          approved yet.
+          <button
+            class="font-semibold underline"
+            @click="draftStore.goToStep(2)"
+          >
+            Go back to Pick Your Neighborhood
+          </button>
+          and choose an area with at least one household.
         </div>
       </div>
 
