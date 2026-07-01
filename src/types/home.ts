@@ -178,7 +178,7 @@ export const MOCK_HOME_CONTEXT: HomeUserContext = {
 // fresh "Start This Campaign" draft — 12 jobs × 0.5mi radius, HVAC
 // preset filters applied via client default. The live audience
 // service returns 900 households for this configuration. 3-card
-// sequence × 900 × $0.69 = $1,863.
+// sequence × 900 × $0.99 = $2,673 (server-owned rate, GET /api/billing/pricing).
 export const MOCK_RECOMMENDATION: BestPracticeRecommendation = {
   id: 'rec-neighbor-marketing-30d',
   title: 'Neighbor Marketing — Past 30 Days',
@@ -186,7 +186,7 @@ export const MOCK_RECOMMENDATION: BestPracticeRecommendation = {
   why: 'You completed 12 jobs in the past 30 days. Mail their neighbors this week while the work is still visible.',
   goalType: 'neighbor_marketing',
   estimatedCount: 900,
-  estimatedCost: 1863,
+  estimatedCost: 2673,
   previewImageUrl: null,
   seasonalTag: 'Recommended',
   urgency: 'high',
@@ -224,14 +224,14 @@ export const MOCK_CAMPAIGNS: HomeCampaignSummary[] = [
 ]
 
 // S69 demo prep: budget sized to accommodate the recommended campaign
-// ($1,863 for 3 × 900 households × $0.69) plus headroom for one more.
+// ($2,673 for 3 × 900 households × $0.99) plus headroom for one more.
 // nextRecommendedSpend aligns with MOCK_RECOMMENDATION.estimatedCost.
 export const MOCK_BUDGET: BudgetSummary = {
   monthlyBudget: 4500,
   spent: 200,
   remaining: 4300,
   campaignsSentThisMonth: 1,
-  nextRecommendedSpend: 1863,
+  nextRecommendedSpend: 2673,
   canAffordRecommendation: true,
 }
 

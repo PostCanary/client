@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { PRICING } from "@/types/campaign";
+import { usePricing } from "@/composables/usePricing";
 import type { PlanCode } from "@/api/billing";
 import { formatCurrency, formatNumber } from "@/utils/format";
 
@@ -10,9 +10,11 @@ const props = defineProps<{
   planCode?: PlanCode | null;
 }>();
 
+const pricing = usePricing();
+
 const perCardRate = computed(() => {
-  if (!props.planCode) return PRICING.payPerSend;
-  return PRICING[props.planCode] ?? PRICING.payPerSend;
+  if (!props.planCode) return pricing.payPerSend;
+  return pricing[props.planCode] ?? pricing.payPerSend;
 });
 
 const cards = computed(() =>

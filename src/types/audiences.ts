@@ -164,7 +164,7 @@ export const REQUIRED_FIELDS: Record<MapperSource, readonly string[]> = {
 export type AudienceCostPreview = {
   audience_id: string
   deliverable_count: number
-  per_card_cost_cents: number          // 69 for $0.69 default
+  per_card_cost_cents: number          // server-owned (99 = $0.99 pay-per-send)
   per_card_subtotal_cents: number      // deliverable_count * per_card_cost_cents
   // Phase 2 fields (null in Phase 1)
   enrich_enabled: boolean

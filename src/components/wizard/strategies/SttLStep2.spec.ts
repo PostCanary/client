@@ -50,11 +50,11 @@ const suppressionResult = {
 const costPreview = {
   audience_id: AUDIENCE_ID,
   deliverable_count: 482,
-  per_card_cost_cents: 69,
-  per_card_subtotal_cents: 33258,
+  per_card_cost_cents: 99,
+  per_card_subtotal_cents: 47718,
   enrich_enabled: false,
   melissa_enrich_estimate_cents: null,
-  total_cents: 33258,
+  total_cents: 47718,
 }
 
 const approvalResponse = {

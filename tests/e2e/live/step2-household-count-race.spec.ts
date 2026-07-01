@@ -25,7 +25,7 @@ import { test, expect, type Page } from "@playwright/test";
  */
 
 const DRAFT_URL_RE = /\/app\/send\/([0-9a-f-]{36})/;
-const PER_CARD_RATE = 0.69; // src/types/campaign.ts PRICING.payPerSend
+const PER_CARD_RATE = 0.99; // server-owned: GET /api/billing/pricing (fallback src/types/campaign.ts PRICING.payPerSend)
 
 // Parse "900 households" or "1,863" style strings into integers.
 function parseNumber(text: string): number {
@@ -201,7 +201,7 @@ test.describe("S70 — Step 2 household count never persists as 0", () => {
       `Step 4 households (${step4Count}) must match Step 2 (${step2Count}) within 1 — mismatch indicates a Step 4 read-path regression`,
     ).toBeLessThanOrEqual(1);
 
-    // Cost sanity: for any card row, cost ≈ households × $0.69 (allow a few
+    // Cost sanity: for any card row, cost ≈ households × $0.99 (allow a few
     // cents of rounding). Just assert ANY non-zero price is present; the
     // full math check is visible in the screenshot if Drake wants to verify.
     const hasNonZeroPrice = priceStrings.some((s) => s !== "$0.00" && s !== "$0");
