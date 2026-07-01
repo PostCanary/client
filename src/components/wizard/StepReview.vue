@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import { PRICING } from "@/types/campaign";
+import { usePricing } from "@/composables/usePricing";
 import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
@@ -123,8 +123,11 @@ function updateSchedule(updated: CardSchedule[]) {
 }
 
 // Cost
-const perCardRate = PRICING.payPerSend; // Round 1: flat rate
-const totalCost = computed(() => householdCount.value * perCardRate * seqLen.value);
+const pricing = usePricing();
+const perCardRate = computed(() => pricing.payPerSend); // Round 1: flat rate
+const totalCost = computed(
+  () => householdCount.value * perCardRate.value * seqLen.value,
+);
 
 // Seeding
 const sendSeedCopy = ref(draftStore.draft?.review?.sendSeedCopy ?? true);
@@ -162,7 +165,7 @@ async function approve() {
     paymentMethodLabel: "Visa ending in 4242",
     totalCost: totalCost.value,
     perCardCosts: Array(seqLen.value).fill(
-      householdCount.value * perCardRate,
+      householdCount.value * perCardRate.value,
     ),
     agreedToTerms: acknowledgedAccuracy.value,
   };

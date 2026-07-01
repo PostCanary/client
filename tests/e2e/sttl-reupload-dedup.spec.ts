@@ -59,11 +59,11 @@ test("SttL re-upload dedup uses the existing audience idempotently", async ({ pa
       body: JSON.stringify({
         audience_id: "audience-existing",
         deliverable_count: 482,
-        per_card_cost_cents: 69,
-        per_card_subtotal_cents: 33258,
+        per_card_cost_cents: 99,
+        per_card_subtotal_cents: 47718,
         enrich_enabled: false,
         melissa_enrich_estimate_cents: null,
-        total_cents: 33258,
+        total_cents: 47718,
       }),
     });
   });

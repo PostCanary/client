@@ -2,7 +2,8 @@
 import { ref, computed, watch, provide, onMounted, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import { GOAL_DEFAULTS, PRICING } from "@/types/campaign";
+import { GOAL_DEFAULTS } from "@/types/campaign";
+import { usePricing } from "@/composables/usePricing";
 import type { TargetingSelection, TargetingFilters, JobReference, EddmSelection } from "@/types/campaign";
 import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
@@ -147,8 +148,9 @@ const finalHouseholdCount = computed(() =>
 );
 const pastInArea = computed(() => apiExclusions.value.pastCustomers);
 const sequenceLength = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
+const pricing = usePricing();
 const estimatedCostSequence = computed(
-  () => finalHouseholdCount.value * PRICING.payPerSend * sequenceLength.value,
+  () => finalHouseholdCount.value * pricing.payPerSend * sequenceLength.value,
 );
 
 // Watch areas + filters and trigger API fetch
@@ -207,8 +209,8 @@ function commitEddmTargeting() {
     finalHouseholdCount: sel.totalHouseholds,
     pastCustomersInArea: 0,
     recipientBreakdown: { newProspects: sel.totalHouseholds, pastCustomers: 0, pastCustomersIncluded: false },
-    estimatedCostSingle: sel.totalHouseholds * PRICING.payPerSend,
-    estimatedCostSequence: sel.totalHouseholds * PRICING.payPerSend * (draftStore.draft?.goal?.sequenceLength ?? 1),
+    estimatedCostSingle: sel.totalHouseholds * pricing.payPerSend,
+    estimatedCostSequence: sel.totalHouseholds * pricing.payPerSend * (draftStore.draft?.goal?.sequenceLength ?? 1),
     countSource: 'mock',
     savedAudienceName: null,
     eddmSelection: sel,
@@ -223,7 +225,7 @@ function commitTargeting() {
   if (commitTimer) clearTimeout(commitTimer);
   commitTimer = setTimeout(() => {
     const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
-    const perCard = PRICING.payPerSend;
+    const perCard = pricing.payPerSend;
 
     const targeting: TargetingSelection = {
       campaignGoal: goalType.value,

@@ -1180,11 +1180,11 @@ export async function installMockApi(page: Page, state: MockAppState) {
       return json(route, {
         audience_id: audienceId,
         deliverable_count: 482,
-        per_card_cost_cents: 69,
-        per_card_subtotal_cents: 33258,
+        per_card_cost_cents: 99,
+        per_card_subtotal_cents: 47718,
         enrich_enabled: false,
         melissa_enrich_estimate_cents: null,
-        total_cents: 33258,
+        total_cents: 47718,
       });
     }
 
@@ -1361,6 +1361,18 @@ export async function installMockApi(page: Page, state: MockAppState) {
         }, 0);
       }
       return json(route, response);
+    }
+
+    if (pathname === "/api/billing/pricing" && method === "GET") {
+      return json(route, {
+        pay_per_send_cents: 99,
+        subscription_rates_cents: {
+          INSIGHT: 79,
+          PERFORMANCE: 79,
+          PRECISION: 79,
+          ELITE: 79,
+        },
+      });
     }
 
     if (pathname === "/api/billing/create-portal-session" && method === "POST") {

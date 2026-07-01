@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from "vue";
-import { PRICING } from "@/types/campaign";
+import { usePricing } from "@/composables/usePricing";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { formatCurrency, formatNumber } from "@/utils/format";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
@@ -16,9 +16,11 @@ const hc = inject(HOUSEHOLD_COUNT_KEY)!;
 
 const draftStore = useCampaignDraftStore();
 const seqLen = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
-const perCard = PRICING.payPerSend;
+const pricing = usePricing();
 
-const perCardCost = computed(() => props.finalHouseholdCount * perCard);
+const perCardCost = computed(
+  () => props.finalHouseholdCount * pricing.payPerSend,
+);
 const totalCost = computed(() => perCardCost.value * seqLen.value);
 const isSmall = computed(() => props.finalHouseholdCount < 100);
 const hasExclusions = computed(() =>
@@ -93,7 +95,7 @@ const hasExclusions = computed(() =>
       >
         <span class="text-gray-500">
           Card {{ n }}: {{ formatNumber(finalHouseholdCount) }} &times;
-          ${{ perCard.toFixed(2) }}
+          ${{ pricing.payPerSend.toFixed(2) }}
         </span>
         <span class="text-[#0b2d50] font-medium">
           {{ formatCurrency(perCardCost) }}

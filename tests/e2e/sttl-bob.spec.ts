@@ -28,7 +28,7 @@ test("Bob can upload, suppress, price, and approve within performance budgets", 
   const suppressionMs = performance.now() - started;
   expect(suppressionMs).toBeLessThanOrEqual(30000);
 
-  await expect(page.getByTestId("enrich-cost-block")).toContainText("$332.58", { timeout: 45000 });
+  await expect(page.getByTestId("enrich-cost-block")).toContainText("$477.18", { timeout: 45000 });
   const costMs = performance.now() - started;
   expect(costMs).toBeLessThanOrEqual(45000);
 

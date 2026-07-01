@@ -21,6 +21,20 @@ export interface CheckoutSessionResult {
 
 export type PlanCode = "INSIGHT" | "PERFORMANCE" | "PRECISION" | "ELITE";
 
+/* ------------------------------------------------------------------
+ * Per-postcard pricing (server-owned source of truth)
+ * Backend: GET /api/billing/pricing  (public, cents)
+ * ------------------------------------------------------------------ */
+
+export interface PricingPayload {
+  pay_per_send_cents: number;
+  subscription_rates_cents: Record<PlanCode, number>;
+}
+
+export async function fetchPricing(): Promise<PricingPayload> {
+  return api<PricingPayload>("/api/billing/pricing");
+}
+
 export interface PaywallConfig {
   // Backend sends snake_case keys; frontend modal uses camelCase.
   title?: string;

@@ -643,17 +643,20 @@ export interface MailCampaignCard {
 }
 
 // ============================================================
-// PER-CARD PRICING
+// PER-CARD PRICING — FALLBACK ONLY.
+// The server owns these rates (GET /api/billing/pricing, locked by the
+// D6 pricing decisions: $0.99 pay-per-send, $0.79 all subscription tiers).
+// Components must read rates via usePricing(), which fetches from the
+// server and falls back to these values only while offline/loading.
 // Keys match PlanCode from @/api/billing (INSIGHT/PERFORMANCE/PRECISION/ELITE)
-// Display names are in @/config/plans.ts (Starter/Basic/Pro/Ultimate)
 // ============================================================
 
 export const PRICING = {
-  payPerSend: 0.69,       // no subscription
-  INSIGHT: 0.59,          // Starter ($99/mo)
-  PERFORMANCE: 0.52,      // Basic ($249/mo)
-  PRECISION: 0.45,        // Pro ($499/mo)
-  ELITE: 0.42,            // Ultimate ($999/mo)
+  payPerSend: 0.99,
+  INSIGHT: 0.79,
+  PERFORMANCE: 0.79,
+  PRECISION: 0.79,
+  ELITE: 0.79,
 } as const
 
 export type PricingTier = keyof typeof PRICING
