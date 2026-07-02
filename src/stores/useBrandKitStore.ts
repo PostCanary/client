@@ -105,6 +105,27 @@ export const useBrandKitStore = defineStore("brandKit", {
       }
     },
 
+    /** S85: orgs that onboarded while ungated never ran the website
+     * scrape (OnboardingModal skips it without the postcards feature),
+     * and nothing else triggers one. When an approved org opens a design
+     * surface with a never-scraped kit ("pending") and a known website
+     * URL, kick the scrape off once. 409 (already scraping) is handled
+     * inside triggerScrape. */
+    async ensureScraped() {
+      if (import.meta.env.VITE_SKIP_AUTH === "true") return;
+      const auth = useAuthStore();
+      if (!auth.hasPostcards) return;
+      if (!this.hydrated) await this.fetch();
+      if (this.brandKit?.scrapeStatus !== "pending") return;
+      const url = (
+        this.brandKit?.websiteUrl ||
+        auth.profile?.website_url ||
+        ""
+      ).trim();
+      if (!url) return;
+      await this.triggerScrape(url);
+    },
+
     async update(partial: Partial<BrandKit>) {
       // MOCK MODE: update locally without API
       if (import.meta.env.VITE_SKIP_AUTH === "true") {

@@ -714,7 +714,9 @@ onMounted(() => {
   void nextTick(measureCanvas);
   window.addEventListener("resize", measureCanvas);
 
-  if (!brandKitStore.hydrated) brandKitStore.fetch();
+  // ensureScraped(): fetch if needed + lazily run the website scrape for
+  // orgs that onboarded before postcards access (S85 review finding).
+  void brandKitStore.ensureScraped();
 
   // Fire-and-forget feature probe — never blocks the design step.
   getMediaFeaturesCached()
