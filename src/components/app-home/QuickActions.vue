@@ -1,7 +1,9 @@
 <!-- src/components/app-home/QuickActions.vue -->
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { captureEvent } from '@/composables/usePostHog'
+import { useAuthStore } from '@/stores/auth'
 import type { QuickAction } from '@/types/home'
 import {
   MailOutline,
@@ -15,6 +17,18 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const auth = useAuthStore()
+
+/* S85 postcards gate: hide send/designs quick actions for unapproved orgs.
+   The router guard is the backstop for any CTA missed elsewhere. */
+const GATED_ROUTE_PREFIXES = ['/app/send', '/app/designs', '/app/campaigns']
+const visibleActions = computed(() =>
+  auth.hasPostcards
+    ? props.actions
+    : props.actions.filter(
+        (a) => !GATED_ROUTE_PREFIXES.some((p) => a.route.startsWith(p)),
+      ),
+)
 
 const iconMap: Record<string, any> = {
   MailOutline,
@@ -27,7 +41,7 @@ const iconMap: Record<string, any> = {
 <template>
   <div class="quick-actions">
     <button
-      v-for="action in actions"
+      v-for="action in visibleActions"
       :key="action.id"
       class="qa-card"
       :class="{ 'qa-card--primary': action.variant === 'primary' }"

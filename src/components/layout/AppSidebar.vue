@@ -134,8 +134,8 @@ async function onSignOut() {
       </li>
     </ul>
 
-    <!-- "+ Send Postcards" button -->
-    <div class="sidebar-cta">
+    <!-- "+ Send Postcards" button (hidden until the org has postcards access, S85) -->
+    <div v-if="auth.hasPostcards" class="sidebar-cta">
       <button
         v-if="isCollapsed"
         class="cta-collapsed"
@@ -156,7 +156,8 @@ async function onSignOut() {
       </button>
     </div>
 
-    <!-- SEND MAIL section -->
+    <!-- SEND MAIL section (hidden until the org has postcards access, S85) -->
+    <template v-if="auth.hasPostcards">
     <div class="section-divider"></div>
     <span v-if="!isCollapsed" class="section-header">SEND MAIL</span>
     <ul class="nav-section">
@@ -176,6 +177,8 @@ async function onSignOut() {
         </button>
       </li>
     </ul>
+
+    </template>
 
     <!-- RESULTS section -->
     <div class="section-divider"></div>

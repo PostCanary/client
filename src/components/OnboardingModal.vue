@@ -122,10 +122,15 @@ async function onSubmit() {
         service_types: serviceTypes.value.length > 0 ? serviceTypes.value : undefined,
       });
 
-      // Seed brand kit from org data + trigger mock scrape
-      await brandKitStore.fetch();
-      if (websiteUrl.value.trim()) {
-        brandKitStore.triggerScrape(websiteUrl.value.trim());
+      // Seed brand kit from org data + trigger mock scrape.
+      // Skipped when the org lacks postcards access (S85): the server
+      // gates /api/brand-kit with 403 feature_not_enabled, and a failed
+      // background scrape is just noise during profile onboarding.
+      if (auth.hasPostcards) {
+        await brandKitStore.fetch();
+        if (websiteUrl.value.trim()) {
+          brandKitStore.triggerScrape(websiteUrl.value.trim());
+        }
       }
     }
 
