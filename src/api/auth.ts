@@ -1,5 +1,6 @@
 // src/api/auth.ts
 import { AUTH_BASE } from "@/config/auth";
+import { ensureCsrfToken } from "@/api/http";
 import type { AuthMeResponse } from "@/api/users";
 
 /**
@@ -25,6 +26,14 @@ async function readJsonSafe<T>(res: Response, fallback: T): Promise<T> {
   }
 }
 
+async function authJsonHeaders(): Promise<HeadersInit> {
+  const token = await ensureCsrfToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { "X-CSRF-Token": token } : {}),
+  };
+}
+
 export async function authMe(): Promise<AuthMeResponse> {
   const res = await fetch(join(AUTH_BASE, "/auth/me"), { credentials: "include" });
   return readJsonSafe<AuthMeResponse>(res, { authenticated: false });
@@ -35,7 +44,7 @@ export async function authLoginJson(email: string, password: string): Promise<Re
   return fetch(join(AUTH_BASE, "/auth/login-json"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: await authJsonHeaders(),
     body: JSON.stringify({ email, password }),
   });
 }
@@ -51,7 +60,7 @@ export async function authRegisterJson(
   return fetch(join(AUTH_BASE, "/auth/register-json"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: await authJsonHeaders(),
     body: JSON.stringify(body),
   });
 }
@@ -70,11 +79,16 @@ export async function authForgotPassword(email: string): Promise<Response> {
   return fetch(join(AUTH_BASE, "/auth/forgot-password"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: await authJsonHeaders(),
     body: JSON.stringify({ email }),
   });
 }
 
 export async function authLogout(): Promise<void> {
-  await fetch(join(AUTH_BASE, "/auth/logout"), { method: "GET", credentials: "include" });
+  const token = await ensureCsrfToken();
+  await fetch(join(AUTH_BASE, "/auth/logout"), {
+    method: "POST",
+    credentials: "include",
+    headers: token ? { "X-CSRF-Token": token } : {},
+  });
 }

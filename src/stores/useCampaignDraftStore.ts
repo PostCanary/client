@@ -1,0 +1,443 @@
+// src/stores/useCampaignDraftStore.ts
+import { defineStore } from "pinia";
+import type {
+  CampaignDraft,
+  WizardStep,
+  GoalSelection,
+  TargetingSelection,
+  DesignSelection,
+  ReviewSelection,
+  AudienceWizardState,
+} from "@/types/campaign";
+import type {
+  AudienceCostPreview,
+  AudienceSuppressionResult,
+} from "@/types/audiences";
+import {
+  saveDraft,
+  loadDraft,
+  createDraft,
+  deleteDraft,
+} from "@/api/campaignDrafts";
+import { API_BASE } from "@/api/http";
+import { generateCards } from "@/composables/usePostcardGenerator";
+import {
+  getRecommendedTemplateSet,
+  getTemplateSetsForGoal,
+  renderTemplateIdForLayout,
+} from "@/data/templates";
+import type { CampaignGoalType } from "@/types/campaign";
+
+// Module-level — NOT in Pinia state (avoids HMR/serialization issues)
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+let _pendingSave = false;
+let _retryCount = 0;
+let _dirty = false;
+let _generatingCards = false;
+// Bumped on every setDesign. generateCardsForDraft captures it before its
+// AI calls and refuses to stomp a design the user modified meanwhile —
+// generation completing late used to silently revert e.g. a layout switch
+// made during the generation window (S73 live-observed race).
+let _designRevision = 0;
+let _saveChain: Promise<void> | null = null;
+let _saveRevision = 0;
+const MAX_RETRIES = 3;
+const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
+
+export const useCampaignDraftStore = defineStore("campaignDraft", {
+  state: () => ({
+    draft: null as CampaignDraft | null,
+    saving: false,
+    loading: false,
+    error: null as string | null,
+    lastSavedAt: null as string | null,
+    audienceId: null as string | null,
+    audienceSource: null as "csv" | "existing" | null,
+    suppressionResult: null as AudienceSuppressionResult | null,
+    costPreview: null as AudienceCostPreview | null,
+  }),
+
+  getters: {
+    currentStep: (state) => state.draft?.currentStep ?? 1,
+    isStepComplete:
+      (state) =>
+      (step: WizardStep): boolean =>
+        state.draft?.completedSteps.includes(step) ?? false,
+    needsReview:
+      (state) =>
+      (step: WizardStep): boolean =>
+        state.draft?.needsReviewSteps.includes(step) ?? false,
+    canProceed:
+      (state) =>
+      (step: WizardStep): boolean => {
+        if (!state.draft) return false;
+        return state.draft.completedSteps.includes(step);
+      },
+    progressPercent: (state): number => {
+      if (!state.draft) return 0;
+      return (state.draft.completedSteps.length / 4) * 100;
+    },
+    isDirty: (): boolean => _dirty,
+  },
+
+  actions: {
+    // --- Lifecycle ---
+    async startNew() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const draft = await createDraft();
+        this.draft = draft;
+      } catch (e: any) {
+        this.error = "Failed to start campaign. Please try again.";
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async resume(draftId: string) {
+      this.loading = true;
+      this.error = null;
+      try {
+        this.draft = await loadDraft(draftId);
+      } catch (e: any) {
+        this.error = "Failed to load draft. Please try again.";
+        throw e;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async discard() {
+      if (this.draft) {
+        await deleteDraft(this.draft.id);
+        this.draft = null;
+      }
+    },
+
+    // --- Step Updates ---
+    setCampaignType(type: 'targeted' | 'eddm') {
+      if (!this.draft) return;
+      this.draft.campaignType = type;
+      this._debounceSave();
+    },
+
+    setGoal(goal: GoalSelection) {
+      if (!this.draft) return;
+      const goalChanged = this.draft.goal?.goalType !== goal.goalType;
+      this.draft.goal = goal;
+      this._markComplete(1);
+
+      if (goalChanged && this.draft.completedSteps.length > 1) {
+        // Flag later steps for review but DON'T wipe data
+        // Include step 4 (Review) — cost/schedule data depends on goal
+        this.draft.needsReviewSteps = [2, 3, 4].filter((s) =>
+          this.draft!.completedSteps.includes(s as WizardStep),
+        ) as WizardStep[];
+      }
+      this._debounceSave();
+      this.generateCardsForDraft();
+    },
+
+    setTargeting(targeting: TargetingSelection) {
+      if (!this.draft) return;
+      this.draft.targeting = targeting;
+      this._markComplete(2);
+      this._clearReview(2);
+      // Flag steps 3 and 4 for review — cost/schedule data depends on targeting
+      for (const step of [3, 4] as WizardStep[]) {
+        if (this.draft.completedSteps.includes(step)) {
+          if (!this.draft.needsReviewSteps.includes(step)) {
+            this.draft.needsReviewSteps.push(step);
+          }
+        }
+      }
+      this._debounceSave();
+    },
+
+    setAudienceState(audience: Partial<AudienceWizardState>) {
+      if (!this.draft) return;
+      const current: AudienceWizardState = this.draft.audience ?? {
+        audienceId: null,
+        audienceSource: null,
+        suppressionResult: null,
+        costPreview: null,
+      };
+      this.draft.audience = { ...current, ...audience };
+      this._debounceSave();
+    },
+
+    approveAudienceState(audience: Partial<AudienceWizardState>) {
+      if (!this.draft) return;
+      this.setAudienceState(audience);
+      this._markComplete(2);
+      this._clearReview(2);
+      for (const step of [3, 4] as WizardStep[]) {
+        if (this.draft.completedSteps.includes(step) && !this.draft.needsReviewSteps.includes(step)) {
+          this.draft.needsReviewSteps.push(step);
+        }
+      }
+      this._debounceSave();
+    },
+
+    setDesign(design: DesignSelection) {
+      if (!this.draft) return;
+      _designRevision++;
+      this.draft.design = design;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    setReview(review: ReviewSelection) {
+      if (!this.draft) return;
+      this.draft.review = review;
+      this._markComplete(4);
+      this._debounceSave();
+    },
+
+    setAudienceSource(source: "csv" | "existing") {
+      this.audienceSource = source;
+    },
+
+    setAudienceId(audienceId: string | null) {
+      this.audienceId = audienceId;
+    },
+
+    setSuppressionResult(result: AudienceSuppressionResult | null) {
+      this.suppressionResult = result;
+    },
+
+    setCostPreview(preview: AudienceCostPreview | null) {
+      this.costPreview = preview;
+    },
+
+    clearAudienceState() {
+      this.audienceId = null;
+      this.audienceSource = null;
+      this.suppressionResult = null;
+      this.costPreview = null;
+    },
+
+    goToStep(step: WizardStep) {
+      if (!this.draft) return;
+      const maxStep = Math.min(
+        Math.max(...this.draft.completedSteps, 0) + 1,
+        4,
+      ) as WizardStep;
+      if (step <= maxStep) {
+        this.draft.currentStep = step;
+      }
+    },
+
+    // --- Internal ---
+    _markComplete(step: WizardStep) {
+      if (!this.draft) return;
+      if (!this.draft.completedSteps.includes(step)) {
+        this.draft.completedSteps.push(step);
+        this.draft.completedSteps.sort();
+      }
+    },
+
+    _clearReview(step: WizardStep) {
+      if (!this.draft) return;
+      this.draft.needsReviewSteps = this.draft.needsReviewSteps.filter(
+        (s) => s !== step,
+      );
+    },
+
+    _debounceSave() {
+      _dirty = true;
+      _saveRevision++;
+      if (_saveTimer) clearTimeout(_saveTimer);
+      // 500ms < useCardPreview's 1500ms preview debounce so the server
+      // has the latest card content before `preview-card` fetches. Prior
+      // value (5000ms) caused the preview endpoint to render stale DB
+      // rows after edits (Session 57 — edit headline did not propagate
+      // to the rendered PNG until the component remounted).
+      _saveTimer = setTimeout(() => this._save(), 500);
+    },
+
+    async _save() {
+      if (!this.draft) return;
+      // MOCK MODE: skip API save
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        this.lastSavedAt = new Date().toISOString();
+        return;
+      }
+      if (this.saving) {
+        _pendingSave = true;
+        if (_saveChain) await _saveChain;
+        return;
+      }
+      const draftToSave = this.draft;
+      this.saving = true;
+      const saveRevisionAtStart = _saveRevision;
+      const savePromise = (async () => {
+      try {
+        await saveDraft(draftToSave);
+        this.lastSavedAt = new Date().toISOString();
+        this.error = null;
+        _retryCount = 0;
+        if (_saveRevision === saveRevisionAtStart) {
+          _dirty = false;
+        } else {
+          _pendingSave = true;
+        }
+      } catch {
+        if (_retryCount < MAX_RETRIES) {
+          _retryCount++;
+          this.error = "Save failed — retrying...";
+          setTimeout(() => this._save(), 10000 * _retryCount);
+        } else {
+          this.error =
+            "Unable to save. Your work may be lost if you leave this page.";
+          _pendingSave = false;
+        }
+      } finally {
+        this.saving = false;
+        if (_pendingSave) {
+          _pendingSave = false;
+          await this._save();
+        }
+      }
+      })();
+      _saveChain = savePromise;
+      try {
+        await savePromise;
+      } finally {
+        if (_saveChain === savePromise) {
+          _saveChain = null;
+        }
+      }
+    },
+
+    async saveNow() {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      await this._save();
+    },
+
+    async generateCardsForDraft() {
+      if (!this.draft || _generatingCards) return;
+      // Captured before ANY await so every design edit after this call
+      // starts counts as a mid-generation modification.
+      const revisionAtStart = _designRevision;
+
+      const { useBrandKitStore } = await import("@/stores/useBrandKitStore");
+      const brandKitStore = useBrandKitStore();
+      if (!brandKitStore.hydrated || !brandKitStore.brandKit) return;
+
+      _generatingCards = true;
+      try {
+        const goalType = (this.draft.goal?.goalType ?? "neighbor_marketing") as CampaignGoalType;
+        const seqLen = this.draft.goal?.sequenceLength ?? 3;
+        const breakdown = this.draft.targeting?.recipientBreakdown ?? {
+          newProspects: 400,
+          pastCustomers: 30,
+          pastCustomersIncluded: false,
+        };
+
+        const cards = await generateCards(
+          brandKitStore.brandKit,
+          goalType,
+          seqLen,
+          breakdown,
+        );
+
+        // S73 race fix: the user edited the design while the AI calls were
+        // in flight. Their cards are what's on screen — never replace them
+        // silently. (Pre-fix this reverted e.g. a layout switch made
+        // during the generation window.)
+        const userModified = _designRevision !== revisionAtStart;
+        const currentCards = this.draft.design?.sequenceCards ?? [];
+        if (userModified && currentCards.length > 0) {
+          console.warn(
+            "generateCardsForDraft: design edited during generation — keeping the user's cards",
+          );
+          return;
+        }
+
+        const templates = getRecommendedTemplateSet(
+          goalType,
+          brandKitStore.brandKit?.industry,
+        );
+        let layoutType = templates[0]?.layoutType ?? "full-bleed";
+        let outCards = cards;
+        // A card-less mid-generation edit is a layout pick (selectTemplate
+        // over zero cards stores only templateLayoutType): apply the
+        // generated cards but remap them onto the user's chosen layout.
+        if (userModified && this.draft.design?.templateLayoutType) {
+          const keptLayout = this.draft.design.templateLayoutType;
+          const set = getTemplateSetsForGoal(
+            goalType,
+            brandKitStore.brandKit?.industry,
+          ).find(
+            (s) => s.layout === keptLayout,
+          );
+          const renderTemplateId = renderTemplateIdForLayout(keptLayout);
+          if (set) {
+            layoutType = keptLayout;
+            outCards = cards.map((card) => ({
+              ...card,
+              templateId:
+                set.templates.find(
+                  (template) => template.cardPosition === card.cardPurpose,
+                )?.id ?? card.templateId,
+              ...(renderTemplateId ? { renderTemplateId } : {}),
+            }));
+          }
+        }
+        this.setDesign({
+          templateId: outCards[0]?.templateId ?? "",
+          templateLayoutType: layoutType,
+          isCustomUpload: false,
+          customUploadUrl: null,
+          sequenceCards: outCards,
+        });
+      } catch (err) {
+        console.error("Card generation failed in store:", err);
+      } finally {
+        _generatingCards = false;
+      }
+    },
+
+    /** Best-effort save that survives tab close via fetch keepalive. */
+    beaconSave() {
+      if (!this.draft || !_dirty) return;
+      // Mirror _save() guards
+      if (import.meta.env.VITE_SKIP_AUTH === "true") {
+        this.lastSavedAt = new Date().toISOString();
+        _dirty = false;
+        return;
+      }
+      const payload = {
+        current_step: this.draft.currentStep,
+        completed_steps: this.draft.completedSteps,
+        needs_review_steps: this.draft.needsReviewSteps,
+        data: {
+          campaignType: this.draft.campaignType,
+          goal: this.draft.goal,
+          targeting: this.draft.targeting,
+          audience: this.draft.audience,
+          design: this.draft.design,
+          review: this.draft.review,
+        },
+      };
+      const body = JSON.stringify(payload);
+      // If payload exceeds keepalive limit, skip — debounce/route-leave covers most cases
+      if (body.length > KEEPALIVE_MAX_BYTES) return;
+      fetch(`${API_BASE}/api/campaign-drafts/${this.draft.id}`, {
+        method: "PUT",
+        keepalive: true,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body,
+      });
+      // Don't clear _dirty — no success confirmation from keepalive fetch
+    },
+  },
+});

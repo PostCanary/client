@@ -6,6 +6,7 @@ import type {
   AxiosRequestConfig,
   AxiosResponse,
 } from "axios";
+import { AUTH_BASE } from "@/config/auth";
 import { log, getReq } from "@/utils/logger";
 
 // ---- Base URL
@@ -70,8 +71,31 @@ export const http = axios.create({
   validateStatus: (status) => status >= 200 && status < 300,
 });
 
+// ---- CSRF token (module-scope; fetched once per session, injected on state-changing requests)
+let _csrfToken: string | null = null;
+const _CSRF_STATE_METHODS = new Set(["post", "put", "patch", "delete"]);
+
+export async function ensureCsrfToken(): Promise<string> {
+  if (_csrfToken) return _csrfToken;
+  // Use raw fetch (not axios) to avoid triggering this interceptor recursively
+  try {
+    const res = await fetch(`${AUTH_BASE}/auth/csrf-token`, { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      _csrfToken = data.csrf_token as string;
+    }
+  } catch {
+    // Non-fatal — requests proceed without the token; server will reject state-changing ones
+  }
+  return _csrfToken ?? "";
+}
+
+export function clearCsrfToken() {
+  _csrfToken = null;
+}
+
 // ---- Request interceptor
-http.interceptors.request.use((cfg) => {
+http.interceptors.request.use(async (cfg) => {
   inflight++;
   notify();
 
@@ -84,6 +108,13 @@ http.interceptors.request.use((cfg) => {
       (headers as AxiosHeaders).set("X-Request-ID", reqId);
     } else {
       cfg.headers = { ...(cfg.headers as any), "X-Request-ID": reqId } as any;
+    }
+  }
+
+  if (_CSRF_STATE_METHODS.has(cfg.method?.toLowerCase() ?? "")) {
+    const token = await ensureCsrfToken();
+    if (token) {
+      (cfg.headers as any)["X-CSRF-Token"] = token;
     }
   }
 
@@ -106,12 +137,27 @@ http.interceptors.response.use(
     log.info("HTTP ← response", { url: res.config?.url, status: res.status });
     return res;
   },
-  (err: AxiosError) => {
+  async (err: AxiosError) => {
     inflight = Math.max(0, inflight - 1);
     notify();
 
     const status = err.response?.status ?? 0;
-    const data: any = err.response?.data;
+    let data: any = err.response?.data;
+    // Blob endpoints (preview-card/preview-back use responseType:"blob")
+    // receive ERROR bodies as Blobs too, which blinded the CSRF-retry
+    // check below — the rotating token made the back preview fail
+    // permanently after ~2min idle (S77, Dustin). Parse JSON error blobs
+    // so retry + message normalization work for every endpoint.
+    if (
+      data instanceof Blob &&
+      (data.type.includes("json") || status === 403)
+    ) {
+      try {
+        data = JSON.parse(await data.text());
+      } catch {
+        /* not JSON — keep the original blob */
+      }
+    }
     const url = err.config?.url;
     const method = err.config?.method;
 
@@ -121,6 +167,17 @@ http.interceptors.response.use(
       data,
       message: err.message,
     });
+
+    // CSRF token expired: clear cached token and retry once
+    if (
+      status === 403 &&
+      data?.error?.code === "csrf_token_invalid" &&
+      !(err.config as any)?._csrfRetried
+    ) {
+      clearCsrfToken();
+      const retryConfig = { ...(err.config as any), _csrfRetried: true };
+      return http.request(retryConfig);
+    }
 
     // Fire “gate” events that main.ts can handle
     if (status === 401) {
@@ -134,15 +191,30 @@ http.interceptors.response.use(
       });
     }
 
-    // Normalize to Error with status/data for call-sites that do try/catch
+    // Normalize to Error with status/data for call-sites that do try/catch.
+    // Flask's error handlers return `{error: {code, message}}` — interpolating
+    // the object directly produces "[object Object]" and hides the real reason.
     let msg = "Network error";
     if (status) msg = `${status} ${err.response?.statusText || ""}`.trim();
-    if (data?.error) msg = `${msg}: ${data.error}`;
-    if (data?.message) msg = `${msg} — ${data.message}`;
+    const errField = data?.error;
+    const errStr =
+      typeof errField === "string"
+        ? errField
+        : errField && typeof errField === "object"
+          ? (errField.message ?? errField.code ?? "")
+          : "";
+    if (errStr) msg = `${msg}: ${errStr}`;
+    if (typeof data?.message === "string" && data.message) {
+      msg = `${msg} — ${data.message}`;
+    }
 
-    const e = new Error(msg) as Error & { status?: number; data?: any };
+    const e = new Error(msg) as Error & { status?: number; data?: any; code?: string };
     e.status = status;
     e.data = data;
+    // Preserve axios-internal codes (ECONNABORTED on timeout, ERR_CANCELED on
+    // abort) so call-sites can distinguish timeout from generic network error.
+    // S382 strike-1 HIGH fold; useCardPreview.ts:87 already expected this.
+    if (err.code) e.code = err.code;
 
     return Promise.reject(e);
   }

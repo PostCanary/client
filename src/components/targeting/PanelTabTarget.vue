@@ -1,0 +1,85 @@
+<script setup lang="ts">
+import type { JobReference } from "@/types/campaign";
+import JobSelector from "./JobSelector.vue";
+import ZipInput from "./ZipInput.vue";
+import { AROUND_MY_JOBS } from "@/config/featureFlags";
+
+const props = defineProps<{
+  jobs: JobReference[];
+  isNeighborGoal: boolean;
+  radiusMiles: number;
+  zips: string[];
+}>();
+
+const emit = defineEmits<{
+  (e: "toggle-job", jobId: string): void;
+  (e: "select-all-jobs"): void;
+  (e: "deselect-all-jobs"): void;
+  (e: "radius-change", miles: number): void;
+  (e: "add-zips", zips: string[]): void;
+  (e: "remove-zip", zip: string): void;
+}>();
+</script>
+
+<template>
+  <div class="space-y-6 p-4">
+    <!-- Around My Jobs (full selection UI — neighbor marketing only) -->
+    <template v-if="isNeighborGoal && AROUND_MY_JOBS">
+      <JobSelector
+        :jobs="jobs"
+        :radius-miles="radiusMiles"
+        @toggle="emit('toggle-job', $event)"
+        @select-all="emit('select-all-jobs')"
+        @deselect-all="emit('deselect-all-jobs')"
+        @radius-change="emit('radius-change', $event)"
+      />
+      <hr class="border-gray-100" />
+    </template>
+
+    <!-- Around My Jobs — coming soon tile (flag OFF) -->
+    <div v-if="isNeighborGoal && !AROUND_MY_JOBS" class="rounded-xl border border-dashed border-gray-200 p-4 text-center space-y-1">
+      <p class="text-sm font-medium text-[#0b2d50]">Around My Jobs</p>
+      <p class="text-xs text-gray-400">Targeting by recent job locations is coming soon. Use the drawing tools or ZIP codes to target your area.</p>
+    </div>
+
+    <!-- Job markers toggle (non-neighbor goals — context only, not targeting) -->
+    <div v-else class="flex items-center justify-between">
+      <label class="text-sm text-gray-600">Show my jobs on map</label>
+      <button
+        class="relative w-9 h-5 rounded-full transition-colors"
+        :class="jobs.some(j => j.selected) ? 'bg-[#47bfa9]' : 'bg-gray-300'"
+        @click="jobs.some(j => j.selected) ? emit('deselect-all-jobs') : emit('select-all-jobs')"
+      >
+        <span
+          class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
+          :class="jobs.some(j => j.selected) ? 'translate-x-4' : ''"
+        />
+      </button>
+    </div>
+
+    <!-- Draw on Map -->
+    <div>
+      <h4 class="text-sm font-semibold text-[#0b2d50] mb-2">
+        Draw on Map
+      </h4>
+      <p class="text-xs text-gray-500">
+        Use the drawing tools on the map to draw circles, rectangles, or
+        polygons. Drawn shapes combine with jobs and ZIP codes.
+      </p>
+    </div>
+
+    <hr class="border-gray-100" />
+
+    <!-- Enter ZIP Codes -->
+    <div>
+      <h4 class="text-sm font-semibold text-[#0b2d50] mb-2">
+        Enter ZIP Codes
+      </h4>
+      <ZipInput
+        :zips="zips"
+        @add="emit('add-zips', $event)"
+        @remove="emit('remove-zip', $event)"
+      />
+    </div>
+  </div>
+</template>

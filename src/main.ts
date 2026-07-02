@@ -2,9 +2,11 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { MotionPlugin } from "@vueuse/motion";
+import * as Sentry from "@sentry/vue";
 import App from "./App.vue";
 import router from "./router";
 import "@/styles/tour.css";
+import "@/styles/print-scale.css";
 
 import { initPostHog } from "@/composables/usePostHog";
 import { useAuthStore } from "@/stores/auth";
@@ -21,7 +23,30 @@ app.use(pinia);
 app.use(router);
 app.use(MotionPlugin);
 
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+if (sentryDsn) {
+  Sentry.init({
+    app,
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    release: import.meta.env.VITE_GIT_COMMIT_SHA as string | undefined,
+    tracesSampleRate: 0.1,
+    integrations: [Sentry.browserTracingIntegration({ router })],
+  });
+}
+
 initPostHog();
+
+// Fetch server-side feature flags before mounting so window.__POSTCANARY_CONFIG__
+// is populated before any route component is rendered. Non-fatal — defaults to off.
+try {
+  const _cfgBase = (import.meta.env.VITE_API_BASE as string | undefined ?? '').trim();
+  const _cfgRes = await fetch(`${_cfgBase}/api/config`, { credentials: 'include' });
+  if (_cfgRes.ok) {
+    const _cfgData = await _cfgRes.json();
+    (window as any).__POSTCANARY_CONFIG__ = { eddmEnabled: Boolean(_cfgData.eddm_enabled) };
+  }
+} catch { /* non-fatal — feature flags default off */ }
 
 // Initialize auth once at boot (so billing flags are available)
 const auth = useAuthStore(pinia);
@@ -29,7 +54,7 @@ auth.fetchMe();
 
 // 401 => prompt login
 window.addEventListener(HTTP_EVENT_AUTH_REQUIRED, () => {
-  const next = router.currentRoute.value.fullPath || "/dashboard";
+  const next = router.currentRoute.value.fullPath || "/app/home";
   auth.openLoginModal(next, "login");
 });
 

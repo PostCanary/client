@@ -1,0 +1,315 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ business_name }} — Postcard</title>
+<style>
+  @font-face {
+    font-family: "Oswald";
+    src: url("fonts/Oswald-VariableFont_wght.ttf") format("truetype-variations");
+    font-weight: 200 700;
+  }
+  @font-face {
+    font-family: "Bebas Neue";
+    src: url("fonts/BebasNeue-Regular.ttf") format("truetype");
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: "Instrument Sans";
+    src: url("fonts/InstrumentSans-VariableFont.ttf") format("truetype-variations");
+    font-weight: 400 700;
+  }
+
+  @page {
+    size: 1200px 800px;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    position: relative;
+    width: 1200px;
+    height: 800px;
+    background: #ffffff;
+    border: 1px solid #d9d9d9;
+    overflow: hidden;
+    font-family: "Instrument Sans", sans-serif;
+  }
+  .card img,
+  .card .bg {
+    position: absolute;
+  }
+  .photo {
+    left: 509.64px;
+    top: -1px;
+    width: 689.362px;
+    height: 499.291px;
+  }
+  .text-zone-bg {
+    left: -1px;
+    top: -1px;
+    width: 614.268px;
+    height: 499.291px;
+  }
+  .offer-strip-outer {
+    position: absolute;
+    left: -1px;
+    top: 498.29px;
+    width: 1200px;
+    height: 120.567px;
+    background: #4dacd8;
+  }
+  .offer-strip-inner {
+    position: absolute;
+    left: -1px;
+    top: 516.73px;
+    width: 1200px;
+    height: 83.688px;
+    background: #006db2;
+    border: 2px dashed #ffffff;
+    box-sizing: border-box;
+  }
+  .info-bg {
+    position: absolute;
+    left: -1px;
+    top: 623.11px;
+    width: 1200px;
+    height: 175.887px;
+    background: #a5cf47;
+  }
+  .logo-panel-bg {
+    left: -1px;
+    top: 623.11px;
+    width: 486.608px;
+    height: 175.887px;
+  }
+  .logo {
+    left: 32.04px;
+    top: 665.67px;
+    width: 68px;
+    height: 68px;
+  }
+  .business-name {
+    position: absolute;
+    left: 122.15px;
+    top: 662.83px;
+    margin: 0;
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 400;
+    font-size: 42px;
+    color: #323232;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .business-heating {
+    position: absolute;
+    left: 122.15px;
+    top: 708.22px;
+    margin: 0;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: #e53935;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .business-air {
+    position: absolute;
+    left: 246.81px;
+    top: 708.22px;
+    margin: 0;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: #3483eb;
+    line-height: 1;
+  }
+  .cta {
+    position: absolute;
+    left: 555.45px;
+    top: 642.97px;
+    margin: 0;
+    width: 404.005px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .phone-icon {
+    left: 512.64px;
+    top: 682.69px;
+    width: 40px;
+    height: 40px;
+  }
+  .phone {
+    position: absolute;
+    left: 569.71px;
+    top: 674.18px;
+    margin: 0;
+    width: 432.541px;
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 66px;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .website {
+    position: absolute;
+    left: 623.78px;
+    top: 753.61px;
+    margin: 0;
+    width: 267.334px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 19.5px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1;
+  }
+  .headline-l1, .headline-l2 {
+    position: absolute;
+    margin: 0;
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 78px;
+    color: #dc3228;
+    line-height: 1;
+  }
+  .headline-l1 { left: 76.35px; top: 33.04px; width: 416.02px; }
+  .headline-l2 { left: 68.09px; top: 126.66px; width: 425.031px; }
+  .bridge {
+    position: absolute;
+    left: 157.45px;
+    top: 228.79px;
+    margin: 0;
+    width: 241.802px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 21px;
+    color: #0d2b4b;
+    line-height: 1;
+  }
+  .headline-l3, .headline-l4 {
+    position: absolute;
+    margin: 0;
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 81px;
+    color: #3caad7;
+    line-height: 70px;
+  }
+  .headline-l3 { left: 135.67px; top: 258.57px; width: 282.353px; }
+  .headline-l4 { left: 134.17px; top: 366.38px; width: 273.342px; }
+  .qr {
+    position: absolute;
+    left: 1042.8px;
+    top: 635.88px;
+    width: 122px;
+    height: 122px;
+    background: #ffffff;
+    border: 2px solid #1a4d0d;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  .scan-here {
+    position: absolute;
+    left: 1013.52px;
+    top: 763.54px;
+    margin: 0;
+    width: 187.735px;
+    font-family: "Oswald", sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    color: #1a4d0d;
+    text-align: center;
+    line-height: 1;
+  }
+  .offer-get {
+    position: absolute;
+    left: 173.22px;
+    top: 535.17px;
+    margin: 0;
+    width: 67.584px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 39px;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .offer-amount {
+    position: absolute;
+    left: 252.82px;
+    top: 528.08px;
+    margin: 0;
+    width: 222.278px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 700;
+    font-size: 48px;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .offer-suffix {
+    position: absolute;
+    left: 487.11px;
+    top: 535.17px;
+    margin: 0;
+    width: 537.672px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 39px;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .offer-fine-print {
+    position: absolute;
+    left: 403.756px;
+    top: 576.3px;
+    margin: 0;
+    width: 390.488px;
+    font-family: "Instrument Sans", sans-serif;
+    font-weight: 400;
+    font-size: 16.5px;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="photo" src="assets/photo-diagonal-right.png">
+  <img class="text-zone-bg" src="assets/text-zone-white-diagonal-left.svg">
+  <div class="offer-strip-outer"></div>
+  <div class="offer-strip-inner"></div>
+  <div class="info-bg"></div>
+  <img class="logo-panel-bg" src="assets/logo-panel-bg.svg">
+  <img class="logo" src="assets/logo-placeholder.svg">
+
+  <p class="headline-l1">{{ headline_line1 }}</p>
+  <p class="headline-l2">{{ headline_line2 }}</p>
+  <p class="bridge">{{ bridge_text }}</p>
+  <p class="headline-l3">{{ headline_line3 }}</p>
+  <p class="headline-l4">{{ headline_line4 }}</p>
+
+  <p class="offer-get">{{ offer_prefix }}</p>
+  <p class="offer-amount">{{ offer_amount }}</p>
+  <p class="offer-suffix">{{ offer_suffix }}</p>
+  <p class="offer-fine-print">{{ offer_fine_print }}</p>
+
+  <p class="business-name">{{ business_name }}</p>
+  <p class="business-heating">HEATING &amp;</p>
+  <p class="business-air">AIR</p>
+  <p class="cta">{{ cta }}</p>
+
+  <img class="phone-icon" src="assets/phone-icon.svg">
+  <p class="phone">{{ phone }}</p>
+  <p class="website">{{ website }}</p>
+
+  <div class="qr"></div>
+  <p class="scan-here">SCAN HERE</p>
+</div>
+</body>
+</html>

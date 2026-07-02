@@ -1,0 +1,662 @@
+// ============================================================
+// PostCanary V1 Campaign Types — shared across all terminals
+// ============================================================
+
+import type {
+  AudienceCostPreview,
+  AudienceSuppressionResult,
+} from "@/types/audiences";
+// API CONVENTION: The codebase uses snake_case directly in TypeScript
+// (no camelCase transformation). New API files should follow this same
+// pattern — use snake_case field names to match the server response.
+// The JSONB `data` blob uses camelCase since only the client reads/writes it.
+// ============================================================
+
+// ============================================================
+// INDUSTRY (structured enum, not free text)
+// ============================================================
+
+export type Industry =
+  | 'hvac'
+  | 'plumbing'
+  | 'roofing'
+  | 'cleaning'
+  | 'electrical'
+  | 'pest_control'
+  | 'landscaping'
+  | 'other'
+
+export const INDUSTRY_LABELS: Record<Industry, string> = {
+  hvac: 'HVAC',
+  plumbing: 'Plumbing',
+  roofing: 'Roofing',
+  cleaning: 'Cleaning',
+  electrical: 'Electrical',
+  pest_control: 'Pest Control',
+  landscaping: 'Landscaping',
+  other: 'Other',
+}
+
+// ============================================================
+// INDUSTRY NORMALIZATION
+// ============================================================
+// Existing users have free-text `industry` values (e.g., 'plumbing',
+// 'HVAC', 'carpet cleaning'). The brand kit's photo selection and
+// targeting smart defaults expect enum values. This helper maps common
+// free-text values to the enum. Returns null for unrecognized values
+// (use generic defaults in that case).
+
+const INDUSTRY_ALIASES: Record<string, Industry> = {
+  hvac: 'hvac',
+  'heating and cooling': 'hvac',
+  'air conditioning': 'hvac',
+  ac: 'hvac',
+  'ac repair': 'hvac',
+  plumbing: 'plumbing',
+  plumber: 'plumbing',
+  roofing: 'roofing',
+  roofer: 'roofing',
+  cleaning: 'cleaning',
+  'carpet cleaning': 'cleaning',
+  'house cleaning': 'cleaning',
+  'pressure washing': 'cleaning',
+  electrical: 'electrical',
+  electrician: 'electrical',
+  'pest control': 'pest_control',
+  'pest_control': 'pest_control',
+  exterminator: 'pest_control',
+  landscaping: 'landscaping',
+  'lawn care': 'landscaping',
+  'lawn service': 'landscaping',
+}
+
+export function normalizeIndustry(raw: string | null): Industry | null {
+  if (!raw) return null
+  const normalized = raw.toLowerCase().trim()
+  return INDUSTRY_ALIASES[normalized] ?? null
+}
+
+// ============================================================
+// CAMPAIGN GOALS
+// ============================================================
+
+export type CampaignGoalType =
+  | 'neighbor_marketing'
+  | 'send_to_list'
+  | 'seasonal_tuneup'
+  | 'target_area'
+  | 'storm_response'
+  | 'win_back'
+  | 'cross_service_promo'
+  | 'new_mover'
+  | 'other'
+
+export interface CampaignGoalDefaults {
+  includePastCustomers: boolean
+  frequencyExclusionDays: number | null  // null = no exclusion (storm)
+  defaultPostcards: number
+  spacingWeeks: number
+}
+
+// Maps goal type to its defaults (auto-applied in Step 2)
+export const GOAL_DEFAULTS: Record<CampaignGoalType, CampaignGoalDefaults> = {
+  neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  send_to_list:        { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 2, spacingWeeks: 1 },
+  win_back:            { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 3 },
+  cross_service_promo: { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 2, spacingWeeks: 2 },
+  new_mover:           { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  other:               { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+}
+
+// ============================================================
+// STEP 1: GOAL SELECTION
+// ============================================================
+
+export interface GoalSelection {
+  goalType: CampaignGoalType
+  goalLabel: string                    // display name
+  serviceType: string | null           // which service (for seasonal, cross-service)
+  sequenceLength: number               // 1-5 cards
+  sequenceSpacingDays: number          // days between cards
+  otherGoalText: string | null         // free text for "other"
+}
+
+// ============================================================
+// STEP 2: TARGETING (Terminal 1 owns)
+// ============================================================
+
+export interface TargetingArea {
+  type: 'circle' | 'rectangle' | 'polygon' | 'zip' | 'job_radius'
+  coordinates: number[][]              // lat/lng pairs defining shape
+  radiusMiles?: number                 // for circle/job_radius
+  zipCode?: string                     // for zip type
+}
+
+export interface JobReference {
+  id: string
+  address: string
+  lat: number
+  lng: number
+  serviceType: string | null
+  jobDate: string                      // ISO date
+  selected: boolean                    // can be unchecked
+  value?: number                       // USD, shown in map popup; optional until Round 2 real data
+}
+
+export interface TargetingFilters {
+  homeowner: 'homeowner' | 'all' | 'investor' | null  // null = any
+  homeValueMin: number | null
+  homeValueMax: number | null
+  yearBuiltMin: number | null
+  yearBuiltMax: number | null
+  propertyTypes: string[]              // empty = all
+  hhageMin: number | null              // vendor bracket 1-7 (1=18-24 … 7=75+); null = any
+  hhageMax: number | null
+  incomeMin: string | null             // household-income bracket code A-J ($60K–$275K+); null = any
+  loresMin: number | null              // residence-length bracket 0-15 (0=<1yr … 15=>14yr); null = any
+  loresMax: number | null
+}
+
+export interface RecipientBreakdown {
+  newProspects: number
+  pastCustomers: number
+  pastCustomersIncluded: boolean
+}
+
+// ============================================================
+// EDDM types — Sprint 2.3 ER.2
+// ============================================================
+
+export interface GeoJsonPolygon {
+  type: 'Polygon'
+  coordinates: number[][][]
+}
+
+export interface EddmRoute {
+  crrt: string
+  zip5: string
+  household_count: number
+  geometry: GeoJsonPolygon
+}
+
+export interface EddmSelection {
+  zip5: string
+  selectedCrrt: string[]
+  totalHouseholds: number
+}
+
+export interface TargetingSelection {
+  // Context from Step 1
+  campaignGoal: CampaignGoalType
+  serviceType: string | null
+  sequenceLength: number
+  sequenceSpacingDays: number
+
+  // Targeting
+  areas: TargetingArea[]
+  method: 'draw' | 'zip' | 'around_jobs' | 'combined'
+  filters: TargetingFilters
+  jobsUsed: JobReference[] | null
+  jobRadiusMiles: number | null
+
+  // Exclusions
+  excludePastCustomers: boolean
+  excludeMailedWithinDays: number | null
+  doNotMailCount: number
+
+  // Counts (computed)
+  totalHouseholds: number
+  excludedPastCustomers: number
+  excludedRecentlyMailed: number
+  excludedDoNotMail: number
+  finalHouseholdCount: number
+  pastCustomersInArea: number
+  recipientBreakdown: RecipientBreakdown
+
+  // Cost (computed)
+  estimatedCostSingle: number          // cost for one card
+  estimatedCostSequence: number        // cost for full sequence
+
+  // Data source
+  countSource: 'melissa' | 'mock'
+
+  // Save
+  savedAudienceName: string | null
+
+  // EDDM path — null when campaign_type = 'targeted'
+  eddmSelection: EddmSelection | null
+}
+
+// ============================================================
+// STEP 3: DESIGN (Terminal 2 owns)
+// ============================================================
+
+export type TemplateLayoutType =
+  | 'full-bleed'
+  | 'side-split'
+  | 'photo-top'
+  | 'photo-hero'
+  | 'bold-graphic'
+  | 'before-after'
+  | 'review-forward'
+  | 'service-checklist'
+  | 'urgency-notice'
+  | 'new-mover'
+  | 'tips'
+  | 'letter-note'
+  | 'neighborhood-map'
+
+export type CardPurpose = 'offer' | 'proof' | 'last_chance'
+
+// Value-stack item for the OfferBox. One checkmarked line like
+// "✓ 23-Point Safety Check  $49 value". The `value` field is the
+// right-aligned dollar value; the label is the service description.
+// NEW 2026-04-10 (P0-F content density): the OfferBox component has
+// accepted items[] since Session 31, but nothing was populating them —
+// PostcardBack was passing `[]` unconditionally. Persisting items on
+// CardDesign lets the generator or manual overrides fill them.
+export interface OfferStackItem {
+  label: string
+  value?: string
+}
+
+// The 5-slot headline system: two accent lines, a small connector, two
+// main lines. Line-level editing (S72): the customer edits these slots
+// directly; the renderer prints them verbatim (empty slot = empty space,
+// never filler). Seeded once from the AI headline by splitHeadline().
+export interface HeadlineLines {
+  red1: string
+  red2: string
+  bridge: string
+  blue1: string
+  blue2: string
+}
+
+// Per-card palette override (S72 color profiles). Absent → brand kit
+// colors. Server validates hex format; renderer resolves any palette to
+// print-safe zone colors.
+export interface ColorOverride {
+  primary: string
+  secondary: string
+  accent: string
+}
+
+// S77 BACK v2 — the selectable back designs (mirrors the worker's
+// BACK_TEMPLATE_REGISTRY). Default is standard-back-v2.
+export type BackTemplateId =
+  | "standard-back-v2"
+  | "testimonial-back-v1"
+  | "service-area-back-v1"
+  | "photo-back-v1"                     // S78 — full-bleed photo left column
+  | "brand-bold-back-v1"                // S78 — full brand-color left field
+  | "standard-back-v1"                  // legacy; old drafts may still pin it
+
+export interface BackTestimonial {
+  quote: string
+  reviewerName: string
+  rating: number                        // 1-5
+}
+
+/**
+ * S80 photo positioning/cropping. A focal point + zoom applied to a photo
+ * inside its fixed (clipped) zone. `x`/`y` are percentages 0-100 (50/50 =
+ * center = today's cover-center default); `zoom` is 1.0-2.5. The worker
+ * translates this to object-position + transform:scale on the photo img.
+ * Absent / identity (50,50,1) → the photo renders exactly as it does today.
+ */
+export interface PhotoCrop {
+  x: number                            // focal X percent, 0-100
+  y: number                            // focal Y percent, 0-100
+  zoom: number                         // 1.0 (fit) – 2.5 (max magnification)
+}
+
+/**
+ * S80 neighborhood-map view controls the customer chose, persisted so a
+ * Regenerate after reload reuses them. These are client + endpoint params
+ * only — the worker just consumes the resulting mapImageUrl.
+ */
+export interface MapSettings {
+  radiusMiles: number                  // 1-10 service radius
+  zoomDelta: -1 | 0 | 1                // Wide / Standard / Close-up
+  showRing: boolean                    // draw the radius ring
+  centerOffset: { dxMiles: number; dyMiles: number } // ±5mi view nudge
+}
+
+export interface CardDesign {
+  cardNumber: number                   // 1, 2, or 3
+  cardPurpose: CardPurpose
+  templateId: string
+  colorOverride?: ColorOverride
+  // Worker render template (e.g. "side-split-front-v1"). Persisted on the
+  // card so the server's resolve_render_template_id picks the right layout.
+  // Optional for drafts saved before the 4-layout set; the server falls
+  // back to the default layout when absent.
+  renderTemplateId?: string
+  previewImageUrl: string              // generated preview for Step 4
+  overrides: {                         // only what customer CHANGED from auto-generated
+    headline?: string
+    headlineLines?: HeadlineLines
+    offerText?: string
+    offerTeaser?: string               // NEW 2026-04-09: short (≤4 word) front-of-card teaser
+    offerItems?: OfferStackItem[]      // NEW 2026-04-10: stacked value items on back OfferBox
+    reviewQuote?: string
+    reviewerName?: string
+    urgencyText?: string
+    riskReversal?: string
+    photoUrl?: string
+    photoCrop?: PhotoCrop              // S80 photo positioning/cropping (main slot)
+    beforePhotoCrop?: PhotoCrop        // S80 before-after before-half crop
+    afterPhotoCrop?: PhotoCrop         // S80 before-after after-half crop
+    serviceRows?: string[]             // service-checklist rows the customer edited (S73)
+    tips?: string[]                    // tips-card rows the customer edited (S74)
+    beforePhotoUrl?: string            // before-after split (S74)
+    afterPhotoUrl?: string
+    salutation?: string                // letter-note greeting the customer edited (S76)
+    letterBody?: string                // letter-note body the customer edited (S76)
+    mapImageUrl?: string               // neighborhood-map service-area map (S76)
+    mapSettings?: MapSettings          // S80 chosen map view controls (persisted)
+  }
+  resolvedContent: {                   // template defaults + overrides merged
+    headline: string
+    headlineLines?: HeadlineLines
+    offerText: string                  // full stacked offer (back)
+    offerTeaser: string                // short front-of-card teaser, e.g. "$79 TUNE-UP"
+    offerItems: OfferStackItem[]       // stacked value items (≥0, usually 3-5)
+    photoUrl: string
+    photoCrop?: PhotoCrop              // S80 main-photo pan/zoom (mirrors override)
+    beforePhotoCrop?: PhotoCrop        // S80 before-after before-half crop
+    afterPhotoCrop?: PhotoCrop         // S80 before-after after-half crop
+    reviewQuote: string
+    reviewerName: string
+    phoneNumber: string                // always from brand kit
+    urgencyText: string
+    riskReversal: string
+    trustSignals: string[]
+    serviceRows?: string[]             // absent → worker derives from brand serviceTypes
+    tips?: string[]                    // absent → worker uses the industry tip pack
+    beforePhotoUrl?: string            // before-after split; falls back to photoUrl
+    afterPhotoUrl?: string
+    salutation?: string                // letter-note greeting; absent → city-derived default
+    letterBody?: string                // letter-note body; absent → worker synthesizes
+    mapImageUrl?: string               // neighborhood-map service-area map (S76)
+  }
+  backContent: {
+    guarantee: string
+    certifications: string[]
+    licenseNumber: string
+    companyAddress: string
+    websiteUrl: string
+    qrCodeUrl: string
+    // --- S77 BACK v2 richer, editable back zones (all optional; absent →
+    // the worker collapses the zone / uses defaults). Persisted on card 1
+    // only — the back is a per-draft surface. ---
+    backTemplateId?: BackTemplateId   // which back design renders (default v2)
+    backSubhead?: string              // recap subhead (≤70 chars)
+    backBenefits?: string[]           // 3-5 why-us bullets (≤48 chars each)
+    backTestimonial?: BackTestimonial // chosen real review, or omitted → rating chip
+    backServices?: string[]           // "we also do" list (≤6, ≤18 chars each)
+    backHours?: string                // hours / "24-7 emergency" line
+    // S78 photo-back-v1: the full-bleed left-column photo. Absent → the worker
+    // falls back through the card photo → industry pack hero (never an empty
+    // hole). Only meaningful for the Photo back style.
+    backPhotoUrl?: string
+    backPhotoCrop?: PhotoCrop          // S80 photo-back left-column photo pan/zoom
+  }
+  // AI generation metadata (populated when using server AI, empty for local fallback)
+  headlineCandidates: Array<{ text: string; formula: string; reason: string }>  // 3 options from AI
+  offerReason: string                  // why this offer was generated
+  reviewReason: string                 // why this review was selected
+  templateReason: string               // why this layout was recommended for this card position
+}
+
+export interface DesignSelection {
+  templateId: string
+  templateLayoutType: TemplateLayoutType
+  isCustomUpload: boolean
+  customUploadUrl: string | null
+  sequenceCards: CardDesign[]
+}
+
+// ============================================================
+// STEP 4: REVIEW & SEND (Terminal 3 owns)
+// ============================================================
+
+export interface CardSchedule {
+  cardNumber: number
+  scheduledDate: string                // ISO date
+  estimatedDeliveryDate: string        // ISO date
+}
+
+export interface ReviewSelection {
+  campaignName: string                 // auto-generated, editable
+  schedules: CardSchedule[]
+  sendSeedCopy: boolean                // default true (free)
+  seedAddress: string                  // from profile
+  additionalSeeds: string[]            // charged at per-card rate
+  paymentMethodId: string | null       // Stripe PM
+  paymentMethodLabel: string | null    // "Visa ending 4242"
+  totalCost: number
+  perCardCosts: number[]
+  agreedToTerms: boolean
+}
+
+// ============================================================
+// CAMPAIGN DRAFT (full wizard state)
+// ============================================================
+
+export type WizardStep = 1 | 2 | 3 | 4
+
+export type CampaignType = 'targeted' | 'eddm'
+
+export interface AudienceWizardState {
+  audienceId: string | null
+  audienceSource: 'csv' | 'existing' | null
+  suppressionResult: AudienceSuppressionResult | null
+  costPreview: AudienceCostPreview | null
+}
+
+export interface CampaignDraft {
+  id: string                           // UUID
+  orgId: string
+  currentStep: WizardStep
+  completedSteps: WizardStep[]         // steps that have valid data
+  needsReviewSteps: WizardStep[]       // steps flagged for re-review after goal change
+
+  campaignType: CampaignType           // 'targeted' (default) | 'eddm'
+  goal: GoalSelection | null
+  targeting: TargetingSelection | null
+  audience: AudienceWizardState | null
+  design: DesignSelection | null
+  review: ReviewSelection | null
+
+  createdAt: string                    // ISO datetime
+  updatedAt: string                    // ISO datetime
+  schemaVersion: number                // for future migration of stale drafts
+}
+
+// ============================================================
+// BRAND KIT
+// ============================================================
+
+// Confidence tier for an extracted field.
+// HIGH = structured source (Google Places API, explicit HTML)
+// MEDIUM = inferred from page content (Firecrawl LLM extraction)
+// LOW = not found, ambiguous, or sourced from mock fallback
+export type ExtractionConfidence = 'high' | 'medium' | 'low'
+
+// Which source contributed to the merged brand kit.
+export type ExtractionSource = 'firecrawl' | 'google_places' | 'manual'
+
+// Trust badge surfaced from brand extraction (BBB, Angi, HomeAdvisor, etc.)
+export interface TrustBadge {
+  type: 'bbb' | 'angi' | 'homeadvisor' | 'yelp' | 'google' | 'nextdoor' | 'thumbtack' | 'porch' | 'custom'
+  label: string                        // "BBB A+" or "Angi Certified"
+  confidence: ExtractionConfidence
+}
+
+export interface BrandKitPhoto {
+  url: string                          // web-accessible URL (e.g., /api/media/brand-photos/{org}/{uuid}.jpg)
+  qualityScore: number                 // 0-100
+  source: 'website' | 'upload' | 'stock' | 'google_places'
+  alt: string
+  // --- Extraction R2 additions (all optional for backwards compat) ---
+  path?: string                        // server filesystem path (for cleanup + re-scrape)
+  originalUrl?: string                 // where the photo was sourced from
+  width?: number
+  height?: number
+  printReady?: boolean                 // width >= 1200
+}
+
+export interface BrandKitReview {
+  quote: string                        // excerpted to <=35 words
+  fullText: string
+  reviewerName: string                 // first name + last initial only
+  rating: number                       // 1-5
+  source: string                       // "Google"
+  reason: string                       // why this review was selected
+  // --- Extraction R2 additions ---
+  specificityScore?: number            // 0-50, used by AI to pick the strongest review
+}
+
+export interface BrandKit {
+  id: string
+  orgId: string
+  businessName: string
+  location: string                     // city, state
+  address: string | null
+  phone: string | null
+  websiteUrl: string | null            // cleaned: no https://, no www., no trailing slash
+  logoUrl: string | null
+  tagline?: string | null              // null = industry default; '' = removed; set = verbatim
+  licenseNumber?: string | null        // verbatim small print in the info bar (CA/FL contractor ads)
+  logoPrintReady?: boolean              // false = logo under 600px wide, soft in print
+  logoWidth?: number
+  logoHeight?: number
+  logoQualityScore: number | null
+  brandColors: string[]                // hex codes extracted from website (2-3)
+  photos: BrandKitPhoto[]
+  googleRating: number | null          // 1.0-5.0 (sourced from Google Places in R2)
+  reviews: BrandKitReview[]
+  certifications: string[]             // ["Licensed & Insured", "BBB A+", "NATE Certified"]
+  currentOffers: string[]              // scraped from website
+  guarantees: string[]                 // scraped from website
+  yearsInBusiness: number | null
+  industry: string | null
+  serviceTypes: string[]               // ["AC Repair", "Heating", "Duct Cleaning"]
+  scrapeStatus: 'pending' | 'scraping' | 'complete' | 'partial' | 'failed' | 'skipped'
+  scrapeProgress: {
+    step: 'connecting' | 'reading' | 'analyzing' | 'downloading' | 'done' | 'failed'
+    message: string         // user-friendly: "Reading your website...", "Finding your photos..."
+    estimatedSecondsLeft: number | null
+    startedAt: string | null   // ISO datetime for stale detection
+    // --- Extraction R2 additions (optional for backwards compat) ---
+    completedSteps?: number    // 0-5, for progress bar
+    totalSteps?: number        // typically 5
+  } | null
+  completenessPercent: number          // 0-100
+  updatedAt: string
+  // --- Extraction R2 additions (all optional for backwards compat) ---
+  reviewCount?: number | null          // total Google review count
+  trustBadges?: TrustBadge[]           // detected and confidence-scored
+  bbbDetected?: boolean                // explicit BBB badge presence
+  partnerBadges?: string[]             // normalized list: ["Angi", "HomeAdvisor", ...]
+  confidenceScores?: Partial<Record<keyof BrandKit, ExtractionConfidence>>
+  extractionSources?: ExtractionSource[]   // which sources contributed
+  // --- Brief #6 P0 #3: server-generated QR code image ---
+  // Populated by brand_kit._scrape_job / update_brand_kit / mock_scrape
+  // whenever websiteUrl or phone is present. Null when neither yields a
+  // usable QR target (very rare — phone is a required brand kit field).
+  // Filename is content-hashed (qr-<sha256[:12]>.png) so prior QRs remain
+  // on disk when the brand kit changes.
+  qrCodeImageUrl?: string | null           // e.g. "/media/brand-photos/{orgId}/qr-<hash>.png"
+}
+
+// ============================================================
+// TEMPLATE SYSTEM
+// ============================================================
+
+export interface TemplateDefinition {
+  id: string
+  layoutType: TemplateLayoutType
+  name: string                         // "Full-Bleed Photo"
+  description: string
+  cardPosition: CardPurpose            // which card in sequence this template is for
+  bestFor: CampaignGoalType[]          // which goals this template works best with
+  contentSlots: {
+    headline: { maxChars: number; placeholder: string }
+    offerText: { maxChars: number; placeholder: string }
+    reviewQuote: { maxChars: number; placeholder: string }
+    urgencyText: { maxChars: number; placeholder: string }
+    riskReversal: { maxChars: number; placeholder: string }
+  }
+  previewImageUrl: string              // static preview for template browser
+}
+
+// ============================================================
+// MAIL CAMPAIGN (approved, in-flight or completed)
+// ============================================================
+// NAMING: The existing codebase has a `Campaign` model for analytics
+// batch grouping (src/api/campaigns.ts, app/models.py). These direct
+// mail campaign types are named `MailCampaign` to avoid collision.
+// Server model: `MailCampaign` (tablename: `mail_campaigns`).
+// UI labels still say "Campaign" — customers don't see type names.
+// The existing Campaign/useCampaignStore stays UNTOUCHED.
+
+export type MailCampaignStatus =
+  | 'draft'
+  | 'approved'
+  | 'pending_moderation'
+  | 'printing'
+  | 'in_transit'
+  | 'delivered'
+  | 'results_ready'
+  | 'completed'
+  | 'paused'
+
+export interface MailCampaign {
+  id: string
+  orgId: string
+  name: string
+  status: MailCampaignStatus
+  goalType: CampaignGoalType
+  serviceType: string | null
+  sequenceLength: number
+  householdCount: number
+  totalCost: number
+  totalSpent: number
+  cards: MailCampaignCard[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MailCampaignCard {
+  cardNumber: number
+  status: 'pending' | 'printing' | 'in_transit' | 'delivered'
+  scheduledDate: string
+  estimatedDeliveryDate: string | null
+  actualSentDate: string | null
+  cost: number
+  previewImageUrl: string
+}
+
+// ============================================================
+// PER-CARD PRICING — FALLBACK ONLY.
+// The server owns these rates (GET /api/billing/pricing, locked by the
+// D6 pricing decisions: $0.99 pay-per-send, $0.79 all subscription tiers).
+// Components must read rates via usePricing(), which fetches from the
+// server and falls back to these values only while offline/loading.
+// Keys match PlanCode from @/api/billing (INSIGHT/PERFORMANCE/PRECISION/ELITE)
+// ============================================================
+
+export const PRICING = {
+  payPerSend: 0.99,
+  INSIGHT: 0.79,
+  PERFORMANCE: 0.79,
+  PRECISION: 0.79,
+  ELITE: 0.79,
+} as const
+
+export type PricingTier = keyof typeof PRICING

@@ -132,7 +132,7 @@ async function onSaveOrgName() {
 
   orgNameSaving.value = true;
   try {
-    await updateOrg(orgId, trimmed);
+    await updateOrg(orgId, { name: trimmed });
     await auth.fetchMe();
     orgName.value = auth.orgName || "";
     message.success("Organization name updated.");

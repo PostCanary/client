@@ -1,6 +1,6 @@
 <!-- src/components/dashboard/UploadCard.vue -->
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import UploadIconUrl from "@/assets/upload.svg?url";
 import { uploadBatch, deleteBatch, type Source } from "@/api/uploads";
@@ -54,7 +54,15 @@ const crmBatchId = ref<string | null>(null);
 const mailDrag = ref(false);
 const crmDrag = ref(false);
 
-const isUploading = ref(false);
+// Count of in-flight /upload/<source>/start requests. Mail and CRM upload
+// concurrently, so a boolean re-enables the button when the FIRST upload
+// finishes while the second is still pending.
+const pendingUploads = ref(0);
+const isUploading = computed(() => pendingUploads.value > 0);
+// Set when the user clicks Upload & Match while uploads are still in
+// flight; the commit is replayed when the last upload settles instead of
+// being silently dropped.
+const commitQueued = ref(false);
 const uploadProgress = ref<number | null>(null);
 const uploadingSource = ref<Source | null>(null);
 
@@ -78,7 +86,7 @@ watch(
 
     mailDrag.value = false;
     crmDrag.value = false;
-    isUploading.value = false;
+    commitQueued.value = false;
     uploadProgress.value = null;
     uploadingSource.value = null;
 
@@ -112,7 +120,7 @@ async function handleFile(source: Source, file: File) {
   if (!file) return;
   if (!csvGuard(file)) return;
 
-  isUploading.value = true;
+  pendingUploads.value += 1;
   uploadingSource.value = source;
   uploadProgress.value = 30;
 
@@ -195,8 +203,17 @@ async function handleFile(source: Source, file: File) {
     alert(`Upload failed: ${e?.message || "unknown error"}`);
     clearFileInput(source);
   } finally {
-    isUploading.value = false;
-    uploadingSource.value = null;
+    pendingUploads.value = Math.max(0, pendingUploads.value - 1);
+    if (pendingUploads.value === 0) {
+      uploadingSource.value = null;
+      if (commitQueued.value) {
+        // The user clicked Upload & Match while this upload was in flight;
+        // honor that click now instead of silently dropping it.
+        commitQueued.value = false;
+        log.info("UI > replaying queued Upload & Match commit");
+        onUpload();
+      }
+    }
   }
 }
 
@@ -287,6 +304,15 @@ function onUpload(ev?: Event) {
 
   if (props.mappingBlocked) {
     log.info("UI > upload blocked due to mapping issues");
+    return;
+  }
+
+  // Uploads still in flight (batch ids not assigned yet): queue the commit
+  // and replay it when the last upload settles. Without this, the click is
+  // silently dropped and matching never runs.
+  if (pendingUploads.value > 0) {
+    commitQueued.value = true;
+    log.info("UI > Upload & Match clicked while uploads in flight; queued");
     return;
   }
 
@@ -448,21 +474,29 @@ function browseCrm() {
         Edit Mapping
       </button>
 
+      <!--
+        Intentionally NOT disabled while uploads are in flight: a disabled
+        button swallows the click entirely. Instead the click is queued in
+        onUpload and replayed when the last upload settles, so a fast
+        "pick files → click" never silently drops the commit.
+      -->
       <button
         type="button"
         class="btn btn-primary"
-        :disabled="isUploading || !!props.mappingBlocked || !!props.billingBlocked"
+        :disabled="!!props.mappingBlocked || !!props.billingBlocked"
         :title="
           props.billingBlocked
             ? 'Uploads are disabled while the subscription is paused'
             : props.mappingBlocked
             ? 'Please fix column mapping before attempting an upload'
+            : isUploading
+            ? 'Files are still uploading — matching will start when they finish'
             : ''
         "
         data-testid="upload-match-button"
         @click="onUpload"
       >
-        Upload &amp; Match
+        {{ isUploading ? (commitQueued ? "Uploading… (will match)" : "Uploading…") : "Upload & Match" }}
       </button>
     </div>
   </section>

@@ -13,11 +13,15 @@ type RequestLog = {
   resumeCalls: number;
   cancelCalls: number;
   changePlanCalls: string[];
+  draftLoads: string[];
+  audienceApprovals: string[];
+  audienceSuppressions: string[];
 };
 
 export type MockAppState = {
   authMe: JsonMap;
   profile: JsonMap;
+  brandKit: JsonMap;
   orgs: JsonMap[];
   membersByOrg: Record<string, JsonMap[]>;
   invitationsByOrg: Record<string, JsonMap[]>;
@@ -215,6 +219,10 @@ export function createMockAppState(): MockAppState {
       org_name: ORG_ALPHA.name,
       org_role: ORG_ALPHA.role,
       orgs: [clone(ORG_ALPHA), clone(ORG_BETA)],
+      // S85 feature gate: e2e org is approved so designs/send flows stay
+      // reachable. The gated (feature-less) experience is covered by
+      // feature-gate.spec.ts, which overrides this.
+      features: ["postcards"],
     },
     profile: {
       id: "user-owner",
@@ -230,6 +238,22 @@ export function createMockAppState(): MockAppState {
       profile_complete: true,
       tour_completed: true,
       created_at: "2024-01-10T12:00:00Z",
+    },
+    brandKit: {
+      ok: true,
+      id: "brand-kit-alpha",
+      org_id: ORG_ALPHA.id,
+      data: {
+        businessName: "Alpha Roofing",
+        location: "Atlanta, GA",
+        websiteUrl: "https://alpha.example",
+        industry: "roofing",
+        serviceTypes: ["Roof replacement", "Storm repair"],
+        completenessPercent: 85,
+      },
+      scrape_status: "complete",
+      created_at: "2024-01-10T12:00:00Z",
+      updated_at: "2024-01-12T12:00:00Z",
     },
     orgs: [clone(ORG_ALPHA), clone(ORG_BETA)],
     membersByOrg: {
@@ -718,18 +742,21 @@ export function createMockAppState(): MockAppState {
     mappingByBatchId: {},
     normalizeByBatchId: {},
     billingPortalUrl: "https://billing.example.test/portal",
-      requestLog: {
-        heatmapQueries: [],
-        normalizeCalls: [],
-        switches: [],
-        profileUpdates: [],
-        orgUpdates: [],
-        inviteEmails: [],
-        pauseCalls: 0,
-        resumeCalls: 0,
-        cancelCalls: 0,
-        changePlanCalls: [],
-      },
+    requestLog: {
+      heatmapQueries: [],
+      normalizeCalls: [],
+      switches: [],
+      profileUpdates: [],
+      orgUpdates: [],
+      inviteEmails: [],
+      pauseCalls: 0,
+      resumeCalls: 0,
+      cancelCalls: 0,
+      changePlanCalls: [],
+      draftLoads: [],
+      audienceApprovals: [],
+      audienceSuppressions: [],
+    },
   };
 
   syncSession(state);
@@ -893,6 +920,23 @@ export async function installMockApi(page: Page, state: MockAppState) {
       return noContent(route);
     }
 
+    if (pathname === "/api/brand-kit" && method === "GET") {
+      return json(route, state.brandKit);
+    }
+
+    if (pathname === "/api/brand-kit" && method === "PUT") {
+      const payload = parseJson(route);
+      state.brandKit = {
+        ...state.brandKit,
+        data: {
+          ...(state.brandKit.data ?? {}),
+          ...payload,
+        },
+        updated_at: new Date().toISOString(),
+      };
+      return json(route, state.brandKit);
+    }
+
     if (pathname === "/api/orgs" && method === "GET") {
       return json(route, { orgs: state.orgs });
     }
@@ -959,7 +1003,9 @@ export async function installMockApi(page: Page, state: MockAppState) {
       const orgId = decodeURIComponent(orgUpdateMatch[1]);
       const payload = parseJson(route);
       state.orgs = state.orgs.map((org) =>
-        org.id === orgId ? { ...org, name: payload.name ?? org.name } : org,
+        org.id === orgId
+          ? { ...org, name: payload.name ?? org.name, location: payload.location ?? org.location }
+          : org,
       );
       syncSession(state);
       state.requestLog.orgUpdates.push({ orgId, name: payload.name });
@@ -1018,6 +1064,145 @@ export async function installMockApi(page: Page, state: MockAppState) {
       };
       state.campaignsByOrg[orgId] = [campaign, ...(state.campaignsByOrg[orgId] ?? [])];
       return json(route, campaign, 201);
+    }
+
+    if (pathname === "/api/campaign-drafts" && method === "POST") {
+      return json(
+        route,
+        {
+          ok: true,
+          id: "mock-draft-001",
+          org_id: activeOrgId(state),
+          created_by: state.authMe.user_id ?? null,
+          current_step: 1,
+          completed_steps: [],
+          needs_review_steps: [],
+          data: {
+            campaignType: "targeted",
+            goal: null,
+            targeting: null,
+            audience: null,
+            design: null,
+            review: null,
+          },
+          schema_version: 1,
+          created_at: "2026-03-23T00:00:00Z",
+          updated_at: "2026-03-23T00:00:00Z",
+        },
+        201,
+      );
+    }
+
+    const draftMatch = pathname.match(/^\/api\/campaign-drafts\/([^/]+)$/);
+    if (draftMatch && method === "GET") {
+      const draftId = decodeURIComponent(draftMatch[1]);
+      state.requestLog.draftLoads.push(draftId);
+      return json(route, {
+        ok: true,
+        id: draftId,
+        org_id: activeOrgId(state),
+        created_by: state.authMe.user_id ?? null,
+        current_step: 2,
+        completed_steps: [1],
+        needs_review_steps: [],
+        data: {
+          campaignType: "targeted",
+          goal: null,
+          targeting: null,
+          audience: null,
+          design: null,
+          review: null,
+        },
+        schema_version: 1,
+        created_at: "2026-03-23T00:00:00Z",
+        updated_at: "2026-03-23T00:00:00Z",
+      });
+    }
+
+    if (draftMatch && method === "PUT") {
+      const draftId = decodeURIComponent(draftMatch[1]);
+      const payload = parseJson(route);
+      return json(route, {
+        ok: true,
+        id: draftId,
+        org_id: activeOrgId(state),
+        created_by: state.authMe.user_id ?? null,
+        current_step: payload.current_step ?? 2,
+        completed_steps: payload.completed_steps ?? [1],
+        needs_review_steps: payload.needs_review_steps ?? [],
+        data: payload.data ?? {},
+        schema_version: 1,
+        created_at: "2026-03-23T00:00:00Z",
+        updated_at: "2026-03-23T00:01:00Z",
+      });
+    }
+
+    if (pathname === "/api/audiences" && method === "POST") {
+      return json(
+        route,
+        {
+          audience: {
+            id: "audience-alpha",
+            org_id: activeOrgId(state),
+            user_id: state.authMe.user_id ?? "user-owner",
+            workspace_id: null,
+            name: "SttL Upload",
+            status: "uploaded",
+            batch_id: "audience-batch-alpha",
+            created_at: "2026-03-23T00:00:00Z",
+            approved_at: null,
+            uploaded_count: 500,
+            deliverable_count: 482,
+          },
+          re_upload_prompt: false,
+        },
+        201,
+      );
+    }
+
+    const audienceSuppressMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/suppress$/);
+    if (audienceSuppressMatch && method === "POST") {
+      const audienceId = decodeURIComponent(audienceSuppressMatch[1]);
+      state.requestLog.audienceSuppressions.push(audienceId);
+      return json(route, {
+        audience_id: audienceId,
+        uploaded_count: 500,
+        suppressed: {
+          dnm: 10,
+          past_customer: 5,
+          recently_mailed: 3,
+          total_suppressed: 18,
+        },
+        deliverable_count: 482,
+        precedence: ["dnm", "past_customer", "recently_mailed"],
+      });
+    }
+
+    const audienceCostMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/cost$/);
+    if (audienceCostMatch && method === "GET") {
+      const audienceId = decodeURIComponent(audienceCostMatch[1]);
+      return json(route, {
+        audience_id: audienceId,
+        deliverable_count: 482,
+        per_card_cost_cents: 99,
+        per_card_subtotal_cents: 47718,
+        enrich_enabled: false,
+        melissa_enrich_estimate_cents: null,
+        total_cents: 47718,
+      });
+    }
+
+    const audienceApproveMatch = pathname.match(/^\/api\/audiences\/([^/]+)\/approve$/);
+    if (audienceApproveMatch && method === "POST") {
+      const audienceId = decodeURIComponent(audienceApproveMatch[1]);
+      const payload = parseJson(route);
+      state.requestLog.audienceApprovals.push(audienceId);
+      return json(route, {
+        audience_id: audienceId,
+        status: "approved",
+        campaign_id: payload.campaign_id ?? null,
+        approved_at: "2026-03-23T00:02:00Z",
+      });
     }
 
     const campaignMutationMatch = pathname.match(/^\/api\/campaigns\/([^/]+)$/);
@@ -1180,6 +1365,18 @@ export async function installMockApi(page: Page, state: MockAppState) {
         }, 0);
       }
       return json(route, response);
+    }
+
+    if (pathname === "/api/billing/pricing" && method === "GET") {
+      return json(route, {
+        pay_per_send_cents: 99,
+        subscription_rates_cents: {
+          INSIGHT: 79,
+          PERFORMANCE: 79,
+          PRECISION: 79,
+          ELITE: 79,
+        },
+      });
     }
 
     if (pathname === "/api/billing/create-portal-session" && method === "POST") {

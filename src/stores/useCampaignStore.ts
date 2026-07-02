@@ -73,6 +73,8 @@ export const useCampaignStore = defineStore("campaign", {
           this.activeCampaignId = null;
           this.persist();
         }
+      } catch {
+        // API unavailable (no backend or not authenticated) — keep existing state
       } finally {
         this.loading = false;
       }

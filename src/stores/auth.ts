@@ -38,7 +38,7 @@ export const useAuthStore = defineStore("auth", {
 
     // Login modal UI state
     loginModalOpen: false,
-    loginRedirectTo: "/dashboard" as string,
+    loginRedirectTo: "/app/home" as string,
     loginLoading: false,
     loginError: "" as string,
     loginMode: "login" as LoginMode,
@@ -89,13 +89,22 @@ export const useAuthStore = defineStore("auth", {
       return !!this.billing?.needs_paywall;
     },
 
+    /** Org-level feature access from /auth/me (S85 postcards early access). */
+    features: (state): string[] =>
+      state.me?.authenticated === true ? state.me.features ?? [] : [],
+
+    /** Designs + mail sending are limited to approved orgs until GA. */
+    hasPostcards(): boolean {
+      return this.features.includes("postcards");
+    },
+
     profileComplete: (state): boolean => !!state.profile?.profile_complete,
 
     tourCompleted: (state): boolean => !!state.profile?.tour_completed,
   },
 
   actions: {
-    openLoginModal(next: string = "/dashboard", mode: LoginMode = "login") {
+    openLoginModal(next: string = "/app/home", mode: LoginMode = "login") {
       this.loginRedirectTo = next;
       this.loginMode = mode;
       this.loginModalOpen = true;
