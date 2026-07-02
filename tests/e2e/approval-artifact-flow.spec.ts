@@ -20,6 +20,7 @@ async function installApprovalFlowMocks(page: Page) {
       full_name: "Alex Owner",
       role: "owner",
       avatar_url: "",
+      features: ["postcards"], // S85 gate: spec org is approved
       org_id: "22222222-2222-4222-8222-222222222222",
       org_name: "Alpha HVAC",
       org_role: "owner",

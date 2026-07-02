@@ -29,6 +29,7 @@ async function mockHarness(page: import("@playwright/test").Page) {
         email: "alex@alpha.example",
         full_name: "Alex Owner",
         role: "owner",
+        features: ["postcards"], // S85 gate: spec org is approved
         org_id: "org-alpha",
         org_name: "Alpha Roofing",
         org_role: "owner",

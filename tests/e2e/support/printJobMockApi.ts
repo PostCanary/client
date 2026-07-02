@@ -70,6 +70,8 @@ function authMeFixture() {
     org_name: "Mock Org",
     org_role: "owner",
     orgs: [{ id: MOCK_ORG_ID, name: "Mock Org", slug: "mock-org", role: "owner" }],
+    features: ["postcards"], // S85 gate: spec org is approved
+
     billing: {
       subscription_status: "active",
       is_subscribed: true,

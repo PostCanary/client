@@ -89,6 +89,15 @@ export const useAuthStore = defineStore("auth", {
       return !!this.billing?.needs_paywall;
     },
 
+    /** Org-level feature access from /auth/me (S85 postcards early access). */
+    features: (state): string[] =>
+      state.me?.authenticated === true ? state.me.features ?? [] : [],
+
+    /** Designs + mail sending are limited to approved orgs until GA. */
+    hasPostcards(): boolean {
+      return this.features.includes("postcards");
+    },
+
     profileComplete: (state): boolean => !!state.profile?.profile_complete,
 
     tourCompleted: (state): boolean => !!state.profile?.tour_completed,

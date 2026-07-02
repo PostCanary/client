@@ -80,4 +80,6 @@ export type AuthMeResponse =
       org_name?: string;
       org_role?: string;
       orgs?: Array<{ id: string; name: string; slug: string; role: string }>;
+      // Org-level feature access (S85). "postcards" gates designs + sending.
+      features?: string[];
     };
