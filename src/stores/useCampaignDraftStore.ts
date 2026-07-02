@@ -27,6 +27,7 @@ import {
   renderTemplateIdForLayout,
 } from "@/data/templates";
 import type { CampaignGoalType } from "@/types/campaign";
+import { disarmScrapeRegenWatcher } from "@/composables/scrapeRegenState";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,6 +82,21 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
   },
 
   actions: {
+    /** Exposes the module-level generation-in-flight flag so callers
+     * outside this store (useScrapeRegenWatcher's precondition check and
+     * its "disable Refresh / never drop the click" backstop) don't need
+     * their own tracking. Deliberately an ACTION, not a getter: Pinia
+     * getters are Vue `computed()`s, which cache forever once read if
+     * they touch zero reactive dependencies — exactly the case here,
+     * since `_generatingCards` is a plain module closure variable (kept
+     * out of Pinia state on purpose, see the comment up top). A cached
+     * getter would freeze at whatever value it saw on its first read,
+     * which silently broke a polling loop that reads it every 200ms.
+     * A plain function call always re-reads the live value. */
+    isGeneratingCards(): boolean {
+      return _generatingCards;
+    },
+
     // --- Lifecycle ---
     async startNew() {
       this.loading = true;
@@ -181,10 +197,25 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this._debounceSave();
     },
 
-    setDesign(design: DesignSelection) {
+    /**
+     * `opts.source` distinguishes a customer edit ("user", the default)
+     * from a system/AI mutation ("system" — full (re)generation and the
+     * review-defaults auto-fill in StepDesign's onMounted/hydration
+     * watchers). Only a "user" source marks the draft as no-longer-
+     * pristine (`designUserEdited`); "system" deliberately leaves the
+     * flag alone so a review-defaults touch-up on top of an already-
+     * edited design doesn't erase that the user edited it (AI-scrape-
+     * triggers spec edge case #11 vs #9). generateCardsForDraft() is
+     * responsible for explicitly clearing the flag back to false on a
+     * full regeneration — see there.
+     */
+    setDesign(design: DesignSelection, opts?: { source?: "user" | "system" }) {
       if (!this.draft) return;
       _designRevision++;
       this.draft.design = design;
+      if ((opts?.source ?? "user") === "user") {
+        this.draft.designUserEdited = true;
+      }
       this._markComplete(3);
       this._clearReview(3);
       this._debounceSave();
@@ -330,6 +361,20 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
       _generatingCards = true;
       try {
+        // S89 Fix B ordering: goal selection (Step 1) fires generation
+        // before Step 3's backfill scrape has a chance to run, so the
+        // first campaign was always built from a sparse kit. If a scan
+        // is already in flight, wait for it to settle (or time out) so
+        // `brandKitStore.brandKit` below reflects the fresh kit — the
+        // reference is read live, AFTER the await, never cached stale.
+        // Disarm useScrapeRegenWatcher's own handling of this same run's
+        // settle transition — this call is already consuming it, so the
+        // watcher must not ALSO auto-refresh/prompt for it.
+        if (brandKitStore.brandKit?.scrapeStatus === "scraping") {
+          disarmScrapeRegenWatcher();
+          await brandKitStore.waitForScrapeSettled();
+        }
+
         const goalType = (this.draft.goal?.goalType ?? "neighbor_marketing") as CampaignGoalType;
         const seqLen = this.draft.goal?.sequenceLength ?? 3;
         const breakdown = this.draft.targeting?.recipientBreakdown ?? {
@@ -388,13 +433,25 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             }));
           }
         }
-        this.setDesign({
-          templateId: outCards[0]?.templateId ?? "",
-          templateLayoutType: layoutType,
-          isCustomUpload: false,
-          customUploadUrl: null,
-          sequenceCards: outCards,
-        });
+        this.setDesign(
+          {
+            templateId: outCards[0]?.templateId ?? "",
+            templateLayoutType: layoutType,
+            isCustomUpload: false,
+            customUploadUrl: null,
+            sequenceCards: outCards,
+          },
+          { source: "system" },
+        );
+        // A full (re)generation produces system content — pristine by
+        // definition, including the "Refresh designs" banner path where
+        // this explicitly un-does a prior user edit's flag. EXCEPT the
+        // remap path just above: a card-less mid-generation layout pick
+        // is a real customer choice, and marking the draft pristine here
+        // would let a later post-scrape auto-refresh silently revert
+        // their layout to the recommended one. Keep them "edited" so
+        // that case prompts instead.
+        this.draft.designUserEdited = userModified;
       } catch (err) {
         console.error("Card generation failed in store:", err);
       } finally {

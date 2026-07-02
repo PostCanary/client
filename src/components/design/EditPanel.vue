@@ -933,6 +933,7 @@ async function importStock(photo: StockPhotoResult) {
 
 // --- Photo upload (designer-side; Phase 0.2a) ------------------------------
 const brandKitStore = useBrandKitStore();
+const auth = useAuthStore();
 const photoInput = ref<HTMLInputElement | null>(null);
 const uploadingPhoto = ref(false);
 const photoUploadError = ref<string | null>(null);
@@ -1057,6 +1058,11 @@ async function saveBizInfo() {
   if (savingBiz.value || !bizDirty.value) return;
   const addressChanged =
     bizDraft.value.address.trim() !== (props.brandKit?.address ?? "").trim();
+  // S89 Fix A: a changed website URL should refresh the brand kit from
+  // the NEW site — logo, colors, photos, services — the same way the
+  // Rescan button does. Mirrors addressChanged above.
+  const websiteChanged =
+    bizDraft.value.websiteUrl.trim() !== (props.brandKit?.websiteUrl ?? "").trim();
   if (!bizDraft.value.businessName.trim()) {
     bizError.value = "Business name can't be empty — it prints on every card.";
     return;
@@ -1090,9 +1096,24 @@ async function saveBizInfo() {
     if (addressChanged && isMapLayout.value && bizDraft.value.address.trim()) {
       void generateMap();
     }
+    // S89 Fix A: an empty new URL never triggers a rescan (nothing to
+    // scan); rescan() itself also no-ops for gated orgs and mock mode.
+    if (websiteChanged && bizDraft.value.websiteUrl.trim() && auth.hasPostcards) {
+      void brandKitStore.rescan(bizDraft.value.websiteUrl.trim());
+    }
   } finally {
     savingBiz.value = false;
   }
+}
+
+// S89 Fix A: explicit "Rescan website" control — scans the CURRENTLY
+// SAVED website (props.brandKit.websiteUrl), not whatever is sitting
+// unsaved in the input, so a rescan can never fire against an edit the
+// customer hasn't committed yet.
+function onRescanWebsite() {
+  const url = props.brandKit?.websiteUrl ?? "";
+  if (!url.trim()) return;
+  void brandKitStore.rescan(url);
 }
 
 // --- Industry switcher (S75: internal test tool) ----------------------------
@@ -2075,6 +2096,44 @@ async function saveNewReview() {
             data-testid="biz-website-input"
             class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
           />
+          <!-- S89 Fix A: manual rescan of the (already saved) website —
+               hidden entirely when the org lacks postcards access. -->
+          <template v-if="auth.hasPostcards">
+            <button
+              type="button"
+              data-testid="biz-rescan-website"
+              class="mt-1 text-[11px] font-semibold text-[#47bfa9] hover:underline disabled:text-gray-300 disabled:no-underline disabled:cursor-not-allowed"
+              :disabled="brandKit?.scrapeStatus === 'scraping' || !(brandKit?.websiteUrl ?? '').trim()"
+              @click="onRescanWebsite"
+            >
+              {{ brandKit?.scrapeStatus === "scraping" ? "Scanning…" : "Rescan website" }}
+            </button>
+            <p
+              v-if="brandKit?.scrapeStatus === 'scraping'"
+              class="text-[10px] text-gray-400 mt-0.5"
+              data-testid="biz-rescan-progress"
+            >
+              {{ brandKitStore.scrapeMessage || "Scanning your website…" }} ({{ brandKitStore.scrapeProgressPercent }}%)
+            </p>
+            <p
+              v-else-if="brandKit?.scrapeStatus === 'failed'"
+              class="text-[10px] text-red-500 mt-0.5"
+              data-testid="biz-rescan-failed"
+            >
+              We couldn't read your website.
+              <button
+                type="button"
+                class="underline font-semibold"
+                data-testid="biz-rescan-retry"
+                @click="onRescanWebsite"
+              >
+                Try again
+              </button>
+            </p>
+            <p class="text-[10px] text-gray-400 mt-0.5">
+              Rescanning refreshes your logo, colors, and photos — it never overwrites your business name, phone, or address, and never touches your reviews.
+            </p>
+          </template>
         </label>
         <label class="block">
           <span class="text-[10px] uppercase tracking-wide text-gray-400">Business address (return address + service-area map)</span>

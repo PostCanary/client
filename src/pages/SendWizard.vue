@@ -90,6 +90,14 @@ onMounted(async () => {
       await brandKitStore.fetch();
     }
     brandKitStore.setupOrgWatcher();
+    // S89 Fix B ordering: kick the backfill scrape here, at wizard entry,
+    // instead of only from StepDesign's onMounted (Step 3) — goal
+    // selection on Step 1 fires card generation immediately, before the
+    // customer ever reaches Step 3, so waiting for Step 3 to trigger the
+    // scan was always too late for the first campaign. ensureScraped() is
+    // pending-only and self-guards (gate, mock mode) — the StepDesign
+    // call stays as an idempotent backstop.
+    void brandKitStore.ensureScraped();
   } catch {
     // API endpoints not available yet — fall back to mock draft
     // so the wizard is always usable (removed once backend is wired)
@@ -113,6 +121,7 @@ onMounted(async () => {
       error: null,
     });
     await brandKitStore.fetch();
+    void brandKitStore.ensureScraped();
   } finally {
     // Single URL sync point: whichever path produced the draft (API or
     // fallback), put the draft id in the URL before the wizard renders.

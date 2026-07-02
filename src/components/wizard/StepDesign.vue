@@ -733,7 +733,7 @@ onMounted(() => {
   }
   const appliedReviews = applyBrandKitReviewDefaults();
   originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-  if (appliedReviews) commitDesign();
+  if (appliedReviews) commitDesign({ source: "system" });
   fetchAllThumbnails();
 });
 
@@ -1245,7 +1245,12 @@ function replaceCardAt(idx: number, nextCard: CardDesign) {
   cards.value = cards.value.map((card, i) => (i === idx ? nextCard : card));
 }
 
-function commitDesign() {
+// `opts.source` forwards to draftStore.setDesign — "system" for the
+// review-defaults auto-fill (applyBrandKitReviewDefaults) below, which
+// must NOT mark the draft's `designUserEdited` pristine-tracking flag
+// (AI-scrape-triggers spec edge case #11). Every other caller here is a
+// genuine customer edit and keeps the default "user" source.
+function commitDesign(opts?: { source?: "user" | "system" }) {
   const design: DesignSelection = {
     templateId: cards.value[0]?.templateId ?? "",
     templateLayoutType: currentLayout.value,
@@ -1253,7 +1258,7 @@ function commitDesign() {
     customUploadUrl: null,
     sequenceCards: cards.value,
   };
-  draftStore.setDesign(design);
+  draftStore.setDesign(design, opts);
 }
 
 // Sync cards from store when async generation completes (fired by setGoal in Step 1)
@@ -1265,7 +1270,7 @@ watch(
       currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
       const appliedReviews = applyBrandKitReviewDefaults();
       originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-      if (appliedReviews) commitDesign();
+      if (appliedReviews) commitDesign({ source: "system" });
     }
   },
 );
@@ -1278,7 +1283,7 @@ watch(
       draftStore.generateCardsForDraft();
     } else if (hydrated && applyBrandKitReviewDefaults()) {
       originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-      commitDesign();
+      commitDesign({ source: "system" });
       queuePersistedPreviewRefresh();
     }
   },

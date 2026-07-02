@@ -471,6 +471,13 @@ export interface CampaignDraft {
   audience: AudienceWizardState | null
   design: DesignSelection | null
   review: ReviewSelection | null
+  // AI-scrape-triggers spec (2026-07-02): true once the customer has made
+  // a manual design edit — cleared back to false whenever the cards are
+  // (re)written wholesale by system/AI generation. Drives the post-scrape
+  // regen decision (silent auto-refresh when pristine vs. a non-blocking
+  // prompt when edited). Persisted with the draft's JSONB `data` blob (the
+  // server stores `data` unvalidated — see useScrapeRegenWatcher.ts).
+  designUserEdited?: boolean
 
   createdAt: string                    // ISO datetime
   updatedAt: string                    // ISO datetime
