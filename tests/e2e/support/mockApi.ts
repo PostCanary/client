@@ -16,12 +16,20 @@ type RequestLog = {
   draftLoads: string[];
   audienceApprovals: string[];
   audienceSuppressions: string[];
+  scrapeRequests: Array<{ website_url?: string }>;
 };
 
 export type MockAppState = {
   authMe: JsonMap;
   profile: JsonMap;
   brandKit: JsonMap;
+  // AI-scrape-triggers spec: scriptable POST /api/brand-kit/scrape +
+  // GET /api/brand-kit progression. A scan starts "scraping"; each GET
+  // poll while in that state counts down scrapePollsRemaining until it
+  // settles into scrapeTerminalStatus. Tests configure both before
+  // triggering a scan to control timing/outcome deterministically.
+  scrapePollsRemaining: number;
+  scrapeTerminalStatus: "complete" | "failed";
   orgs: JsonMap[];
   membersByOrg: Record<string, JsonMap[]>;
   invitationsByOrg: Record<string, JsonMap[]>;
@@ -742,6 +750,8 @@ export function createMockAppState(): MockAppState {
     mappingByBatchId: {},
     normalizeByBatchId: {},
     billingPortalUrl: "https://billing.example.test/portal",
+    scrapePollsRemaining: 1,
+    scrapeTerminalStatus: "complete",
     requestLog: {
       heatmapQueries: [],
       normalizeCalls: [],
@@ -756,6 +766,7 @@ export function createMockAppState(): MockAppState {
       draftLoads: [],
       audienceApprovals: [],
       audienceSuppressions: [],
+      scrapeRequests: [],
     },
   };
 
@@ -921,6 +932,28 @@ export async function installMockApi(page: Page, state: MockAppState) {
     }
 
     if (pathname === "/api/brand-kit" && method === "GET") {
+      // Scripted scrape progression: each poll while "scraping" counts
+      // down scrapePollsRemaining until it settles into
+      // scrapeTerminalStatus (mirrors the real orchestrator's polling
+      // contract — see useBrandKitStore._pollScrapeStatus).
+      if (state.brandKit.scrape_status === "scraping") {
+        state.scrapePollsRemaining -= 1;
+        if (state.scrapePollsRemaining <= 0) {
+          state.brandKit = {
+            ...state.brandKit,
+            scrape_status: state.scrapeTerminalStatus,
+            data:
+              state.scrapeTerminalStatus === "complete"
+                ? {
+                    ...(state.brandKit.data ?? {}),
+                    brandColors: ["#1d4ed8", "#0b2d50", "#47bfa9"],
+                    completenessPercent: 92,
+                  }
+                : (state.brandKit.data ?? {}),
+            updated_at: new Date().toISOString(),
+          };
+        }
+      }
       return json(route, state.brandKit);
     }
 
@@ -932,6 +965,27 @@ export async function installMockApi(page: Page, state: MockAppState) {
           ...(state.brandKit.data ?? {}),
           ...payload,
         },
+        updated_at: new Date().toISOString(),
+      };
+      return json(route, state.brandKit);
+    }
+
+    if (pathname === "/api/brand-kit/scrape" && method === "POST") {
+      const payload = parseJson(route);
+      if (state.brandKit.scrape_status === "scraping") {
+        // Mirrors the real server's 409 for an already-in-flight scan.
+        return json(route, { error: "A website scan is already running" }, 409);
+      }
+      state.requestLog.scrapeRequests.push({ website_url: payload.website_url });
+      state.brandKit = {
+        ...state.brandKit,
+        data: {
+          ...(state.brandKit.data ?? {}),
+          ...(payload.website_url
+            ? { websiteUrl: String(payload.website_url).trim() }
+            : {}),
+        },
+        scrape_status: "scraping",
         updated_at: new Date().toISOString(),
       };
       return json(route, state.brandKit);

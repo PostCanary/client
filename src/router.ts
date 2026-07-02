@@ -274,6 +274,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/pages/dev/StepDesignFold.vue"),
     meta: { title: "Step Design Fold (dev)", marketing: false },
   },
+  {
+    path: "/dev/wizard-shell-strips",
+    name: "DevWizardShellStrips",
+    component: () => import("@/pages/dev/WizardShellStrips.vue"),
+    meta: { title: "Wizard Shell Strips (dev)", marketing: false },
+  },
 
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

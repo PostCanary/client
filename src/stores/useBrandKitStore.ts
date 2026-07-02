@@ -98,6 +98,14 @@ export const useBrandKitStore = defineStore("brandKit", {
       try {
         this.brandKit = await getBrandKit();
         this.hydrated = true;
+        // AI-scrape-triggers spec edge case #8: a page reload mid-scan
+        // would otherwise leave `scraping` state on screen forever with
+        // nobody polling for it to settle (this.scraping resets to false
+        // on every fresh page load). Resume polling so the strip clears
+        // and waitForScrapeSettled() below can actually resolve.
+        if (this.brandKit?.scrapeStatus === "scraping" && !this.scraping) {
+          this._pollScrapeStatus();
+        }
       } catch (e: any) {
         this.error = "Couldn't load your brand info — try again";
       } finally {
@@ -124,6 +132,71 @@ export const useBrandKitStore = defineStore("brandKit", {
       ).trim();
       if (!url) return;
       await this.triggerScrape(url);
+    },
+
+    /** S89 Fix B: wait for an in-flight scrape to settle before generation
+     * reads the brand kit, so the first campaign isn't built from a sparse
+     * kit. Resolves immediately with "idle" when nothing is scraping
+     * (pending/absent kit) or in mock mode. Piggybacks on the existing
+     * _pollScrapeStatus loop (starting it if it isn't already running —
+     * e.g. right after a reload, see fetch() above) and just watches
+     * `brandKit.scrapeStatus` for the poll to land on a terminal value. */
+    async waitForScrapeSettled(
+      timeoutMs = 130_000,
+    ): Promise<"complete" | "failed" | "timeout" | "idle"> {
+      if (import.meta.env.VITE_SKIP_AUTH === "true") return "idle";
+
+      const settled = (): "complete" | "failed" | "idle" | null => {
+        const status = this.brandKit?.scrapeStatus;
+        if (!status || status === "pending") return "idle";
+        if (status === "scraping") return null;
+        if (status === "failed") return "failed";
+        // complete | partial | skipped — all are terminal, usable states.
+        return "complete";
+      };
+
+      const immediate = settled();
+      if (immediate !== null) return immediate;
+
+      if (!this.scraping) this._pollScrapeStatus();
+
+      const startedAt = Date.now();
+      return new Promise((resolve) => {
+        const check = () => {
+          const result = settled();
+          if (result !== null) {
+            resolve(result);
+            return;
+          }
+          if (Date.now() - startedAt >= timeoutMs) {
+            resolve("timeout");
+            return;
+          }
+          setTimeout(check, 300);
+        };
+        check();
+      });
+    },
+
+    /** S89 Fix A: rescan the (possibly-just-changed) website URL. Thin
+     * wrapper over triggerScrape — 409 (already scraping) is swallowed
+     * inside it. Self-guards against gated orgs, empty URLs, and mock
+     * mode so callers (Business Info save, the Rescan button, the
+     * failed-strip "Try again") don't need to repeat those checks. */
+    async rescan(url: string): Promise<void> {
+      if (import.meta.env.VITE_SKIP_AUTH === "true") return;
+      const auth = useAuthStore();
+      if (!auth.hasPostcards) return;
+      const trimmed = url.trim();
+      if (!trimmed) return;
+      await this.triggerScrape(trimmed);
+      // triggerScrape already starts polling when ITS OWN response comes
+      // back "scraping". On the 409 path (a scan from elsewhere is already
+      // running) it returns early without touching brandKit — make sure
+      // polling is still active so this caller's UI reflects that scan.
+      if (this.brandKit?.scrapeStatus === "scraping" && !this.scraping) {
+        this._pollScrapeStatus();
+      }
     },
 
     async update(partial: Partial<BrandKit>) {

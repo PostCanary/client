@@ -1,5 +1,9 @@
 // Generation-overwrite race (S73): async card generation completing AFTER
 // a user design edit must never silently replace what's on screen.
+//
+// Also covers the AI-scrape-triggers spec (2026-07-02): generateCardsForDraft
+// waiting on an in-flight scrape before reading the brand kit (Fix B), and
+// setDesign's "user"/"system" source flag driving designUserEdited (Fix C).
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
@@ -8,8 +12,26 @@ vi.mock("@/composables/usePostcardGenerator", () => ({
   generateCards: (...args: unknown[]) => generateCardsMock(...args),
   deriveTeaser: () => "",
 }));
+
+// A plain mutable object (read through getters, so the SAME closure state
+// is visible however many times useBrandKitStore() is called) — lets tests
+// change brandKit/scrapeStatus mid-flight without needing the real store.
+const brandKitStoreState: { hydrated: boolean; brandKit: any } = {
+  hydrated: true,
+  brandKit: { businessName: "Acme" },
+};
+const waitForScrapeSettledMock = vi.fn().mockResolvedValue("idle");
 vi.mock("@/stores/useBrandKitStore", () => ({
-  useBrandKitStore: () => ({ hydrated: true, brandKit: { businessName: "Acme" } }),
+  useBrandKitStore: () => ({
+    get hydrated() {
+      return brandKitStoreState.hydrated;
+    },
+    get brandKit() {
+      return brandKitStoreState.brandKit;
+    },
+    waitForScrapeSettled: (...args: unknown[]) =>
+      waitForScrapeSettledMock(...args),
+  }),
 }));
 vi.mock("@/api/campaignDrafts", () => ({
   saveDraft: vi.fn().mockResolvedValue(undefined),
@@ -57,6 +79,9 @@ describe("generateCardsForDraft — overwrite race", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     generateCardsMock.mockReset();
+    waitForScrapeSettledMock.mockReset().mockResolvedValue("idle");
+    brandKitStoreState.hydrated = true;
+    brandKitStoreState.brandKit = { businessName: "Acme" };
   });
 
   it("applies generated cards on the undisturbed path", async () => {
@@ -148,5 +173,141 @@ describe("generateCardsForDraft — overwrite race", () => {
     expect(design.templateLayoutType).toBe("photo-top");
     expect(design.sequenceCards[0]!.renderTemplateId).toBe("photo-top-front-v1");
     expect(design.sequenceCards[0]!.templateId).toBe("photo-top-offer");
+    // The layout pick is a real customer choice — the regeneration must
+    // NOT mark the draft pristine, or a later post-scrape auto-refresh
+    // would silently revert their layout to the recommended one (S89
+    // review finding). Edited drafts get the prompt banner instead.
+    expect(store.draft!.designUserEdited).toBe(true);
+  });
+});
+
+describe("generateCardsForDraft — S89 Fix B: waits for an in-flight scrape", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    generateCardsMock.mockReset();
+    waitForScrapeSettledMock.mockReset().mockResolvedValue("idle");
+    brandKitStoreState.hydrated = true;
+    brandKitStoreState.brandKit = { businessName: "Acme" };
+  });
+
+  it("does not wait when the kit isn't mid-scrape", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    generateCardsMock.mockResolvedValue([makeCard(1, "offer")]);
+
+    await store.generateCardsForDraft();
+
+    expect(waitForScrapeSettledMock).not.toHaveBeenCalled();
+  });
+
+  it("waits for the scan to settle, then reads the CURRENT (not stale) brand kit", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    brandKitStoreState.brandKit = { businessName: "Acme", scrapeStatus: "scraping" };
+
+    let resolveWait!: (status: string) => void;
+    waitForScrapeSettledMock.mockReturnValue(
+      new Promise((resolve) => (resolveWait = resolve)),
+    );
+    generateCardsMock.mockResolvedValue([
+      makeCard(1, "offer"),
+      makeCard(2, "proof"),
+      makeCard(3, "last_chance"),
+    ]);
+
+    const running = store.generateCardsForDraft();
+    // Let the store's dynamic import + synchronous prelude reach the await.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(waitForScrapeSettledMock).toHaveBeenCalledTimes(1);
+    expect(generateCardsMock).not.toHaveBeenCalled();
+
+    // The scan settles with FRESH data — mutated before the wait resolves,
+    // mirroring the real store where polling updates brandKit before
+    // waitForScrapeSettled's promise settles.
+    brandKitStoreState.brandKit = {
+      businessName: "Acme Fresh From Scan",
+      scrapeStatus: "complete",
+    };
+    resolveWait("complete");
+    await running;
+
+    expect(generateCardsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ businessName: "Acme Fresh From Scan" }),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it("proceeds with fallback content on timeout/failed rather than looping", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    brandKitStoreState.brandKit = { businessName: "Acme", scrapeStatus: "scraping" };
+    waitForScrapeSettledMock.mockResolvedValue("timeout");
+    generateCardsMock.mockResolvedValue([makeCard(1, "offer")]);
+
+    await store.generateCardsForDraft();
+
+    expect(generateCardsMock).toHaveBeenCalledTimes(1);
+    expect(store.draft!.design?.sequenceCards).toHaveLength(1);
+  });
+});
+
+describe("setDesign — S89 Fix C: designUserEdited pristine tracking", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    generateCardsMock.mockReset();
+    waitForScrapeSettledMock.mockReset().mockResolvedValue("idle");
+    brandKitStoreState.hydrated = true;
+    brandKitStoreState.brandKit = { businessName: "Acme" };
+  });
+
+  const anyDesign = {
+    templateId: "t",
+    templateLayoutType: "full-bleed",
+    isCustomUpload: false,
+    customUploadUrl: null,
+    sequenceCards: [],
+  } as any;
+
+  it('defaults to "user" and marks the draft edited', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign);
+    expect(store.draft!.designUserEdited).toBe(true);
+  });
+
+  it('a "system" source does not mark the draft edited', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign, { source: "system" });
+    expect(store.draft!.designUserEdited).toBeFalsy();
+  });
+
+  it('a "system" source (review-defaults touch-up) does not clear a prior user edit', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign); // customer edit
+    expect(store.draft!.designUserEdited).toBe(true);
+
+    store.setDesign(anyDesign, { source: "system" }); // review-defaults commit
+    expect(store.draft!.designUserEdited).toBe(true);
+  });
+
+  it("a full regeneration resets designUserEdited back to false", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign); // simulate a prior edit
+    expect(store.draft!.designUserEdited).toBe(true);
+
+    generateCardsMock.mockResolvedValue([
+      makeCard(1, "offer"),
+      makeCard(2, "proof"),
+      makeCard(3, "last_chance"),
+    ]);
+    await store.generateCardsForDraft();
+
+    expect(store.draft!.designUserEdited).toBe(false);
   });
 });
