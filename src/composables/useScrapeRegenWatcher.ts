@@ -14,6 +14,8 @@ import {
   armScrapeRegenWatcher,
   disarmScrapeRegenWatcher,
   isScrapeRegenWatcherArmed,
+  isScrapeRunClaimed,
+  releaseScrapeRunClaim,
 } from "@/composables/scrapeRegenState";
 
 const TOAST_MS = 6000;
@@ -84,17 +86,29 @@ export function useScrapeRegenWatcher() {
     () => brandKitStore.brandKit?.scrapeStatus,
     (next, prev) => {
       if (next === "scraping" && prev !== "scraping") {
-        armScrapeRegenWatcher();
+        // S90: a claimed run is owned end-to-end by another flow (the
+        // Generate-with-AI button) — never arm for it, or this watcher
+        // races the owner at settle (its handler runs on the status write,
+        // before the owner's poll can observe it).
+        if (!isScrapeRunClaimed()) {
+          armScrapeRegenWatcher();
+        }
         resetBanner();
         dismissToast();
         return;
       }
       if (prev === "scraping" && next !== "scraping") {
         const wasArmed = isScrapeRegenWatcherArmed();
-        // One-shot per run: leaving "scraping" always disarms, whether or
-        // not THIS watcher is the one that acts on the transition.
+        // A claim wins over armed state: the run may have STARTED before
+        // the owner claimed it (button clicked into an already-in-flight
+        // scan — its rescan 409s and just waits), in which case armed is
+        // stale truth from the pre-claim start transition. One-shot per
+        // run either way: leaving "scraping" always disarms and releases.
+        const wasClaimed = isScrapeRunClaimed();
         disarmScrapeRegenWatcher();
-        if (!wasArmed) return; // consumed by generateCardsForDraft's own wait
+        releaseScrapeRunClaim();
+        if (wasClaimed) return; // an owning flow consumes this settle
+        if (!wasArmed) return; // consumed by an owning flow's own wait
         if (next !== "complete" && next !== "partial") return; // failed/skipped → no regen, no banner
         void maybeTrigger();
       }

@@ -33,3 +33,30 @@ export function disarmScrapeRegenWatcher(): void {
 export function isScrapeRegenWatcherArmed(): boolean {
   return armed;
 }
+
+// S90: a flow that OWNS a scrape run end-to-end (the "Generate with AI"
+// button scans and then regenerates itself) must keep the watcher out of
+// that run entirely. A pre-scan disarm alone is not enough: the watcher
+// RE-ARMS on the → "scraping" transition the owned rescan itself causes,
+// and its settle handler runs on the Vue watch (synchronously with the
+// status write) — before the owner's 300ms waitForScrapeSettled poll can
+// observe the settle and disarm again. The claim is checked at arm time,
+// so the watcher never arms for a claimed run, and is released by the
+// watcher itself when that run settles (or by the owner on error).
+let claimed = false;
+
+/** Claim the NEXT scrape run for the calling flow — the watcher will not
+ * arm on its start transition. Call immediately before kicking the scan. */
+export function claimScrapeRun(): void {
+  claimed = true;
+}
+
+/** Release an unconsumed claim (owner errored before/without a scan, or
+ * the run settled). Idempotent. */
+export function releaseScrapeRunClaim(): void {
+  claimed = false;
+}
+
+export function isScrapeRunClaimed(): boolean {
+  return claimed;
+}

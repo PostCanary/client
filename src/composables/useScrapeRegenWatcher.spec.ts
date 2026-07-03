@@ -8,7 +8,13 @@ import { nextTick } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
-import { disarmScrapeRegenWatcher, isScrapeRegenWatcherArmed } from "./scrapeRegenState";
+import {
+  claimScrapeRun,
+  disarmScrapeRegenWatcher,
+  isScrapeRegenWatcherArmed,
+  isScrapeRunClaimed,
+  releaseScrapeRunClaim,
+} from "./scrapeRegenState";
 
 const generateCardsMock = vi.fn().mockResolvedValue([]);
 vi.mock("@/composables/usePostcardGenerator", () => ({
@@ -64,11 +70,13 @@ describe("useScrapeRegenWatcher", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     disarmScrapeRegenWatcher();
+    releaseScrapeRunClaim();
     generateCardsMock.mockClear();
   });
 
   afterEach(() => {
     disarmScrapeRegenWatcher();
+    releaseScrapeRunClaim();
   });
 
   it("auto-refreshes + toasts on a pristine draft when the scan settles complete", async () => {
@@ -122,6 +130,64 @@ describe("useScrapeRegenWatcher", () => {
 
     expect(genSpy).toHaveBeenCalledTimes(1);
     expect(toastMessage.value).toContain("Designs updated");
+  });
+
+  it("never arms for a claimed run and stays silent at its settle (Generate-with-AI ownership)", async () => {
+    grantPostcards();
+    const brandKitStore = useBrandKitStore();
+    brandKitStore.hydrated = true;
+    brandKitStore.brandKit = { scrapeStatus: "pending" } as any;
+    const draftStore = useCampaignDraftStore();
+    seedDraftWithCards(draftStore, false);
+    const genSpy = vi
+      .spyOn(draftStore, "generateCardsForDraft")
+      .mockResolvedValue(undefined);
+
+    const { toastMessage, bannerVisible } = useScrapeRegenWatcher();
+
+    // Owner claims, THEN the scan starts (the button's normal sequence).
+    claimScrapeRun();
+    brandKitStore.brandKit = { scrapeStatus: "scraping" } as any;
+    await nextTick();
+    expect(isScrapeRegenWatcherArmed()).toBe(false); // claim blocked arming
+
+    brandKitStore.brandKit = { scrapeStatus: "complete" } as any;
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(genSpy).not.toHaveBeenCalled(); // owner regenerates, not us
+    expect(toastMessage.value).toBeNull();
+    expect(bannerVisible.value).toBe(false);
+    expect(isScrapeRunClaimed()).toBe(false); // released at settle
+  });
+
+  it("treats a claim as consumed even when the run armed BEFORE the claim (click into in-flight scan)", async () => {
+    grantPostcards();
+    const brandKitStore = useBrandKitStore();
+    brandKitStore.hydrated = true;
+    brandKitStore.brandKit = { scrapeStatus: "pending" } as any;
+    const draftStore = useCampaignDraftStore();
+    seedDraftWithCards(draftStore, false);
+    const genSpy = vi
+      .spyOn(draftStore, "generateCardsForDraft")
+      .mockResolvedValue(undefined);
+
+    const { toastMessage } = useScrapeRegenWatcher();
+
+    // Scan starts unowned (arms normally)…
+    brandKitStore.brandKit = { scrapeStatus: "scraping" } as any;
+    await nextTick();
+    expect(isScrapeRegenWatcherArmed()).toBe(true);
+
+    // …then the button claims it mid-flight (its rescan 409'd + waits).
+    claimScrapeRun();
+    brandKitStore.brandKit = { scrapeStatus: "complete" } as any;
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(genSpy).not.toHaveBeenCalled(); // claim wins over stale armed
+    expect(toastMessage.value).toBeNull();
+    expect(isScrapeRunClaimed()).toBe(false);
   });
 
   it("shows a non-blocking banner instead of auto-refreshing when the design was edited", async () => {
