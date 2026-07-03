@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { useAuthStore } from "@/stores/auth";
+import { useAiGenerate } from "@/composables/useAiGenerate";
 import type {
   CardDesign,
   ColorOverride,
@@ -49,6 +51,25 @@ function mediaSrc(url: string): string {
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
+const auth = useAuthStore();
+
+// S90: "Generate with AI" toolbar button — composes the S89 scrape/regen
+// primitives (rescan, waitForScrapeSettled, generateCardsForDraft) into one
+// click. State machine lives in the composable so it's unit-testable.
+const {
+  label: aiGenerateLabel,
+  busy: aiGenerateBusy,
+  showWebsiteModal: showAiWebsiteModal,
+  websiteInput: aiWebsiteInput,
+  websiteModalError: aiWebsiteModalError,
+  savingWebsite: aiSavingWebsite,
+  showConfirmModal: showAiConfirmModal,
+  handleClick: handleAiGenerateClick,
+  submitWebsiteModal: submitAiWebsiteModal,
+  cancelWebsiteModal: cancelAiWebsiteModal,
+  confirmRegenerate: confirmAiRegenerate,
+  cancelConfirm: cancelAiConfirm,
+} = useAiGenerate();
 
 // Phase 4D task 28: Generate Proof PDF via render-worker pipeline.
 // Triggered after the customer is happy with the Vue preview — shows
@@ -1423,6 +1444,21 @@ watch(
       <!-- Global canvas actions, pushed to the right edge of the toolbar. -->
       <div class="ml-auto flex items-center gap-2">
         <button
+          v-if="auth.hasPostcards"
+          type="button"
+          data-testid="ai-generate-btn"
+          class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          :disabled="aiGenerateBusy"
+          @click="handleAiGenerateClick"
+        >
+          <template v-if="aiGenerateBusy">
+            <span
+              class="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-1.5"
+            />
+          </template>
+          {{ aiGenerateLabel }}
+        </button>
+        <button
           type="button"
           data-testid="toolbar-try-template"
           class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
@@ -1884,5 +1920,82 @@ watch(
       @select="selectTemplate"
       @close="showTemplateBrowser = false"
     />
+
+    <!-- S90: "Generate with AI" — no website on file yet, ask for one. -->
+    <div
+      v-if="showAiWebsiteModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="ai-generate-website-modal"
+      @click.self="cancelAiWebsiteModal"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <h2 class="text-lg font-semibold text-[#0b2d50]">Design from your website</h2>
+        <p class="mt-1 text-sm text-gray-500">
+          We'll scan it for your logo, colors, and photos, then build your postcard.
+        </p>
+        <input
+          v-model="aiWebsiteInput"
+          type="text"
+          placeholder="yourbusiness.com"
+          data-testid="ai-generate-website-input"
+          class="mt-4 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @keyup.enter="submitAiWebsiteModal"
+        />
+        <p v-if="aiWebsiteModalError" class="mt-1.5 text-xs text-red-600">
+          {{ aiWebsiteModalError }}
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900"
+            @click="cancelAiWebsiteModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            data-testid="ai-generate-website-submit"
+            class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            :disabled="aiSavingWebsite"
+            @click="submitAiWebsiteModal"
+          >
+            {{ aiSavingWebsite ? "Saving…" : "Scan & Generate" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- S90: "Generate with AI" — design already has manual edits, confirm
+         before overwriting them with a fresh AI regeneration. -->
+    <div
+      v-if="showAiConfirmModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="ai-generate-confirm"
+      @click.self="cancelAiConfirm"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <h2 class="text-lg font-semibold text-[#0b2d50]">Replace your card copy?</h2>
+        <p class="mt-1 text-sm text-gray-500">
+          This rewrites your card copy with fresh AI content — your manual edits will be replaced.
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            data-testid="ai-generate-cancel"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900"
+            @click="cancelAiConfirm"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] transition-colors"
+            @click="confirmAiRegenerate"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

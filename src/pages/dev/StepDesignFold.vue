@@ -83,6 +83,11 @@ brandKitStore.brandKit = {
   reviews: [],
   certifications: [],
   completenessPercent: 90,
+  // S90: a settled, real-scan kit so the "Generate with AI" toolbar
+  // button's direct-regenerate path (no rescan needed) is exercisable
+  // here without a live scrape round-trip.
+  scrapeStatus: "complete",
+  extractionSources: ["firecrawl"],
 } as any;
 brandKitStore.hydrated = true;
 
