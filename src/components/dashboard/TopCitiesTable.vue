@@ -6,13 +6,37 @@
 
     <div class="table-cols">
       <span class="col col-city">City</span>
-      <span class="col col-total">Matches</span>
-      <span class="col col-rate">Match Rate</span>
+      <button
+        type="button"
+        class="col col-total col-sortable"
+        :aria-sort="ariaSortFor('total')"
+        @click="toggleSort('total')"
+      >
+        Matches
+        <span
+          v-if="sortKey === 'total'"
+          class="sort-indicator"
+          aria-hidden="true"
+        >{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+      </button>
+      <button
+        type="button"
+        class="col col-rate col-sortable"
+        :aria-sort="ariaSortFor('rate')"
+        @click="toggleSort('rate')"
+      >
+        Match Rate
+        <span
+          v-if="sortKey === 'rate'"
+          class="sort-indicator"
+          aria-hidden="true"
+        >{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+      </button>
     </div>
 
     <ul class="rows">
       <li
-        v-for="(r, i) in rowsToShow"
+        v-for="(r, i) in sortedRows"
         :key="i"
         class="row"
       >
@@ -30,18 +54,57 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 export type Row = { city: string; total: number; rate: string };
 
+type SortKey = "total" | "rate";
+
 const props = defineProps<{ rows?: Row[] }>();
+
+const sortKey = ref<SortKey | null>(null);
+const sortDirection = ref<"asc" | "desc">("desc");
 
 const rowsToShow = computed<Row[]>(() => props.rows ?? []);
 
-function ratePercent(rate: string): number {
+function parseRateValue(rate: string): number {
   const n = parseFloat(rate);
-  return Number.isFinite(n) ? Math.min(n, 100) : 0;
+  return Number.isFinite(n) ? n : 0;
 }
+
+function ratePercent(rate: string): number {
+  const n = parseRateValue(rate);
+  return Math.min(n, 100);
+}
+
+function toggleSort(key: SortKey): void {
+  if (sortKey.value !== key) {
+    sortKey.value = key;
+    sortDirection.value = "desc";
+    return;
+  }
+  sortDirection.value = sortDirection.value === "desc" ? "asc" : "desc";
+}
+
+function ariaSortFor(key: SortKey): "ascending" | "descending" | "none" {
+  if (sortKey.value !== key) return "none";
+  return sortDirection.value === "asc" ? "ascending" : "descending";
+}
+
+const sortedRows = computed<Row[]>(() => {
+  const base = rowsToShow.value;
+  if (!sortKey.value) return base;
+
+  const dir = sortDirection.value === "asc" ? 1 : -1;
+  const key = sortKey.value;
+
+  return [...base].sort((a, b) => {
+    const aVal = key === "total" ? a.total : parseRateValue(a.rate);
+    const bVal = key === "total" ? b.total : parseRateValue(b.rate);
+    if (aVal === bVal) return 0;
+    return (aVal - bVal) * dir;
+  });
+});
 </script>
 
 <style scoped>
@@ -87,6 +150,31 @@ function ratePercent(rate: string): number {
 .col-total,
 .col-rate {
   text-align: right;
+}
+
+.col-sortable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.1s ease;
+}
+
+.col-sortable:hover,
+.col-sortable:focus-visible {
+  color: var(--app-teal, #47bfa9);
+  outline: none;
+}
+
+.sort-indicator {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--app-teal, #47bfa9);
 }
 
 /* body */
