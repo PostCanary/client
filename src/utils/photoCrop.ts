@@ -55,8 +55,12 @@ export function isIdentityCrop(crop?: Partial<PhotoCrop> | null): boolean {
  * At zoom z the photo is z× the frame, so the overshoot on each axis is
  * (z - 1) × frame. The full focal range (0→100%) corresponds to panning that
  * whole overshoot. Hence percent-per-pixel = 100 / ((z - 1) × frameSize), and
- * at z = 1 there is no pan room (range collapses) — we guard against /0.
+ * at z = 1 there is no pan room at all — the focal point cannot move on that
+ * axis, so we hold it at its start value rather than dividing by a near-zero
+ * pan room (which used to blow up and saturate the position to 0 or 100).
  */
+const ZOOM_EPSILON = 1e-4;
+
 export function applyDrag(
   start: PhotoCrop,
   dxPx: number,
@@ -65,11 +69,16 @@ export function applyDrag(
   frameHeightPx: number,
 ): PhotoCrop {
   const zoom = clampZoom(start.zoom);
-  const panRoomX = Math.max(1e-6, (zoom - 1) * Math.max(1, frameWidthPx));
-  const panRoomY = Math.max(1e-6, (zoom - 1) * Math.max(1, frameHeightPx));
-  // Dragging the window right (dx>0) shifts the focal point right.
-  const nextX = start.x + (dxPx / panRoomX) * 100;
-  const nextY = start.y + (dyPx / panRoomY) * 100;
+  const hasPanRoom = zoom > CROP_MIN_ZOOM + ZOOM_EPSILON;
+  let nextX = start.x;
+  let nextY = start.y;
+  if (hasPanRoom) {
+    const panRoomX = (zoom - 1) * Math.max(1, frameWidthPx);
+    const panRoomY = (zoom - 1) * Math.max(1, frameHeightPx);
+    // Dragging the window right (dx>0) shifts the focal point right.
+    nextX = start.x + (dxPx / panRoomX) * 100;
+    nextY = start.y + (dyPx / panRoomY) * 100;
+  }
   return {
     x: clampPercent(nextX),
     y: clampPercent(nextY),

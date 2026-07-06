@@ -54,6 +54,15 @@ const aspectRatio = computed(() => props.aspect && props.aspect > 0 ? props.aspe
 const imgStyle = computed(() => cropImgStyle(crop.value));
 const isDefault = computed(() => isIdentityCrop(crop.value));
 
+// At zoom 1 there's no pan room, so dragging can't move the photo — tell the
+// user to zoom in first instead of the generic drag hint.
+const canReposition = computed(() => crop.value.zoom > CROP_MIN_ZOOM + 1e-4);
+const hintText = computed(() =>
+  canReposition.value
+    ? "Drag the photo to reposition it; use the slider to zoom."
+    : "Zoom in to reposition your photo.",
+);
+
 // --- debounced commit (like the text editors) ---
 let commitTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleCommit() {
@@ -172,8 +181,12 @@ function reset() {
       />
       <span class="text-[10px] text-gray-400">{{ CROP_MAX_ZOOM }}x</span>
     </div>
-    <p class="text-[10px] text-gray-400 leading-snug">
-      Drag the photo to reposition it; use the slider to zoom.
+    <p
+      data-testid="crop-hint"
+      class="text-[10px] leading-snug"
+      :class="canReposition ? 'text-gray-400' : 'text-[#0b2d50] font-medium'"
+    >
+      {{ hintText }}
     </p>
   </div>
 </template>

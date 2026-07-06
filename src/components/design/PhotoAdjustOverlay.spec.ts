@@ -112,6 +112,19 @@ describe("PhotoAdjustOverlay", () => {
     expect(btn.disabled).toBe(true);
   });
 
+  it("shows the zoom-in hint at zoom 1 and hides it once zoomed in", () => {
+    const atDefault = mount(PhotoAdjustOverlay, { props: baseProps });
+    expect(atDefault.find('[data-testid="photo-adjust-hint"]').exists()).toBe(true);
+    expect(atDefault.find('[data-testid="photo-adjust-hint"]').text()).toContain(
+      "Zoom in to reposition",
+    );
+
+    const zoomedIn = mount(PhotoAdjustOverlay, {
+      props: { ...baseProps, crop: { x: 50, y: 50, zoom: 1.5 } },
+    });
+    expect(zoomedIn.find('[data-testid="photo-adjust-hint"]').exists()).toBe(false);
+  });
+
   it("emits done on Done click", async () => {
     const w = mount(PhotoAdjustOverlay, { props: baseProps });
     await w.find('[data-testid="photo-adjust-done"]').trigger("click");
