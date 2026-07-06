@@ -62,7 +62,10 @@ const {
   cancelWebsiteModal: cancelAiWebsiteModal,
   confirmRegenerate: confirmAiRegenerate,
   cancelConfirm: cancelAiConfirm,
-} = useAiGenerate();
+} = useAiGenerate({
+  onBeforeRegenerate: handleAiRegenerateBefore,
+  onAfterRegenerate: syncCardsAfterAiRegenerate,
+});
 
 // Phase 4D task 28: Generate Proof PDF via render-worker pipeline.
 // Triggered after the customer is happy with the Vue preview — shows
@@ -919,6 +922,38 @@ async function regenerateCards() {
   liveOverlay.value = null;
   cards.value = [];
   await draftStore.generateCardsForDraft();
+}
+
+// "Generate with AI" toolbar button (useAiGenerate) follows the same
+// clear-then-resync contract as regenerateCards() above, but the composable
+// has no access to this component's local `cards` — it calls these two
+// hooks instead. Passed to useAiGenerate() near the top of this file (the
+// closures below are only invoked on click, long after these consts exist,
+// so the earlier declaration order is fine).
+function handleAiRegenerateBefore() {
+  invalidateProof();
+  liveOverlay.value = null;
+  cards.value = [];
+}
+
+// Always runs once generateCardsForDraft() settles — the store swallows its
+// own generation errors rather than rethrowing, so "the AI call failed" and
+// "it succeeded" both just mean "read whatever is in the store now". On
+// success that's the fresh cards; on failure the store never wrote past its
+// early return, so this restores the pre-clear cards instead of leaving the
+// editor blank.
+function syncCardsAfterAiRegenerate() {
+  const storeCards = draftStore.draft?.design?.sequenceCards ?? [];
+  cards.value = [...storeCards];
+  currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
+  if (activeCardIndex.value >= cards.value.length) {
+    activeCardIndex.value = Math.max(0, cards.value.length - 1);
+  }
+  // Any open contextual editor was anchored to the pre-regenerate cards.
+  popover.value = null;
+  drawerTab.value = null;
+  photoAdjust.exit();
+  originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
 }
 
 function updateColors(colors: ColorOverride | null) {

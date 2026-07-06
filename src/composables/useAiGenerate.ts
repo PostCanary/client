@@ -28,7 +28,24 @@ import {
 
 const SUCCESS_MS = 2000;
 
-export function useAiGenerate() {
+export interface UseAiGenerateOptions {
+  /** Fired right before the store's generateCardsForDraft() call, once the
+   * user has confirmed (if a confirm was needed) — never before that
+   * confirm, so a "Cancel" on the overwrite prompt leaves existing work
+   * untouched. Callers use this to drop any local mirror of the store's
+   * sequenceCards so the editor doesn't render/commit stale pre-AI cards
+   * while generation is in flight. */
+  onBeforeRegenerate?: () => void;
+  /** Fired after generateCardsForDraft() settles, success or not. The store
+   * swallows generation errors internally (see its try/catch) rather than
+   * rethrowing, so there is no separate failure branch here — on failure
+   * the store's sequenceCards are simply left unchanged, and re-reading
+   * them is exactly the recovery a caller that cleared local state needs. */
+  onAfterRegenerate?: () => void;
+}
+
+export function useAiGenerate(options: UseAiGenerateOptions = {}) {
+  const { onBeforeRegenerate, onAfterRegenerate } = options;
   const auth = useAuthStore();
   const brandKitStore = useBrandKitStore();
   const draftStore = useCampaignDraftStore();
@@ -87,8 +104,10 @@ export function useAiGenerate() {
       return;
     }
     running.value = true;
+    onBeforeRegenerate?.();
     try {
       await draftStore.generateCardsForDraft();
+      onAfterRegenerate?.();
       flashSuccess();
     } finally {
       running.value = false;
@@ -98,8 +117,10 @@ export function useAiGenerate() {
   async function confirmRegenerate() {
     showConfirmModal.value = false;
     running.value = true;
+    onBeforeRegenerate?.();
     try {
       await draftStore.generateCardsForDraft();
+      onAfterRegenerate?.();
       flashSuccess();
     } finally {
       running.value = false;

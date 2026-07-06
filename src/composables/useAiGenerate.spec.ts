@@ -364,6 +364,91 @@ describe("useAiGenerate", () => {
     expect(showWebsiteModal.value).toBe(false);
   });
 
+  it("calls onBeforeRegenerate then onAfterRegenerate around a direct regenerate (POS-121/123)", async () => {
+    grantPostcards();
+    const brandKitStore = useBrandKitStore();
+    brandKitStore.hydrated = true;
+    brandKitStore.brandKit = {
+      websiteUrl: "totalcomfort.com",
+      scrapeStatus: "complete",
+      extractionSources: ["firecrawl"],
+    } as any;
+    const draftStore = useCampaignDraftStore();
+    seedDraft(draftStore);
+    const order: string[] = [];
+    vi.spyOn(draftStore, "generateCardsForDraft").mockImplementation(async () => {
+      order.push("generate");
+    });
+
+    const { handleClick } = useAiGenerate({
+      onBeforeRegenerate: () => order.push("before"),
+      onAfterRegenerate: () => order.push("after"),
+    });
+    await handleClick();
+
+    expect(order).toEqual(["before", "generate", "after"]);
+  });
+
+  it("does not clear local state before the user confirms an overwrite, and still resyncs after (POS-121/123)", async () => {
+    grantPostcards();
+    const brandKitStore = useBrandKitStore();
+    brandKitStore.hydrated = true;
+    brandKitStore.brandKit = {
+      websiteUrl: "totalcomfort.com",
+      scrapeStatus: "complete",
+      extractionSources: ["firecrawl"],
+    } as any;
+    const draftStore = useCampaignDraftStore();
+    seedDraft(draftStore, true);
+    vi.spyOn(draftStore, "generateCardsForDraft").mockResolvedValue(undefined);
+    const onBeforeRegenerate = vi.fn();
+    const onAfterRegenerate = vi.fn();
+
+    const { handleClick, showConfirmModal, cancelConfirm, confirmRegenerate } =
+      useAiGenerate({ onBeforeRegenerate, onAfterRegenerate });
+    await handleClick();
+    expect(showConfirmModal.value).toBe(true);
+    // Cancel must never have cleared anything — that would wipe the user's
+    // edits on a decision to keep them.
+    expect(onBeforeRegenerate).not.toHaveBeenCalled();
+    cancelConfirm();
+
+    await handleClick();
+    expect(showConfirmModal.value).toBe(true);
+    expect(onBeforeRegenerate).not.toHaveBeenCalled();
+    await confirmRegenerate();
+
+    expect(onBeforeRegenerate).toHaveBeenCalledTimes(1);
+    expect(onAfterRegenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it("still calls onAfterRegenerate when the store silently no-ops the generation (e.g. missing brand kit)", async () => {
+    // useCampaignDraftStore.generateCardsForDraft() catches its own errors
+    // and simply returns early without writing sequenceCards — it never
+    // rethrows. onAfterRegenerate must still fire so a caller that cleared
+    // local state on onBeforeRegenerate can restore it from the (unchanged)
+    // store snapshot instead of staying blank.
+    grantPostcards();
+    const brandKitStore = useBrandKitStore();
+    brandKitStore.hydrated = true;
+    brandKitStore.brandKit = {
+      websiteUrl: "totalcomfort.com",
+      scrapeStatus: "complete",
+      extractionSources: ["firecrawl"],
+    } as any;
+    const draftStore = useCampaignDraftStore();
+    seedDraft(draftStore);
+    vi.spyOn(draftStore, "generateCardsForDraft").mockResolvedValue(undefined);
+    const onBeforeRegenerate = vi.fn();
+    const onAfterRegenerate = vi.fn();
+
+    const { handleClick } = useAiGenerate({ onBeforeRegenerate, onAfterRegenerate });
+    await handleClick();
+
+    expect(onBeforeRegenerate).toHaveBeenCalledTimes(1);
+    expect(onAfterRegenerate).toHaveBeenCalledTimes(1);
+  });
+
   it("reflects scanning / generating state in the label and disables clicks (belt-and-suspenders no-op)", async () => {
     grantPostcards();
     const brandKitStore = useBrandKitStore();
