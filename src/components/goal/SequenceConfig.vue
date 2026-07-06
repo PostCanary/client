@@ -72,7 +72,7 @@ watch(
       </label>
       <div class="flex gap-2">
         <button
-          v-for="n in 5"
+          v-for="n in 3"
           :key="n"
           class="w-10 h-10 rounded-lg text-sm font-semibold transition-all"
           :class="

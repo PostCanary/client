@@ -119,7 +119,7 @@ export interface GoalSelection {
   goalType: CampaignGoalType
   goalLabel: string                    // display name
   serviceType: string | null           // which service (for seasonal, cross-service)
-  sequenceLength: number               // 1-5 cards
+  sequenceLength: number               // 1-3 cards
   sequenceSpacingDays: number          // days between cards
   otherGoalText: string | null         // free text for "other"
 }
