@@ -6,6 +6,7 @@ import { capturePageview } from "@/composables/usePostHog";
 import { getSeoData, SITE_URL } from "@/config/seo";
 import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
 import { initMetaPixel } from "@/composables/useMetaPixel";
+import { isChunkLoadError, shouldReloadForChunkError } from "@/utils/chunkReload";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -366,6 +367,26 @@ router.afterEach((to) => {
   if (to.meta?.marketing === true) {
     loadMetaPixelScript();
     initMetaPixel();
+  }
+});
+
+// POS-126: we deploy many times a day and Vercel serves /assets/* as
+// immutable, so a tab that's been open across a deploy 404s the first time
+// it lazily imports a route chunk (e.g. clicking "Designs"). Recover with a
+// hard navigation to the intended destination instead of leaving the click
+// silently doing nothing.
+router.onError((error, to) => {
+  if (!isChunkLoadError(error)) return;
+
+  if (!shouldReloadForChunkError(window.sessionStorage)) {
+    console.error("[POS-126] repeated chunk load error, not reloading again", error);
+    return;
+  }
+
+  if (to?.fullPath) {
+    window.location.assign(to.fullPath);
+  } else {
+    window.location.reload();
   }
 });
 

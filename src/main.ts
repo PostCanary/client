@@ -15,6 +15,20 @@ import {
   HTTP_EVENT_SUBSCRIPTION_REQUIRED,
   type HttpGateEventDetail,
 } from "@/api/http";
+import { shouldReloadForChunkError } from "@/utils/chunkReload";
+
+// POS-126: we deploy many times a day and Vercel serves /assets/* as
+// immutable, so a tab open across a deploy will fail to preload a lazy
+// chunk (Vite fires this event instead of throwing into app code). Recover
+// with a one-time hard reload rather than leaving the tab silently stuck.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault?.();
+  if (shouldReloadForChunkError(window.sessionStorage)) {
+    window.location.reload();
+  } else {
+    console.error("[POS-126] repeated vite:preloadError, not reloading again", event);
+  }
+});
 
 const app = createApp(App);
 
