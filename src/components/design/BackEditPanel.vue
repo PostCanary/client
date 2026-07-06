@@ -413,6 +413,9 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Benefits
       </label>
+      <p v-if="isSectionMode" class="text-[11px] text-gray-500 mb-2">
+        The checkmark list.
+      </p>
       <div class="space-y-2">
         <div
           v-for="(_b, i) in benefits"
@@ -455,6 +458,9 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Testimonial
       </label>
+      <p v-if="isSectionMode" class="text-[11px] text-gray-500 mb-2">
+        The featured quote (or the star-rating chip when no quote is set).
+      </p>
       <div class="space-y-1.5" data-testid="back-testimonial-picker">
         <button
           type="button"
@@ -499,6 +505,13 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Services ("We also do")
       </label>
+      <p v-if="isSectionMode" class="text-[11px] text-gray-500 mb-2">
+        {{
+          activeStyle === "service-area-back-v1"
+            ? 'The "Everything We Do" checklist that leads this back style.'
+            : 'The small "We also do:" line near the bottom of the card.'
+        }}
+      </p>
       <div class="space-y-2">
         <div
           v-for="(_s, i) in services"
@@ -563,6 +576,9 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
       >
         Guarantee
       </label>
+      <p v-if="isSectionMode" class="text-[11px] text-gray-500 mb-2">
+        The promise line near the bottom, plus the certification chips below it.
+      </p>
       <textarea
         id="back-guarantee"
         data-testid="back-guarantee-input"
