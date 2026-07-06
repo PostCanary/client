@@ -4,6 +4,7 @@ import {
   editZonesFor,
   BACK_EDIT_ZONES,
   DEFAULT_BACK_TEMPLATE_ID,
+  TEMPLATE_EDIT_ZONES,
 } from "./templateEditZones";
 
 describe("backEditZonesFor (S79 Phase-2)", () => {
@@ -62,6 +63,54 @@ describe("backEditZonesFor (S79 Phase-2)", () => {
     // sanity: the front map still resolves through the existing helper
     const front = editZonesFor("hac-1000-front-v1", "offer");
     expect(front.some((z) => z.editor === "headline")).toBe(true);
+  });
+
+  describe("POS-131: business zone (front bottom strip)", () => {
+    it("every front template gets a business zone", () => {
+      for (const id of Object.keys(TEMPLATE_EDIT_ZONES)) {
+        const zones = TEMPLATE_EDIT_ZONES[id]!;
+        expect(zones.some((z) => z.editor === "business")).toBe(true);
+      }
+    });
+
+    it("the business zone never overlaps another zone on the same template (including proof-only zones)", () => {
+      for (const id of Object.keys(TEMPLATE_EDIT_ZONES)) {
+        const zones = TEMPLATE_EDIT_ZONES[id]!;
+        const business = zones.find((z) => z.editor === "business")!;
+        for (const z of zones) {
+          if (z === business) continue;
+          const overlaps =
+            z.top < business.top + business.height &&
+            business.top < z.top + z.height;
+          expect(overlaps).toBe(false);
+        }
+      }
+    });
+
+    it("the business zone spans full width and reaches the bottom of the card", () => {
+      for (const id of Object.keys(TEMPLATE_EDIT_ZONES)) {
+        const business = TEMPLATE_EDIT_ZONES[id]!.find(
+          (z) => z.editor === "business",
+        )!;
+        expect(business.left).toBe(0);
+        expect(business.width).toBe(100);
+        expect(business.top + business.height).toBeCloseTo(100, 5);
+      }
+    });
+
+    it("the business zone shows on both proof and non-proof cards (no proofOnly/hideOnProof flag)", () => {
+      const withProof = editZonesFor("hac-1000-front-v1", "proof");
+      const withoutProof = editZonesFor("hac-1000-front-v1", "offer");
+      expect(withProof.some((z) => z.editor === "business")).toBe(true);
+      expect(withoutProof.some((z) => z.editor === "business")).toBe(true);
+    });
+
+    it("neighborhood-map's shorter offer band still yields a full-width business zone starting where its offer ends", () => {
+      const zones = TEMPLATE_EDIT_ZONES["neighborhood-map-front-v1"]!;
+      const offer = zones.find((z) => z.editor === "offer")!;
+      const business = zones.find((z) => z.editor === "business")!;
+      expect(business.top).toBeCloseTo(offer.top + offer.height, 5);
+    });
   });
 
   describe("POS-120: tuned per-style band geometry", () => {

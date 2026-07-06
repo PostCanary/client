@@ -260,21 +260,31 @@ function openZone(zone: EditZone) {
   requestedEditor.value = { editor, ts: Date.now() };
 }
 
-// POS-120: the back canvas has a click-catcher UNDER the zone buttons
-// covering the whole card (return-address strip, IMb block, and the
-// left column's reserved bottom margin below BACK_BOTTOM — see
+// POS-120 / POS-130: both canvases have a click-catcher UNDER the zone
+// buttons covering the whole card — back: return-address strip, IMb block,
+// reserved bottom margin below BACK_BOTTOM; front: the side ribbon, promo
+// fine print, and margins outside the hand-authored template zones (see
 // templateEditZones.ts). It only receives clicks the zone buttons don't
-// consume, since those buttons render later in the DOM and win the
-// default stacking order. Previously those clicks did nothing at all.
-const lockedZoneHint = ref<{ x: number; y: number } | null>(null);
+// consume, since those buttons render later in the DOM and win the default
+// stacking order. Previously those clicks did nothing at all. One shared
+// hint state serves both sides (never shown simultaneously — the front/back
+// canvas blocks are mutually exclusive), parameterized by which card box to
+// measure against and which copy to show.
+const lockedZoneHint = ref<{ x: number; y: number; message: string } | null>(null);
 let lockedZoneHintTimer: ReturnType<typeof setTimeout> | null = null;
-function showLockedZoneHint(event: MouseEvent) {
-  const card = backCardBoxEl.value;
+const BACK_LOCKED_HINT = "This area is required for mailing and can't be edited.";
+const FRONT_LOCKED_HINT = "This part of the design is fixed for this template.";
+function showLockedZoneHint(
+  event: MouseEvent,
+  card: HTMLElement | null,
+  message: string,
+) {
   if (!card) return;
   const rect = card.getBoundingClientRect();
   lockedZoneHint.value = {
     x: ((event.clientX - rect.left) / rect.width) * 100,
     y: ((event.clientY - rect.top) / rect.height) * 100,
+    message,
   };
   if (lockedZoneHintTimer) clearTimeout(lockedZoneHintTimer);
   lockedZoneHintTimer = setTimeout(() => {
@@ -369,6 +379,9 @@ watch(activeCardIndex, () => {
   drawerTab.value = null;
   // S81: the photo under the adjust overlay belongs to the old card — drop it.
   photoAdjust.exit();
+  // POS-130: a different card can have a different template's zone map — a
+  // hint positioned against the old geometry would be stale.
+  lockedZoneHint.value = null;
 });
 // NOTE: the previewUrl reconciliation watch lives just below the
 // useCardPreview destructure (declaration order).
@@ -406,6 +419,11 @@ watch(previewUrl, (url) => {
 const activeSide = ref<"front" | "back">("front");
 const renderSide = ref<"front" | "back">("front");
 const isBack = computed(() => renderSide.value === "back");
+// POS-130: a locked-zone hint from one side is meaningless (and mispositioned)
+// once the canvas flips to the other side's geometry.
+watch(renderSide, () => {
+  lockedZoneHint.value = null;
+});
 
 // Canvas flip wrapper element ref (the div that carries the CSS animation).
 const canvasFlipWrapperEl = ref<HTMLElement | null>(null);
@@ -1230,6 +1248,8 @@ function selectTemplate(layout: TemplateLayoutType) {
   // all survive the switch.
   invalidateProof();
   currentLayout.value = layout;
+  // POS-130: a new template has a different zone map — drop any stale hint.
+  lockedZoneHint.value = null;
   const templateSet = getTemplateSetsForGoal(
     goalType.value,
     brandKit.value?.industry,
@@ -1598,7 +1618,7 @@ watch(
               data-testid="back-locked-zone-catcher"
               class="absolute inset-0 w-full h-full cursor-not-allowed bg-transparent focus:outline-none"
               aria-label="This area is required for mailing and can't be edited"
-              @click="showLockedZoneHint"
+              @click="(e) => showLockedZoneHint(e, backCardBoxEl, BACK_LOCKED_HINT)"
             />
             <div
               v-if="lockedZoneHint"
@@ -1606,7 +1626,7 @@ watch(
               class="absolute z-10 pointer-events-none text-[11px] font-medium bg-[#0b2d50]/90 text-white px-2 py-1 rounded shadow-lg -translate-x-1/2 -translate-y-full"
               :style="{ left: lockedZoneHint.x + '%', top: lockedZoneHint.y + '%' }"
             >
-              This area is required for mailing and can't be edited.
+              {{ lockedZoneHint.message }}
             </div>
 
             <!-- Back click-to-edit hotspots (S79 Phase-2): same model as the
@@ -1699,6 +1719,29 @@ watch(
                 </div>
               </div>
             </div>
+            <!-- Front locked-zone click-catcher (POS-130): sits under the zone
+                 buttons below so any click NOT on an editable zone (side
+                 ribbon, promo fine print, margins outside the template's
+                 hand-authored bands — see templateEditZones.ts) surfaces a
+                 brief non-editable cue instead of doing nothing. Mirrors the
+                 back canvas's catcher (POS-120) with front-specific
+                 testids/copy. -->
+            <button
+              type="button"
+              data-testid="front-locked-zone-catcher"
+              class="absolute inset-0 w-full h-full cursor-not-allowed bg-transparent focus:outline-none"
+              aria-label="Non-editable area"
+              @click="(e) => showLockedZoneHint(e, frontCardBoxEl, FRONT_LOCKED_HINT)"
+            />
+            <div
+              v-if="lockedZoneHint"
+              data-testid="front-locked-zone-hint"
+              class="absolute z-10 pointer-events-none text-[11px] font-medium bg-[#0b2d50]/90 text-white px-2 py-1 rounded shadow-lg -translate-x-1/2 -translate-y-full"
+              :style="{ left: lockedZoneHint.x + '%', top: lockedZoneHint.y + '%' }"
+            >
+              {{ lockedZoneHint.message }}
+            </div>
+
             <!-- Click-to-edit hotspots: invisible until hover, mapped to the
                  template's slot geometry. Lives OUTSIDE the flip wrapper so
                  hit-areas are NEVER transformed (S79 Phase-3 guard).

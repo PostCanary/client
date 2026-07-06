@@ -48,7 +48,34 @@ export interface EditZone {
 
 export const DEFAULT_RENDER_TEMPLATE_ID = "hac-1000-front-v1";
 
-export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
+// POS-131: every front template's bottom business strip (logo, business name,
+// phone/CTA, QR) sits below the lowest hand-authored zone (usually the offer
+// strip, whose bottom edge varies by template — see neighborhood-map's
+// shorter offer band) and was previously uncovered, so clicks there fell
+// through to nothing. `withBusinessZone` fills whatever gap remains to 100%
+// with a "business" zone (routes to the Business drawer, same as the
+// toolbar Business button — see openZone in StepDesign.vue) instead of
+// hand-coding per-template bounds, so it can never overlap a template's real
+// zones and self-adjusts if a template's band geometry changes. If a
+// template's zones already reach 100% (none do today), no business zone is
+// added — see templateEditZones.spec.ts for the non-overlap guarantee.
+function withBusinessZone(zones: EditZone[]): EditZone[] {
+  const bottom = zones.reduce((max, z) => Math.max(max, z.top + z.height), 0);
+  if (bottom >= 100 - 0.01) return zones;
+  return [
+    ...zones,
+    {
+      editor: "business",
+      label: "Business info & logo",
+      left: 0,
+      top: bottom,
+      width: 100,
+      height: 100 - bottom,
+    },
+  ];
+}
+
+const FRONT_ZONE_SOURCES: Record<string, EditZone[]> = {
   // Geometry source: tips-card-front.html (S74 wave 3) — checklist base,
   // right panel = numbered tips (dedicated editor).
   "tips-card-front-v1": [
@@ -569,6 +596,13 @@ export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = {
     },
   ],
 };
+
+export const TEMPLATE_EDIT_ZONES: Record<string, EditZone[]> = Object.fromEntries(
+  Object.entries(FRONT_ZONE_SOURCES).map(([id, zones]) => [
+    id,
+    withBusinessZone(zones),
+  ]),
+);
 
 // ---------------------------------------------------------------------------
 // BACK-SIDE zone maps (S79 Phase-2).
