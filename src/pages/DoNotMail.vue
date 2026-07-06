@@ -347,9 +347,9 @@ const columns = computed<DataTableColumns<DnmEntry>>(() => [
                     <strong>Add address</strong> — fill in one address at a time.
                   </li>
                   <li>
-                    <strong>Import CSV</strong> — columns:
-                    <code>address, city, state, zip5</code>. Optional:
-                    <code>name</code>. Header row required.
+                    <strong>Import CSV</strong> — upload a CSV with one address
+                    per row. Include street, city, state, and ZIP columns —
+                    we'll match the rest.
                   </li>
                 </ul>
               </div>
