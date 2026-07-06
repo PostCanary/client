@@ -25,19 +25,7 @@ import {
   type StockPhotoResult,
 } from "@/api/brandKit";
 import { onMounted } from "vue";
-import { API_BASE } from "@/api/http";
-
-/**
- * Brand-kit photos store relative /media/... URLs; the API host serves
- * them. On same-origin deployments API_BASE is "" and this is a no-op; on
- * cross-origin deployments (Vercel preview + Railway API) the browser
- * would otherwise resolve them against the SPA host and 404 — which is
- * why picker thumbnails showed alt text while the rendered card (whose
- * URLs the server absolutizes) was fine.
- */
-function mediaSrc(url: string): string {
-  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
-}
+import { mediaSrc } from "@/utils/mediaSrc";
 
 type EditorType =
   | "headline"
@@ -309,11 +297,15 @@ function applyOffer() {
 }
 
 // --- Offer tiers (S74: good/better/best coupon row) -------------------------
-// 2-3 tiers render the coupon strip on the card; 0-1 keeps the classic
-// single-offer strip (which the textarea above edits).
+// 2-3 tiers render the coupon strip on the card. Server-side every front
+// template only prints the single-offer text in the `{% else %}` of
+// `{% if offer_tiers %}` — so as soon as ANY tier exists (1+), the main
+// offer text below stops rendering on the card even though it's still
+// editable here (POS-124). hasOfferTiers below gates the field to match.
 const editableTiers = ref<OfferStackItem[]>(
   (props.card.resolvedContent.offerItems ?? []).map((tier) => ({ ...tier })),
 );
+const hasOfferTiers = computed(() => editableTiers.value.length > 0);
 
 function applyTiers() {
   emit(
@@ -1330,11 +1322,22 @@ async function saveNewReview() {
         Edit Offer
       </button>
       <div v-if="isOpen('offer')" class="px-3 pb-3">
+        <p
+          v-if="hasOfferTiers"
+          data-testid="offer-text-tiers-hint"
+          class="text-[11px] text-gray-500 mb-2"
+        >
+          Your coupon tiers replace this text on the card. Remove all tiers
+          to use a single offer line.
+        </p>
         <textarea
           v-model="editableOffer"
           maxlength="200"
           rows="3"
+          :disabled="hasOfferTiers"
+          data-testid="offer-text-input"
           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none"
+          :class="hasOfferTiers ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''"
           @input="applyOffer"
         />
         <div class="text-[10px] text-gray-400 mt-1 text-right">
