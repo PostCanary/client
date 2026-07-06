@@ -7,6 +7,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import "@/styles/leaflet-edit-handles.css";
 import type { TargetingArea, EddmRoute } from "@/types/campaign";
 import { fetchRoutes } from "@/composables/useEddmRoutes";
+import { getZipCentroids } from "@/api/targeting";
 
 // Fix leaflet-draw circle bug: "radius is not defined" in strict mode (Vite ES modules)
 // leaflet-draw 1.0.4 assigns to undeclared `radius` variable in two places
@@ -183,9 +184,13 @@ export function useTargetingMap(
   let map: L.Map | null = null;
   const drawnItems = new L.FeatureGroup();
   const jobMarkers = new L.FeatureGroup();
+  const zipMarkers = new L.FeatureGroup();
   const areas = ref<TargetingArea[]>([]);
   const activeDrawTool = ref<string | null>(null);
   let docMouseUpHandler: (() => void) | null = null;
+  // Guards against a slow/late centroid fetch stomping a more recent one
+  // (e.g. user adds ZIP A, then quickly adds ZIP B before A's fetch resolves).
+  let zipHighlightToken = 0;
 
   // EDDM state — Sprint 2.3 ER.2c
   const eddmRoutes = ref<EddmRoute[]>([]);
@@ -276,6 +281,7 @@ export function useTargetingMap(
 
     drawnItems.addTo(map);
     jobMarkers.addTo(map);
+    zipMarkers.addTo(map);
 
     // Add draw control to map (needed for editing drag handlers to work)
     // The default toolbar is hidden via CSS — custom buttons in TargetingMap.vue replace it
@@ -543,13 +549,42 @@ export function useTargetingMap(
     }
   }
 
-  function highlightZips(zips: string[]) {
-    // Round 1: center map on first ZIP and add a rough area marker
-    // Real ZIP boundary data comes in Round 2 with provider data
-    // For now, just add a visual indicator
-    if (zips.length > 0) {
-      // We don't have ZIP centroid data in Round 1, so this is a no-op visually
-      // The area/count calculations use the mock estimateHouseholds function
+  async function highlightZips(zips: string[]) {
+    zipMarkers.clearLayers();
+    if (!map || zips.length === 0) return;
+
+    const token = ++zipHighlightToken;
+    let centroids;
+    try {
+      const res = await getZipCentroids(zips);
+      centroids = res.centroids;
+    } catch (err) {
+      // Failure tolerance: chips/targeting still work exactly as today —
+      // just no recenter and no markers.
+      console.warn("ZIP centroid lookup failed — map will not recenter", err);
+      return;
+    }
+    // A newer call finished first (or the map was torn down while we waited) — bail.
+    if (token !== zipHighlightToken || !map || centroids.length === 0) return;
+
+    for (const c of centroids) {
+      L.circleMarker([c.lat, c.lon], {
+        radius: 8,
+        fillColor: TEAL,
+        fillOpacity: 0.3,
+        color: TEAL,
+        weight: 2,
+      }).addTo(zipMarkers);
+    }
+
+    if (centroids.length === 1) {
+      const only = centroids[0]!;
+      map.setView([only.lat, only.lon], DEFAULT_ZOOM);
+    } else {
+      const bounds = L.latLngBounds(
+        centroids.map((c) => [c.lat, c.lon] as L.LatLngTuple),
+      );
+      map.fitBounds(bounds.pad(0.2));
     }
   }
 
@@ -594,10 +629,12 @@ export function useTargetingMap(
   function clearAll() {
     drawnItems.clearLayers();
     jobMarkers.clearLayers();
+    zipMarkers.clearLayers();
     areas.value = [];
   }
 
   function destroy() {
+    zipHighlightToken++; // invalidate any in-flight centroid fetch
     if (docMouseUpHandler) {
       document.removeEventListener("mouseup", docMouseUpHandler);
       docMouseUpHandler = null;
