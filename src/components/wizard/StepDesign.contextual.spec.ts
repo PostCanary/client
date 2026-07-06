@@ -224,4 +224,48 @@ describe("StepDesign — contextual editing (S79 Phase-2)", () => {
     expect(wrapper.find('[data-testid="zone-popover"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="back-subhead-input"]').exists()).toBe(true);
   });
+
+  describe("POS-130/131: front business zone + locked-zone cue", () => {
+    it("clicking the front business zone opens the Business drawer (same as the toolbar button)", async () => {
+      const wrapper = await mountStep();
+      expect(wrapper.find('[data-testid="context-drawer"]').exists()).toBe(false);
+      await wrapper.get('[data-testid="card-zone-business"]').trigger("click");
+      expect(wrapper.find('[data-testid="context-drawer"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="biz-name-input"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="zone-popover"]').exists()).toBe(false);
+    });
+
+    it("clicking the front locked-zone catcher shows a non-editable hint and auto-hides it", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const wrapper = await mountStep();
+        expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(false);
+        await wrapper.get('[data-testid="front-locked-zone-catcher"]').trigger("click");
+        const hint = wrapper.get('[data-testid="front-locked-zone-hint"]');
+        expect(hint.text()).toContain("fixed for this template");
+        vi.advanceTimersByTime(2300);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("front zone hotspots (headline, business) win over the locked-zone catcher underneath them", async () => {
+      const wrapper = await mountStep();
+      await wrapper.get('[data-testid="card-zone-headline"]').trigger("click");
+      expect(wrapper.find('[data-testid="zone-popover"]').exists()).toBe(true);
+      expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(false);
+    });
+
+    it("switching sides clears a front locked-zone hint", async () => {
+      const wrapper = await mountStep();
+      await wrapper.get('[data-testid="front-locked-zone-catcher"]').trigger("click");
+      expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(true);
+      await wrapper.get('[data-testid="side-toggle-back"]').trigger("click");
+      await flushPromises();
+      expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="back-locked-zone-hint"]').exists()).toBe(false);
+    });
+  });
 });
