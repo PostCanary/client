@@ -260,6 +260,28 @@ function openZone(zone: EditZone) {
   requestedEditor.value = { editor, ts: Date.now() };
 }
 
+// POS-120: the back canvas has a click-catcher UNDER the zone buttons
+// covering the whole card (return-address strip, IMb block, and the
+// left column's reserved bottom margin below BACK_BOTTOM — see
+// templateEditZones.ts). It only receives clicks the zone buttons don't
+// consume, since those buttons render later in the DOM and win the
+// default stacking order. Previously those clicks did nothing at all.
+const lockedZoneHint = ref<{ x: number; y: number } | null>(null);
+let lockedZoneHintTimer: ReturnType<typeof setTimeout> | null = null;
+function showLockedZoneHint(event: MouseEvent) {
+  const card = backCardBoxEl.value;
+  if (!card) return;
+  const rect = card.getBoundingClientRect();
+  lockedZoneHint.value = {
+    x: ((event.clientX - rect.left) / rect.width) * 100,
+    y: ((event.clientY - rect.top) / rect.height) * 100,
+  };
+  if (lockedZoneHintTimer) clearTimeout(lockedZoneHintTimer);
+  lockedZoneHintTimer = setTimeout(() => {
+    lockedZoneHint.value = null;
+  }, 2200);
+}
+
 function openDrawer(tab: DrawerTab) {
   popover.value = null;
   drawerTab.value = tab;
@@ -756,6 +778,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (persistedPreviewRefreshTimer) clearTimeout(persistedPreviewRefreshTimer);
+  if (lockedZoneHintTimer) clearTimeout(lockedZoneHintTimer);
   revokeThumbnailUrls();
   invalidateProof();
   photoAdjust.dispose();
@@ -1557,6 +1580,27 @@ watch(
                 @load="measureCanvas"
               />
             </div>
+            <!-- Locked-zone click-catcher (POS-120): sits under the zone
+                 buttons below so any click NOT on an editable zone (the
+                 mailing/IMb column, or the reserved strip below
+                 BACK_BOTTOM) surfaces a brief non-editable cue instead of
+                 doing nothing. -->
+            <button
+              type="button"
+              data-testid="back-locked-zone-catcher"
+              class="absolute inset-0 w-full h-full cursor-not-allowed bg-transparent focus:outline-none"
+              aria-label="This area is required for mailing and can't be edited"
+              @click="showLockedZoneHint"
+            />
+            <div
+              v-if="lockedZoneHint"
+              data-testid="back-locked-zone-hint"
+              class="absolute z-10 pointer-events-none text-[11px] font-medium bg-[#0b2d50]/90 text-white px-2 py-1 rounded shadow-lg -translate-x-1/2 -translate-y-full"
+              :style="{ left: lockedZoneHint.x + '%', top: lockedZoneHint.y + '%' }"
+            >
+              This area is required for mailing and can't be edited.
+            </div>
+
             <!-- Back click-to-edit hotspots (S79 Phase-2): same model as the
                  front — click a back zone → its editor opens in a popover
                  (or the drawer for Back Style / Back Photo).
