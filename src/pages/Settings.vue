@@ -17,6 +17,7 @@ import {
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
 import { useOrgStore } from "@/stores/org";
+import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
 import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
@@ -44,8 +45,21 @@ const selectedPlan = ref<PlanCode | null>(null);
 const router = useRouter();
 const auth = useAuthStore();
 const orgStore = useOrgStore();
+const brandKitStore = useBrandKitStore();
 const { startTour } = useTour();
 const message = useMessage();
+
+// POS-119.1 — Business name lives on the brand kit, not the user profile,
+// and the AI generation flow only ever reads brand_kit.data.businessName
+// (never User.website_url or the profile form). This was previously only
+// editable from the designer's Business Info panel; surface it here too so
+// it has a discoverable home, and so Website changes here actually reach
+// the same brand kit the AI flow reads from (see onSubmit below).
+const bizName = ref("");
+const brandKitError = ref<string | null>(null);
+function syncBizNameFromKit() {
+  bizName.value = brandKitStore.brandKit?.businessName ?? "";
+}
 
 // Org name editing
 const orgName = ref(auth.orgName || "");
@@ -144,12 +158,51 @@ async function onSaveOrgName() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadProfile();
+  if (!brandKitStore.hydrated) await brandKitStore.fetch();
+  syncBizNameFromKit();
 });
 
 async function onSubmit() {
+  const prevWebsiteUrl = (profile.value?.website_url ?? "").trim();
+  const newWebsiteUrl = form.value.website_url.trim();
+  const websiteChanged = newWebsiteUrl !== prevWebsiteUrl;
+
+  const prevBizName = (brandKitStore.brandKit?.businessName ?? "").trim();
+  const newBizName = bizName.value.trim();
+  const bizNameChanged = newBizName !== prevBizName;
+
+  brandKitError.value = null;
   await saveProfile();
+  // saveProfile() already surfaces its own failure via `error` — don't
+  // pile a brand-kit failure on top of an unsaved profile.
+  if (error.value) return;
+  if (!websiteChanged && !bizNameChanged) return;
+
+  // Website changes rescan the brand kit (logo/colors/photos/services);
+  // a businessName-only edit never should — scraping never overwrites a
+  // non-empty businessName anyway, so there's nothing for it to refresh.
+  const patch: Record<string, string> = {};
+  if (websiteChanged) patch.websiteUrl = newWebsiteUrl;
+  if (bizNameChanged && newBizName) patch.businessName = newBizName;
+  if (Object.keys(patch).length === 0) return;
+
+  try {
+    await brandKitStore.update(patch);
+    if (brandKitStore.error) {
+      brandKitError.value = brandKitStore.error;
+      return;
+    }
+    syncBizNameFromKit();
+    if (websiteChanged && newWebsiteUrl && auth.hasPostcards) {
+      void brandKitStore.rescan(newWebsiteUrl);
+    }
+  } catch (err: any) {
+    console.error("[Settings] brand kit update failed", err);
+    brandKitError.value =
+      "Profile saved, but the brand kit update failed — try again.";
+  }
 }
 
 async function onChangePlan() {
@@ -366,6 +419,27 @@ function onReplayTour() {
 
           <div>
             <label
+              for="settings-business-name"
+              class="block text-sm font-medium text-slate-700"
+            >
+              Business name
+            </label>
+            <input
+              id="settings-business-name"
+              v-model="bizName"
+              type="text"
+              placeholder="Your business name"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              autocomplete="organization"
+            />
+            <p class="mt-1 text-xs text-slate-500">
+              Prints on every card. A website scan never overwrites this
+              once it's set.
+            </p>
+          </div>
+
+          <div>
+            <label
               for="settings-website"
               class="block text-sm font-medium text-slate-700"
             >
@@ -379,6 +453,10 @@ function onReplayTour() {
               class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               autocomplete="url"
             />
+            <p class="mt-1 text-xs text-slate-500">
+              Used to build your brand kit — changing it rescans your
+              website.
+            </p>
           </div>
 
           <div>
@@ -420,6 +498,13 @@ function onReplayTour() {
 
         <p v-if="error" class="text-sm text-red-600">
           {{ error }}
+        </p>
+        <p
+          v-if="brandKitError"
+          class="text-sm text-amber-600"
+          data-testid="settings-brand-kit-error"
+        >
+          {{ brandKitError }}
         </p>
 
         <div class="flex items-center justify-end gap-3">
