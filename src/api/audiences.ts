@@ -12,6 +12,7 @@ import type {
   AudienceCostPreview,
   AudienceCreateData,
   AudienceListResponse,
+  AudiencePointsResponse,
   AudienceSuppressionResult,
 } from "@/types/audiences";
 
@@ -136,6 +137,23 @@ export async function getAudienceCost(
 ): Promise<AudienceCostPreview> {
   return await get<AudienceCostPreview>(
     `/api/audiences/${encodeURIComponent(audienceId)}/cost`
+  );
+}
+
+/* ============================================================
+ * Points: GET /api/audiences/:id/points
+ * ============================================================
+ * ZIP-centroid pins for the map preview — one per ZIP present in the
+ * audience, `count` is total rows for that ZIP (upload count, not
+ * post-suppression). Fetch once after the audience ID resolves; the
+ * result is reused as-is after suppression runs (POS-137).
+ */
+
+export async function getAudiencePoints(
+  audienceId: string
+): Promise<AudiencePointsResponse> {
+  return await get<AudiencePointsResponse>(
+    `/api/audiences/${encodeURIComponent(audienceId)}/points`
   );
 }
 

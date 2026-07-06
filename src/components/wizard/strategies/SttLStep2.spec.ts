@@ -26,12 +26,14 @@ vi.mock('@/components/wizard/AudienceMapPreview.vue', () => ({
 const mockCreateAudience = vi.fn()
 const mockSuppressAudience = vi.fn()
 const mockGetAudienceCost = vi.fn()
+const mockGetAudiencePoints = vi.fn()
 const mockApproveAudience = vi.fn()
 
 vi.mock('@/api/audiences', () => ({
   createAudience: (...args) => mockCreateAudience(...args),
   suppressAudience: (...args) => mockSuppressAudience(...args),
   getAudienceCost: (...args) => mockGetAudienceCost(...args),
+  getAudiencePoints: (...args) => mockGetAudiencePoints(...args),
   approveAudience: (...args) => mockApproveAudience(...args),
 }))
 
@@ -91,6 +93,7 @@ describe('SttLStep2', () => {
     mockCreateAudience.mockResolvedValue({ status: 201, data: { audience: { id: AUDIENCE_ID } } })
     mockSuppressAudience.mockResolvedValue(suppressionResult)
     mockGetAudienceCost.mockResolvedValue(costPreview)
+    mockGetAudiencePoints.mockResolvedValue({ points: [], total_zips: 0, unmatched_zips: 0 })
     mockApproveAudience.mockResolvedValue(approvalResponse)
   })
 
@@ -259,6 +262,70 @@ describe('SttLStep2', () => {
     expect(mockGetAudienceCost).toHaveBeenCalledTimes(2)
     expect(wrapper.find('[data-testid="cost-retry-banner"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="approve-btn"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('maps audience points into AudienceMapPreview pin shape with labels', async () => {
+    mockGetAudiencePoints.mockResolvedValue({
+      points: [
+        { zip: '55317', lat: 44.8547, lng: -93.5312, count: 12 },
+        { zip: '75001', lat: 32.9483, lng: -96.8397, count: 1 },
+      ],
+      total_zips: 2,
+      unmatched_zips: 0,
+    })
+
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    expect(mockGetAudiencePoints).toHaveBeenCalledWith(AUDIENCE_ID)
+    const map = wrapper.findComponent({ name: 'AudienceMapPreview' })
+    expect(map.props('points')).toEqual([
+      { lat: 44.8547, lng: -93.5312, label: '55317 — 12 addresses' },
+      { lat: 32.9483, lng: -96.8397, label: '75001 — 1 address' },
+    ])
+    expect(wrapper.find('[data-testid="unmatched-zips-note"]').exists()).toBe(false)
+  })
+
+  it('shows an unmatched-ZIPs note when the server reports some', async () => {
+    mockGetAudiencePoints.mockResolvedValue({
+      points: [{ zip: '55317', lat: 44.8547, lng: -93.5312, count: 12 }],
+      total_zips: 3,
+      unmatched_zips: 2,
+    })
+
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    const note = wrapper.find('[data-testid="unmatched-zips-note"]')
+    expect(note.exists()).toBe(true)
+    expect(note.text()).toContain('2 ZIPs')
+  })
+
+  it('soft-fails when the points fetch errors — map stays empty, rest of flow proceeds', async () => {
+    mockGetAudiencePoints.mockRejectedValue(new Error('points endpoint down'))
+
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    const map = wrapper.findComponent({ name: 'AudienceMapPreview' })
+    expect(map.props('points')).toEqual([])
+    expect(wrapper.find('[data-testid="error-banner"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="approve-btn"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('reuses the same fetched points after suppression without re-fetching', async () => {
+    mockGetAudiencePoints.mockResolvedValue({
+      points: [{ zip: '55317', lat: 44.8547, lng: -93.5312, count: 12 }],
+      total_zips: 1,
+      unmatched_zips: 0,
+    })
+
+    const wrapper = mountCsv()
+    await flushPromises()
+
+    expect(mockGetAudiencePoints).toHaveBeenCalledOnce()
+    const map = wrapper.findComponent({ name: 'AudienceMapPreview' })
+    expect(map.props('points')).toHaveLength(1)
   })
 
   it('passes enrich_enabled=false from costPreview to EnrichCostBlock (Phase 1 wiring)', async () => {
