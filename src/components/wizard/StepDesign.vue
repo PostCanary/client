@@ -28,7 +28,7 @@ import PhotoAdjustOverlay from "@/components/design/PhotoAdjustOverlay.vue";
 import { usePhotoAdjust } from "@/composables/usePhotoAdjust";
 import type { ZoneBox } from "@/composables/usePopoverAnchor";
 import { normalizeCrop } from "@/utils/photoCrop";
-import { API_BASE } from "@/api/http";
+import { mediaSrc } from "@/utils/mediaSrc";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { useCardPreview } from "@/composables/useCardPreview";
 import { useBackPreview } from "@/composables/useBackPreview";
@@ -41,13 +41,6 @@ import {
   type EditZone,
 } from "@/data/templateEditZones";
 import { generateMapImage, getMediaFeaturesCached } from "@/api/brandKit";
-
-// Resolve a possibly-relative media path against the API base (mirrors
-// EditPanel.mediaSrc) so the on-canvas adjust overlay loads the same bytes the
-// worker renders. Same-origin deployments have API_BASE === "" (no-op).
-function mediaSrc(url: string): string {
-  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
-}
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -1855,7 +1848,7 @@ watch(
           </div>
           <a
             v-if="renderPhase === 'done' && renderedCards.length > 0"
-            :href="renderedCards[0]?.downloadUrl"
+            :href="mediaSrc(renderedCards[0]?.downloadUrl ?? '')"
             target="_blank"
             class="text-sm text-[#47bfa9] underline"
           >Download PDF</a>
@@ -1884,7 +1877,7 @@ watch(
               class="border-t border-gray-100 px-3 py-2"
             >
               <a
-                :href="renderedCards[idx]?.downloadUrl"
+                :href="mediaSrc(renderedCards[idx]?.downloadUrl ?? '')"
                 target="_blank"
                 class="text-xs font-medium text-[#47bfa9] underline"
                 :data-testid="`proof-pdf-link-${idx + 1}`"

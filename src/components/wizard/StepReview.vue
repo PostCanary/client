@@ -14,6 +14,7 @@ import {
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 import { useRenderJob } from "@/composables/useRenderJob";
+import { mediaSrc } from "@/utils/mediaSrc";
 
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
@@ -333,7 +334,7 @@ async function approve() {
                 Card {{ card.cardNumber }} — print PDF
               </div>
               <iframe
-                :src="card.downloadUrl"
+                :src="mediaSrc(card.downloadUrl)"
                 class="w-full"
                 style="height: 380px; border: 0;"
                 :title="`Print proof for card ${card.cardNumber}`"
