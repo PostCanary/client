@@ -1384,112 +1384,120 @@ watch(
          full-size thumbnail strip + caption + separate centered toggle. -->
     <div
       v-if="cardsReady"
-      class="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 bg-white px-4 sm:px-6 py-2"
+      class="shrink-0 flex flex-wrap items-end gap-x-4 gap-y-2 border-b border-gray-200 bg-white px-4 sm:px-6 py-2"
     >
       <!-- Card sequence (only when >1 card) -->
-      <SequenceView
-        v-if="cards.length > 1"
-        :cards="cards"
-        :active-card-index="activeCardIndex"
-        :thumbnail-urls="thumbnailUrls"
-        :brand-colors="brandKit?.brandColors"
-        :business-name="brandKit?.businessName"
-        :business-address="brandKit?.address ?? ''"
-        :logo-url="brandKit?.logoUrl"
-        :rating="brandKit?.googleRating ?? null"
-        :review-count="brandKit?.reviewCount ?? null"
-        :trust-badges="brandKit?.trustBadges ?? []"
-        :years-in-business="brandKit?.yearsInBusiness ?? null"
-        :city="brandKitCity"
-        :credibility-line="brandKitCredibility"
-        @select="activeCardIndex = $event"
-      />
+      <div v-if="cards.length > 1" class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wide text-gray-400">Cards</div>
+        <SequenceView
+          :cards="cards"
+          :active-card-index="activeCardIndex"
+          :thumbnail-urls="thumbnailUrls"
+          :brand-colors="brandKit?.brandColors"
+          :business-name="brandKit?.businessName"
+          :business-address="brandKit?.address ?? ''"
+          :logo-url="brandKit?.logoUrl"
+          :rating="brandKit?.googleRating ?? null"
+          :review-count="brandKit?.reviewCount ?? null"
+          :trust-badges="brandKit?.trustBadges ?? []"
+          :years-in-business="brandKit?.yearsInBusiness ?? null"
+          :city="brandKitCity"
+          :credibility-line="brandKitCredibility"
+          @select="activeCardIndex = $event"
+        />
+      </div>
 
       <!-- Front/Back surface toggle (S76 Phase-5). The back is ONE design
            for the whole sequence — switching here swaps the preview + the
            edit panel between the front card and the shared back. -->
-      <div
-        class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5"
-        role="tablist"
-        aria-label="Postcard side"
-      >
-        <button
-          type="button"
-          role="tab"
-          data-testid="side-toggle-front"
-          :aria-selected="activeSide === 'front'"
-          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-          :class="activeSide === 'front'
-            ? 'bg-[#0b2d50] text-white'
-            : 'text-gray-600 hover:text-gray-900'"
-          @click="activeSide = 'front'"
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wide text-gray-400">Side</div>
+        <div
+          class="inline-flex rounded-lg border border-gray-200 bg-white p-0.5"
+          role="tablist"
+          aria-label="Postcard side"
         >
-          Front
-        </button>
-        <button
-          type="button"
-          role="tab"
-          data-testid="side-toggle-back"
-          :aria-selected="activeSide === 'back'"
-          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-          :class="activeSide === 'back'
-            ? 'bg-[#0b2d50] text-white'
-            : 'text-gray-600 hover:text-gray-900'"
-          @click="activeSide = 'back'"
-        >
-          Back
-        </button>
+          <button
+            type="button"
+            role="tab"
+            data-testid="side-toggle-front"
+            :aria-selected="activeSide === 'front'"
+            class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+            :class="activeSide === 'front'
+              ? 'bg-[#0b2d50] text-white'
+              : 'text-gray-600 hover:text-gray-900'"
+            @click="activeSide = 'front'"
+          >
+            Front
+          </button>
+          <button
+            type="button"
+            role="tab"
+            data-testid="side-toggle-back"
+            :aria-selected="activeSide === 'back'"
+            class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+            :class="activeSide === 'back'
+              ? 'bg-[#0b2d50] text-white'
+              : 'text-gray-600 hover:text-gray-900'"
+            @click="activeSide = 'back'"
+          >
+            Back
+          </button>
+        </div>
       </div>
 
       <!-- Heavy-editor launchers (S79 Phase-2). These open the ContextDrawer
            rather than crowding a popover. Photo/Colors apply to the active
            surface; Business Info is org-wide. -->
-      <div class="flex items-center gap-1.5">
-        <button
-          type="button"
-          data-testid="toolbar-photo"
-          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
-          :class="drawerTab === 'photo'
-            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
-          @click="openDrawer('photo')"
-        >
-          Photo
-        </button>
-        <button
-          type="button"
-          data-testid="toolbar-colors"
-          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
-          :class="drawerTab === 'colors'
-            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
-          @click="openDrawer('colors')"
-        >
-          Colors
-        </button>
-        <button
-          type="button"
-          data-testid="toolbar-business"
-          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
-          :class="drawerTab === 'business'
-            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
-          @click="openDrawer('business')"
-        >
-          Business
-        </button>
-        <button
-          v-if="isBack"
-          type="button"
-          data-testid="toolbar-back-style"
-          class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
-          :class="drawerTab === 'back-style'
-            ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-            : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
-          @click="openDrawer('back-style')"
-        >
-          Back Style
-        </button>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wide text-gray-400">Customize</div>
+        <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="toolbar-photo"
+            class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+            :class="drawerTab === 'photo'
+              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+            @click="openDrawer('photo')"
+          >
+            Photo
+          </button>
+          <button
+            type="button"
+            data-testid="toolbar-colors"
+            class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+            :class="drawerTab === 'colors'
+              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+            @click="openDrawer('colors')"
+          >
+            Colors
+          </button>
+          <button
+            type="button"
+            data-testid="toolbar-business"
+            class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+            :class="drawerTab === 'business'
+              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+            @click="openDrawer('business')"
+          >
+            Business
+          </button>
+          <button
+            v-if="isBack"
+            type="button"
+            data-testid="toolbar-back-style"
+            class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+            :class="drawerTab === 'back-style'
+              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+            @click="openDrawer('back-style')"
+          >
+            Back Style
+          </button>
+        </div>
       </div>
 
       <!-- Global canvas actions, pushed to the right edge of the toolbar. -->
