@@ -9,11 +9,18 @@ import { test, expect, type Page } from "@playwright/test";
  * `finalHouseholdCount: 0` to the draft. Step 4 Review then showed
  * "Sending to 0 households" and $0 cost.
  *
- * Fix (commit 91c2ec0):
- *   - useHouseholdCount.ts seeds count.value with clientMockCount on entry
- *     so commit never sees 0 during the API await window.
- *   - StepTargeting.vue adds finalHouseholdCount to the commit watcher so a
- *     second commit captures the API-accurate number when it arrives.
+ * Fix (commit 91c2ec0): useHouseholdCount seeded count.value with a
+ * client-side density estimate (clientMockCount) so commit never saw 0
+ * during the API await window.
+ *
+ * Re-fix (POS-135, Drake): displayed/persisted numbers must be real Melissa
+ * data or a real error — never a client-side guess. clientMockCount was
+ * removed. Instead, useHouseholdCount now exposes a `ready` flag that only
+ * flips true once the count is authoritative (a real API response, or the
+ * genuine zero for "no areas selected"), and StepTargeting.vue's
+ * commitTargeting() skips the commit entirely until `ready` is true —
+ * `finalHouseholdCount` + `ready` are both in the commit watcher so a
+ * deferred commit fires as soon as the real result lands.
  *
  * Two scenarios covered:
  *   FAST — arrive from Home Recommendation, click Next-Next as fast as the

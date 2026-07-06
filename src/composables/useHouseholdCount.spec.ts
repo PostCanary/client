@@ -179,3 +179,120 @@ describe('useHouseholdCount', () => {
     expect(hc.count.value).toBe(1500)
   })
 })
+
+// POS-135 (Drake): numbers shown to customers must be real Melissa data or a
+// real error — never a client-side guess. clientMockCount was removed;
+// `ready` now gates auto-commit instead of a seeded estimate.
+describe('useHouseholdCount — POS-135 (no client-side estimate)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.mocked(getHouseholdCount).mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  async function flushDebounce() {
+    await vi.advanceTimersByTimeAsync(500)
+  }
+
+  it('starts with count 0, ready false, and no mock source — nothing is fabricated before a fetch', () => {
+    const hc = useHouseholdCount()
+    expect(hc.count.value).toBe(0)
+    expect(hc.ready.value).toBe(false)
+    expect(hc.source.value).not.toBe('mock')
+  })
+
+  it('never estimates a count while a request is in flight — count stays 0 until the API responds', async () => {
+    let resolveFetch: (v: unknown) => void
+    vi.mocked(getHouseholdCount).mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = resolve
+      }) as any,
+    )
+
+    const hc = useHouseholdCount()
+    hc.fetchCount([circle(5)], NO_FILTERS)
+    await flushDebounce()
+
+    // Mid-flight: no estimate was seeded, and the fetch isn't authoritative yet.
+    expect(hc.count.value).toBe(0)
+    expect(hc.ready.value).toBe(false)
+    expect(hc.loading.value).toBe(true)
+
+    resolveFetch!({
+      ok: true,
+      finalCount: 900,
+      filteredCount: 900,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa',
+    })
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(hc.count.value).toBe(900)
+    expect(hc.ready.value).toBe(true)
+  })
+
+  it('marks ready on a real zero-area count — a genuine 0, not an estimate', async () => {
+    const hc = useHouseholdCount()
+    hc.fetchCount([], NO_FILTERS)
+    await flushDebounce()
+
+    expect(hc.count.value).toBe(0)
+    expect(hc.ready.value).toBe(true)
+    expect(getHouseholdCount).not.toHaveBeenCalled()
+  })
+
+  it('marks ready on an oversized-radius rejection — definitive, not fabricated', async () => {
+    const hc = useHouseholdCount()
+    hc.fetchCount([circle(30)], NO_FILTERS)
+    await flushDebounce()
+
+    expect(hc.ready.value).toBe(true)
+    expect(hc.count.value).toBe(0)
+    expect(hc.invalid.value).toBe(true)
+  })
+
+  it('does NOT mark ready on a first-ever 503 outage — count must not look authoritative', async () => {
+    const err = new Error('temporarily unavailable') as Error & { status: number }
+    err.status = 503
+    vi.mocked(getHouseholdCount).mockRejectedValue(err)
+
+    const hc = useHouseholdCount()
+    hc.fetchCount([circle(5)], NO_FILTERS)
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(hc.ready.value).toBe(false)
+    expect(hc.count.value).toBe(0)
+    expect(hc.error.value).toBe('temporarily unavailable')
+  })
+
+  it('keeps ready true and the last-good count after a 503 that follows a successful fetch', async () => {
+    vi.mocked(getHouseholdCount).mockResolvedValueOnce({
+      ok: true,
+      finalCount: 1200,
+      filteredCount: 1200,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa',
+    })
+    const hc = useHouseholdCount()
+    hc.fetchCount([circle(5)], NO_FILTERS)
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+    expect(hc.ready.value).toBe(true)
+    expect(hc.count.value).toBe(1200)
+
+    const err = new Error('temporarily unavailable') as Error & { status: number }
+    err.status = 503
+    vi.mocked(getHouseholdCount).mockRejectedValue(err)
+    hc.fetchCount([circle(6)], NO_FILTERS)
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(hc.ready.value).toBe(true)
+    expect(hc.count.value).toBe(1200) // last-good real value, not corrupted
+    expect(hc.error.value).toBe('temporarily unavailable')
+  })
+})

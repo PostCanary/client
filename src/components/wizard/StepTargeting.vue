@@ -26,6 +26,7 @@ const {
   loading: countLoading,
   error: countError,
   source: countSource,
+  ready: countReady,
   fetchCount,
   fetchTotalIfNeeded,
 } = useHouseholdCount();
@@ -233,6 +234,13 @@ let commitTimer: ReturnType<typeof setTimeout> | null = null;
 function commitTargeting() {
   if (commitTimer) clearTimeout(commitTimer);
   commitTimer = setTimeout(() => {
+    // POS-135: without a client-side estimate, apiCount starts at 0 until
+    // the household-count API responds. Skip the commit entirely until it
+    // reports an authoritative result (real count, real zero, or a
+    // definitive rejection) so a draft is never persisted with a
+    // premature/fabricated finalHouseholdCount: 0. The finalHouseholdCount
+    // watcher below re-triggers this once countReady flips true.
+    if (!countReady.value) return;
     const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
     const perCard = pricing.payPerSend;
 
@@ -284,12 +292,14 @@ function determineMethod(): "draw" | "zip" | "around_jobs" | "combined" {
 }
 
 // Watch for changes and auto-commit.
-// S70 demo-fix: include finalHouseholdCount so that when the async
-// household-count API resolves AFTER the first commit (user clicked
-// Next quickly), a second commit persists the API-accurate number
-// instead of leaving the draft with the client-mock fallback.
+// Include finalHouseholdCount + countReady so that when the async
+// household-count API resolves AFTER the first commit attempt (user clicked
+// Next quickly, or countReady was still false), a follow-up commit persists
+// the real number (POS-135). countReady is needed on its own because it can
+// flip true without finalHouseholdCount's value changing (e.g. a genuine
+// zero-area count), which wouldn't otherwise re-trigger this watcher.
 watch(
-  [selectedJobs, radiusMiles, zips, filters, excludePastCustomers, excludeMailedWithinDays, finalHouseholdCount],
+  [selectedJobs, radiusMiles, zips, filters, excludePastCustomers, excludeMailedWithinDays, finalHouseholdCount, countReady],
   commitTargeting,
   { deep: true },
 );
