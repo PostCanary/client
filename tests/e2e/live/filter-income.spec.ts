@@ -1,7 +1,7 @@
 /**
  * filter-income.spec.ts — D1.B.1 household income filter live regression
  *
- * Verifies that the household income (min) filter on the Refine tab is wired
+ * Verifies that the household income (min) filter on the Filter tab is wired
  * end-to-end: selecting a minimum income bracket triggers a new Melissa count
  * call and reduces (or at most maintains) the household count vs the unfiltered
  * baseline.
@@ -128,8 +128,8 @@ test.describe("D1.B.1 — Household income filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab and apply income filter ───────────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab and apply income filter ───────────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // "Household income (min)" select — choose $100K+ (code "C")
@@ -145,7 +145,7 @@ test.describe("D1.B.1 — Household income filter wired end-to-end", () => {
       if (!incomeSelectVisible) {
         test.skip(
           true,
-          "Income select not found in Refine tab — UI control may not be rendered",
+          "Income select not found in Filter tab — UI control may not be rendered",
         );
         return;
       }

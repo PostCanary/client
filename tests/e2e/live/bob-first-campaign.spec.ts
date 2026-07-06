@@ -94,9 +94,9 @@ test.describe("Bob first-campaign — wizard stays simple for not-tech-savvy use
 
     // Step 2's content should appear. We use the same fallback selectors
     // as home-to-step2-skip.spec.ts — Step 2 uses tab-style content not
-    // a heading, so match either tab labels OR the "Refine" CTA.
+    // a heading, so match either tab labels OR the "Filter" CTA.
     await expect(
-      page.getByText(/Around My Jobs|Select Area|Refine/).first(),
+      page.getByText(/Around My Jobs|Select Area|Filter/).first(),
       "Step 2 didn't render after single-click advance from Step 1",
     ).toBeVisible({ timeout: 15_000 });
 

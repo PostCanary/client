@@ -100,7 +100,7 @@ test.describe("Alex zero-data path — wizard works without CRM upload precondit
     // Step 2 should appear — proves Step 1→2 advance doesn't require
     // a prior CRM upload to unblock.
     await expect(
-      page.getByText(/Around My Jobs|Select Area|Refine/).first(),
+      page.getByText(/Around My Jobs|Select Area|Filter/).first(),
       "Step 2 didn't render after Step 1 advance — wizard now gates on data",
     ).toBeVisible({ timeout: 15_000 });
 
@@ -137,7 +137,7 @@ test.describe("Alex zero-data path — wizard works without CRM upload precondit
     // map (see pickerSurface locator below), and map tile-fetching keeps
     // the network busy past Playwright's idle threshold (S124 spawn fix).
     await expect(
-      page.getByText(/Around My Jobs|Select Area|Refine/).first(),
+      page.getByText(/Around My Jobs|Select Area|Filter/).first(),
       "Step 2 didn't render after Step 1 advance — wizard may gate on data",
     ).toBeVisible({ timeout: 20_000 });
 

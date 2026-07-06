@@ -1,7 +1,7 @@
 /**
  * filter-lores.spec.ts — D1.B.3 length-of-residence filter live regression
  *
- * Verifies that the length-of-residence (lores) filter on the Refine tab is
+ * Verifies that the length-of-residence (lores) filter on the Filter tab is
  * wired end-to-end: selecting a min residence bracket triggers a new Melissa
  * count call and reduces (or at most maintains) the household count vs the
  * unfiltered baseline.
@@ -131,8 +131,8 @@ test.describe("D1.B.3 — Length of residence filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab and apply length-of-residence filter ───────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab and apply length-of-residence filter ───────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // PanelTabFilters renders two selects for length of residence:
@@ -151,7 +151,7 @@ test.describe("D1.B.3 — Length of residence filter wired end-to-end", () => {
       if (!minLoresVisible) {
         test.skip(
           true,
-          "Length-of-residence min select not found in Refine tab — skipping",
+          "Length-of-residence min select not found in Filter tab — skipping",
         );
         return;
       }

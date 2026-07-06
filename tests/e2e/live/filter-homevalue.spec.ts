@@ -1,7 +1,7 @@
 /**
  * filter-homevalue.spec.ts — D1.B.4 estimated home value filter live regression
  *
- * Verifies that the home value range filter on the Refine tab is wired
+ * Verifies that the home value range filter on the Filter tab is wired
  * end-to-end: entering a homeValueMin triggers a new Melissa count call and
  * reduces (or at most maintains) the household count vs the unfiltered baseline.
  *
@@ -131,8 +131,8 @@ test.describe("D1.B.4 — Home value filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab and apply home value filter ────────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab and apply home value filter ────────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // PanelTabFilters renders two text inputs for home value range:
@@ -148,7 +148,7 @@ test.describe("D1.B.4 — Home value filter wired end-to-end", () => {
       if (!minVisible) {
         test.skip(
           true,
-          "Home value min input not found in Refine tab — skipping",
+          "Home value min input not found in Filter tab — skipping",
         );
         return;
       }

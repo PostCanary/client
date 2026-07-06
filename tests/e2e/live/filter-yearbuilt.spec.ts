@@ -1,7 +1,7 @@
 /**
  * filter-yearbuilt.spec.ts — D1.B.5 year-home-was-built filter live regression
  *
- * Verifies that the year-built range filter on the Refine tab is wired
+ * Verifies that the year-built range filter on the Filter tab is wired
  * end-to-end: entering a yearBuiltMin triggers a new Melissa count call and
  * reduces (or at most maintains) the household count vs the baseline.
  *
@@ -135,8 +135,8 @@ test.describe("D1.B.5 — Year-built filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab and apply year-built filter ────────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab and apply year-built filter ────────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // PanelTabFilters renders two number inputs for year built:
@@ -151,7 +151,7 @@ test.describe("D1.B.5 — Year-built filter wired end-to-end", () => {
       if (!yearMinVisible) {
         test.skip(
           true,
-          "Year-built From input not found in Refine tab — skipping",
+          "Year-built From input not found in Filter tab — skipping",
         );
         return;
       }

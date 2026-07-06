@@ -41,7 +41,7 @@ const activeTab = ref<"target" | "filters" | "summary">("target");
 
 const tabs = [
   { key: "target" as const, label: "Select Area" },
-  { key: "filters" as const, label: "Refine" },
+  { key: "filters" as const, label: "Filter" },
   { key: "summary" as const, label: "Count & Cost" },
 ];
 </script>
