@@ -86,6 +86,13 @@ function selectStyle(id: BackTemplateId) {
 }
 // The back-photo picker is only relevant when the Photo style is selected.
 const isPhotoStyle = computed(() => activeStyle.value === "photo-back-v1");
+// The toolbar's Photo button always routes to the 'back-photo' drawer
+// section regardless of the current back style (StepDesign.vue), so a
+// non-Photo style used to open a drawer with an empty body. Show an
+// empty-state with a one-click switch instead (POS-122).
+const showBackPhotoEmptyState = computed(
+  () => isSectionMode.value && props.section === "back-photo" && !isPhotoStyle.value,
+);
 
 // --- Back photo picker (S78) — reuses the Change Photo gallery pattern -------
 type PickerPhoto = {
@@ -304,58 +311,76 @@ const certifications = computed(() => props.brandKit?.certifications ?? []);
     <!-- Back photo picker (S78) — only when the Photo style is selected.
          Reuses the Change Photo gallery grid (brand + stock, Low-res badge). -->
     <div
-      v-if="isPhotoStyle && (showSlice('back-style') || showSlice('back-photo'))"
+      v-if="(isPhotoStyle && (showSlice('back-style') || showSlice('back-photo'))) || showBackPhotoEmptyState"
       class="mb-5"
       data-testid="back-photo-section"
     >
       <label class="text-[10px] uppercase tracking-wide text-gray-400 block mb-1">
         Back Photo
       </label>
-      <p class="text-[11px] text-gray-500 mb-2">
-        Fills the left side of the back. Leave unset to reuse this campaign's
-        front photo.
-      </p>
-      <div
-        v-if="backPickerPhotos.length === 0"
-        class="text-xs text-gray-400 py-1"
-      >
-        No photos yet — add brand photos in onboarding, or pick a card photo on
-        the front.
-      </div>
-      <div v-else class="grid grid-cols-3 gap-2" data-testid="back-photo-grid">
-        <button
-          v-for="(photo, i) in backPickerPhotos"
-          :key="photo.url"
-          type="button"
-          :data-testid="`back-photo-option-${i}`"
-          :data-source="photo.source"
-          :data-active="photo.url === currentBackPhotoUrl ? 'true' : 'false'"
-          class="relative aspect-square rounded-md overflow-hidden border-2 transition-colors"
-          :class="
-            photo.url === currentBackPhotoUrl
-              ? 'border-[#47bfa9]'
-              : 'border-transparent hover:border-gray-300'
-          "
-          :title="photo.alt"
-          @click="applyBackPhoto(photo.url)"
+
+      <template v-if="isPhotoStyle">
+        <p class="text-[11px] text-gray-500 mb-2">
+          Fills the left side of the back. Leave unset to reuse this campaign's
+          front photo.
+        </p>
+        <div
+          v-if="backPickerPhotos.length === 0"
+          class="text-xs text-gray-400 py-1"
         >
-          <img
-            :src="mediaSrc(photo.url)"
-            :alt="photo.alt"
-            class="w-full h-full object-cover"
-          />
-          <span
-            v-if="photo.source === 'stock'"
-            class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
-            >Stock</span
+          No photos yet — add brand photos in onboarding, or pick a card photo on
+          the front.
+        </div>
+        <div v-else class="grid grid-cols-3 gap-2" data-testid="back-photo-grid">
+          <button
+            v-for="(photo, i) in backPickerPhotos"
+            :key="photo.url"
+            type="button"
+            :data-testid="`back-photo-option-${i}`"
+            :data-source="photo.source"
+            :data-active="photo.url === currentBackPhotoUrl ? 'true' : 'false'"
+            class="relative aspect-square rounded-md overflow-hidden border-2 transition-colors"
+            :class="
+              photo.url === currentBackPhotoUrl
+                ? 'border-[#47bfa9]'
+                : 'border-transparent hover:border-gray-300'
+            "
+            :title="photo.alt"
+            @click="applyBackPhoto(photo.url)"
           >
-          <span
-            v-if="photo.lowRes"
-            data-testid="back-photo-lowres-badge"
-            class="absolute top-0 left-0 text-[8px] font-medium bg-amber-500/90 text-white px-1 rounded-br"
-            title="Below print resolution — may look soft when printed"
-            >Low res</span
-          >
+            <img
+              :src="mediaSrc(photo.url)"
+              :alt="photo.alt"
+              class="w-full h-full object-cover"
+            />
+            <span
+              v-if="photo.source === 'stock'"
+              class="absolute bottom-0 right-0 text-[8px] font-medium bg-gray-900/70 text-white px-1 rounded-tl"
+              >Stock</span
+            >
+            <span
+              v-if="photo.lowRes"
+              data-testid="back-photo-lowres-badge"
+              class="absolute top-0 left-0 text-[8px] font-medium bg-amber-500/90 text-white px-1 rounded-br"
+              title="Below print resolution — may look soft when printed"
+              >Low res</span
+            >
+          </button>
+        </div>
+      </template>
+
+      <div v-else class="text-xs text-gray-400 py-1" data-testid="back-photo-empty-state">
+        <p class="mb-2">
+          This back style doesn't include a photo. Switch to the Photo back
+          style to add one.
+        </p>
+        <button
+          type="button"
+          data-testid="back-photo-switch-to-photo"
+          class="w-full px-3 py-2 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          @click="selectStyle('photo-back-v1')"
+        >
+          Switch to Photo back style
         </button>
       </div>
     </div>
