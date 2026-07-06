@@ -86,6 +86,17 @@ describe("PhotoCropAdjuster", () => {
     expect(last!.x).toBeGreaterThan(50);
   });
 
+  it("shows the zoom-in hint at zoom 1 and the drag hint once zoomed in", () => {
+    const atDefault = mountAdjuster({ x: 50, y: 50, zoom: 1 });
+    expect(atDefault.find('[data-testid="crop-hint"]').text()).toContain(
+      "Zoom in to reposition",
+    );
+    const zoomedIn = mountAdjuster({ x: 50, y: 50, zoom: 1.5 });
+    expect(zoomedIn.find('[data-testid="crop-hint"]').text()).toContain(
+      "Drag the photo to reposition it",
+    );
+  });
+
   it("shows a placeholder when no photo is set", () => {
     const w = mount(PhotoCropAdjuster, {
       props: { src: "", aspect: 1.5 },

@@ -81,6 +81,10 @@ const imgStyle = computed(() => cropImgStyle(props.crop));
 
 const isDefault = computed(() => isIdentityCrop(props.crop));
 
+// At zoom 1 there's no pan room, so dragging can't move the photo — nudge the
+// user to zoom in first instead of letting them wonder why drag "does nothing".
+const canReposition = computed(() => props.crop.zoom > CROP_MIN_ZOOM + 1e-4);
+
 // --- drag to pan ---
 let dragging = false;
 let startX = 0;
@@ -172,6 +176,13 @@ function onZoomInput(e: Event) {
       @pointerdown.stop
       @wheel.stop
     >
+      <span
+        v-if="!canReposition"
+        data-testid="photo-adjust-hint"
+        class="text-[11px] font-medium text-white/90 whitespace-nowrap"
+      >
+        Zoom in to reposition your photo
+      </span>
       <span class="text-[10px] text-white/60">1×</span>
       <input
         type="range"
