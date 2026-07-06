@@ -97,7 +97,7 @@ const selectedGoal = computed(
 
 // Sequence config state
 const sequenceConfig = ref({
-  sequenceLength: draftStore.draft?.goal?.sequenceLength ?? 3,
+  sequenceLength: Math.min(draftStore.draft?.goal?.sequenceLength ?? 3, 3), // only 3 card purposes exist currently; see POS-140 for real 4-5 support
   spacingWeeks: Math.round(
     (draftStore.draft?.goal?.sequenceSpacingDays ?? 14) / 7,
   ),
