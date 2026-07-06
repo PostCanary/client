@@ -20,6 +20,13 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
         Counting households...
       </div>
     </template>
+    <!-- POS-133: an area was selected but rejected (e.g. server's 25-mile
+         radius cap) — show why instead of a frozen last-good count. -->
+    <template v-else-if="hc.error.value && !hasTargeting">
+      <div class="text-xs font-medium text-amber-700 bg-amber-50 rounded px-2 py-1.5">
+        {{ hc.error.value }}
+      </div>
+    </template>
     <template v-else-if="hasTargeting">
       <div class="flex items-center gap-1.5">
         <div class="text-sm font-semibold text-[#0b2d50]">
