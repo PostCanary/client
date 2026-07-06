@@ -12,7 +12,6 @@
 import { ref, onBeforeUnmount } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { getHouseholdCount } from '@/api/targeting'
-import { estimateHouseholds, circleAreaSqMiles, zipAreaSqMiles, applyFilterReductions } from '@/data/mockTargetingData'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
 
 // POS-133: mirrors the server's circle-radius validation (app/utils/geo.py
@@ -56,8 +55,16 @@ export function useHouseholdCount() {
   const exclusions = ref({ pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 })
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const source = ref<'melissa' | 'mock'>('mock')
+  // Neutral until the server actually reports a source (POS-135: no client
+  // estimate exists to badge as 'mock' by default anymore).
+  const source = ref<'melissa' | 'mock'>('melissa')
   const invalid = ref(false)
+  // POS-135: true once `count` reflects an authoritative answer (a real
+  // server response, or the genuine "no areas selected" zero) rather than
+  // its uninitialized default. Callers (StepTargeting's auto-commit) must
+  // gate on this instead of relying on a seeded client-side estimate, so a
+  // draft never gets persisted with a fabricated or premature 0.
+  const ready = ref(false)
 
   let abortController: AbortController | null = null
   let retryCount = 0
@@ -77,9 +84,9 @@ export function useHouseholdCount() {
       count.value = 0
       totalCount.value = 0
       loading.value = false
-      source.value = 'mock'
       error.value = null
       invalid.value = false
+      ready.value = true  // genuinely 0 households — no area selected, not an estimate
       return
     }
 
@@ -93,6 +100,7 @@ export function useHouseholdCount() {
       count.value = 0
       filteredCount.value = 0
       exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
+      ready.value = true  // definitive (rejected) state, not a fabricated number
       return
     }
 
@@ -105,16 +113,6 @@ export function useHouseholdCount() {
     if (areasKey !== totalFetchedForAreas) {
       totalFetchedForAreas = ''
       totalCount.value = 0  // S131: reset stale unfiltered total so Count&Cost tab doesn't show old area's number
-    }
-
-    // S70 demo-fix: seed count immediately with client-side mock so that
-    // auto-commit (which runs on a 1s timer in StepTargeting.vue) never
-    // persists `finalHouseholdCount: 0` when the user clicks Next before
-    // the API has a chance to respond or when the request is aborted on
-    // unmount. The API result overwrites this on success.
-    if (count.value === 0) {
-      count.value = clientMockCount(areas, filters)
-      source.value = 'mock'
     }
 
     try {
@@ -141,10 +139,11 @@ export function useHouseholdCount() {
       }
 
       invalid.value = false
+      ready.value = true
       retryCount = 0
       loading.value = false
     } catch (e: any) {
-      if (isAbortError(e)) return  // Cancelled — don't touch loading/count/error
+      if (isAbortError(e)) return  // Cancelled — don't touch loading/count/error/ready
       // Retry once on semaphore timeout with jittered delay
       if (e.message?.includes('busy') && retryCount < 1) {
         retryCount++
@@ -165,49 +164,21 @@ export function useHouseholdCount() {
         filteredCount.value = 0
         exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
         error.value = extractServerMessage(e) || AREA_TOO_LARGE_MESSAGE
+        ready.value = true  // definitive (rejected) state, not a fabricated number
       } else if (e.status === 503 || e.message?.includes('temporarily unavailable')) {
-        // Drake priority #1 (S71 mem 574): NO silent mock fallback in prod.
-        // When the server returns 503 (provider unavailable + alert already
-        // fired server-side), surface the real error message to the user.
-        // The seeded clientMockCount from L62-65 stays as-is so auto-commit
-        // doesn't corrupt draft state with 0, but `error.value` is populated
-        // so the UI layer can gate the Next button / show a warning banner.
+        // Drake priority #1 (S71 mem 574 / POS-135): NO silent mock fallback,
+        // client or server. Surface the real error message to the user. Do
+        // NOT set ready here on a first-ever fetch — count is still at its
+        // uninitialized 0 and must not look authoritative (see `ready` doc
+        // comment above). If a PRIOR fetch already succeeded, ready is
+        // already true and count holds that last-good real value, which is
+        // safe to keep showing/committing.
         error.value = e.message || 'Household-count service temporarily unavailable. Please retry in a minute.'
       } else {
         error.value = e.message || 'Could not get household count. Please retry.'
       }
     }
   }, 500)
-
-  function clientMockCount(areas: TargetingArea[], filters: TargetingFilters): number {
-    let sqMiles = 0
-    for (const a of areas) {
-      if ((a.type === 'circle' || a.type === 'job_radius') && a.radiusMiles) {
-        sqMiles += circleAreaSqMiles(a.radiusMiles)
-      } else if (a.type === 'zip') {
-        sqMiles += zipAreaSqMiles()
-      } else if (a.type === 'rectangle' && a.coordinates?.length >= 2) {
-        const c = a.coordinates
-        const latMid = (c[0]![0]! + c[1]![0]!) / 2
-        const h = Math.abs(c[1]![0]! - c[0]![0]!) * 69
-        const w = Math.abs(c[1]![1]! - c[0]![1]!) * 69 * Math.cos(latMid * Math.PI / 180)
-        sqMiles += h * w
-      } else if (a.type === 'polygon' && a.coordinates?.length >= 3) {
-        const c = a.coordinates
-        const latMid = c.reduce((s, p) => s + p[0]!, 0) / c.length
-        let pa = 0
-        for (let i = 0; i < c.length; i++) {
-          const j = (i + 1) % c.length
-          pa += c[i]![1]! * c[j]![0]! - c[j]![1]! * c[i]![0]!
-        }
-        sqMiles += Math.abs(pa) / 2 * 69 * 69 * Math.cos(latMid * Math.PI / 180)
-      } else {
-        sqMiles += 2
-      }
-    }
-    const base = estimateHouseholds(sqMiles)
-    return Math.max(applyFilterReductions(base, filters), 0)
-  }
 
   async function fetchTotalIfNeeded() {
     // Lazy unfiltered call — only fires when Summary tab opens
@@ -250,6 +221,7 @@ export function useHouseholdCount() {
     error,
     source,
     invalid,
+    ready,
     fetchCount,
     fetchTotalIfNeeded,
   }
