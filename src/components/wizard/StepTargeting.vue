@@ -46,7 +46,16 @@ const goalDefaults = computed(() => GOAL_DEFAULTS[goalType.value]);
 const isNeighborGoal = computed(() => goalType.value === "neighbor_marketing");
 const jobs = ref<JobReference[]>(draftStore.draft?.targeting?.jobsUsed ?? []);
 const radiusMiles = ref(draftStore.draft?.targeting?.jobRadiusMiles ?? 0.5);
-const zips = ref<string[]>([]);
+// Rehydrate ZIP chips from the persisted draft, same as jobs/filters/drawn
+// shapes above/below. Without this, remounting Step 2 (e.g. Back then
+// Next) showed an empty ZIP list while `draft.targeting.areas` still
+// carried the zip entries — targeting/billing kept applying silently
+// while the UI looked cleared (POS-116 Bug A).
+const zips = ref<string[]>(
+  (draftStore.draft?.targeting?.areas ?? [])
+    .filter((a) => a.type === "zip" && a.zipCode)
+    .map((a) => a.zipCode!),
+);
 // S69 demo prep: HVAC default presets. Applied when the draft has no
 // filters yet OR filters exist but every field is null/empty (the
 // "untouched-new-draft" signature). Once any field is customized, the
@@ -360,6 +369,9 @@ onMounted(() => {
       }
       if (anyJobSelected) {
         updateMapJobs();
+      }
+      if (zips.value.length > 0) {
+        mapRef.value?.highlightZips(zips.value);
       }
     });
   } else if (anyJobSelected) {

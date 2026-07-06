@@ -1,5 +1,5 @@
 // src/api/targeting.ts
-import { postJson } from '@/api/http'
+import { get, postJson } from '@/api/http'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
 
 export interface HouseholdCountResponse {
@@ -26,4 +26,24 @@ export async function getHouseholdCount(
     filters,
     includeTotal: includeTotal ?? false,
   }, signal ? { signal } : undefined)
+}
+
+export interface ZipCentroid {
+  zip: string
+  lat: number
+  lon: number
+}
+
+export interface ZipCentroidsResponse {
+  centroids: ZipCentroid[]
+}
+
+export async function getZipCentroids(
+  zips: string[],
+  signal?: AbortSignal,
+): Promise<ZipCentroidsResponse> {
+  return get<ZipCentroidsResponse>('/api/targeting/zip-centroids', {
+    params: { zips: zips.join(',') },
+    ...(signal ? { signal } : {}),
+  })
 }
