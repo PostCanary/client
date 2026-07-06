@@ -208,6 +208,15 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
      * triggers spec edge case #11 vs #9). generateCardsForDraft() is
      * responsible for explicitly clearing the flag back to false on a
      * full regeneration — see there.
+     *
+     * Step 3's completion checkmark follows the same "user" vs "system"
+     * split (POS-138): a system write (auto-generation, review-defaults
+     * touch-up) populates the cards but must NOT complete the step —
+     * Pete's bug was a brand-new campaign showing step 3 complete before
+     * the customer ever looked at it. Only an actual customer edit here
+     * completes it; the explicit "I looked at this" path for someone who
+     * never edits anything is `markDesignReviewed()`, called from
+     * WizardShell's goNext when leaving step 3 forward.
      */
     setDesign(design: DesignSelection, opts?: { source?: "user" | "system" }) {
       if (!this.draft) return;
@@ -215,7 +224,18 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.draft.design = design;
       if ((opts?.source ?? "user") === "user") {
         this.draft.designUserEdited = true;
+        this._markComplete(3);
       }
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Explicit "I reviewed step 3" signal for the case where the user
+     * never edits a card — completes the step and clears it from review
+     * without requiring a real design change. Fired by WizardShell's
+     * goNext when advancing past step 3 (POS-138). */
+    markDesignReviewed() {
+      if (!this.draft) return;
       this._markComplete(3);
       this._clearReview(3);
       this._debounceSave();
