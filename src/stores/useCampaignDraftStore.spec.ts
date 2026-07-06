@@ -311,3 +311,73 @@ describe("setDesign — S89 Fix C: designUserEdited pristine tracking", () => {
     expect(store.draft!.designUserEdited).toBe(false);
   });
 });
+
+describe("setDesign / markDesignReviewed — POS-138: step 3 checkmark requires review", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    generateCardsMock.mockReset();
+    waitForScrapeSettledMock.mockReset().mockResolvedValue("idle");
+    brandKitStoreState.hydrated = true;
+    brandKitStoreState.brandKit = { businessName: "Acme" };
+  });
+
+  const anyDesign = {
+    templateId: "t",
+    templateLayoutType: "full-bleed",
+    isCustomUpload: false,
+    customUploadUrl: null,
+    sequenceCards: [],
+  } as any;
+
+  it('a "system" source (auto-generation) populates the design but leaves step 3 incomplete', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign, { source: "system" });
+    expect(store.draft!.design).toEqual(anyDesign);
+    expect(store.draft!.completedSteps).not.toContain(3);
+  });
+
+  it('a "user" source (real edit) completes step 3', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign);
+    expect(store.draft!.completedSteps).toContain(3);
+  });
+
+  it("markDesignReviewed completes step 3 and clears it from review without touching the design", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setDesign(anyDesign, { source: "system" });
+    store.draft!.needsReviewSteps = [3];
+    expect(store.draft!.completedSteps).not.toContain(3);
+
+    store.markDesignReviewed();
+
+    expect(store.draft!.completedSteps).toContain(3);
+    expect(store.draft!.needsReviewSteps).not.toContain(3);
+    expect(store.draft!.design).toEqual(anyDesign);
+  });
+
+  it("a full (system) regeneration via generateCardsForDraft never completes step 3 on its own", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    generateCardsMock.mockResolvedValue([
+      makeCard(1, "offer"),
+      makeCard(2, "proof"),
+      makeCard(3, "last_chance"),
+    ]);
+
+    await store.generateCardsForDraft();
+
+    expect(store.draft!.design?.sequenceCards).toHaveLength(3);
+    expect(store.draft!.completedSteps).not.toContain(3);
+  });
+
+  it("an existing step-3 completion (persisted draft) is left alone by a later system write", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.draft!.completedSteps = [1, 2, 3];
+    store.setDesign(anyDesign, { source: "system" });
+    expect(store.draft!.completedSteps).toContain(3);
+  });
+});

@@ -66,6 +66,18 @@ function retryScrape() {
 const step = computed(() => draftStore.currentStep);
 const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
 
+// POS-138: step 3 no longer flips `isStepComplete` on its own (that now
+// requires the explicit review signal in goNext), but auto-generated cards
+// always exist by the time the user reaches this step, so Next should still
+// be clickable — clicking it IS the review. Every other step still gates
+// on its real completion flag.
+const canAdvance = computed(() => {
+  if (step.value === 3) {
+    return (draftStore.draft?.design?.sequenceCards?.length ?? 0) > 0;
+  }
+  return draftStore.isStepComplete(step.value as WizardStep);
+});
+
 function goToStep(s: WizardStep) {
   draftStore.goToStep(s);
 }
@@ -77,7 +89,14 @@ function goBack() {
 }
 
 function goNext() {
-  if (step.value < 4 && draftStore.isStepComplete(step.value as WizardStep)) {
+  if (step.value < 4 && canAdvance.value) {
+    // POS-138: leaving step 3 forward is the explicit "reviewed" signal —
+    // auto-generated cards never complete the step on their own (see
+    // setDesign in useCampaignDraftStore), so this is what checks it off
+    // for a user who never touched a card.
+    if (step.value === 3) {
+      draftStore.markDesignReviewed();
+    }
     draftStore.goToStep((step.value + 1) as WizardStep);
   }
 }
@@ -264,11 +283,11 @@ onBeforeRouteLeave(async () => {
         v-if="step < 4"
         class="text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors"
         :class="
-          draftStore.isStepComplete(step as WizardStep)
+          canAdvance
             ? 'bg-[#47bfa9] text-white hover:bg-[#3aa893]'
             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
         "
-        :disabled="!draftStore.isStepComplete(step as WizardStep)"
+        :disabled="!canAdvance"
         @click="goNext"
       >
         Next
