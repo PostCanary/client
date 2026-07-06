@@ -341,7 +341,7 @@ export function getRecommendedTemplateSet(
 export function getTemplateSetsForGoal(
   goalType: CampaignGoalType,
   industry?: string | null,
-): { layout: TemplateLayoutType; name: string; templates: TemplateDefinition[]; recommended: boolean }[] {
+): { layout: TemplateLayoutType; name: string; desc: string; templates: TemplateDefinition[]; recommended: boolean }[] {
   const recommended = resolveRecommendedLayout(goalType, industry);
   const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(goalType);
   // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
@@ -352,6 +352,7 @@ export function getTemplateSetsForGoal(
     .map((layout) => ({
       layout: layout.type,
       name: layout.name,
+      desc: layout.desc,
       templates: POSITIONS.map(
         (pos) =>
           visibleLibraryTemplates.find(
