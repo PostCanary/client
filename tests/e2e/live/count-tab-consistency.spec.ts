@@ -143,13 +143,13 @@ test.describe("D1.A — Count-tab consistency (S131 Bug B regression)", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to "Refine" tab — bar count must not change ─────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to "Filter" tab — bar count must not change ─────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
       const barCountOnRefine = await getBarCount(page);
       expect(
         barCountOnRefine,
-        `Bar count changed when switching to Refine tab (was ${barCountBaseline}, now ${barCountOnRefine}) — tab-switch must not alter count`,
+        `Bar count changed when switching to Filter tab (was ${barCountBaseline}, now ${barCountOnRefine}) — tab-switch must not alter count`,
       ).toBe(barCountBaseline);
 
       // ── Apply a home-value filter to trigger a new Melissa call ────────

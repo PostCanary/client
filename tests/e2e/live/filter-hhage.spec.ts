@@ -1,7 +1,7 @@
 /**
  * filter-hhage.spec.ts — D1.B.2 homeowner age filter live regression
  *
- * Verifies that the homeowner age (hhage) filter on the Refine tab is wired
+ * Verifies that the homeowner age (hhage) filter on the Filter tab is wired
  * end-to-end: selecting a min/max age bracket triggers a new Melissa count
  * call and reduces (or at most maintains) the household count vs the
  * unfiltered baseline.
@@ -128,8 +128,8 @@ test.describe("D1.B.2 — Homeowner age filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab and apply homeowner age filter ────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab and apply homeowner age filter ────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // PanelTabFilters renders two selects for homeowner age:
@@ -148,7 +148,7 @@ test.describe("D1.B.2 — Homeowner age filter wired end-to-end", () => {
       if (!minAgeVisible) {
         test.skip(
           true,
-          "Homeowner age min select not found in Refine tab — skipping",
+          "Homeowner age min select not found in Filter tab — skipping",
         );
         return;
       }

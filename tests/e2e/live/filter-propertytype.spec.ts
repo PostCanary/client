@@ -1,7 +1,7 @@
 /**
  * filter-propertytype.spec.ts — D1.B.6 property type filter live regression
  *
- * Verifies that the property type checkbox filter on the Refine tab is wired
+ * Verifies that the property type checkbox filter on the Filter tab is wired
  * end-to-end: changing the selection triggers a new Melissa count call and
  * the count reflects the narrowed type set.
  *
@@ -139,8 +139,8 @@ test.describe("D1.B.6 — Property type filter wired end-to-end", () => {
         contentType: "image/png",
       });
 
-      // ── Switch to Refine tab ────────────────────────────────────────────
-      await page.getByRole("button", { name: "Refine" }).click();
+      // ── Switch to Filter tab ────────────────────────────────────────────
+      await page.getByRole("button", { name: "Filter" }).click();
       await page.waitForTimeout(300);
 
       // Locate the "Single Family" checkbox inside its label
@@ -148,7 +148,7 @@ test.describe("D1.B.6 — Property type filter wired end-to-end", () => {
       const sfVisible = await sfLabel.isVisible({ timeout: 4_000 }).catch(() => false);
 
       if (!sfVisible) {
-        test.skip(true, "Property type checkboxes not found in Refine tab — skipping");
+        test.skip(true, "Property type checkboxes not found in Filter tab — skipping");
         return;
       }
 

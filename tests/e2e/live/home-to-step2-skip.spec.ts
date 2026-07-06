@@ -63,7 +63,7 @@ test.describe("Home Recommendation -> skip to Step 2 (live stack)", () => {
     // Fallback: Step 2's "Around My Jobs" label is the tab content, not a
     // heading. Assert either the Step-2 tabs OR the "Select Area" tab text.
     await expect(
-      page.getByText(/Around My Jobs|Select Area|Refine/).first(),
+      page.getByText(/Around My Jobs|Select Area|Filter/).first(),
     ).toBeVisible({ timeout: 10_000 });
 
     // The Step 1 stepper icon should show "complete" (checkmark) because
