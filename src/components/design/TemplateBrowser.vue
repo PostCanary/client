@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import type { CampaignGoalType, TemplateLayoutType } from "@/types/campaign";
 import { getTemplateSetsForGoal, useCaseLabel } from "@/data/templates";
 import { getMediaFeaturesCached } from "@/api/brandKit";
+import TemplateSchematic from "./TemplateSchematic.vue";
 
 const props = defineProps<{
   goalType: CampaignGoalType;
@@ -105,31 +106,44 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
             "
             @click="emit('select', set.layout)"
           >
-            <div class="flex items-center gap-2 mb-2">
-              <span
-                class="w-3 h-3 rounded-full"
-                :style="{ backgroundColor: LAYOUT_COLORS[set.layout] }"
-              />
-              <span class="text-sm font-semibold text-[#0b2d50]">
-                {{ set.name }}
-              </span>
-              <span
-                v-if="set.recommended"
-                class="text-[10px] bg-[#47bfa9]/15 text-[#47bfa9] px-2 py-0.5 rounded-full font-medium"
-              >
-                ★ Best for: {{ recommendedUseCase }}
-              </span>
-            </div>
-            <!-- 3 mini thumbnails -->
-            <div class="flex gap-2">
+            <div class="flex gap-3">
               <div
-                v-for="t in set.templates"
-                :key="t.id"
-                class="flex-1 rounded-lg border border-gray-100 p-2 text-center"
-                :style="{ backgroundColor: LAYOUT_COLORS[set.layout] + '10' }"
+                class="w-24 aspect-[1.5/1] shrink-0 rounded-lg overflow-hidden border"
+                :style="{ borderColor: LAYOUT_COLORS[set.layout] + '40', backgroundColor: LAYOUT_COLORS[set.layout] + '0d' }"
               >
-                <div class="text-[8px] text-gray-500 font-medium">
-                  {{ t.cardPosition === 'offer' ? 'Offer' : t.cardPosition === 'proof' ? 'Proof' : 'Last Chance' }}
+                <TemplateSchematic :layout="set.layout" :accent="LAYOUT_COLORS[set.layout]" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span
+                    class="w-3 h-3 rounded-full shrink-0"
+                    :style="{ backgroundColor: LAYOUT_COLORS[set.layout] }"
+                  />
+                  <span class="text-sm font-semibold text-[#0b2d50]">
+                    {{ set.name }}
+                  </span>
+                  <span
+                    v-if="set.recommended"
+                    class="text-[10px] bg-[#47bfa9]/15 text-[#47bfa9] px-2 py-0.5 rounded-full font-medium"
+                  >
+                    ★ Best for: {{ recommendedUseCase }}
+                  </span>
+                </div>
+                <p class="text-xs text-gray-500 mb-2 leading-snug">
+                  {{ set.desc }}
+                </p>
+                <!-- 3 mini position chips -->
+                <div class="flex gap-2">
+                  <div
+                    v-for="t in set.templates"
+                    :key="t.id"
+                    class="flex-1 rounded-lg border border-gray-100 p-1.5 text-center"
+                    :style="{ backgroundColor: LAYOUT_COLORS[set.layout] + '10' }"
+                  >
+                    <div class="text-[8px] text-gray-500 font-medium">
+                      {{ t.cardPosition === 'offer' ? 'Offer' : t.cardPosition === 'proof' ? 'Social Proof' : 'Last Chance' }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -152,14 +166,27 @@ const LAYOUT_COLORS: Record<TemplateLayoutType, string> = {
               class="rounded-xl border-2 border-gray-200 p-4 cursor-pointer hover:border-gray-300 transition-all"
               @click="emit('select', set.layout)"
             >
-              <div class="flex items-center gap-2">
-                <span
-                  class="w-3 h-3 rounded-full"
-                  :style="{ backgroundColor: LAYOUT_COLORS[set.layout] }"
-                />
-                <span class="text-sm font-semibold text-[#0b2d50]">
-                  {{ set.name }}
-                </span>
+              <div class="flex gap-3">
+                <div
+                  class="w-[72px] aspect-[1.5/1] shrink-0 rounded-lg overflow-hidden border"
+                  :style="{ borderColor: LAYOUT_COLORS[set.layout] + '40', backgroundColor: LAYOUT_COLORS[set.layout] + '0d' }"
+                >
+                  <TemplateSchematic :layout="set.layout" :accent="LAYOUT_COLORS[set.layout]" />
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="w-3 h-3 rounded-full shrink-0"
+                      :style="{ backgroundColor: LAYOUT_COLORS[set.layout] }"
+                    />
+                    <span class="text-sm font-semibold text-[#0b2d50]">
+                      {{ set.name }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1 leading-snug">
+                    {{ set.desc }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
