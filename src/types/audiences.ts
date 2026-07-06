@@ -171,3 +171,23 @@ export type AudienceCostPreview = {
   melissa_enrich_estimate_cents: number | null
   total_cents: number                  // per_card_subtotal + enrich (if enabled)
 }
+
+// ============================================================
+// POINTS — ZIP-centroid map pins for the audience map preview (POS-137)
+// ============================================================
+// One point per ZIP present in the audience, not per address — `count` is
+// the total row count for that ZIP (upload count, unaffected by suppression;
+// the client fetches once and reuses the result after suppression runs).
+
+export type AudiencePoint = {
+  zip: string
+  lat: number
+  lng: number
+  count: number
+}
+
+export type AudiencePointsResponse = {
+  points: AudiencePoint[]
+  total_zips: number
+  unmatched_zips: number      // ZIPs in the audience with no centroid match
+}

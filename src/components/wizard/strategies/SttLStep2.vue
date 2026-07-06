@@ -8,6 +8,7 @@ import {
   createAudience,
   suppressAudience,
   getAudienceCost,
+  getAudiencePoints,
   approveAudience,
 } from '@/api/audiences'
 import type {
@@ -49,6 +50,7 @@ const audienceId = ref<string | null>(null)
 const suppression = ref<AudienceSuppressionResult | null>(null)
 const costPreview = ref<AudienceCostPreview | null>(null)
 const mapPoints = ref<MapPoint[]>([])
+const unmatchedZips = ref(0)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const approving = ref(false)
@@ -83,9 +85,27 @@ const headerSubText = computed(() =>
     : 'Review your selected audience before approving for mailing',
 )
 
+// ── map points ──────────────────────────────────────────────────────────────
+// Fetched once the audience ID resolves and reused as-is afterward —
+// suppression removes deliverable rows but doesn't change per-ZIP upload
+// counts, so there's nothing to re-fetch. Non-fatal: a failed fetch leaves
+// the map in its empty state instead of blocking the rest of the flow.
+async function fetchMapPoints(id: string): Promise<void> {
+  try {
+    const res = await getAudiencePoints(id)
+    mapPoints.value = (res.points ?? []).map((p) => ({
+      lat: p.lat,
+      lng: p.lng,
+      label: `${p.zip} — ${p.count.toLocaleString()} address${p.count === 1 ? '' : 'es'}`,
+    }))
+    unmatchedZips.value = res.unmatched_zips ?? 0
+  } catch {
+    mapPoints.value = []
+    unmatchedZips.value = 0
+  }
+}
+
 // ── orchestration: upload → suppress → cost ───────────────────────────────────
-// Phase 1 map points are empty — AudienceMapPreview renders "No address points"
-// until the backend returns geocoded coordinates in a future phase.
 async function runFlow(): Promise<void> {
   // Runtime prop invariant guard (MEDIUM: comment-only in props block is insufficient)
   if (props.audienceSource === 'csv' && !props.file) {
@@ -134,6 +154,7 @@ async function runFlow(): Promise<void> {
       suppressionResult: null,
       costPreview: null,
     })
+    await fetchMapPoints(audienceId.value)
 
     // 2. Suppression (DNM > Past > Recent — server enforces precedence)
     suppression.value = await suppressAudience(audienceId.value)
@@ -142,7 +163,6 @@ async function runFlow(): Promise<void> {
       audienceSource: props.audienceSource,
       suppressionResult: suppression.value,
     })
-    mapPoints.value = [] // Phase 1: no geocoded points yet
 
     // 3. Cost preview — isolated so a transient failure doesn't block suppression display
     try {
@@ -253,11 +273,18 @@ onMounted(runFlow)
       data-testid="suppression-strip"
     />
 
-    <!-- Audience map preview (Phase 1: empty points → fallback message rendered by child) -->
+    <!-- Audience map preview — pins per ZIP; empty state rendered by child -->
     <AudienceMapPreview
       :points="mapPoints"
       data-testid="audience-map"
     />
+    <p
+      v-if="unmatchedZips > 0"
+      class="text-xs text-slate-400 -mt-2"
+      data-testid="unmatched-zips-note"
+    >
+      {{ unmatchedZips }} ZIP{{ unmatchedZips === 1 ? '' : 's' }} couldn't be placed on the map.
+    </p>
 
     <!-- Cost retry — suppression succeeded but cost fetch failed; retry without re-uploading -->
     <div

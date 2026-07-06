@@ -95,12 +95,23 @@ function onStateChange(state: {
   draftStore.setAudienceState(state);
 }
 
-function onApproved(audienceId: string) {
+async function onApproved(audienceId: string) {
   approvedAudienceId.value = audienceId;
   draftStore.approveAudienceState({
     audienceId,
     audienceSource: audienceSource.value,
   });
+
+  // Resume the wizard on the design step — approveAudienceState only marks
+  // step 2 complete, it doesn't move draft.currentStep (that's an explicit
+  // action everywhere else in the wizard, e.g. WizardShell's Next button).
+  // Persist before navigating: SendWizard re-resumes the draft from the
+  // server on mount, so an unsaved currentStep would be lost on the hop.
+  draftStore.goToStep(3);
+  await draftStore.saveNow();
+
+  const targetDraftId = campaignId.value;
+  router.push(targetDraftId ? `/app/send/${targetDraftId}` : "/app/send");
 }
 
 function goBack() {
