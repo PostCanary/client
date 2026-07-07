@@ -7,7 +7,6 @@ import { useAiGenerate } from "@/composables/useAiGenerate";
 import type {
   CardDesign,
   ColorOverride,
-  DesignSelection,
   HeadlineLines,
   OfferStackItem,
   PhotoCrop,
@@ -101,8 +100,7 @@ function invalidateProof() {
 async function handleGenerateProof() {
   if (!draftStore.draft) return;
   if (applyBrandKitReviewDefaults()) {
-    originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-    commitDesign();
+    snapshotOriginalCards();
   }
   showProofPanel.value = true;
   proofRenderWarnings.value = [];
@@ -140,10 +138,21 @@ async function handleGenerateProof() {
   await startRender(draftStore.draft.id);
 }
 
-const cards = ref<CardDesign[]>([]);
+// Single-owner card state (2026-07-07 refactor): the draft store OWNS
+// sequenceCards; this component reads them through a computed and writes
+// through draftStore.setSequenceCards. The old local `cards` ref mirrored
+// the store and had to be manually re-synced after every store-side write
+// (AI generation, hydration) — missed syncs were the POS-121/123/119.2
+// data-loss bug class (local copy clobbered fresh store cards on the next
+// edit). A computed cannot go stale.
+const cards = computed<CardDesign[]>(
+  () => draftStore.draft?.design?.sequenceCards ?? [],
+);
 const activeCardIndex = ref(0);
 const showTemplateBrowser = ref(false);
-const currentLayout = ref<TemplateLayoutType>("full-bleed");
+const currentLayout = computed<TemplateLayoutType>(
+  () => draftStore.draft?.design?.templateLayoutType ?? "full-bleed",
+);
 
 const draftIdRef = computed(() => draftStore.draft?.id);
 const cardNumberRef = computed(() => activeCardIndex.value + 1);
@@ -581,7 +590,6 @@ function updateBack(patch: Partial<CardDesign["backContent"]>) {
       ...patch,
     },
   });
-  commitDesign();
 }
 
 const goalType = computed(() => draftStore.draft?.goal?.goalType ?? "neighbor_marketing");
@@ -614,6 +622,12 @@ const brandKitCredibility = computed(() => {
 // Original cards for reset
 let originalCards: CardDesign[] = [];
 
+function snapshotOriginalCards() {
+  originalCards = cards.value.map(
+    (c) => JSON.parse(JSON.stringify(c)) as CardDesign,
+  );
+}
+
 const cardsReady = computed(() => cards.value.length > 0);
 const FALLBACK_REVIEW_QUOTES = new Set([
   "Professional, reliable service!",
@@ -626,7 +640,7 @@ function applyBrandKitReviewDefaults(): boolean {
   if (reviews.length === 0 || cards.value.length === 0) return false;
 
   let changed = false;
-  cards.value = cards.value.map((card, idx) => {
+  const next = cards.value.map((card, idx) => {
     const overrideQuote = (card.overrides.reviewQuote ?? "").trim();
     const overrideReviewer = (card.overrides.reviewerName ?? "").trim();
     const hasCustomReviewOverride =
@@ -658,6 +672,9 @@ function applyBrandKitReviewDefaults(): boolean {
     };
   });
 
+  // "system" source: an auto-fill must not mark the draft user-edited
+  // (AI-scrape-triggers spec edge case #11) nor complete step 3 (POS-138).
+  if (changed) draftStore.setSequenceCards(next, { source: "system" });
   return changed;
 }
 
@@ -784,13 +801,10 @@ onMounted(() => {
       /* probe failure → layout stays gated off; no UX impact */
     });
 
-  if (draftStore.draft?.design?.sequenceCards?.length) {
-    cards.value = [...draftStore.draft.design.sequenceCards];
-    currentLayout.value = draftStore.draft.design.templateLayoutType;
-  }
-  const appliedReviews = applyBrandKitReviewDefaults();
-  originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-  if (appliedReviews) commitDesign({ source: "system" });
+  // Cards hydrate straight from the store through the `cards` computed —
+  // no local copy to seed. Only the arrival side-effects run here.
+  applyBrandKitReviewDefaults();
+  snapshotOriginalCards();
   fetchAllThumbnails();
 });
 
@@ -884,7 +898,6 @@ function updateHeadlineLines(lines: HeadlineLines) {
       headlineLines: { ...lines },
     },
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -907,7 +920,6 @@ function updateServiceRows(rows: string[]) {
       serviceRows: [...rows],
     },
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -929,7 +941,6 @@ function updateOfferItems(items: OfferStackItem[]) {
       offerItems: items.map((tier) => ({ ...tier })),
     },
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -950,43 +961,34 @@ function updateTips(tips: string[]) {
       tips: [...tips],
     },
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
 // Industry switcher (S75 test tool): full re-generation so the cards
-// demo the new trade end to end. Clearing local cards first lets the
-// store→local sync watch (cards.value.length === 0 guard) pick up the
-// fresh set when generation completes.
+// demo the new trade end to end. The store owns the cards, so the old
+// clear-then-resync dance is gone — the computed reflects the fresh set
+// the moment generateCardsForDraft writes it.
 async function regenerateCards() {
   invalidateProof();
   liveOverlay.value = null;
-  cards.value = [];
   await draftStore.generateCardsForDraft();
+  syncCardsAfterAiRegenerate();
 }
 
-// "Generate with AI" toolbar button (useAiGenerate) follows the same
-// clear-then-resync contract as regenerateCards() above, but the composable
-// has no access to this component's local `cards` — it calls these two
-// hooks instead. Passed to useAiGenerate() near the top of this file (the
-// closures below are only invoked on click, long after these consts exist,
-// so the earlier declaration order is fine).
+// "Generate with AI" toolbar button (useAiGenerate) hooks. Before: drop
+// stale proof/overlay state. After: post-regeneration side-effects below.
 function handleAiRegenerateBefore() {
   invalidateProof();
   liveOverlay.value = null;
-  cards.value = [];
 }
 
 // Always runs once generateCardsForDraft() settles — the store swallows its
 // own generation errors rather than rethrowing, so "the AI call failed" and
-// "it succeeded" both just mean "read whatever is in the store now". On
-// success that's the fresh cards; on failure the store never wrote past its
-// early return, so this restores the pre-clear cards instead of leaving the
-// editor blank.
+// "it succeeded" both just mean "the store holds whatever is current" (the
+// computed already shows it). Only the side-effects remain: clamp the
+// active index, close editors anchored to the old cards, re-seed the reset
+// snapshot.
 function syncCardsAfterAiRegenerate() {
-  const storeCards = draftStore.draft?.design?.sequenceCards ?? [];
-  cards.value = [...storeCards];
-  currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
   if (activeCardIndex.value >= cards.value.length) {
     activeCardIndex.value = Math.max(0, cards.value.length - 1);
   }
@@ -994,7 +996,7 @@ function syncCardsAfterAiRegenerate() {
   popover.value = null;
   drawerTab.value = null;
   photoAdjust.exit();
-  originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
+  snapshotOriginalCards();
 }
 
 function updateColors(colors: ColorOverride | null) {
@@ -1008,7 +1010,6 @@ function updateColors(colors: ColorOverride | null) {
     delete next.colorOverride;
   }
   replaceActiveCard(next);
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -1053,7 +1054,6 @@ function updateCardField(field: string, value: string) {
     overrides,
     resolvedContent,
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -1072,7 +1072,6 @@ function updatePhoto(url: string) {
       photoUrl: url,
     },
   });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -1096,7 +1095,6 @@ function updateCrop(field: string, crop: PhotoCrop | undefined) {
     (resolvedContent as Record<string, unknown>)[field] = crop;
   }
   replaceActiveCard({ ...card, overrides, resolvedContent });
-  commitDesign();
   queuePersistedPreviewRefresh();
 }
 
@@ -1112,7 +1110,6 @@ function updateMapSettings(settings: MapSettings) {
     ...card,
     overrides: { ...card.overrides, mapSettings: settings },
   });
-  commitDesign();
 }
 
 // --- S81 on-canvas photo position/crop -------------------------------------
@@ -1247,7 +1244,6 @@ function selectTemplate(layout: TemplateLayoutType) {
   // thinking the picker was broken). Content, overrides, photos, colors
   // all survive the switch.
   invalidateProof();
-  currentLayout.value = layout;
   // POS-130: a new template has a different zone map — drop any stale hint.
   lockedZoneHint.value = null;
   const templateSet = getTemplateSetsForGoal(
@@ -1257,14 +1253,19 @@ function selectTemplate(layout: TemplateLayoutType) {
     (set) => set.layout === layout,
   );
   const renderTemplateId = renderTemplateIdForLayout(layout);
-  cards.value = cards.value.map((card) => ({
-    ...card,
-    templateId:
-      templateSet?.templates.find(
-        (template) => template.cardPosition === card.cardPurpose,
-      )?.id ?? card.templateId,
-    ...(renderTemplateId ? { renderTemplateId } : {}),
-  }));
+  // One store write carries both the remapped cards and the new layout
+  // (currentLayout is computed from the store).
+  draftStore.setSequenceCards(
+    cards.value.map((card) => ({
+      ...card,
+      templateId:
+        templateSet?.templates.find(
+          (template) => template.cardPosition === card.cardPurpose,
+        )?.id ?? card.templateId,
+      ...(renderTemplateId ? { renderTemplateId } : {}),
+    })),
+    { layout },
+  );
   showTemplateBrowser.value = false;
   switchingLayout.value = true;
   if (switchingLayoutFallback) clearTimeout(switchingLayoutFallback);
@@ -1272,7 +1273,6 @@ function selectTemplate(layout: TemplateLayoutType) {
   switchingLayoutFallback = setTimeout(() => {
     switchingLayout.value = false;
   }, 30_000);
-  commitDesign();
   queuePersistedPreviewRefresh();
 
   // S76: auto-generate the service-area map when switching to the
@@ -1301,12 +1301,13 @@ function maybeAutoGenerateMap() {
       if (!res?.url) return;
       // Apply to all cards (the map is org-level, shared across the
       // sequence), preserving any per-card overrides.
-      cards.value = cards.value.map((card) => ({
-        ...card,
-        overrides: { ...card.overrides, mapImageUrl: res.url },
-        resolvedContent: { ...card.resolvedContent, mapImageUrl: res.url },
-      }));
-      commitDesign();
+      draftStore.setSequenceCards(
+        cards.value.map((card) => ({
+          ...card,
+          overrides: { ...card.overrides, mapImageUrl: res.url },
+          resolvedContent: { ...card.resolvedContent, mapImageUrl: res.url },
+        })),
+      );
       queuePersistedPreviewRefresh();
     })
     .catch(() => {
@@ -1324,7 +1325,6 @@ function resetCard() {
   if (orig) {
     invalidateProof();
     replaceActiveCard({ ...(JSON.parse(JSON.stringify(orig)) as CardDesign), overrides: {} });
-    commitDesign();
     queuePersistedPreviewRefresh();
   }
 }
@@ -1333,36 +1333,24 @@ function replaceActiveCard(nextCard: CardDesign) {
   replaceCardAt(activeCardIndex.value, nextCard);
 }
 
+// Every card mutation writes straight to the store — no local mirror to
+// commit or re-sync (single-owner refactor; commitDesign is gone).
 function replaceCardAt(idx: number, nextCard: CardDesign) {
-  cards.value = cards.value.map((card, i) => (i === idx ? nextCard : card));
+  draftStore.setSequenceCards(
+    cards.value.map((card, i) => (i === idx ? nextCard : card)),
+  );
 }
 
-// `opts.source` forwards to draftStore.setDesign — "system" for the
-// review-defaults auto-fill (applyBrandKitReviewDefaults) below, which
-// must NOT mark the draft's `designUserEdited` pristine-tracking flag
-// (AI-scrape-triggers spec edge case #11). Every other caller here is a
-// genuine customer edit and keeps the default "user" source.
-function commitDesign(opts?: { source?: "user" | "system" }) {
-  const design: DesignSelection = {
-    templateId: cards.value[0]?.templateId ?? "",
-    templateLayoutType: currentLayout.value,
-    isCustomUpload: false,
-    customUploadUrl: null,
-    sequenceCards: cards.value,
-  };
-  draftStore.setDesign(design, opts);
-}
-
-// Sync cards from store when async generation completes (fired by setGoal in Step 1)
+// When cards first arrive from async generation (fired by setGoal in
+// Step 1), seed the reset snapshot and apply brand-kit review defaults.
+// The computed already reflects the store — only the arrival side-effects
+// remain from the old store→local sync.
 watch(
-  () => draftStore.draft?.design?.sequenceCards,
-  (storeCards) => {
-    if (storeCards?.length && cards.value.length === 0) {
-      cards.value = [...storeCards];
-      currentLayout.value = draftStore.draft?.design?.templateLayoutType ?? "full-bleed";
-      const appliedReviews = applyBrandKitReviewDefaults();
-      originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-      if (appliedReviews) commitDesign({ source: "system" });
+  () => cards.value.length,
+  (n, prev) => {
+    if (n > 0 && prev === 0) {
+      applyBrandKitReviewDefaults();
+      snapshotOriginalCards();
     }
   },
 );
@@ -1374,8 +1362,7 @@ watch(
     if (hydrated && cards.value.length === 0) {
       draftStore.generateCardsForDraft();
     } else if (hydrated && applyBrandKitReviewDefaults()) {
-      originalCards = cards.value.map((c) => JSON.parse(JSON.stringify(c)) as CardDesign);
-      commitDesign({ source: "system" });
+      snapshotOriginalCards();
       queuePersistedPreviewRefresh();
     }
   },
