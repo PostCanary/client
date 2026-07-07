@@ -252,12 +252,6 @@ const routes: RouteRecordRaw[] = [
   // Not linked from navigation. Used for visual verification of postcard
   // templates without running the full wizard or hitting the backend.
   {
-    path: "/dev/postcard-preview",
-    name: "DevPostcardPreview",
-    component: () => import("@/pages/dev/PostcardPreview.vue"),
-    meta: { title: "Postcard Preview (dev)", marketing: false },
-  },
-  {
     path: "/dev/sttl-step2-preview",
     name: "DevSttLStep2Preview",
     component: () => import("@/pages/dev/SttLStep2Preview.vue"),
