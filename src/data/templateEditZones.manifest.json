@@ -1,0 +1,84 @@
+{
+  "_readme": "sha256 of each render-worker template file that templateEditZones.ts geometry was hand-mirrored from. Regenerate with `node scripts/update-zone-manifest.mjs` AFTER re-verifying zone geometry against the changed template. Do not hand-edit hashes.",
+  "shared": {
+    "_base.html": "57159c481b1da868879d580b64dbd352b2f3db528148c2373679a5716465020d"
+  },
+  "templates": {
+    "hac-1000-front-v1": {
+      "file": "hac-1000-front.html",
+      "sha256": "a30029644138809d4a5c05375f2e724139d8d0f0f963c8a2a9299ae4325a025b"
+    },
+    "side-split-front-v1": {
+      "file": "side-split-front.html",
+      "sha256": "44089bfa5cb50d4a41d0df19b6f508fd5dcc49f06bf5e675a141ee943205cc7c"
+    },
+    "photo-top-front-v1": {
+      "file": "photo-top-front.html",
+      "sha256": "8a87da92de2cf509d4fdcca5a9a7e60310af3ab26b6cf076513c0171cddaf5cd"
+    },
+    "photo-hero-front-v1": {
+      "file": "photo-hero-front.html",
+      "sha256": "32361ff4d358b1e5dca2705f09e35ab9ee74cb66204f11988eabdce43c3115c0"
+    },
+    "new-mover-front-v1": {
+      "file": "new-mover-front.html",
+      "sha256": "5a2ce253905ba92a0dc9698e7957b76736a3fb286f4cec2c02b85045e40f05bc"
+    },
+    "before-after-front-v1": {
+      "file": "before-after-front.html",
+      "sha256": "ac1a0502e6239c94577878bfd5db3134d56bca6f7d59094169599efc3940ac18"
+    },
+    "tips-card-front-v1": {
+      "file": "tips-card-front.html",
+      "sha256": "726906e9b00812c3d8ce3d73b3059474558eca33d7b31a3dc61463b9030eb563"
+    },
+    "letter-note-front-v1": {
+      "file": "letter-note-front.html",
+      "sha256": "058a9b382c34e34f80921d937b053761e86e1d81b4f48d44b8e6e73b03572f12"
+    },
+    "bold-graphic-front-v1": {
+      "file": "bold-graphic-front.html",
+      "sha256": "aa5f7212669af665270e4b1b0a11023c176ebdd59c8e7652e86e801346cf4c50"
+    },
+    "review-forward-front-v1": {
+      "file": "review-forward-front.html",
+      "sha256": "a6e29f25ed89b761decf75694c1e78c718fe1a32c98649940d2f93f6981f702c"
+    },
+    "service-checklist-front-v1": {
+      "file": "service-checklist-front.html",
+      "sha256": "e55938b4b7404eccd424b6084e003da9a7f48f6913f9d9ccd10270bf842b670d"
+    },
+    "urgency-notice-front-v1": {
+      "file": "urgency-notice-front.html",
+      "sha256": "eef6e3847b0a22e5124018fe1ea32d15bdb61b8d298ac711a219b7368c413bb4"
+    },
+    "neighborhood-map-front-v1": {
+      "file": "neighborhood-map-front.html",
+      "sha256": "5e4fb0e94ced98d4cb9ad38e199399e3b63d1c0b8405e65bfd8bf82d87b5ecc4"
+    },
+    "standard-back-v2": {
+      "file": "standard-back-v2.html",
+      "sha256": "afff5d74a1a071e2526b9d63d4dfb47dc7f16e97e53a0714be95bb2d88dea056"
+    },
+    "standard-back-v1": {
+      "file": "standard-back-v1.html",
+      "sha256": "8a627608b02dfe5bf2a9cdaf20392bc49faceabc48b78261840b8c9247caee54"
+    },
+    "testimonial-back-v1": {
+      "file": "testimonial-back-v1.html",
+      "sha256": "d852ec1b4afefc5dd7da6d1934a2de18d9fb765da6c27e5a2735bdb2ff281b3e"
+    },
+    "service-area-back-v1": {
+      "file": "service-area-back-v1.html",
+      "sha256": "7a964e7935461e152ebd312ad6b186f26f1c05d8777af583096e999536a266ba"
+    },
+    "photo-back-v1": {
+      "file": "photo-back-v1.html",
+      "sha256": "999c7beba1c9b4c6647e91609e4c3e92a8db0c3de47c9d6c038356cc46ec154f"
+    },
+    "brand-bold-back-v1": {
+      "file": "brand-bold-back-v1.html",
+      "sha256": "9f2f2a07a4af8224c15fa00390a8c76de6f168783806d867c3971fdccac3b62a"
+    }
+  }
+}
