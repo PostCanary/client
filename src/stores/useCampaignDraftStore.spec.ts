@@ -381,3 +381,48 @@ describe("setDesign / markDesignReviewed — POS-138: step 3 checkmark requires 
     expect(store.draft!.completedSteps).toContain(3);
   });
 });
+
+describe("setSequenceCards — single-owner card writes (2026-07-07 refactor)", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    generateCardsMock.mockReset();
+    waitForScrapeSettledMock.mockReset().mockResolvedValue("idle");
+    brandKitStoreState.hydrated = true;
+    brandKitStoreState.brandKit = { businessName: "Acme" };
+  });
+
+  const card = (templateId: string) =>
+    ({ cardNumber: 1, cardPurpose: "offer", templateId }) as any;
+
+  it("writes cards and derives templateId from card 1", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setSequenceCards([card("side-split-offer")]);
+    expect(store.draft!.design!.sequenceCards).toHaveLength(1);
+    expect(store.draft!.design!.templateId).toBe("side-split-offer");
+    expect(store.draft!.designUserEdited).toBe(true);
+  });
+
+  it("preserves the current layout when opts.layout is omitted", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setSequenceCards([card("a")], { layout: "side-split" as any });
+    store.setSequenceCards([card("b")]);
+    expect(store.draft!.design!.templateLayoutType).toBe("side-split");
+  });
+
+  it("updates the layout when opts.layout is given", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setSequenceCards([card("a")], { layout: "photo-hero" as any });
+    expect(store.draft!.design!.templateLayoutType).toBe("photo-hero");
+  });
+
+  it('forwards a "system" source (no user-edit mark, step 3 stays incomplete)', () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setSequenceCards([card("a")], { source: "system" });
+    expect(store.draft!.designUserEdited).toBeFalsy();
+    expect(store.draft!.completedSteps).not.toContain(3);
+  });
+});

@@ -131,7 +131,10 @@ function seedStores() {
     },
   } as unknown as CampaignDraft;
   draftStore.saveNow = (async () => {}) as any;
-  draftStore.setDesign = (() => {}) as any;
+  // Single-owner refactor: card edits flow through setSequenceCards →
+  // setDesign, so setDesign must stay REAL for the store to reflect edits.
+  // Only the persistence side-effect is stubbed (no save timers/HTTP).
+  draftStore._debounceSave = (() => {}) as any;
 }
 
 async function mountStep() {
@@ -267,5 +270,71 @@ describe("StepDesign — contextual editing (S79 Phase-2)", () => {
       expect(wrapper.find('[data-testid="front-locked-zone-hint"]').exists()).toBe(false);
       expect(wrapper.find('[data-testid="back-locked-zone-hint"]').exists()).toBe(false);
     });
+  });
+});
+
+describe("StepDesign — single-owner card state (POS-121/123/119.2 clobber class)", () => {
+  beforeEach(() => setActivePinia(createPinia()));
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+  });
+
+  async function mountWithStore() {
+    const wrapper = await mountStep();
+    return { wrapper, draftStore: useCampaignDraftStore() };
+  }
+
+  it("an edit after a store-side regeneration keeps the fresh cards (no stale-mirror clobber)", async () => {
+    const { wrapper, draftStore } = await mountWithStore();
+
+    // Simulate the AI path: the STORE is rewritten with fresh cards while
+    // the component is mounted (useAiGenerate → generateCardsForDraft).
+    const fresh = [
+      makeCard(1, "offer"),
+      makeCard(2, "proof"),
+      makeCard(3, "last_chance"),
+    ].map((c, i) => ({
+      ...c,
+      resolvedContent: {
+        ...c.resolvedContent,
+        headline: `AI FRESH ${i + 1}`,
+      },
+    }));
+    draftStore.setSequenceCards(fresh, { source: "system" });
+    await flushPromises();
+
+    // The editing surface reads the fresh cards immediately.
+    await wrapper.get('[data-testid="card-zone-headline"]').trigger("click");
+    // (splitHeadline distributes the headline across line slots — line 1
+    // carries the leading words.)
+    const line1 = wrapper.get('[data-testid="headline-line-red1"]');
+    expect((line1.element as HTMLInputElement).value).toContain("AI FRESH");
+
+    // First user edit after regeneration — the historical clobber moment.
+    await line1.setValue("USER EDIT 1");
+    await flushPromises();
+
+    const stored = draftStore.draft!.design!.sequenceCards!;
+    // Card 1 carries the user's edit...
+    expect(stored[0]!.resolvedContent.headline).toContain("USER EDIT 1");
+    // ...and cards 2/3 keep the AI-fresh content instead of reverting to
+    // the pre-regeneration cards (the POS-121 data-loss signature).
+    expect(stored[1]!.resolvedContent.headline).toBe("AI FRESH 2");
+    expect(stored[2]!.resolvedContent.headline).toBe("AI FRESH 3");
+  });
+
+  it("a template switch writes cards and layout to the store in one write", async () => {
+    const { wrapper, draftStore } = await mountWithStore();
+    await wrapper.get('[data-testid="toolbar-try-template"]').trigger("click");
+    await flushPromises();
+    const browser = wrapper.findComponent({ name: "TemplateBrowser" });
+    expect(browser.exists()).toBe(true);
+    browser.vm.$emit("select", "side-split");
+    await flushPromises();
+    expect(draftStore.draft!.design!.templateLayoutType).toBe("side-split");
+    expect(
+      draftStore.draft!.design!.sequenceCards![0]!.renderTemplateId,
+    ).toBe("side-split-front-v1");
   });
 });

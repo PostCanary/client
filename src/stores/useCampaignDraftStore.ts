@@ -2,6 +2,8 @@
 import { defineStore } from "pinia";
 import type {
   CampaignDraft,
+  CardDesign,
+  TemplateLayoutType,
   WizardStep,
   GoalSelection,
   TargetingSelection,
@@ -228,6 +230,38 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       }
       this._clearReview(3);
       this._debounceSave();
+    },
+
+    /**
+     * Single-owner write path for the design step's card sequence
+     * (StepDesign refactor 2026-07-07). StepDesign no longer keeps a local
+     * `cards` mirror — it reads `draft.design.sequenceCards` through a
+     * computed and every mutation lands here, so a store write from any
+     * other source (AI generation, hydration) can never be clobbered by a
+     * stale local copy (POS-121/123/119.2 bug class).
+     *
+     * `opts.layout` updates templateLayoutType in the same write (template
+     * switches); omitted, the current layout is preserved. `opts.source`
+     * forwards to setDesign's user/system pristine-tracking split.
+     */
+    setSequenceCards(
+      cards: CardDesign[],
+      opts?: { source?: "user" | "system"; layout?: TemplateLayoutType },
+    ) {
+      if (!this.draft) return;
+      this.setDesign(
+        {
+          templateId: cards[0]?.templateId ?? "",
+          templateLayoutType:
+            opts?.layout ??
+            this.draft.design?.templateLayoutType ??
+            "full-bleed",
+          isCustomUpload: false,
+          customUploadUrl: null,
+          sequenceCards: cards,
+        },
+        opts,
+      );
     },
 
     /** Explicit "I reviewed step 3" signal for the case where the user
