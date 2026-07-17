@@ -3,12 +3,11 @@ import { ref, computed, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import type { CampaignGoalType, GoalSelection, Industry } from "@/types/campaign";
+import type { GoalSelection, Industry } from "@/types/campaign";
 import { INDUSTRY_LABELS } from "@/types/campaign";
 import { updateOrg } from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
-import GoalCard from "@/components/goal/GoalCard.vue";
-import SequenceConfig from "@/components/goal/SequenceConfig.vue";
+import { MapOutline, ListOutline } from "@vicons/ionicons5";
 import {
   getGoalsForDisplay,
   type GoalDefinition,
@@ -81,66 +80,49 @@ function selectCampaignType(type: 'targeted' | 'eddm') {
   draftStore.setCampaignType(type);
 }
 
-// Goal selection
-const selectedGoalType = ref<CampaignGoalType | null>(
-  draftStore.draft?.goal?.goalType ?? null,
-);
-const showMore = ref(false);
-
+/* ── Dashboard Flow v2 (POS-146): the visible choice is Target an Area vs
+ * Send to a List, per the wireframe. The goal system stays underneath —
+ * each option maps to an existing goal type (target_area / send_to_list)
+ * with its defaults, so campaign naming, sequence defaults, and AI copy
+ * grounding keep working. The full goal picker is gone from the UI, not
+ * from the data model. ── */
 const { primary, more } = getGoalsForDisplay();
+const allGoals = [...primary, ...more];
+const targetAreaGoal = allGoals.find((g) => g.type === "target_area") ?? null;
+const sendToListGoal = allGoals.find((g) => g.type === "send_to_list") ?? null;
 
-const selectedGoal = computed(
-  () =>
-    [...primary, ...more].find((g) => g.type === selectedGoalType.value) ??
-    null,
-);
+const selectedGoalType = ref(draftStore.draft?.goal?.goalType ?? null);
 
-// Sequence config state
-const sequenceConfig = ref({
-  sequenceLength: Math.min(draftStore.draft?.goal?.sequenceLength ?? 3, 3), // only 3 card purposes exist currently; see POS-140 for real 4-5 support
-  spacingWeeks: Math.round(
-    (draftStore.draft?.goal?.sequenceSpacingDays ?? 14) / 7,
-  ),
-  serviceType: draftStore.draft?.goal?.serviceType ?? null,
-  otherGoalText: draftStore.draft?.goal?.otherGoalText ?? null,
-});
-
-async function selectGoal(goal: GoalDefinition) {
+function commitGoal(goal: GoalDefinition) {
   selectedGoalType.value = goal.type;
-  // Auto-apply defaults for the new goal
-  sequenceConfig.value = {
+  const selection: GoalSelection = {
+    goalType: goal.type,
+    goalLabel: goal.label,
+    serviceType: draftStore.draft?.goal?.serviceType ?? null,
     sequenceLength: goal.defaults.defaultPostcards,
-    spacingWeeks: goal.defaults.spacingWeeks,
-    serviceType: null,
+    sequenceSpacingDays: goal.defaults.spacingWeeks * 7,
     otherGoalText: null,
   };
-  commitGoal();
+  draftStore.setGoal(selection);
+}
 
-  if (goal.type === "send_to_list") {
-    await router.push(
-      draftStore.draft?.id
-        ? `/app/send/${draftStore.draft.id}/sttl-step-2`
-        : "/app/send/sttl-step-2",
-    );
+async function chooseTargetArea() {
+  if (!targetAreaGoal) return;
+  commitGoal(targetAreaGoal);
+  await nextTick();
+  if (draftStore.isStepComplete(1)) {
+    draftStore.goToStep(2);
   }
 }
 
-function onConfigUpdate(config: typeof sequenceConfig.value) {
-  sequenceConfig.value = config;
-  commitGoal();
-}
-
-function commitGoal() {
-  if (!selectedGoalType.value || !selectedGoal.value) return;
-  const goal: GoalSelection = {
-    goalType: selectedGoalType.value,
-    goalLabel: selectedGoal.value.label,
-    serviceType: sequenceConfig.value.serviceType,
-    sequenceLength: sequenceConfig.value.sequenceLength,
-    sequenceSpacingDays: sequenceConfig.value.spacingWeeks * 7,
-    otherGoalText: sequenceConfig.value.otherGoalText,
-  };
-  draftStore.setGoal(goal);
+async function chooseSendToList() {
+  if (!sendToListGoal) return;
+  commitGoal(sendToListGoal);
+  await router.push(
+    draftStore.draft?.id
+      ? `/app/send/${draftStore.draft.id}/sttl-step-2`
+      : "/app/send/sttl-step-2",
+  );
 }
 
 onMounted(async () => {
@@ -148,35 +130,24 @@ onMounted(async () => {
     brandKitStore.fetch();
   }
 
-  // S69 demo prep: pre-select Neighbor Marketing for untouched drafts.
-  // Matches the Home page Recommendation CTA + auto-populate philosophy
-  // (mem 425). Once the customer picks a different goal, that selection
-  // persists via draft.goal.goalType and this block is skipped.
-  // Post-demo: replace hardcoded default with industry/context-aware
-  // recommendation keyed off brandKit.industry + recent-job signal.
-  const wasAutoSelected = !selectedGoalType.value;
-  if (wasAutoSelected) {
-    const defaultGoal = [...primary, ...more].find(
-      (g) => g.type === "neighbor_marketing",
-    );
-    if (defaultGoal) selectGoal(defaultGoal);
-  }
-
-  // S69: if the customer arrived from the Home page Recommendation card
-  // (?from=recommendation), they already expressed their goal by clicking
-  // the card — skip ahead to Step 2. Gated on (a) goal was auto-selected
-  // this mount (not a returning user editing Step 1), (b) setup isn't
-  // required (location + industry present), (c) Step 1 is complete per
-  // draftStore. nextTick waits one paint so selectGoal's async store
-  // commit lands before we check isStepComplete.
+  // S69: arriving from the Home page Recommendation card means the goal was
+  // already expressed by that click — auto-apply the recommended goal and
+  // skip ahead to Step 2. Direct visits get the explicit two-option choice
+  // (Flow v2) with no auto-selection, so card generation fires once, on the
+  // user's actual pick.
   if (
-    wasAutoSelected &&
+    !selectedGoalType.value &&
     route.query.from === "recommendation" &&
     !needsSetup.value
   ) {
-    await nextTick();
-    if (draftStore.isStepComplete(1)) {
-      draftStore.goToStep(2);
+    const recommended =
+      allGoals.find((g) => g.type === "neighbor_marketing") ?? targetAreaGoal;
+    if (recommended) {
+      commitGoal(recommended);
+      await nextTick();
+      if (draftStore.isStepComplete(1)) {
+        draftStore.goToStep(2);
+      }
     }
   }
 });
@@ -278,59 +249,80 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- Goal selection (shown after setup is complete or not needed) -->
-    <template v-if="!needsSetup">
-      <h2 class="text-xl font-semibold text-[#0b2d50] mb-1">
-        What's the goal of this campaign?
-      </h2>
-      <p class="text-sm text-gray-500 mb-6">
-        Pick a goal and we'll set up smart defaults for targeting, timing, and
-        messaging.
-      </p>
-
-      <!-- Primary goals -->
-      <div class="grid grid-cols-1 gap-3 mb-4">
-        <GoalCard
-          v-for="goal in primary"
-          :key="goal.type"
-          :goal="goal"
-          :selected="selectedGoalType === goal.type"
-          size="primary"
-          @select="selectGoal(goal)"
-        />
-      </div>
-
-      <!-- More options -->
+    <!-- Audience choice (Flow v2 wireframe: two large options) -->
+    <div
+      v-if="!needsSetup"
+      class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-6"
+    >
       <button
-        v-if="!showMore && more.length > 0"
-        class="text-sm text-[#47bfa9] font-medium hover:underline mb-4"
-        @click="showMore = true"
+        type="button"
+        class="audience-option audience-option--primary"
+        data-testid="choose-target-area"
+        @click="chooseTargetArea"
       >
-        More options ({{ more.length }})
+        <MapOutline class="w-9 h-9" aria-hidden="true" />
+        <span class="text-lg font-bold">Target an Area</span>
+        <span class="text-sm opacity-90">Pick any Neighborhood on the map.</span>
       </button>
 
-      <div v-if="showMore" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-        <GoalCard
-          v-for="goal in more"
-          :key="goal.type"
-          :goal="goal"
-          :selected="selectedGoalType === goal.type"
-          size="more"
-          @select="selectGoal(goal)"
-        />
-      </div>
-
-      <!-- Sequence config (shown after goal selected) -->
-      <SequenceConfig
-        v-if="selectedGoal"
-        :defaults="selectedGoal.defaults"
-        :goal-type="selectedGoal.type"
-        :initial-sequence-length="sequenceConfig.sequenceLength"
-        :initial-spacing-weeks="sequenceConfig.spacingWeeks"
-        :initial-service-type="sequenceConfig.serviceType"
-        :initial-other-goal-text="sequenceConfig.otherGoalText"
-        @update="onConfigUpdate"
-      />
-    </template>
+      <button
+        type="button"
+        class="audience-option"
+        data-testid="choose-send-to-list"
+        @click="chooseSendToList"
+      >
+        <ListOutline class="w-9 h-9" aria-hidden="true" />
+        <span class="text-lg font-bold">Send to a List</span>
+        <span class="text-sm opacity-75">Mail to a list you already have.</span>
+      </button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.audience-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 200px;
+  padding: 32px 24px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #0b2d50;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease-out, background 0.15s ease-out,
+    color 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+/* Wireframe: Target an Area rendered filled teal; both fill + slightly grow
+ * on hover (same treatment as the homepage cards). */
+.audience-option--primary {
+  background: var(--app-teal, #47bfa9);
+  border-color: var(--app-teal, #47bfa9);
+  color: #fff;
+}
+
+.audience-option:hover,
+.audience-option:focus-visible {
+  background: var(--app-teal, #47bfa9);
+  border-color: var(--app-teal, #47bfa9);
+  color: #fff;
+  transform: scale(1.03);
+  box-shadow: 0 8px 24px rgba(71, 191, 169, 0.35);
+}
+
+.audience-option--primary:hover,
+.audience-option--primary:focus-visible {
+  background: var(--app-teal-hover, #3aa893);
+  border-color: var(--app-teal-hover, #3aa893);
+}
+
+.audience-option:focus-visible {
+  outline: 2px solid var(--app-teal-hover, #3aa893);
+  outline-offset: 2px;
+}
+</style>

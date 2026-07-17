@@ -27,12 +27,7 @@ test("Designs page shows curated render-backed templates and starts the wizard f
   await expect(page).toHaveURL(
     /\/app\/send\/mock-draft-001\?templateId=hvac-hac-1000-full-bleed-offer-v1&goal=neighbor_marketing$/,
   );
-  await expect(
-    page.getByRole("heading", {
-      name: "What's the goal of this campaign?",
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /Recommended\s+Neighbor Marketing/ }),
-  ).toBeVisible();
+  // Flow v2 (POS-146): Step 1 is now the two-option audience choice.
+  await expect(page.getByTestId("choose-target-area")).toBeVisible();
+  await expect(page.getByTestId("choose-send-to-list")).toBeVisible();
 });
