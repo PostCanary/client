@@ -1,27 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAnalytics } from "@/composables/useAnalytics";
-import { useRunData } from "@/composables/useRunData";
-import { useBilling } from "@/composables/useBilling";
-import { useCampaignStore } from "@/stores/useCampaignStore";
-import AnalyticsHeroCards from "@/components/analytics/AnalyticsHeroCards.vue";
+import { useUploadAndMatch } from "@/composables/useUploadAndMatch";
+
+import UploadCard from "@/components/dashboard/UploadCard.vue";
+import KpiSummaryCard from "@/components/dashboard/KpiSummaryCard.vue";
+import MappingRequiredModal from "@/components/dashboard/MappingRequiredModal.vue";
+import MapperModal from "@/components/dashboard/MapperModal.vue";
+import CampaignPromptModal from "@/components/dashboard/CampaignPromptModal.vue";
+import FirstUploadRunMatchingModal from "@/components/dashboard/FirstUploadRunMatchingModal.vue";
+import PaywallModal from "@/components/dashboard/PaywallModal.vue";
+import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
+import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
+
 import InsightsSummary from "@/components/analytics/InsightsSummary.vue";
 import InsightSectionCard from "@/components/analytics/InsightSection.vue";
 import RecommendationsPanel from "@/components/analytics/RecommendationsPanel.vue";
 import RegenerateButton from "@/components/analytics/RegenerateButton.vue";
-import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
-import PaywallModal from "@/components/dashboard/PaywallModal.vue";
-import PaymentFailedModal from "@/components/dashboard/PaymentFailedModal.vue";
 
 const route = useRoute();
 const router = useRouter();
 
 const {
-  loading,
+  loading: analyticsLoading,
   regenerating,
-  error,
-  hasData,
+  error: analyticsError,
+  hasData: hasInsightsData,
   executiveSummary,
   sections,
   recommendations,
@@ -30,60 +35,70 @@ const {
   regenerate,
 } = useAnalytics();
 
-const { runResult, refreshOnce: refreshRunData } = useRunData();
-const campaignStore = useCampaignStore();
-campaignStore.hydrate();
-
 const {
+  runResult,
+  runResultLoading,
+  runDataError,
+  hasMatchData,
+  initialLoadDone,
+
+  showMapping,
+  missing,
+  mappingBlocked,
+  showMapper,
+  mailHeaders,
+  crmHeaders,
+  mailHeaderTypes,
+  crmHeaderTypes,
+  mailSamples,
+  crmSamples,
+  requiredMail,
+  requiredCrm,
+  initialMapping,
+  mailFields,
+  crmFields,
+  mailLabels,
+  crmLabels,
+  mapperErrors,
+  mapperSaving,
+  uploadResetKey,
+  showFirstUploadModal,
+  firstUploadRunLoading,
+  showCampaignPrompt,
+  pendingNormalize,
+  billingReadOnly,
+
+  onBatchIdsUpdated,
+  onUploadMappingRequired,
+  onUploadCommit,
+  openMapper,
+  onMappingConfirm,
+  onCampaignPromptConfirm,
+  onCampaignPromptSkip,
+  handleFirstUploadRunMatching,
+
   showPaywall,
   paywallBusy,
   showPaymentFailed,
   paymentFailedBusy,
-  paywallConfig,
-  isBillingOverlayActive,
-  showBillingSuccess,
+  effectivePaywallConfig,
+  shouldBlur,
+  showPreviewUpgradeBanner,
   onRequireSubscription,
   onPaywallPrimary,
-  onPaywallSecondary,
+  handlePaywallSecondary,
   onPaymentFixPrimary,
   onPaymentFailedSecondary,
-} = useBilling(route, router);
+} = useUploadAndMatch(route, router);
 
 const kpis = computed(() => (runResult.value as any)?.kpis ?? null);
 
-const isPreviewMode = ref(false);
-
-watch(
-  () => runResult.value,
-  (result) => {
-    if (result) {
-      const previewMode = result.preview_mode === true;
-      if (previewMode !== isPreviewMode.value) {
-        isPreviewMode.value = previewMode;
-        if (previewMode && !showPaywall.value) {
-          onRequireSubscription();
-        }
-      }
-    }
-  },
-  { immediate: true, deep: true }
+/** Entry screen until first refresh finishes, then only when no match KPIs yet. */
+const showEntryScreen = computed(
+  () => initialLoadDone.value && !hasMatchData.value,
 );
 
-const shouldBlur = computed(() => {
-  return isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
-});
-
-const showPreviewUpgradeBanner = computed(() => {
-  return isPreviewMode.value && !showBillingSuccess.value;
-});
-
-watch(
-  () => campaignStore.activeCampaignId,
-  () => {
-    void refreshRunData();
-  },
-  { immediate: true }
-);
+const showResultsScreen = computed(() => hasMatchData.value);
 </script>
 
 <template>
@@ -93,97 +108,195 @@ watch(
   />
 
   <div class="analytics-page" :class="{ 'analytics-blurred': shouldBlur }">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div>
-        <h1>AI Insights</h1>
-        <p>AI-powered insights from your mail and CRM data</p>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading && !hasData" class="loading-state">
+    <!-- Initial load -->
+    <div v-if="!initialLoadDone && runResultLoading" class="loading-state">
       <div class="loading-spinner"></div>
       <p>Loading analytics...</p>
     </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
-      <p class="error-hint">Make sure you have completed at least one matching run.</p>
-    </div>
-
-    <!-- Generating State (user clicked Generate) -->
-    <div v-else-if="regenerating && !hasData" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>Generating AI insights... this may take a moment.</p>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="!hasData && !loading" class="empty-state">
-      <div class="empty-icon">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
-        </svg>
+    <!-- Screen 1 — Entry: upload customer list -->
+    <div v-else-if="showEntryScreen" class="entry-screen">
+      <div class="entry-header">
+        <h1>Upload your Customer List</h1>
+        <p>See who's converting from your mail.</p>
       </div>
-      <h2>No analytics available yet</h2>
-      <p>Generate AI-powered insights from your existing match data.</p>
-      <button
-        class="generate-btn"
-        :disabled="regenerating"
-        @click="regenerate"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
-        </svg>
-        Generate Insights
-      </button>
+
+      <div class="entry-upload">
+        <UploadCard
+          :reset-key="uploadResetKey"
+          :mapping-blocked="mappingBlocked"
+          :billing-blocked="billingReadOnly"
+          @edit-mapping="openMapper"
+          @batch-ids="onBatchIdsUpdated"
+          @upload-commit="onUploadCommit"
+          @mapping-required="onUploadMappingRequired"
+        />
+      </div>
     </div>
 
-    <!-- Content -->
-    <template v-else>
-      <!-- Hero KPI Cards -->
-      <AnalyticsHeroCards :kpis="kpis" />
+    <!-- Screen 2 — Results: KPIs + re-upload + AI Insights -->
+    <template v-else-if="showResultsScreen">
+      <div v-if="runDataError" class="run-error">
+        {{ runDataError }}
+      </div>
 
-      <!-- AI Executive Summary -->
-      <InsightsSummary
-        :summary="executiveSummary"
-        :generated-at="generatedAt"
-        :data-context="dataContext"
+      <!-- Hero KPI cards (Match Rate, Match Revenue, Total Matches, Days to Convert) -->
+      <KpiSummaryCard
+        variant="hero"
+        :kpis="kpis"
+        :loading="runResultLoading"
       />
 
-      <!-- Insight Sections -->
-      <div class="sections-grid">
-        <InsightSectionCard
-          v-for="(section, i) in sections"
-          :key="i"
-          :section="section"
+      <!-- Re-upload + advanced detail panel (mirrors Dashboard Row 2) -->
+      <div class="action-row">
+        <UploadCard
+          :reset-key="uploadResetKey"
+          :mapping-blocked="mappingBlocked"
+          :billing-blocked="billingReadOnly"
+          @edit-mapping="openMapper"
+          @batch-ids="onBatchIdsUpdated"
+          @upload-commit="onUploadCommit"
+          @mapping-required="onUploadMappingRequired"
+        />
+
+        <KpiSummaryCard
+          variant="advanced"
+          :kpis="kpis"
+          :loading="runResultLoading"
         />
       </div>
 
-      <!-- Recommendations -->
-      <RecommendationsPanel :recommendations="recommendations" />
+      <!-- AI Insights (preserved; only when insights exist) -->
+      <section v-if="hasInsightsData" class="ai-insights-section">
+        <div class="page-header">
+          <div>
+            <h2 class="ai-insights-heading">AI Insights</h2>
+            <p>AI-powered insights from your mail and CRM data</p>
+          </div>
+        </div>
 
-      <!-- Regenerate Button -->
-      <RegenerateButton
-        :regenerating="regenerating"
-        @regenerate="regenerate"
-      />
+        <InsightsSummary
+          :summary="executiveSummary"
+          :generated-at="generatedAt"
+          :data-context="dataContext"
+        />
+
+        <div class="sections-grid">
+          <InsightSectionCard
+            v-for="(section, i) in sections"
+            :key="i"
+            :section="section"
+          />
+        </div>
+
+        <RecommendationsPanel :recommendations="recommendations" />
+
+        <RegenerateButton
+          :regenerating="regenerating"
+          @regenerate="regenerate"
+        />
+      </section>
+
+      <!-- Insights loading / empty / error under results when match data exists -->
+      <section
+        v-else-if="analyticsLoading && !hasInsightsData"
+        class="ai-insights-section"
+      >
+        <h2 class="ai-insights-heading">AI Insights</h2>
+        <div class="loading-state compact">
+          <div class="loading-spinner"></div>
+          <p>Loading AI insights...</p>
+        </div>
+      </section>
+
+      <section
+        v-else-if="regenerating && !hasInsightsData"
+        class="ai-insights-section"
+      >
+        <h2 class="ai-insights-heading">AI Insights</h2>
+        <div class="loading-state compact">
+          <div class="loading-spinner"></div>
+          <p>Generating AI insights... this may take a moment.</p>
+        </div>
+      </section>
+
+      <section v-else-if="analyticsError" class="ai-insights-section">
+        <h2 class="ai-insights-heading">AI Insights</h2>
+        <div class="error-state">
+          <p>{{ analyticsError }}</p>
+          <p class="error-hint">
+            Make sure you have completed at least one matching run.
+          </p>
+        </div>
+      </section>
+
+      <section
+        v-else-if="!hasInsightsData && !analyticsLoading"
+        class="ai-insights-section"
+      >
+        <h2 class="ai-insights-heading">AI Insights</h2>
+        <div class="empty-state">
+          <h3>No analytics available yet</h3>
+          <p>Generate AI-powered insights from your existing match data.</p>
+          <button
+            class="generate-btn"
+            :disabled="regenerating"
+            @click="regenerate"
+          >
+            Generate Insights
+          </button>
+        </div>
+      </section>
     </template>
   </div>
 
+  <MappingRequiredModal
+    v-model="showMapping"
+    v-model:missing="missing"
+    @edit-mapping="openMapper"
+  />
+
+  <MapperModal
+    :open="showMapper"
+    :mail-headers="mailHeaders"
+    :crm-headers="crmHeaders"
+    :mail-header-types="mailHeaderTypes"
+    :crm-header-types="crmHeaderTypes"
+    :mail-samples="mailSamples"
+    :crm-samples="crmSamples"
+    :mail-fields="mailFields"
+    :crm-fields="crmFields"
+    :mail-labels="mailLabels"
+    :crm-labels="crmLabels"
+    :initial-mapping="initialMapping"
+    :required-mail="requiredMail"
+    :required-crm="requiredCrm"
+    :errors="mapperErrors || null"
+    :saving="mapperSaving"
+    :confirm-label="pendingNormalize ? 'Confirm & Run' : undefined"
+    @close="showMapper = false"
+    @confirm="onMappingConfirm"
+  />
+
+  <CampaignPromptModal
+    :open="showCampaignPrompt"
+    @confirm="onCampaignPromptConfirm"
+    @skip="onCampaignPromptSkip"
+  />
+
+  <FirstUploadRunMatchingModal
+    :open="showFirstUploadModal"
+    :loading="firstUploadRunLoading"
+    @close="showFirstUploadModal = false"
+    @run-matching="handleFirstUploadRunMatching"
+  />
+
   <PaywallModal
     v-model="showPaywall"
-    :config="paywallConfig"
+    :config="effectivePaywallConfig"
     :loading="paywallBusy"
     @primary="onPaywallPrimary"
-    @secondary="onPaywallSecondary"
+    @secondary="handlePaywallSecondary"
   />
 
   <PaymentFailedModal
@@ -216,14 +329,67 @@ watch(
   user-select: none;
 }
 
-/* Page Header */
+/* Screen 1 — centered entry */
+.entry-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 16px;
+  gap: 28px;
+}
+
+.entry-header {
+  text-align: center;
+  max-width: 480px;
+}
+
+.entry-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--app-text, #0c2d50);
+}
+
+.entry-header p {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--app-text-secondary, #64748b);
+  font-weight: 400;
+}
+
+.entry-upload {
+  width: 100%;
+  max-width: 560px;
+}
+
+/* Screen 2 — action row (upload + advanced KPIs) */
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* AI Insights block */
+.ai-insights-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--app-border, #e2e8f0);
+}
+
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.page-header h1 {
+.ai-insights-heading {
+  margin: 0;
   font-size: 22px;
   font-weight: 700;
   color: var(--app-text, #0c2d50);
@@ -236,14 +402,22 @@ watch(
   font-weight: 400;
 }
 
-/* Sections Grid */
 .sections-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-/* Loading State */
+.run-error {
+  border-radius: 8px;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #9f1239;
+}
+
+/* Loading / empty / error */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -251,6 +425,10 @@ watch(
   justify-content: center;
   padding: 80px 20px;
   gap: 16px;
+}
+
+.loading-state.compact {
+  padding: 40px 20px;
 }
 
 .loading-state p {
@@ -268,13 +446,14 @@ watch(
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Error State */
 .error-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 40px 20px;
 }
 
 .error-state p {
@@ -288,27 +467,22 @@ watch(
   font-size: 13px !important;
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
-  padding: 80px 20px;
+  padding: 40px 20px;
 }
 
-.empty-icon {
-  color: var(--app-text-muted, #94a3b8);
-  margin-bottom: 16px;
-}
-
-.empty-state h2 {
-  font-size: 18px;
+.empty-state h3 {
+  font-size: 16px;
   font-weight: 600;
   color: var(--app-text, #0c2d50);
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
 .empty-state p {
   font-size: 14px;
   color: var(--app-text-muted, #94a3b8);
+  margin: 0;
 }
 
 .generate-btn {
@@ -336,9 +510,14 @@ watch(
   cursor: not-allowed;
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
-  .sections-grid { grid-template-columns: 1fr; }
+  .action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sections-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -346,6 +525,10 @@ watch(
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .entry-header h1 {
+    font-size: 20px;
   }
 }
 </style>
