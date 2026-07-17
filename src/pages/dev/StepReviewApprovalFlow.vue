@@ -6,12 +6,49 @@
 import StepReview from "@/components/wizard/StepReview.vue";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
-import type { CampaignDraft } from "@/types/campaign";
+import type { CampaignDraft, DesignSelection } from "@/types/campaign";
 
 const now = new Date().toISOString();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
-const emptyDraft = new URLSearchParams(window.location.search).get("emptyDraft") === "1";
+const params = new URLSearchParams(window.location.search);
+const emptyDraft = params.get("emptyDraft") === "1";
+
+// POS-149: drives ReviewSummary/CostBreakdown through the Flow v2
+// designSource states from a plain URL param, so Playwright can seed
+// requested/uploaded/absent without a real Step 3 build.
+const designSourceParam = params.get("designSource");
+const SAMPLE_UPLOADED_FRONT =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiM3AwBv7QMCaZrQZQAAAABJRU5ErkJggg==";
+
+const designExtras: Partial<DesignSelection> =
+  designSourceParam === "requested"
+    ? {
+        designSource: "requested",
+        designRequest: {
+          fullName: "Alex Owner",
+          email: "alex@example.test",
+          phone: "(612) 887-2109",
+          websiteAddress: "totalcomfort.example",
+          template: 1,
+          notes: "Keep it teal, match our van wrap.",
+          submittedAt: now,
+        },
+      }
+    : designSourceParam === "uploaded"
+      ? {
+          designSource: "uploaded",
+          uploadedAsset: {
+            fileName: "front.png",
+            mimeType: "image/png",
+            fileSizeBytes: 2048,
+            widthPx: 1875,
+            heightPx: 1275,
+            frontDataUrl: SAMPLE_UPLOADED_FRONT,
+            backDataUrl: null,
+          },
+        }
+      : {};
 
 brandKitStore.brandKit = {
   industry: "hvac",
@@ -93,6 +130,7 @@ draftStore.draft = emptyDraft
         isCustomUpload: false,
         customUploadUrl: null,
         sequenceCards: [],
+        ...designExtras,
       },
       review: null,
       createdAt: now,

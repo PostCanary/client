@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
-import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
+import type { CardSchedule, DesignSource, MailCampaign, ReviewSelection } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
@@ -66,6 +66,16 @@ const acknowledgedAccuracy = ref(false);
 const goal = computed(() => draftStore.draft?.goal);
 const targeting = computed(() => draftStore.draft?.targeting);
 const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []);
+// POS-149: Flow v2 checkout deltas. Absent designSource (pre-Flow-v2 drafts,
+// or a draft that never touched the new design-request/upload paths) keeps
+// today's generated-cards behavior exactly — see DesignSelection.designSource.
+const designSource = computed<DesignSource | undefined>(
+  () => draftStore.draft?.design?.designSource,
+);
+const uploadedFrontUrl = computed(
+  () => draftStore.draft?.design?.uploadedAsset?.frontDataUrl ?? null,
+);
+const isCustomDesignRequest = computed(() => designSource.value === "requested");
 const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
 // Campaign name — auto-generated, editable
@@ -126,8 +136,13 @@ function updateSchedule(updated: CardSchedule[]) {
 // Cost
 const pricing = usePricing();
 const perCardRate = computed(() => pricing.payPerSend); // Round 1: flat rate
+const customDesignFee = computed(() =>
+  isCustomDesignRequest.value ? pricing.customDesignFee : 0,
+);
 const totalCost = computed(
-  () => householdCount.value * perCardRate.value * seqLen.value,
+  () =>
+    householdCount.value * perCardRate.value * seqLen.value +
+    customDesignFee.value,
 );
 
 // Seeding
@@ -267,6 +282,8 @@ async function approve() {
         <ReviewSummary
           :draft-id="draftStore.draft?.id"
           :cards="designCards"
+          :design-source="designSource"
+          :uploaded-front-url="uploadedFrontUrl"
         />
       </div>
 
@@ -407,6 +424,7 @@ async function approve() {
       <CostBreakdown
         :household-count="householdCount"
         :sequence-length="seqLen"
+        :include-custom-design-fee="isCustomDesignRequest"
         class="mt-5"
       />
 
