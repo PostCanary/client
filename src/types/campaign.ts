@@ -412,12 +412,44 @@ export interface CardDesign {
   templateReason: string               // why this layout was recommended for this card position
 }
 
+// Flow v2 (POS-147/148/149 shared contract): where the campaign's design
+// comes from. 'generated' = studio/AI cards (sequenceCards), 'uploaded' =
+// customer-supplied artwork, 'requested' = $199 professional design brief
+// (checkout shows a "your custom design" placeholder + the design fee).
+export type DesignSource = 'generated' | 'uploaded' | 'requested'
+
+export interface UploadedDesignAsset {
+  fileName: string
+  mimeType: string
+  fileSizeBytes: number
+  widthPx: number | null
+  heightPx: number | null
+  // Client-side preview until server-side asset storage lands. Front is
+  // required for a valid upload; back may be null (blank back).
+  frontDataUrl: string | null
+  backDataUrl: string | null
+}
+
+export interface DesignRequestBrief {
+  fullName: string
+  email: string
+  phone: string
+  websiteAddress: string
+  template: 1 | 2 | 3 | 4
+  notes: string
+  submittedAt: string                  // ISO datetime
+}
+
 export interface DesignSelection {
   templateId: string
   templateLayoutType: TemplateLayoutType
   isCustomUpload: boolean
   customUploadUrl: string | null
   sequenceCards: CardDesign[]
+  // Optional for back-compat with pre-Flow-v2 drafts; absent means 'generated'.
+  designSource?: DesignSource
+  uploadedAsset?: UploadedDesignAsset | null
+  designRequest?: DesignRequestBrief | null
 }
 
 // ============================================================
@@ -664,6 +696,9 @@ export const PRICING = {
   PERFORMANCE: 0.79,
   PRECISION: 0.79,
   ELITE: 0.79,
+  // Flow v2: one-time professional design fee ("buy a design from our team,
+  // $199"). Server-confirmable via custom_design_fee_cents once it ships.
+  customDesignFee: 199,
 } as const
 
 export type PricingTier = keyof typeof PRICING
