@@ -669,6 +669,12 @@ export interface MailCampaign {
   cards: MailCampaignCard[]
   createdAt: string
   updatedAt: string
+  // POS-151: raw server targeting snapshot. Populated for area-goal
+  // campaigns (shape: TargetingSelection, see areas: TargetingArea[]);
+  // null for send_to_list campaigns — the SttL wizard clears `targeting`
+  // before approval and the audience's UUID is never persisted onto the
+  // campaign server-side, so there is no audience_id to read back here.
+  targetingData: Record<string, any> | null
 }
 
 export interface MailCampaignCard {
