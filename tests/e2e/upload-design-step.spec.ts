@@ -100,5 +100,6 @@ test("submitting a valid design request enables Next and posts the brief", async
   expect(request.template).toBe(3);
   expect(request.email).toBe("alex@alpha.example");
   expect(request.notes).toBe("Please use our brand colors.");
-  expect(request.draftId).toBe("mock-draft-001");
+  expect(request.draft_id).toBe("mock-draft-001");
+  expect(request.full_name).toBeTruthy();
 });

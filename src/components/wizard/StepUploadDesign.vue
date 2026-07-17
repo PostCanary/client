@@ -289,9 +289,16 @@ async function submitDesignRequest() {
     draftStore.setDesignRequest(brief);
     showDesignRequestModal.value = false;
 
+    // Wire contract is snake_case (server blueprint design_requests.py,
+    // PR #132) — the store keeps the camelCase DesignRequestBrief shape.
     postJson("/api/design-requests", {
-      ...brief,
-      draftId: draftStore.draft?.id ?? null,
+      full_name: brief.fullName,
+      email: brief.email,
+      phone: brief.phone,
+      website_address: brief.websiteAddress,
+      template: brief.template,
+      notes: brief.notes,
+      draft_id: draftStore.draft?.id ?? null,
     }).catch(() => {
       message.error(
         "Your design request was saved, but we couldn't notify our design team yet. We'll retry automatically.",
