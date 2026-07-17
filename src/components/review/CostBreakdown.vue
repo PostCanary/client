@@ -8,6 +8,11 @@ const props = defineProps<{
   householdCount: number;
   sequenceLength: number;
   planCode?: PlanCode | null;
+  // POS-149: true when the customer bought a professional design from
+  // PostCanary's team ($199, Flow v2 "Postcard Design Request" brief).
+  // Rate comes from PRICING.customDesignFee via usePricing() — never
+  // hardcode the amount here.
+  includeCustomDesignFee?: boolean;
 }>();
 
 const pricing = usePricing();
@@ -24,8 +29,12 @@ const cards = computed(() =>
   })),
 );
 
+const customDesignFee = computed(() =>
+  props.includeCustomDesignFee ? pricing.customDesignFee : 0,
+);
+
 const totalCost = computed(() =>
-  cards.value.reduce((sum, c) => sum + c.cost, 0),
+  cards.value.reduce((sum, c) => sum + c.cost, 0) + customDesignFee.value,
 );
 </script>
 
@@ -45,6 +54,16 @@ const totalCost = computed(() =>
         </span>
         <span class="font-medium text-[#0b2d50]">
           {{ formatCurrency(card.cost) }}
+        </span>
+      </div>
+      <div
+        v-if="includeCustomDesignFee"
+        data-testid="custom-design-fee-line"
+        class="flex justify-between text-sm"
+      >
+        <span class="text-gray-500">Custom design</span>
+        <span class="font-medium text-[#0b2d50]">
+          {{ formatCurrency(customDesignFee) }}
         </span>
       </div>
       <hr class="border-gray-200" />
