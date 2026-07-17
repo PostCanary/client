@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useCampaignList, type CampaignTab } from "@/composables/useCampaignList";
 import CampaignListCard from "@/components/campaigns/CampaignListCard.vue";
 import CampaignFilters from "@/components/campaigns/CampaignFilters.vue";
-import { pauseMailCampaign, resumeMailCampaign } from "@/api/mailCampaigns";
+import CampaignViewModal from "@/components/campaigns/CampaignViewModal.vue";
+import { pauseMailCampaign, resumeMailCampaign, getMailCampaign } from "@/api/mailCampaigns";
 import { deleteDraft } from "@/api/campaignDrafts";
+import type { MailCampaign } from "@/types/campaign";
 
 const router = useRouter();
+const route = useRoute();
 const {
   drafts,
   loading,
@@ -19,13 +22,43 @@ const {
   fetch,
 } = useCampaignList();
 
-onMounted(fetch);
+// "Your Campaign" modal state — clicking a card opens this overlay rather
+// than navigating away (Dashboard Flow, Flow 3). Deep links to
+// /app/campaigns/:id still resolve via CampaignDetail.vue's full-page route.
+const selectedCampaign = ref<MailCampaign | null>(null);
+const modalOpen = ref(false);
+const modalLoading = ref(false);
+
+async function openCampaign(id: string) {
+  modalOpen.value = true;
+  modalLoading.value = true;
+  selectedCampaign.value = null;
+  try {
+    selectedCampaign.value = await getMailCampaign(id);
+  } finally {
+    modalLoading.value = false;
+  }
+}
+
+function closeModal() {
+  modalOpen.value = false;
+  selectedCampaign.value = null;
+}
+
+onMounted(async () => {
+  await fetch();
+  // Support deep-linking straight into the modal, e.g. from a notification
+  // that points at /app/campaigns?open=<id>.
+  const openId = route.query.open;
+  if (typeof openId === "string" && openId) {
+    openCampaign(openId);
+  }
+});
 
 const tabs: { key: CampaignTab; label: string }[] = [
-  { key: "active", label: "Active" },
+  { key: "in_progress", label: "In Progress" },
+  { key: "sent", label: "Sent" },
   { key: "drafts", label: "Drafts" },
-  { key: "completed", label: "Completed" },
-  { key: "paused", label: "Paused" },
 ];
 
 async function handlePause(id: string) {
@@ -48,10 +81,9 @@ function resumeDraft(draftId: string) {
 }
 
 const emptyMessages: Record<CampaignTab, string> = {
-  active: "No active campaigns yet. Send your first postcards →",
+  in_progress: "No campaigns in progress. Send your first postcards →",
+  sent: "No sent campaigns yet.",
   drafts: "No drafts. Start a new campaign to see it here.",
-  completed: "No completed campaigns yet.",
-  paused: "No paused campaigns.",
 };
 </script>
 
@@ -84,8 +116,7 @@ const emptyMessages: Record<CampaignTab, string> = {
         {{ tab.label }}
         <span
           v-if="tabCounts[tab.key] > 0"
-          class="ml-1 text-xs"
-          :class="activeTab === tab.key ? 'text-gray-400' : 'text-gray-400'"
+          class="ml-1 text-xs text-gray-400"
         >
           ({{ tabCounts[tab.key] }})
         </span>
@@ -94,6 +125,7 @@ const emptyMessages: Record<CampaignTab, string> = {
 
     <!-- Filters -->
     <CampaignFilters
+      v-if="activeTab !== 'drafts'"
       v-model:search-query="searchQuery"
       v-model:sort-by="sortBy"
       class="mb-4"
@@ -106,12 +138,12 @@ const emptyMessages: Record<CampaignTab, string> = {
       />
     </div>
 
-    <!-- Campaign list (active/completed/paused tabs) -->
+    <!-- Campaign list (in_progress/sent tabs) -->
     <template v-else-if="activeTab !== 'drafts'">
       <div v-if="filtered.length === 0" class="text-center py-12">
         <p class="text-gray-400">{{ emptyMessages[activeTab] }}</p>
         <button
-          v-if="activeTab === 'active'"
+          v-if="activeTab === 'in_progress'"
           class="mt-3 text-sm text-[#47bfa9] font-medium hover:underline"
           @click="router.push('/app/send')"
         >
@@ -123,6 +155,7 @@ const emptyMessages: Record<CampaignTab, string> = {
           v-for="campaign in filtered"
           :key="campaign.id"
           :campaign="campaign"
+          @open="openCampaign"
           @pause="handlePause"
           @resume="handleResume"
         />
@@ -179,5 +212,12 @@ const emptyMessages: Record<CampaignTab, string> = {
         </div>
       </div>
     </template>
+
+    <CampaignViewModal
+      :open="modalOpen"
+      :campaign="selectedCampaign"
+      :loading="modalLoading"
+      @close="closeModal"
+    />
   </div>
 </template>

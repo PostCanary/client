@@ -4,15 +4,18 @@ import type { MailCampaign, CampaignDraft } from "@/types/campaign";
 import { listMailCampaigns } from "@/api/mailCampaigns";
 import { listDrafts } from "@/api/campaignDrafts";
 
-export type CampaignTab = "active" | "drafts" | "completed" | "paused";
+// POS-151: Campaigns history — In Progress / Sent tabs per the Dashboard
+// Flow wireframe (Flow 3), with Drafts kept as a third tab so the existing
+// resume/delete-draft UX isn't lost (the wireframe only calls out two).
+export type CampaignTab = "in_progress" | "sent" | "drafts";
 
-const ACTIVE_STATUSES = ["approved", "printing", "in_transit", "delivered"];
+const SENT_STATUSES = ["delivered", "results_ready", "completed"];
 
 export function useCampaignList() {
   const campaigns = ref<MailCampaign[]>([]);
   const drafts = ref<CampaignDraft[]>([]);
   const loading = ref(false);
-  const activeTab = ref<CampaignTab>("active");
+  const activeTab = ref<CampaignTab>("in_progress");
   const searchQuery = ref("");
   const sortBy = ref<"newest" | "oldest">("newest");
 
@@ -33,14 +36,10 @@ export function useCampaignList() {
     let list = campaigns.value;
 
     // Filter by tab
-    if (activeTab.value === "active") {
-      list = list.filter((c) => ACTIVE_STATUSES.includes(c.status));
-    } else if (activeTab.value === "completed") {
-      list = list.filter(
-        (c) => c.status === "completed" || c.status === "results_ready",
-      );
-    } else if (activeTab.value === "paused") {
-      list = list.filter((c) => c.status === "paused");
+    if (activeTab.value === "sent") {
+      list = list.filter((c) => SENT_STATUSES.includes(c.status));
+    } else if (activeTab.value === "in_progress") {
+      list = list.filter((c) => !SENT_STATUSES.includes(c.status));
     }
 
     // Search
@@ -60,14 +59,12 @@ export function useCampaignList() {
   });
 
   const tabCounts = computed(() => ({
-    active: campaigns.value.filter((c) =>
-      ACTIVE_STATUSES.includes(c.status),
+    in_progress: campaigns.value.filter(
+      (c) => !SENT_STATUSES.includes(c.status),
     ).length,
+    sent: campaigns.value.filter((c) => SENT_STATUSES.includes(c.status))
+      .length,
     drafts: drafts.value.length,
-    completed: campaigns.value.filter(
-      (c) => c.status === "completed" || c.status === "results_ready",
-    ).length,
-    paused: campaigns.value.filter((c) => c.status === "paused").length,
   }));
 
   return {

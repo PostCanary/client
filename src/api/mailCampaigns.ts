@@ -46,6 +46,7 @@ function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     cards: r.cards_data ?? [],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    targetingData: r.targeting_data ?? null,
   };
 }
 
