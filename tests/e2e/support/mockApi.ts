@@ -17,6 +17,7 @@ type RequestLog = {
   audienceApprovals: string[];
   audienceSuppressions: string[];
   scrapeRequests: Array<{ website_url?: string }>;
+  designRequests: Array<JsonMap>;
 };
 
 export type MockAppState = {
@@ -49,6 +50,13 @@ export type MockAppState = {
   normalizeByBatchId: Record<string, { status: number; body: JsonMap }>;
   billingPortalUrl: string;
   requestLog: RequestLog;
+  // Flow v2 (POS-147): overrides the hardcoded GET /api/campaign-drafts/:id
+  // response below (current_step/completed_steps/data). Tests that need to
+  // land directly on a specific wizard step (e.g. step 3, Upload Your
+  // Design) set this before navigating instead of driving the whole wizard
+  // by hand. `null` (default) preserves the original hardcoded response so
+  // every pre-existing spec is unaffected.
+  draftOverride: JsonMap | null;
 };
 
 const ORG_ALPHA = {
@@ -767,7 +775,9 @@ export function createMockAppState(): MockAppState {
       audienceApprovals: [],
       audienceSuppressions: [],
       scrapeRequests: [],
+      designRequests: [],
     },
+    draftOverride: null,
   };
 
   syncSession(state);
@@ -1151,7 +1161,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
     if (draftMatch && method === "GET") {
       const draftId = decodeURIComponent(draftMatch[1]);
       state.requestLog.draftLoads.push(draftId);
-      return json(route, {
+      const base = {
         ok: true,
         id: draftId,
         org_id: activeOrgId(state),
@@ -1170,7 +1180,25 @@ export async function installMockApi(page: Page, state: MockAppState) {
         schema_version: 1,
         created_at: "2026-03-23T00:00:00Z",
         updated_at: "2026-03-23T00:00:00Z",
-      });
+      };
+      if (state.draftOverride) {
+        return json(route, {
+          ...base,
+          ...state.draftOverride,
+          data: { ...base.data, ...(state.draftOverride.data ?? {}) },
+        });
+      }
+      return json(route, base);
+    }
+
+    if (pathname === "/api/design-requests" && method === "POST") {
+      const payload = parseJson(route);
+      state.requestLog.designRequests.push(payload);
+      return json(
+        route,
+        { id: `mock-design-request-${state.requestLog.designRequests.length}`, status: "received" },
+        201,
+      );
     }
 
     if (draftMatch && method === "PUT") {

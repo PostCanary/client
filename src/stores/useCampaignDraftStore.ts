@@ -10,6 +10,8 @@ import type {
   DesignSelection,
   ReviewSelection,
   AudienceWizardState,
+  UploadedDesignAsset,
+  DesignRequestBrief,
 } from "@/types/campaign";
 import type {
   AudienceCostPreview,
@@ -270,6 +272,57 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
      * goNext when advancing past step 3 (POS-138). */
     markDesignReviewed() {
       if (!this.draft) return;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Flow v2 (POS-147): customer uploaded their own front/back artwork
+     * instead of using the studio. `this.draft.design` may still be null
+     * for a fresh draft, so this seeds a minimal DesignSelection rather
+     * than assuming setDesign/setSequenceCards already ran. */
+    setUploadedDesign(asset: UploadedDesignAsset) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "uploaded",
+        uploadedAsset: asset,
+        designRequest: null,
+      };
+      this.draft.designUserEdited = true;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Flow v2 (POS-148): customer requested a $199 professional design
+     * instead of uploading or using the studio. Network delivery of the
+     * brief to the server (POST /api/design-requests) is handled by the
+     * caller (StepUploadDesign) as fire-and-forget — this action's job is
+     * only to record the choice on the draft so step 3 completes. */
+    setDesignRequest(brief: DesignRequestBrief) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "requested",
+        designRequest: brief,
+        uploadedAsset: null,
+      };
+      this.draft.designUserEdited = true;
       this._markComplete(3);
       this._clearReview(3);
       this._debounceSave();
