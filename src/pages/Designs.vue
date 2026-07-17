@@ -1,17 +1,30 @@
 <!-- src/pages/Designs.vue -->
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { NIcon } from 'naive-ui'
+import { DownloadOutline, SendOutline } from '@vicons/ionicons5'
 import { captureEvent } from '@/composables/usePostHog'
 import { visibleDesignLibraryTemplates, type DesignLibraryTemplate } from '@/data/templates'
 
+// A real PDF/asset URL isn't produced anywhere in the design-library data
+// model yet (DesignLibraryTemplate has no pdfUrl/assetUrl field — templates
+// are curated layout definitions, not rendered artifacts). The optional
+// field below lets the Download PDF action light up per-card the moment a
+// real asset URL exists, without any other changes to this page.
+type DesignWithAsset = DesignLibraryTemplate & { pdfUrl?: string }
+
 const router = useRouter()
+
+const designs = computed(() => visibleDesignLibraryTemplates as DesignWithAsset[])
 
 onMounted(() => {
   captureEvent('designs_page_viewed')
 })
 
-function startFromTemplate(template: DesignLibraryTemplate) {
+// TODO(POS-146): once the send funnel restructure lands, hand off a real
+// design/draft preselect here instead of templateId+goal query params.
+function sendThisPostcard(template: DesignLibraryTemplate) {
   captureEvent('designs_template_started', {
     template_id: template.id,
     render_template_id: template.renderTemplateId,
@@ -24,6 +37,18 @@ function startFromTemplate(template: DesignLibraryTemplate) {
     },
   })
 }
+
+function downloadPdf(template: DesignWithAsset) {
+  if (!template.pdfUrl) return
+  captureEvent('designs_pdf_downloaded', { template_id: template.id })
+  const link = document.createElement('a')
+  link.href = template.pdfUrl
+  link.download = `${template.name}.pdf`
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
 </script>
 
 <template>
@@ -33,7 +58,7 @@ function startFromTemplate(template: DesignLibraryTemplate) {
       <p class="designs-subtitle">Approved launch templates for customer-visible postcards.</p>
     </div>
 
-    <div class="designs-grid">
+    <div v-if="designs.length" class="designs-grid">
       <!-- "Create New" card (always first) -->
       <button class="design-card design-card--new" @click="() => { captureEvent('designs_create_new_clicked', {}); router.push('/app/send') }" type="button">
         <div class="design-card__icon">+</div>
@@ -41,7 +66,7 @@ function startFromTemplate(template: DesignLibraryTemplate) {
       </button>
 
       <article
-        v-for="template in visibleDesignLibraryTemplates"
+        v-for="template in designs"
         :key="template.id"
         class="design-card design-card--template"
         data-testid="design-library-template"
@@ -56,19 +81,40 @@ function startFromTemplate(template: DesignLibraryTemplate) {
           <div class="design-card__tags" aria-label="Template tags">
             <span v-for="tag in template.tags" :key="tag">{{ tag }}</span>
           </div>
-          <button
-            class="design-card__action"
-            type="button"
-            @click="startFromTemplate(template)"
-          >
-            Start from template
-          </button>
+          <div class="design-card__actions">
+            <button
+              class="design-card__action design-card__action--primary"
+              type="button"
+              @click="sendThisPostcard(template)"
+            >
+              <NIcon><SendOutline /></NIcon>
+              Send this Postcard
+            </button>
+            <button
+              v-if="template.pdfUrl"
+              class="design-card__action design-card__action--secondary"
+              type="button"
+              @click="downloadPdf(template)"
+            >
+              <NIcon><DownloadOutline /></NIcon>
+              Download PDF
+            </button>
+          </div>
         </div>
       </article>
     </div>
 
-    <div class="designs-empty">
-      <p>User-saved designs will appear here after saved-template storage is approved.</p>
+    <div v-else class="designs-empty">
+      <div class="designs-empty__icon">
+        <NIcon><SendOutline /></NIcon>
+      </div>
+      <p class="designs-empty__title">No designs yet</p>
+      <p class="designs-empty__body">
+        Start a postcard and your designs will show up here.
+      </p>
+      <button class="designs-empty__cta" type="button" @click="router.push('/app/send')">
+        Send Postcards
+      </button>
     </div>
   </div>
 </template>
@@ -220,8 +266,85 @@ function startFromTemplate(template: DesignLibraryTemplate) {
   padding: 3px 7px;
 }
 
+.design-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
 .design-card__action {
-  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.design-card__action--primary {
+  background: var(--app-teal, #47bfa9);
+  color: #ffffff;
+}
+
+.design-card__action--primary:hover {
+  background: #329f8e;
+}
+
+.design-card__action--secondary {
+  background: transparent;
+  color: var(--app-teal, #47bfa9);
+  padding: 8px 4px;
+}
+
+.design-card__action--secondary:hover {
+  color: #329f8e;
+  text-decoration: underline;
+}
+
+.designs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  margin: 40px auto 0;
+  padding: 32px 24px;
+  border-radius: 8px;
+  border: 1px dashed var(--app-border-medium, #dde3ea);
+  text-align: center;
+}
+
+.designs-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(71, 191, 169, 0.1);
+  color: var(--app-teal, #47bfa9);
+  font-size: 22px;
+}
+
+.designs-empty__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text, #0c2d50);
+  margin: 4px 0 0;
+}
+
+.designs-empty__body {
+  font-size: 13px;
+  color: var(--app-text-muted, #94a3b8);
+  margin: 0;
+}
+
+.designs-empty__cta {
   border: 0;
   border-radius: 6px;
   background: var(--app-teal, #47bfa9);
@@ -230,19 +353,10 @@ function startFromTemplate(template: DesignLibraryTemplate) {
   font-size: 13px;
   font-weight: 700;
   margin-top: 8px;
-  padding: 8px 10px;
+  padding: 8px 14px;
 }
 
-.design-card__action:hover {
+.designs-empty__cta:hover {
   background: #329f8e;
-}
-
-.designs-empty {
-  text-align: center;
-}
-
-.designs-empty p {
-  font-size: 14px;
-  color: var(--app-text-muted, #94a3b8);
 }
 </style>
