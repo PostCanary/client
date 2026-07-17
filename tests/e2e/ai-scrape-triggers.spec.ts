@@ -4,9 +4,10 @@
 // Part A drives the real wizard entry (SendWizard → WizardShell) to prove
 // Fix B/D wiring: the backfill scrape fires as soon as the wizard mounts
 // (not just when Step 3 happens to render), and the progress strip
-// reflects it. StepGoal.vue auto-selects "Neighbor Marketing" for an
-// untouched draft on its own mount, so no click is needed to trigger
-// generateCardsForDraft's scrape-wait ordering.
+// reflects it. Flow v2 (POS-146): StepGoal no longer auto-selects a goal
+// on direct visits — the scrape still fires at wizard mount (SendWizard
+// onMounted → ensureScraped), independent of goal selection; card
+// generation now fires on the user's audience-option click.
 //
 // Part B drives the /dev/step-design-fold harness (same pattern as
 // photo-adjust-on-canvas.spec.ts) to reach EditPanel's Business Info panel
@@ -32,9 +33,7 @@ test.describe("AI scrape triggers — wizard entry (Fix B/D)", () => {
 
     await page.goto("/app/send");
 
-    await expect(
-      page.getByRole("heading", { name: "What's the goal of this campaign?" }),
-    ).toBeVisible();
+    await expect(page.getByTestId("choose-target-area")).toBeVisible();
 
     // ensureScraped() fired POST /api/brand-kit/scrape at wizard mount —
     // not only when Step 3 happens to render.
