@@ -16,7 +16,7 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-function listCampaign() {
+function listCampaign(overrides: Record<string, unknown> = {}) {
   return {
     ok: true,
     id: "campaign-list-1",
@@ -48,6 +48,7 @@ function listCampaign() {
     draft_id: null,
     created_at: "2026-05-30T18:00:00Z",
     updated_at: "2026-05-30T18:00:00Z",
+    ...overrides,
   };
 }
 
@@ -186,6 +187,81 @@ test.describe("Campaigns history (POS-151)", () => {
     await expect(
       page.getByRole("img", { name: "Targeted area map preview" }),
     ).toBeVisible();
+  });
+
+  test("POS-154: list campaign with an audience_id downloads the real recipient CSV", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    await page.route("**/api/mail-campaigns", async (route) => {
+      return json(route, {
+        ok: true,
+        campaigns: [listCampaign({ audience_id: "audience-alpha" })],
+      });
+    });
+    await page.route("**/api/mail-campaigns/campaign-list-1", async (route) => {
+      return json(route, listCampaign({ audience_id: "audience-alpha" }));
+    });
+    await page.route("**/api/campaign-drafts", async (route) => {
+      return json(route, { ok: true, drafts: [] });
+    });
+
+    let audienceCsvRequested = false;
+    await page.route(
+      "**/api/mail-campaigns/campaign-list-1/audience-csv",
+      async (route) => {
+        audienceCsvRequested = true;
+        return route.fulfill({
+          status: 200,
+          contentType: "text/csv",
+          body: "name,address\nJane Doe,123 Main St",
+        });
+      },
+    );
+
+    await page.goto("/app/campaigns");
+    await page.getByText("Send to a List — Spring VIPs").click();
+    await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download Audience" }).click();
+    const download = await downloadPromise;
+
+    expect(audienceCsvRequested).toBe(true);
+    expect(download.suggestedFilename()).toBe(
+      "send-to-a-list-spring-vips-recipients.csv",
+    );
+  });
+
+  test("POS-154: list campaign without an audience_id falls back to the summary CSV", async ({
+    page,
+  }) => {
+    // No audience_id in the payload — matches area campaigns and
+    // pre-migration list campaigns. The audience-csv route is registered
+    // but must never be hit in this case.
+    let audienceCsvRequested = false;
+    await bootCampaignsPage(page);
+    await page.route(
+      "**/api/mail-campaigns/campaign-list-1/audience-csv",
+      async (route) => {
+        audienceCsvRequested = true;
+        return route.fulfill({ status: 404 });
+      },
+    );
+
+    await page.getByText("Send to a List — Spring VIPs").click();
+    await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download Audience" }).click();
+    const download = await downloadPromise;
+
+    expect(audienceCsvRequested).toBe(false);
+    expect(download.suggestedFilename()).toBe(
+      "send-to-a-list-spring-vips-audience.csv",
+    );
   });
 
   test("deep link to /app/campaigns/:id still resolves via the full-page detail route", async ({

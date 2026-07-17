@@ -671,10 +671,14 @@ export interface MailCampaign {
   updatedAt: string
   // POS-151: raw server targeting snapshot. Populated for area-goal
   // campaigns (shape: TargetingSelection, see areas: TargetingArea[]);
-  // null for send_to_list campaigns — the SttL wizard clears `targeting`
-  // before approval and the audience's UUID is never persisted onto the
-  // campaign server-side, so there is no audience_id to read back here.
+  // null for send_to_list campaigns.
   targetingData: Record<string, any> | null
+  // POS-154 (server PR #132): the linked Audience UUID for send_to_list
+  // campaigns, now persisted server-side and serialized back on GET. Null
+  // for area campaigns and for pre-migration list campaigns approved
+  // before #132 shipped — callers must degrade to the summary CSV in
+  // both of those cases, not just when the server 404s.
+  audienceId: string | null
 }
 
 export interface MailCampaignCard {

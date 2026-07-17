@@ -3,7 +3,9 @@
 // Design ref: PostCanary Dashboard Flow.md, Flow 3.
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import axios from "axios";
 import type { MailCampaign } from "@/types/campaign";
+import { getAudienceCsv } from "@/api/mailCampaigns";
 import {
   campaignAudienceType,
   campaignAreas,
@@ -62,15 +64,24 @@ function viewFullDetails() {
   router.push(`/app/campaigns/${id}`);
 }
 
-// No audience_id survives onto MailCampaign server-side (the send_to_list
-// wizard clears `targeting` before approval and the approve endpoint never
-// persists the source Audience UUID onto the campaign row), so the actual
-// per-recipient CSV can't be reconstructed here. This downloads the
-// campaign-level summary instead of fabricating recipient rows — see
-// campaignDisplay.ts and the POS-151 report for the server-side gap.
-function downloadAudience() {
-  const c = props.campaign;
-  if (!c) return;
+const downloadingAudience = ref(false);
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// This client-generated summary CSV is the fallback used whenever the real
+// per-recipient list can't be fetched: area campaigns (no audience at all),
+// list campaigns approved before the audience_id migration (server PR
+// #132), or the real-CSV request 404ing/erroring for any other reason.
+function downloadSummaryCsv(c: MailCampaign) {
   const rows: [string, string][] = [
     ["Campaign", c.name],
     ["Audience Type", "List"],
@@ -83,14 +94,43 @@ function downloadAudience() {
     .map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
     .join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${c.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "campaign"}-audience.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(
+    blob,
+    `${c.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "campaign"}-audience.csv`,
+  );
+}
+
+// POS-154: server PR #132 now serializes audience_id and exposes the real
+// per-recipient CSV at /api/mail-campaigns/<id>/audience-csv. When a
+// campaign has one, fetch it; otherwise (or on any failure — including the
+// server not being deployed yet) fall back to the summary CSV above rather
+// than blocking the download.
+async function downloadAudience() {
+  const c = props.campaign;
+  if (!c) return;
+
+  if (!c.audienceId) {
+    downloadSummaryCsv(c);
+    return;
+  }
+
+  downloadingAudience.value = true;
+  try {
+    const blob = await getAudienceCsv(c.id);
+    triggerBlobDownload(
+      blob,
+      `${c.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "campaign"}-recipients.csv`,
+    );
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : null;
+    console.warn(
+      `[CampaignViewModal] audience-csv fetch failed (status=${status ?? "network"}); falling back to summary CSV`,
+      err,
+    );
+    downloadSummaryCsv(c);
+  } finally {
+    downloadingAudience.value = false;
+  }
 }
 </script>
 
@@ -152,9 +192,10 @@ function downloadAudience() {
         <button
           v-if="audienceType === 'list'"
           class="primary-btn"
+          :disabled="downloadingAudience"
           @click="downloadAudience"
         >
-          Download Audience
+          {{ downloadingAudience ? "Downloading…" : "Download Audience" }}
         </button>
 
         <!-- Sent to an area: map view -->

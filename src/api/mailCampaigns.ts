@@ -24,6 +24,10 @@ interface MailCampaignResponse {
   draft_id: string | null;
   created_at: string;
   updated_at: string;
+  // POS-154 / server PR #132: present once the server's mail-campaigns
+  // serializer ships; absent on older server builds pre-deploy, so treat
+  // it as optional rather than required.
+  audience_id?: string | null;
 }
 
 interface ListResponse {
@@ -47,6 +51,7 @@ function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     targetingData: r.targeting_data ?? null,
+    audienceId: r.audience_id ?? null,
   };
 }
 
@@ -124,6 +129,17 @@ export async function purchaseCampaignRecords(
     `/api/mail-campaigns/${campaignId}/purchase-records`,
     { qty },
   );
+}
+
+// POS-154: streams the real per-recipient CSV for a send_to_list campaign
+// (server PR #132, GET /api/mail-campaigns/<id>/audience-csv). 404s when
+// the campaign has no linked audience (area campaigns, or list campaigns
+// approved before the audience_id migration) — callers must catch that
+// and fall back to the client-generated summary CSV.
+export async function getAudienceCsv(campaignId: string): Promise<Blob> {
+  return get<Blob>(`/api/mail-campaigns/${campaignId}/audience-csv`, {
+    responseType: "blob",
+  });
 }
 
 export async function pauseMailCampaign(id: string): Promise<MailCampaign> {
