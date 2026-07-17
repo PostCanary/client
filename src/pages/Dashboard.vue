@@ -1,8 +1,7 @@
 <!-- src/pages/Dashboard.vue -->
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, watch } from "vue";
+import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useMessage } from "naive-ui";
 
 import MappingRequiredModal from "@/components/dashboard/MappingRequiredModal.vue";
 import MapperModal from "@/components/dashboard/MapperModal.vue";
@@ -21,26 +20,8 @@ import SummaryTable from "@/components/dashboard/SummaryTable.vue";
 import DemoFilterBar from "@/components/demographics/DemoFilterBar.vue";
 import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue";
 
-import {
-  normalizeBatch,
-  getBatches,
-  type NormalizeBatchRes,
-  type Source,
-} from "@/api/uploads";
-import {
-  fetchHeaders as fetchMapperHeaders,
-  fetchMapping as fetchMapperMapping,
-  saveMapping as saveMapperMapping,
-  type Mapping as MapperMapping,
-  type MappingBundle,
-} from "@/api/mapper";
-
-import { useRunData, type TopAreaRanking } from "@/composables/useRunData";
-import { useLoader } from "@/stores/loader";
-import { useBilling, type PaywallConfig as BillingPaywallConfig } from "@/composables/useBilling";
-import { useRunStore } from "@/stores/useRunStore";
-import { useAuthStore } from "@/stores/auth";
-import { useCampaignStore } from "@/stores/useCampaignStore";
+import type { TopAreaRanking } from "@/composables/useRunData";
+import { useUploadAndMatch } from "@/composables/useUploadAndMatch";
 import { BRAND } from "@/config/brand";
 
 declare global {
@@ -51,204 +32,18 @@ declare global {
 
 const route = useRoute();
 const router = useRouter();
-const message = useMessage();
-const loader = useLoader();
-const runStore = useRunStore();
-const auth = useAuthStore();
-const campaignStore = useCampaignStore();
-campaignStore.hydrate();
 
-/* ------------------------------------------------------------------
- * Loader policy helpers
- * ------------------------------------------------------------------ */
-
-function loaderShowLocked(message: string, progress = 5) {
-  loader.lock();
-  loader.show({ progress, message });
-}
-
-function loaderSet(message: string, progress?: number) {
-  if (typeof progress === "number") loader.setProgress(progress);
-  loader.setMessage(message);
-}
-
-function loaderFinish(message: string) {
-  try {
-    loader.setProgress(100);
-    loader.setMessage(message);
-  } finally {
-    loader.unlock();
-    // intentionally NO hide() here
-  }
-}
-
-function loaderCloseForModal() {
-  try {
-    loader.unlock();
-  } catch {}
-  loader.hide(true);
-}
-
-/* ------------------------------------------------------------------
- * Billing (subscription-only model)
- * ------------------------------------------------------------------ */
-
-const {
-  showPaywall,
-  paywallBusy,
-  showPaymentFailed,
-  paymentFailedBusy,
-  paywallConfig,
-  isBillingOverlayActive,
-  showBillingSuccess,
-  dismissBillingSuccess,
-  onRequireSubscription,
-  onPaywallPrimary,
-  onPaywallSecondary,
-  onPaymentFixPrimary,
-  onPaymentFailedSecondary,
-  maybeStartCheckoutFromQuery,
-} = useBilling(route, router);
-
-/* ------------------------------------------------------------------
- * Mapping / mapper state
- * ------------------------------------------------------------------ */
-
-const showMapping = ref(false);
-
-/** Shape expected by MappingRequiredModal: { mail?: string[]; crm?: string[] } */
-const missing = ref<Record<string, string[]>>({});
-
-const mappingBlocked = computed(() => {
-  const m = missing.value || {};
-  return !!((m.mail && m.mail.length) || (m.crm && m.crm.length));
-});
-
-const showMapper = ref(false);
-const mailHeaders = ref<string[]>([]);
-const crmHeaders = ref<string[]>([]);
-const mailHeaderTypes = ref<
-  Record<string, "string" | "number" | "date" | "unknown">
->({});
-const crmHeaderTypes = ref<
-  Record<string, "string" | "number" | "date" | "unknown">
->({});
-const mailSamples = ref<Record<string, any>[]>([]);
-const crmSamples = ref<Record<string, any>[]>([]);
-const requiredMail = ref<string[]>([]);
-const requiredCrm = ref<string[]>([]);
-const initialMapping = ref<MapperMapping | undefined>(undefined);
-const mailFields = ref<string[]>([]);
-const crmFields = ref<string[]>([]);
-const mailLabels = ref<Record<string, string>>({});
-const crmLabels = ref<Record<string, string>>({});
-
-const mapperErrors = ref<{
-  mail: Record<string, string>;
-  crm: Record<string, string>;
-} | null>(null);
-
-const mapperSaving = ref(false);
-
-const uploadResetKey = ref(0);
-const showFirstUploadModal = ref(false);
-const isFirstUpload = ref(false);
-const firstUploadRunLoading = ref(false);
-
-const mailBatchId = ref<string | null>(null);
-const crmBatchId = ref<string | null>(null);
-const pendingNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | null } | null>(null);
-
-// Campaign prompt state — shown before normalize to nudge campaign assignment
-const showCampaignPrompt = ref(false);
-const pendingCampaignNormalize = ref<{ mailBatchId: string | null; crmBatchId: string | null } | null>(null);
-
-// Track if we're in preview mode (results blurred until payment)
-const isPreviewMode = ref(false); // Tracks if results should be blurred due to paywall
-const billingReadOnly = computed(
-  () => String(auth.billing?.subscription_status || "").toLowerCase() === "paused"
-);
-
-// Store the run_id from preview mode uploads so we can verify we show the correct run after payment
-const PREVIEW_RUN_ID_KEY = "mt_preview_run_id";
-const paywallConfigOverride = ref<BillingPaywallConfig | null>(null);
-
-const effectivePaywallConfig = computed(
-  () => paywallConfigOverride.value ?? paywallConfig.value
-);
-
-function showSubscriptionPaywall() {
-  paywallConfigOverride.value = null;
-  onRequireSubscription();
-}
-
-function handlePaywallSecondary() {
-  paywallConfigOverride.value = null;
-  onPaywallSecondary();
-}
-
-function normalizePaywallConfig(
-  config: Record<string, any> | null | undefined
-): BillingPaywallConfig | null {
-  if (!config) return null;
-
-  return {
-    title: config.title,
-    body: config.body,
-    priceSummary: config.priceSummary ?? config.price_summary,
-    primaryLabel: config.primaryLabel ?? config.primary_label,
-    secondaryLabel: config.secondaryLabel ?? config.secondary_label,
-    bullets: Array.isArray(config.bullets) ? config.bullets : [],
-    tierPicker: Boolean(config.tierPicker ?? config.tier_picker),
-    defaultPlanCode: config.defaultPlanCode ?? config.default_plan_code,
-    tierHint: config.tierHint ?? config.tier_hint,
-  };
-}
-
-function onBatchIdsUpdated(payload: {
-  mailBatchId?: string | null;
-  crmBatchId?: string | null;
-}) {
-  if ("mailBatchId" in payload) mailBatchId.value = payload.mailBatchId ?? null;
-  if ("crmBatchId" in payload) crmBatchId.value = payload.crmBatchId ?? null;
-}
-
-function onUploadMappingRequired(payload: {
-  source: Source;
-  batchId: string | null;
-  errors?: Record<string, string>;
-  missing?: Record<string, string> | string[];
-  sampleHeaders?: string[];
-  sampleRows?: Record<string, any>[];
-}) {
-  const { source, batchId } = payload;
-
-  if (source === "mail" && batchId) mailBatchId.value = batchId;
-  if (source === "crm" && batchId) crmBatchId.value = batchId;
-
-  const rawMissing = payload.missing || payload.errors || {};
-  missing.value =
-    source === "mail"
-      ? { mail: labelsFromMissing(rawMissing) }
-      : { crm: labelsFromMissing(rawMissing) };
-
-  loaderCloseForModal();
-  showMapping.value = true;
-}
-
-/* ------------------------------------------------------------------
- * Run data + polling
- * ------------------------------------------------------------------ */
-
+// POS-155: Dashboard.vue now consumes the shared upload → mapping →
+// normalize → match-run wiring extracted to useUploadAndMatch (POS-152,
+// originally built for Analytics.vue). refreshingLoaderMessage preserves
+// Dashboard's pre-extraction wording — the one genuine copy divergence
+// found between the two inline copies; see useUploadAndMatch.ts.
 const {
   runResult,
   runResultLoading,
   matchesLoading,
-  error: runDataError,
-
-  refreshOnce: refreshRunData,
-  pollUntilTerminal,
-  setActiveRunId,
+  runDataError,
+  refreshRunData,
   setDateRange,
 
   graphLabels,
@@ -264,7 +59,63 @@ const {
   topZipRowsByMatches,
   topZipRowsByRate,
   summaryRows,
-} = useRunData();
+
+  showMapping,
+  missing,
+  mappingBlocked,
+  showMapper,
+  mailHeaders,
+  crmHeaders,
+  mailHeaderTypes,
+  crmHeaderTypes,
+  mailSamples,
+  crmSamples,
+  requiredMail,
+  requiredCrm,
+  initialMapping,
+  mailFields,
+  crmFields,
+  mailLabels,
+  crmLabels,
+  mapperErrors,
+  mapperSaving,
+  uploadResetKey,
+  showFirstUploadModal,
+  firstUploadRunLoading,
+  showCampaignPrompt,
+  pendingNormalize,
+  billingReadOnly,
+
+  onBatchIdsUpdated,
+  onUploadMappingRequired,
+  onUploadCommit,
+  openMapper,
+  onMappingConfirm,
+  onCampaignPromptConfirm,
+  onCampaignPromptSkip,
+  handleFirstUploadRunMatching,
+
+  showPaywall,
+  paywallBusy,
+  showPaymentFailed,
+  paymentFailedBusy,
+  effectivePaywallConfig,
+  shouldBlur,
+  showPreviewUpgradeBanner,
+  showBillingSuccess,
+  dismissBillingSuccess,
+  onRequireSubscription,
+  onPaywallPrimary,
+  handlePaywallSecondary,
+  onPaymentFixPrimary,
+  onPaymentFailedSecondary,
+} = useUploadAndMatch(route, router, {
+  refreshingLoaderMessage: "Refreshing dashboard…",
+});
+
+/* ------------------------------------------------------------------
+ * Dashboard-only: date filter + top-area ranking toggle
+ * ------------------------------------------------------------------ */
 
 const dashboardStart = ref<string | undefined>(undefined);
 const dashboardEnd = ref<string | undefined>(undefined);
@@ -277,797 +128,12 @@ const topZipRows = computed(() =>
   topAreaRanking.value === "match_rate" ? topZipRowsByRate.value : topZipRowsByMatches.value,
 );
 
-/* ------------------------------------------------------------------
- * Helpers (missing labels + normalize response guards)
- * ------------------------------------------------------------------ */
-
-function labelsFromMissing(rawMissing: any): string[] {
-  if (Array.isArray(rawMissing)) return rawMissing;
-
-  if (rawMissing && typeof rawMissing === "object") {
-    const values = Object.values(rawMissing);
-    const first = values[0];
-    if (typeof first === "string") return values as string[];
-    return Object.keys(rawMissing);
-  }
-
-  return [];
-}
-
-function normalizeReason(data: any): string {
-  return data?.reason ?? data?.code ?? data?.error ?? data?.error_code ?? "";
-}
-
-function isNormalizeAccepted(r: NormalizeBatchRes): boolean {
-  return r.status === 202 && (r.data as any)?.ok === true;
-}
-
-function isNormalizeMappingRequired(r: NormalizeBatchRes): boolean {
-  const d: any = r.data || {};
-  return (
-    r.status === 409 &&
-    (d.error === "mapping_required" || d.code === "mapping_required")
-  );
-}
-
-function isNormalizeGateDenied(r: NormalizeBatchRes): boolean {
-  if (!(r.status === 402 || r.status === 400)) return false;
-  const d: any = r.data || {};
-  const reason = normalizeReason(d);
-  return (
-    reason === "usage_limit_exceeded" ||
-    reason === "subscription_required" ||
-    reason === "upgrade_required" ||
-    reason === "paused_subscription"
-  );
-}
-
-function openNormalizeGatePaywall(data: Record<string, any>) {
-  paywallConfigOverride.value = normalizePaywallConfig(data?.paywall_config);
-
-  const reason = normalizeReason(data);
-  if (reason === "usage_limit_exceeded") {
-    message.warning(
-      data?.message ||
-        "This upload would put you over your plan's mail limit. Upgrade to normalize and match these files."
-    );
-  } else if (reason === "paused_subscription") {
-    message.warning(
-      data?.message ||
-        "Uploads are paused until you resume a paid plan."
-    );
-  }
-
-  onRequireSubscription();
-}
-
-/* ------------------------------------------------------------------
- * Mapping / mapper flows
- * ------------------------------------------------------------------ */
-
-async function openMapper() {
-  try {
-    if (!mailBatchId.value && !crmBatchId.value) {
-      console.warn("[Dashboard] No batch IDs available for mapper", {
-        mailBatchId: mailBatchId.value,
-        crmBatchId: crmBatchId.value,
-      });
-      return;
-    }
-
-    mapperErrors.value = null;
-
-    loaderShowLocked("Loading your mapping…", 8);
-    await nextTick();
-
-    const params = {
-      mailBatchId: mailBatchId.value || undefined,
-      crmBatchId: crmBatchId.value || undefined,
-    } as const;
-
-    const [headersRes, mappingBundle] = await Promise.all([
-      fetchMapperHeaders(params),
-      fetchMapperMapping(params),
-    ]);
-
-    mailHeaders.value = headersRes.mailHeaders || [];
-    crmHeaders.value = headersRes.crmHeaders || [];
-    mailHeaderTypes.value = headersRes.mailHeaderTypes || {};
-    crmHeaderTypes.value = headersRes.crmHeaderTypes || {};
-    mailSamples.value = headersRes.mailSamples || [];
-    crmSamples.value = headersRes.crmSamples || [];
-
-    const mb: MappingBundle = mappingBundle;
-
-    initialMapping.value = { mail: mb.mail.mapping, crm: mb.crm.mapping };
-    requiredMail.value = mb.mail.required || [];
-    requiredCrm.value = mb.crm.required || [];
-    mailFields.value = mb.mail.fields || [];
-    crmFields.value = mb.crm.fields || [];
-    mailLabels.value = mb.mail.labels ?? {};
-    crmLabels.value = mb.crm.labels ?? {};
-
-    loaderCloseForModal();
-    showMapping.value = false;
-    showMapper.value = true;
-  } catch (err) {
-    console.error("[Dashboard] Failed to open mapper", err);
-    loaderFinish("Could not load mapping (close this and try again).");
-  }
-}
-
-async function onMappingConfirm(mapping: MapperMapping) {
-  mapperErrors.value = null;
-  mapperSaving.value = true;
-
-  try {
-    if (!mailBatchId.value && !crmBatchId.value) {
-      console.warn("[Dashboard] No batch IDs available for onMappingConfirm");
-      return;
-    }
-
-    await saveMapperMapping({
-      mailBatchId: mailBatchId.value || undefined,
-      crmBatchId: crmBatchId.value || undefined,
-      mapping,
-    });
-
-    showMapper.value = false;
-    mapperErrors.value = null;
-    missing.value = {};
-
-    // If we opened the mapper for auto-mapping review, continue to campaign prompt → normalize
-    if (pendingNormalize.value) {
-      const pending = pendingNormalize.value;
-      pendingNormalize.value = null;
-      showCampaignPromptBeforeNormalize(pending);
-    }
-  } catch (err: any) {
-    const status = err?.status ?? err?.response?.status;
-    const data = err?.data ?? err?.response?.data ?? {};
-    const errorObj = data?.error ?? data;
-
-    if (
-      (status === 409 || status === 422) &&
-      (errorObj?.type === "MappingValidationError" ||
-        errorObj?.code === "mapping_required" ||
-        data?.code === "mapping_required")
-    ) {
-      const fields =
-        errorObj.fields || errorObj.details?.fields || data?.fields || {};
-      const mailFieldErrors: Record<string, string> = {};
-      const crmFieldErrors: Record<string, string> = {};
-
-      if (fields.mail) {
-        for (const [canonField, meta] of Object.entries<any>(fields.mail)) {
-          mailFieldErrors[canonField] =
-            meta?.message || "Please adjust this field’s mapping.";
-        }
-      }
-
-      if (fields.crm) {
-        for (const [canonField, meta] of Object.entries<any>(fields.crm)) {
-          crmFieldErrors[canonField] =
-            meta?.message || "Please adjust this field’s mapping.";
-        }
-      }
-
-      mapperErrors.value = { mail: mailFieldErrors, crm: crmFieldErrors };
-      console.warn("[Dashboard] Mapping validation failed", mapperErrors.value);
-      return;
-    }
-
-    console.error("[Dashboard] Saving mapping failed", err);
-  } finally {
-    mapperSaving.value = false;
-  }
-}
-
-function autoMappingNeedsReview(
-  side: MappingBundle["mail"] | MappingBundle["crm"] | null | undefined,
-  batchId: string | null
-): boolean {
-  if (!batchId || !side?.from_auto) return false;
-  return Array.isArray(side.missing) && side.missing.length > 0;
-}
-
-/* ------------------------------------------------------------------
- * Upload commit → normalize + poll run + auto-populate results
- * ------------------------------------------------------------------ */
-
-const foregroundBusy = ref(false);
-
-/**
- * Called when UploadCard's "Upload" button is clicked.
- * If auto-mapping was used, shows MapperModal for review first.
- * Otherwise proceeds directly to normalize + matching.
- */
-async function onUploadCommit(payload: {
-  mailBatchId: string | null;
-  crmBatchId: string | null;
-}) {
-  const { mailBatchId: mailId, crmBatchId: crmId } = payload;
-
-  if (!mailId && !crmId) {
-    console.info("[Dashboard] Upload commit skipped: no batch IDs");
-    return;
-  }
-
-  // Check if any side has an auto-generated mapping that needs review
-  try {
-    const mappingBundle = await fetchMapperMapping({
-      mailBatchId: mailId || undefined,
-      crmBatchId: crmId || undefined,
-    });
-
-    const hasAutoMappingReview =
-      autoMappingNeedsReview(mappingBundle.mail, mailId) ||
-      autoMappingNeedsReview(mappingBundle.crm, crmId);
-
-    if (hasAutoMappingReview) {
-      pendingNormalize.value = { mailBatchId: mailId, crmBatchId: crmId };
-      await openMapper();
-      return; // normalize will be triggered by onMappingConfirm
-    }
-  } catch (err) {
-    console.warn("[Dashboard] Failed to check mapping, proceeding to normalize", err);
-  }
-
-  showCampaignPromptBeforeNormalize(payload);
-}
-
-/* ------------------------------------------------------------------
- * Campaign prompt — shown before normalize to nudge campaign assignment
- * ------------------------------------------------------------------ */
-
-function showCampaignPromptBeforeNormalize(payload: {
-  mailBatchId: string | null;
-  crmBatchId: string | null;
-}) {
-  pendingCampaignNormalize.value = payload;
-  showCampaignPrompt.value = true;
-}
-
-function onCampaignPromptConfirm(_campaignId: string | null) {
-  showCampaignPrompt.value = false;
-  const pending = pendingCampaignNormalize.value;
-  pendingCampaignNormalize.value = null;
-  if (pending) onUploadCommitNormalize(pending);
-}
-
-function onCampaignPromptSkip() {
-  showCampaignPrompt.value = false;
-  const pending = pendingCampaignNormalize.value;
-  pendingCampaignNormalize.value = null;
-  if (pending) onUploadCommitNormalize(pending);
-}
-
-/**
- * Normalize batches + kick off matching.
- * Called after campaign prompt (confirm or skip).
- */
-async function assignMailBatchToActiveCampaign(mailBatchId: string | null) {
-  const campaignId = campaignStore.activeCampaignId;
-  if (!mailBatchId || !campaignId) return;
-
-  try {
-    await campaignStore.assignBatches(campaignId, [mailBatchId]);
-    console.info(
-      "[Dashboard] Mail batch %s assigned to campaign %s",
-      mailBatchId,
-      campaignId,
-    );
-  } catch (err) {
-    console.warn("[Dashboard] Failed to assign batch to campaign", err);
-  }
-}
-
-async function onUploadCommitNormalize(payload: {
-  mailBatchId: string | null;
-  crmBatchId: string | null;
-}) {
-  const { mailBatchId: mailId, crmBatchId: crmId } = payload;
-
-  const batchIds: string[] = [];
-  if (mailId) batchIds.push(mailId);
-  if (crmId) batchIds.push(crmId);
-
-  if (!batchIds.length) {
-    console.info("[Dashboard] Upload commit skipped: no batch IDs");
-    return;
-  }
-
-  await assignMailBatchToActiveCampaign(mailId);
-
-  foregroundBusy.value = true;
-
-  // Check if this is the first upload
-  try {
-    const existingBatches = await getBatches();
-    isFirstUpload.value = existingBatches.length === 0;
-  } catch (err) {
-    console.warn("[Dashboard] Failed to check existing batches:", err);
-    isFirstUpload.value = false;
-  }
-
-  loaderShowLocked("Normalizing your data…", 5);
-  await nextTick();
-
-  try {
-    let startedRunId: string | null = null;
-    const processedBatchIds: string[] = [];
-
-    for (const [i, id] of batchIds.entries()) {
-      loaderSet(`Normalizing ${i + 1}/${batchIds.length}…`, 5 + i * 5);
-
-      const res = await normalizeBatch(id);
-      const data: any = res.data || {};
-
-      // ✅ Mapping required surfaced from /normalize (409)
-      if (isNormalizeMappingRequired(res)) {
-        const src = (data.source as Source | undefined) ?? undefined;
-        const labelList = labelsFromMissing(
-          data.missing || data.field_errors || {}
-        );
-
-        if (src === "mail") missing.value = { mail: labelList };
-        else if (src === "crm") missing.value = { crm: labelList };
-
-        loaderCloseForModal();
-        showMapping.value = true;
-        return;
-      }
-
-      // ✅ Check for preview mode (subscription required but allowed to proceed)
-      // Backend sets preview_mode=true when subscription_required but allows processing
-      const batchPreviewMode = data.preview_mode === true || 
-        (res.status === 202 && data.reason === "subscription_required");
-      
-      console.log("[Dashboard] Normalize response:", {
-        batchId: id,
-        status: res.status,
-        previewMode: data.preview_mode,
-        reason: data.reason,
-        runId: data.run_id,
-        batchPreviewMode,
-      });
-      
-      // ✅ Tier gate (402/400) — only block for usage_limit_exceeded
-      // subscription_required now allows preview mode, so we handle it differently
-      if (isNormalizeGateDenied(res) && !batchPreviewMode) {
-        console.log("[Dashboard] Blocked normalization, showing paywall", {
-          batchId: id,
-          reason: data.reason,
-          status: res.status,
-        });
-        loaderCloseForModal();
-        openNormalizeGatePaywall(data);
-        return;
-      }
-
-      // ✅ Preview mode or accepted (202) -> capture run id and show paywall if needed
-      if (!startedRunId && (isNormalizeAccepted(res) || batchPreviewMode) && data.run_id) {
-        startedRunId = String(data.run_id);
-        console.log("[Dashboard] Captured run_id:", startedRunId, batchPreviewMode ? "(PREVIEW MODE)" : "");
-        
-        // Store run_id in localStorage for preview mode so we can verify after payment
-        if (batchPreviewMode) {
-          localStorage.setItem(PREVIEW_RUN_ID_KEY, startedRunId);
-          console.log("[Dashboard] Stored preview run_id in localStorage:", startedRunId);
-        }
-      }
-      
-      // If preview mode, show paywall but continue processing
-      if (batchPreviewMode) {
-        console.log("[Dashboard] ⚠️ PREVIEW MODE DETECTED - Enabling blur, showing paywall");
-        // Set preview mode flag to keep results blurred
-        isPreviewMode.value = true;
-        console.log("[Dashboard] isPreviewMode set to:", isPreviewMode.value);
-        // Close loader so paywall modal appears on top
-        loaderCloseForModal();
-        // Show paywall modal but don't stop processing
-        // Results will be blurred until payment
-        // IMPORTANT: Processing continues in background - run will complete and results will be ready when user returns
-        showSubscriptionPaywall();
-        console.log("[Dashboard] Paywall modal triggered, loader closed. Processing continues in background...");
-      }
-      
-      processedBatchIds.push(id);
-    }
-
-    // Poll if a run was started (backend handles single-file scenarios)
-    const shouldPoll = !!startedRunId;
-
-    if (startedRunId) setActiveRunId(startedRunId);
-
-    // Show first upload modal only if this is the first upload AND both files are uploaded
-    // (Single-file uploads don't need the modal since matching can proceed immediately)
-    if (isFirstUpload.value && batchIds.length >= 2) {
-      loaderCloseForModal();
-      showFirstUploadModal.value = true;
-      return; // Don't auto-start polling, wait for user to click "Run Matching"
-    }
-
-    if (shouldPoll && startedRunId) {
-      loaderSet("Running matches & geocoding…", 20);
-
-      const finalStatus = await pollUntilTerminal({
-        runId: startedRunId,
-        showLoader: true,
-        initialMessage: "Running matches & geocoding…",
-        intervalMs: 1000,
-        maxTicks: 240,
-      });
-
-      if (!finalStatus) {
-        loaderFinish(
-          "Run finished, but status is unavailable — close this and refresh."
-        );
-      } else {
-        // Refresh dashboard to show results (blurred if preview mode)
-        await refreshRunData();
-        loaderFinish("Processing complete — results are ready!");
-        // Ensure loader stays open for auto-close
-        loader.show({ progress: 100, message: "Processing complete — results are ready!" });
-        // Auto-close the loader after 5 seconds when results are populated
-        setTimeout(() => {
-          loader.hide(true);
-        }, 5000);
-      }
-    } else {
-      loaderSet("Refreshing dashboard…", 25);
-      await refreshRunData();
-      loaderFinish("Upload complete — close this when you're ready.");
-      // Ensure loader stays open for auto-close
-      loader.show({ progress: 100, message: "Upload complete — close this when you're ready." });
-      // Auto-close the loader after 5 seconds when results are populated
-      setTimeout(() => {
-        loader.hide(true);
-      }, 5000);
-    }
-
-    uploadResetKey.value++;
-  } catch (err: any) {
-    // ✅ Keep your old block — but it now only applies to NON-normalize failures
-    // (polling failures, mapper, unexpected errors, etc.)
-    const status = err?.status ?? err?.response?.status;
-    const data = err?.data ?? err?.response?.data ?? {};
-
-    const code =
-      data?.code ??
-      data?.error ??
-      data?.error_code ??
-      data?.reason ??
-      (data?.type === "MappingValidationError" ? "mapping_required" : "");
-
-    if ((status === 409 || status === 422) && code === "mapping_required") {
-      const src = data?.source as Source | undefined;
-      const labelList = labelsFromMissing(
-        data?.missing || data?.field_errors || data?.fields || {}
-      );
-
-      if (src === "mail") missing.value = { mail: labelList };
-      else if (src === "crm") missing.value = { crm: labelList };
-
-      loaderCloseForModal();
-      showMapping.value = true;
-      return;
-    }
-
-    if (
-      (status === 402 || status === 400) &&
-      (
-        code === "usage_limit_exceeded" ||
-        code === "subscription_required" ||
-        code === "upgrade_required" ||
-        code === "paused_subscription"
-      )
-    ) {
-      loaderCloseForModal();
-      openNormalizeGatePaywall(data);
-      return;
-    }
-
-    console.error("[Dashboard] Upload commit failed", err);
-    loaderFinish("Upload failed — close this and try again.");
-  } finally {
-    foregroundBusy.value = false;
-  }
-}
-
-/* ------------------------------------------------------------------
- * Initialisation
- * ------------------------------------------------------------------ */
-
-function onRunCompleted() {
-  if (foregroundBusy.value) return;
-  void refreshRunData();
-}
-
-async function handleFirstUploadRunMatching() {
-  firstUploadRunLoading.value = true;
-  showFirstUploadModal.value = false;
-
-  try {
-    loaderShowLocked("Starting matching run…", 10);
-    await nextTick();
-
-    await refreshRunData();
-
-    const runId = runStore.status?.run_id;
-
-    if (runId) {
-      setActiveRunId(String(runId));
-      loaderSet("Running matches & geocoding…", 20);
-
-      const finalStatus = await pollUntilTerminal({
-        runId: String(runId),
-        showLoader: true,
-        initialMessage: "Running matches & geocoding…",
-        intervalMs: 1000,
-        maxTicks: 240,
-      });
-
-      if (!finalStatus) {
-        loaderFinish(
-          "Run finished, but status is unavailable — close this and refresh."
-        );
-      } else {
-        await refreshRunData();
-        loaderFinish("Matching complete!");
-        // Ensure loader stays open for auto-close
-        loader.show({ progress: 100, message: "Matching complete!" });
-        // Auto-close the loader after 5 seconds when results are populated
-        setTimeout(() => {
-          loader.hide(true);
-        }, 5000);
-      }
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await refreshRunData();
-      loaderFinish("Matching run started. Results will appear shortly.");
-      // Ensure loader stays open for auto-close
-      loader.show({ progress: 100, message: "Matching run started. Results will appear shortly." });
-      // Auto-close the loader after 5 seconds when results are populated
-      setTimeout(() => {
-        loader.hide(true);
-      }, 5000);
-    }
-  } catch (err: any) {
-    console.error("[Dashboard] Failed to start matching run:", err);
-    loaderFinish("Failed to start matching run. Please try again.");
-  } finally {
-    firstUploadRunLoading.value = false;
-  }
-}
-
-// Note: retryPendingBatches removed - no longer needed since preview mode
-// processes files immediately and shows blurred results
-
-// Watch for payment success and unblur results
-watch(
-  () => showBillingSuccess.value,
-  async (isSuccess) => {
-    console.log("[Dashboard] Payment success watch triggered:", isSuccess);
-    if (isSuccess) {
-      console.log("[Dashboard] ✅ Payment successful - Disabling preview mode, unblurring results");
-      // Clear preview mode - results are now unblurred
-      isPreviewMode.value = false;
-      console.log("[Dashboard] isPreviewMode set to:", isPreviewMode.value);
-      // Wait a bit for auth state to update
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // Refresh dashboard to show unblurred results
-      console.log("[Dashboard] Refreshing run data after payment...");
-      await refreshRunData();
-      console.log("[Dashboard] Run data refreshed");
-      // Close paywall if still open
-      if (showPaywall.value) {
-        console.log("[Dashboard] Closing paywall modal");
-        paywallConfigOverride.value = null;
-        showPaywall.value = false;
-      }
-      console.log("[Dashboard] ✅ Results should now be unblurred");
-    }
-  },
-  { immediate: false }
-);
-
-watch(
-  () => showPaywall.value,
-  (open) => {
-    if (!open) {
-      paywallConfigOverride.value = null;
-    }
-  }
-);
-
-// Watch runResult for preview_mode flag from backend
-// This ensures we respect the backend's payment check even after logout/login
-// The backend sets preview_mode=true when run requires payment but user is not subscribed
-watch(
-  () => runResult.value,
-  (result) => {
-    if (result) {
-      const previewMode = result.preview_mode === true;
-      if (previewMode !== isPreviewMode.value) {
-        console.log("[Dashboard] 🔄 Backend preview_mode flag changed:", {
-          from: isPreviewMode.value,
-          to: previewMode,
-          run_id: result.run_id,
-        });
-        isPreviewMode.value = previewMode;
-        
-        // If backend says preview mode is required, show paywall
-        if (previewMode && !showPaywall.value) {
-          console.log("[Dashboard] ⚠️ Backend requires payment - showing paywall");
-          showSubscriptionPaywall();
-        }
-      }
-    }
-  },
-  { immediate: true, deep: true }
-);
-
-// Watch preview mode state changes
-watch(
-  () => isPreviewMode.value,
-  (newVal, oldVal) => {
-    console.log("[Dashboard] 🔄 isPreviewMode changed:", { from: oldVal, to: newVal });
-  }
-);
-
-// Watch blur class application
-const dashMainInner = computed(() => {
-  const shouldBlur = isBillingOverlayActive.value || (isPreviewMode.value && !showBillingSuccess.value);
-  return shouldBlur;
-});
-
-const showPreviewUpgradeBanner = computed(() => {
-  return isPreviewMode.value && !showBillingSuccess.value;
-});
-
-// Watch blur state changes (separate watcher to avoid logging on every computed access)
-let lastBlurState: boolean | null = null;
-watch(
-  () => dashMainInner.value,
-  (shouldBlur) => {
-    if (lastBlurState !== shouldBlur) {
-      console.log("[Dashboard] 🎨 Blur state changed:", {
-        from: lastBlurState,
-        to: shouldBlur,
-        isBillingOverlayActive: isBillingOverlayActive.value,
-        isPreviewMode: isPreviewMode.value,
-        showBillingSuccess: showBillingSuccess.value,
-      });
-      lastBlurState = shouldBlur;
-    }
-  },
-  { immediate: true }
-);
-
-onMounted(() => {
-  const init = async () => {
-    console.log("[Dashboard] Component mounted");
-    await maybeStartCheckoutFromQuery();
-    setDateRange({ start: dashboardStart.value, end: dashboardEnd.value });
-    
-    // Refresh auth state first to get current subscription status
-    await auth.fetchMe();
-    
-    // Then refresh run data - the backend will check payment status and return preview_mode flag
-    await refreshRunData();
-    
-    // Check if backend returned preview_mode flag and set it accordingly
-    // This handles the case where user logs out/in - backend will check payment status
-    const result = runResult.value;
-    if (result) {
-      const backendPreviewMode = result.preview_mode === true;
-      if (backendPreviewMode) {
-        console.log("[Dashboard] ⚠️ Backend indicates preview mode required - enabling blur");
-        isPreviewMode.value = true;
-        // Show paywall if not already shown
-        if (!showPaywall.value) {
-          showSubscriptionPaywall();
-        }
-      } else {
-        console.log("[Dashboard] ✅ Backend indicates no preview mode required");
-        isPreviewMode.value = false;
-      }
-    }
-    
-    // If we have billing=success in query, unblur results and refresh
-    if (route.query.billing === "success") {
-      console.log("[Dashboard] 🎉 Detected billing=success in query - Unblurring results");
-      isPreviewMode.value = false;
-      console.log("[Dashboard] isPreviewMode set to:", isPreviewMode.value);
-      
-      // Check if we have a specific run_id from the redirect URL or localStorage
-      const redirectRunId = route.query.run ? String(route.query.run) : null;
-      const storedPreviewRunId = localStorage.getItem(PREVIEW_RUN_ID_KEY);
-      
-      // Use redirect run_id if available, otherwise use stored preview run_id
-      const expectedRunId = redirectRunId || storedPreviewRunId;
-      
-      if (expectedRunId) {
-        console.log("[Dashboard] Found run_id to verify:", {
-          fromRedirect: redirectRunId,
-          fromStorage: storedPreviewRunId,
-          using: expectedRunId,
-        });
-        setActiveRunId(expectedRunId);
-      } else {
-        console.log("[Dashboard] No run_id found in redirect URL or storage, will use latest run");
-      }
-      
-      // Explicitly refresh auth state to get updated subscription status
-      console.log("[Dashboard] Refreshing auth state to get updated subscription status...");
-      await auth.fetchMe();
-      console.log("[Dashboard] Auth state refreshed. is_subscribed:", auth.isSubscribed);
-      
-      // Wait a bit more for any webhook processing
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      // Refresh to show unblurred results (will use latest run, which should be the one from upload)
-      console.log("[Dashboard] Refreshing run data after payment redirect...");
-      console.log("[Dashboard] Goal: Show results from files uploaded BEFORE payment");
-      await refreshRunData();
-      
-      // Verify we're showing the correct run (the one from the upload before payment)
-      const currentRunId = runStore.status?.run_id;
-      console.log("[Dashboard] Current run_id after refresh:", currentRunId);
-      
-      if (expectedRunId && currentRunId) {
-        if (String(currentRunId) === expectedRunId) {
-          console.log("[Dashboard] ✅ SUCCESS: Showing the correct run from pre-payment upload!");
-        } else {
-          console.warn("[Dashboard] ⚠️ Warning: Expected run_id doesn't match current run_id.");
-          console.warn("[Dashboard] Expected (from upload):", expectedRunId);
-          console.warn("[Dashboard] Got (latest run):", currentRunId);
-          console.log("[Dashboard] This is OK if the expected run completed and a newer run exists");
-        }
-      }
-      
-      // Clear stored preview run_id since payment is complete
-      if (storedPreviewRunId) {
-        localStorage.removeItem(PREVIEW_RUN_ID_KEY);
-        console.log("[Dashboard] Cleared stored preview run_id from localStorage");
-      }
-      
-      console.log("[Dashboard] Run data refreshed");
-      
-      // Close paywall if still open
-      if (showPaywall.value) {
-        console.log("[Dashboard] Closing paywall modal");
-        paywallConfigOverride.value = null;
-        showPaywall.value = false;
-      }
-      console.log("[Dashboard] ✅ Setup complete - Results from pre-payment upload should now be visible and unblurred");
-    } else {
-      console.log("[Dashboard] No billing=success in query, normal initialization");
-    }
-  };
-
-  window.addEventListener("mt:run-completed", onRunCompleted);
-  void init();
-});
-
 async function onDashboardDateRangeApply(payload: { start?: string; end?: string }) {
   dashboardStart.value = payload.start;
   dashboardEnd.value = payload.end;
   setDateRange(payload);
   await refreshRunData();
 }
-
-function onCampaignChanged() {
-  void refreshRunData();
-}
-
-window.addEventListener("mt:campaign-changed", onCampaignChanged);
-
-onBeforeUnmount(() => {
-  window.removeEventListener("mt:run-completed", onRunCompleted);
-  window.removeEventListener("mt:campaign-changed", onCampaignChanged);
-});
 </script>
 
 <template>
@@ -1078,7 +144,7 @@ onBeforeUnmount(() => {
 
   <div
     class="dash-main-inner"
-    :class="{ 'dash-main-inner--blurred': dashMainInner }"
+    :class="{ 'dash-main-inner--blurred': shouldBlur }"
   >
     <div
       v-if="showBillingSuccess"

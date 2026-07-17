@@ -27,10 +27,24 @@ import type { RouteLocationNormalizedLoaded, Router } from "vue-router";
 
 const PREVIEW_RUN_ID_KEY = "mt_preview_run_id";
 
+export interface UseUploadAndMatchOptions {
+  /**
+   * POS-155: Dashboard.vue and Analytics.vue show different copy for the
+   * loader message when an upload completes without starting a match run
+   * (e.g. a second file added to an existing campaign). Defaults to
+   * Analytics' original wording so existing callers are unaffected;
+   * Dashboard.vue overrides with its pre-POS-152 wording.
+   */
+  refreshingLoaderMessage?: string;
+}
+
 export function useUploadAndMatch(
   route: RouteLocationNormalizedLoaded,
   router: Router,
+  options: UseUploadAndMatchOptions = {},
 ) {
+  const refreshingLoaderMessage =
+    options.refreshingLoaderMessage ?? "Refreshing results…";
   const message = useMessage();
   const loader = useLoader();
   const runStore = useRunStore();
@@ -188,10 +202,25 @@ export function useUploadAndMatch(
   const {
     runResult,
     runResultLoading,
+    matchesLoading,
     error: runDataError,
     refreshOnce: refreshRunData,
     pollUntilTerminal,
     setActiveRunId,
+    setDateRange,
+    graphLabels,
+    graphMailNow,
+    graphCrmNow,
+    graphMatchNow,
+    mailPrev,
+    crmPrev,
+    matchPrev,
+    graphRawMonths,
+    topCityRowsByMatches,
+    topCityRowsByRate,
+    topZipRowsByMatches,
+    topZipRowsByRate,
+    summaryRows,
   } = useRunData();
 
   /** True when a completed match run with KPI payload is available. */
@@ -617,7 +646,7 @@ export function useUploadAndMatch(
           }, 5000);
         }
       } else {
-        loaderSet("Refreshing results…", 25);
+        loaderSet(refreshingLoaderMessage, 25);
         await refreshRunData();
         loaderFinish("Upload complete — close this when you're ready.");
         loader.show({
@@ -855,10 +884,27 @@ export function useUploadAndMatch(
     // Run data
     runResult,
     runResultLoading,
+    matchesLoading,
     runDataError,
     hasMatchData,
     refreshRunData,
     initialLoadDone,
+    setDateRange,
+
+    // Run data — view-model (POS-155: Dashboard's graph/top-area/summary rendering)
+    graphLabels,
+    graphMailNow,
+    graphCrmNow,
+    graphMatchNow,
+    mailPrev,
+    crmPrev,
+    matchPrev,
+    graphRawMonths,
+    topCityRowsByMatches,
+    topCityRowsByRate,
+    topZipRowsByMatches,
+    topZipRowsByRate,
+    summaryRows,
 
     // Upload / mapping state
     showMapping,
