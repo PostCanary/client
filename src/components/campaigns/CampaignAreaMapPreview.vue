@@ -55,12 +55,23 @@ function renderAreas(areas: TargetingArea[]) {
         (p): p is [number, number] => p.length >= 2,
       )
       if (pts.length < 2) continue
-      const shape = L.polygon(pts, {
-        color: TEAL,
-        fillColor: TEAL,
-        fillOpacity: 0.2,
-        weight: 2,
-      })
+      // Rectangles are serialized as exactly two diagonal corners
+      // (useTargetingMap) — L.polygon would draw them as a line segment.
+      const [cornerA, cornerB] = pts
+      const shape =
+        area.type === 'rectangle' && pts.length === 2 && cornerA && cornerB
+          ? L.rectangle(L.latLngBounds(cornerA, cornerB), {
+              color: TEAL,
+              fillColor: TEAL,
+              fillOpacity: 0.2,
+              weight: 2,
+            })
+          : L.polygon(pts, {
+              color: TEAL,
+              fillColor: TEAL,
+              fillOpacity: 0.2,
+              weight: 2,
+            })
       shapeLayer.addLayer(shape)
       boundsPts.push(...pts)
     }

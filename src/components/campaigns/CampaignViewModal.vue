@@ -3,7 +3,6 @@
 // Design ref: PostCanary Dashboard Flow.md, Flow 3.
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
 import type { MailCampaign } from "@/types/campaign";
 import { getAudienceCsv } from "@/api/mailCampaigns";
 import {
@@ -122,7 +121,9 @@ async function downloadAudience() {
       `${c.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "campaign"}-recipients.csv`,
     );
   } catch (err) {
-    const status = axios.isAxiosError(err) ? err.response?.status : null;
+    // The shared http client rejects with a normalized Error carrying
+    // .status — never an AxiosError (src/api/http.ts interceptor).
+    const status = (err as { status?: number })?.status ?? null;
     console.warn(
       `[CampaignViewModal] audience-csv fetch failed (status=${status ?? "network"}); falling back to summary CSV`,
       err,

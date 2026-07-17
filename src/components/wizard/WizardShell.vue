@@ -68,16 +68,20 @@ const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
 
 // POS-147/148 (Flow v2): step 3 is now Upload Your Design — advance once
 // the customer has either uploaded artwork or requested a paid design.
-// Pre-Flow-v2 drafts resumed mid-flight (created before this change, no
-// designSource set) fall back to the old "auto-generated cards exist"
-// check so they aren't stranded. Every other step still gates on its real
-// completion flag.
+// The legacy "cards exist" fallback applies ONLY to drafts that already
+// completed step 3 in the pre-Flow-v2 studio: background generation
+// populates sequenceCards on every new draft, so cards alone must not
+// open the gate (cross-phase review finding). Every other step still
+// gates on its real completion flag.
 const canAdvance = computed(() => {
   if (step.value === 3) {
     const design = draftStore.draft?.design;
     const source = design?.designSource;
     if (source === "uploaded" || source === "requested") return true;
-    return (design?.sequenceCards?.length ?? 0) > 0;
+    return (
+      completedSteps.value.includes(3) &&
+      (design?.sequenceCards?.length ?? 0) > 0
+    );
   }
   return draftStore.isStepComplete(step.value as WizardStep);
 });

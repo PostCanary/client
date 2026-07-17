@@ -296,6 +296,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         uploadedAsset: asset,
         designRequest: null,
       };
+      // Count as a design edit so an in-flight generateCardsForDraft's
+      // mid-generation guard sees it (cross-phase review finding: without
+      // this, a late generation result clobbered the upload).
+      _designRevision++;
       this.draft.designUserEdited = true;
       this._markComplete(3);
       this._clearReview(3);
@@ -322,6 +326,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         designRequest: brief,
         uploadedAsset: null,
       };
+      _designRevision++;
       this.draft.designUserEdited = true;
       this._markComplete(3);
       this._clearReview(3);
@@ -458,6 +463,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async generateCardsForDraft() {
       if (!this.draft || _generatingCards) return;
+      // Flow v2: an explicit customer choice (own artwork / $199 request)
+      // must never be overwritten by background generation.
+      const src = this.draft.design?.designSource;
+      if (src === "uploaded" || src === "requested") return;
       // Captured before ANY await so every design edit after this call
       // starts counts as a mid-generation modification.
       const revisionAtStart = _designRevision;
@@ -496,6 +505,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           seqLen,
           breakdown,
         );
+
+        // Flow v2 re-check after the awaits: the customer may have uploaded
+        // or requested a design while generation was in flight.
+        const srcNow = this.draft.design?.designSource;
+        if (srcNow === "uploaded" || srcNow === "requested") return;
 
         // S73 race fix: the user edited the design while the AI calls were
         // in flight. Their cards are what's on screen — never replace them

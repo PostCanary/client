@@ -35,6 +35,11 @@ async function openCampaign(id: string) {
   selectedCampaign.value = null;
   try {
     selectedCampaign.value = await getMailCampaign(id);
+  } catch (err) {
+    // Stale deep link (?open=<deleted id>) or fetch failure — without this
+    // the modal spun forever on `!campaign` (cross-phase review finding).
+    console.warn(`[Campaigns] failed to load campaign ${id}`, err);
+    modalOpen.value = false;
   } finally {
     modalLoading.value = false;
   }

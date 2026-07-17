@@ -288,8 +288,12 @@ async function approve() {
       </div>
 
       <!-- Print proof bar — Phase 4D task 29. Same flow as StepDesign's
-           Generate Proof but framed as final pre-approval verification. -->
+           Generate Proof but framed as final pre-approval verification.
+           Hidden for uploaded/requested designs: the render pipeline only
+           knows sequenceCards, so a proof here would show AI cards that
+           contradict the preview above (cross-phase review finding). -->
       <div
+        v-if="designSource !== 'uploaded' && designSource !== 'requested'"
         class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
       >
         <div class="text-sm text-gray-500">
