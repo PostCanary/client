@@ -37,14 +37,11 @@ function formatDate(iso: string): string {
 
 <template>
   <div
-    class="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer flex gap-4"
+    class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col"
     @click="emit('open', campaign.id)"
   >
-    <!-- Design preview -->
-    <div
-      class="shrink-0 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
-      style="aspect-ratio: 3 / 2"
-    >
+    <!-- Design preview — full card width, postcard aspect -->
+    <div class="w-full bg-gray-100 border-b border-gray-200" style="aspect-ratio: 3 / 2">
       <img
         v-if="campaignDesignPreviewUrl(campaign)"
         :src="campaignDesignPreviewUrl(campaign) as string"
@@ -57,42 +54,53 @@ function formatDate(iso: string): string {
         class="flex h-full w-full items-center justify-center px-2 text-center"
         data-testid="campaign-list-card-preview-placeholder"
       >
-        <span class="text-[10px] font-medium text-gray-400">Preview pending</span>
+        <span class="text-sm font-medium text-gray-400">Preview pending</span>
       </div>
     </div>
 
-    <div class="flex-1 min-w-0">
+    <div class="p-4 flex-1 flex flex-col gap-2">
       <div class="flex items-start justify-between gap-3">
-        <div class="flex items-center gap-2 mb-1 min-w-0">
-          <h3 class="font-semibold text-[#0b2d50] truncate">
-            {{ campaign.name }}
-          </h3>
-          <CampaignStatusBadge :status="campaign.status" />
-        </div>
+        <h3 class="font-semibold text-[#0b2d50] leading-snug">
+          {{ campaign.name }}
+        </h3>
+        <CampaignStatusBadge :status="campaign.status" class="shrink-0" />
+      </div>
 
-        <!-- Actions -->
-        <div class="flex items-center gap-2 shrink-0" @click.stop>
-          <button
-            v-if="isPausable"
-            class="text-sm font-medium text-amber-600 hover:underline"
-            @click="emit('pause', campaign.id)"
-          >
-            Pause
-          </button>
-          <button
-            v-if="isResumable"
-            class="text-sm font-medium text-[#47bfa9] hover:underline"
-            @click="emit('resume', campaign.id)"
-          >
-            Resume
-          </button>
+      <div class="text-sm text-gray-500 space-y-1">
+        <div class="flex justify-between">
+          <span>Campaign Date</span>
+          <span class="text-[#0b2d50] font-medium">{{ formatDate(campaign.createdAt) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Audience Type</span>
+          <span class="text-[#0b2d50] font-medium capitalize">{{ campaignAudienceType(campaign) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Pieces Sent</span>
+          <span class="text-[#0b2d50] font-medium">{{ campaignPiecesSent(campaign).toLocaleString() }}</span>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-        <span>{{ formatDate(campaign.createdAt) }}</span>
-        <span class="capitalize">{{ campaignAudienceType(campaign) }}</span>
-        <span>{{ campaignPiecesSent(campaign).toLocaleString() }} sent</span>
+      <!-- Actions -->
+      <div
+        v-if="isPausable || isResumable"
+        class="mt-auto pt-2 flex justify-end"
+        @click.stop
+      >
+        <button
+          v-if="isPausable"
+          class="text-sm font-medium text-amber-600 hover:underline"
+          @click="emit('pause', campaign.id)"
+        >
+          Pause
+        </button>
+        <button
+          v-if="isResumable"
+          class="text-sm font-medium text-[#47bfa9] hover:underline"
+          @click="emit('resume', campaign.id)"
+        >
+          Resume
+        </button>
       </div>
     </div>
   </div>

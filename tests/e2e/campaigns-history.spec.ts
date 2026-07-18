@@ -130,7 +130,7 @@ test.describe("Campaigns history (POS-151)", () => {
     const card = page.locator("div").filter({ hasText: "Send to a List — Spring VIPs" }).first();
     await expect(card.getByText("list", { exact: true })).toBeVisible();
     await expect(card.getByText("May 30, 2026")).toBeVisible();
-    await expect(card.getByText("240 sent")).toBeVisible();
+    await expect(card.getByText("240", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("img", { name: "Campaign design preview" }).first(),
     ).toBeVisible();
@@ -142,7 +142,7 @@ test.describe("Campaigns history (POS-151)", () => {
 
     const areaCard = page.locator("div").filter({ hasText: "Target an Area — Phoenix, AZ" }).first();
     await expect(areaCard.getByText("area", { exact: true })).toBeVisible();
-    await expect(areaCard.getByText("512 sent")).toBeVisible();
+    await expect(areaCard.getByText("512", { exact: true })).toBeVisible();
     await expect(
       page.getByTestId("campaign-list-card-preview-placeholder"),
     ).toBeVisible();
@@ -158,9 +158,11 @@ test.describe("Campaigns history (POS-151)", () => {
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
     await expect(page).toHaveURL(/\/app\/campaigns$/);
 
-    await expect(page.getByText("Campaign Date")).toBeVisible();
-    await expect(page.getByText("Audience Type")).toBeVisible();
-    await expect(page.getByText("Number of Pieces Sent")).toBeVisible();
+    // Scope to the modal — the grid cards also label these fields now.
+    const modal = page.getByRole("dialog", { name: "Your Campaign" });
+    await expect(modal.getByText("Campaign Date")).toBeVisible();
+    await expect(modal.getByText("Audience Type")).toBeVisible();
+    await expect(modal.getByText("Number of Pieces Sent")).toBeVisible();
   });
 
   test("list campaign shows a Download affordance, area campaign shows View Map", async ({

@@ -93,7 +93,7 @@ const emptyMessages: Record<CampaignTab, string> = {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="w-full max-w-6xl mx-auto py-8 px-4">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-[#0b2d50]">Campaigns</h1>
@@ -155,7 +155,9 @@ const emptyMessages: Record<CampaignTab, string> = {
           Send your first postcards
         </button>
       </div>
-      <div v-else class="space-y-3">
+      <!-- Wireframe Flow 3: preview-forward tiles in a responsive grid,
+           not a compact list — the design IS the card. -->
+      <div v-else class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <CampaignListCard
           v-for="campaign in filtered"
           :key="campaign.id"
