@@ -8,7 +8,7 @@ import { useScrapeRegenWatcher } from "@/composables/useScrapeRegenWatcher";
 import WizardProgress from "./WizardProgress.vue";
 import StepGoal from "./StepGoal.vue";
 import StepTargeting from "./StepTargeting.vue";
-import StepDesign from "./StepDesign.vue";
+import StepUploadDesign from "./StepUploadDesign.vue";
 import StepReview from "./StepReview.vue";
 import type { WizardStep } from "@/types/campaign";
 
@@ -66,14 +66,22 @@ function retryScrape() {
 const step = computed(() => draftStore.currentStep);
 const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
 
-// POS-138: step 3 no longer flips `isStepComplete` on its own (that now
-// requires the explicit review signal in goNext), but auto-generated cards
-// always exist by the time the user reaches this step, so Next should still
-// be clickable — clicking it IS the review. Every other step still gates
-// on its real completion flag.
+// POS-147/148 (Flow v2): step 3 is now Upload Your Design — advance once
+// the customer has either uploaded artwork or requested a paid design.
+// The legacy "cards exist" fallback applies ONLY to drafts that already
+// completed step 3 in the pre-Flow-v2 studio: background generation
+// populates sequenceCards on every new draft, so cards alone must not
+// open the gate (cross-phase review finding). Every other step still
+// gates on its real completion flag.
 const canAdvance = computed(() => {
   if (step.value === 3) {
-    return (draftStore.draft?.design?.sequenceCards?.length ?? 0) > 0;
+    const design = draftStore.draft?.design;
+    const source = design?.designSource;
+    if (source === "uploaded" || source === "requested") return true;
+    return (
+      completedSteps.value.includes(3) &&
+      (design?.sequenceCards?.length ?? 0) > 0
+    );
   }
   return draftStore.isStepComplete(step.value as WizardStep);
 });
@@ -261,7 +269,7 @@ onBeforeRouteLeave(async () => {
     <div class="flex-1 overflow-y-auto">
       <StepGoal v-if="step === 1" />
       <StepTargeting v-else-if="step === 2" />
-      <StepDesign v-else-if="step === 3" />
+      <StepUploadDesign v-else-if="step === 3" />
       <StepReview v-else-if="step === 4" />
     </div>
 

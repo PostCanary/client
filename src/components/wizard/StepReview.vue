@@ -4,7 +4,13 @@ import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
-import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
+import type {
+  CardSchedule,
+  DesignReturnAddress,
+  DesignSource,
+  MailCampaign,
+  ReviewSelection,
+} from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
@@ -13,6 +19,10 @@ import {
   createApprovalArtifact,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
+import {
+  getReturnAddress,
+  type OrgReturnAddress,
+} from "@/api/orgs";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { mediaSrc } from "@/utils/mediaSrc";
 
@@ -66,7 +76,29 @@ const acknowledgedAccuracy = ref(false);
 const goal = computed(() => draftStore.draft?.goal);
 const targeting = computed(() => draftStore.draft?.targeting);
 const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []);
-const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
+// POS-149: Flow v2 checkout deltas. Absent designSource (pre-Flow-v2 drafts,
+// or a draft that never touched the new design-request/upload paths) keeps
+// today's generated-cards behavior exactly — see DesignSelection.designSource.
+const designSource = computed<DesignSource | undefined>(
+  () => draftStore.draft?.design?.designSource,
+);
+const uploadedFrontUrl = computed(() => {
+  const url = draftStore.draft?.design?.uploadedAsset?.frontUrl ?? null;
+  // Server returns root-relative /media/... paths — resolve against API_BASE.
+  return url ? mediaSrc(url) : null;
+});
+const isCustomDesignRequest = computed(() => designSource.value === "requested");
+// Send-to-a-list campaigns have no targeting slice — their recipient count
+// is the uploaded audience's post-suppression deliverable count (dry-run
+// find 2026-07-18: review showed "0 households" and blocked approval).
+const householdCount = computed(() => {
+  if (goal.value?.goalType === "send_to_list") {
+    return (
+      draftStore.draft?.audience?.suppressionResult?.deliverable_count ?? 0
+    );
+  }
+  return targeting.value?.finalHouseholdCount ?? 0;
+});
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
@@ -86,6 +118,7 @@ onMounted(() => {
     const areaStr = area ? ` — ${area}` : "";
     campaignName.value = `${goalLabel}${areaStr} — ${date}`;
   }
+  void loadOrgReturnAddress();
 });
 
 // Targeting method label
@@ -126,8 +159,13 @@ function updateSchedule(updated: CardSchedule[]) {
 // Cost
 const pricing = usePricing();
 const perCardRate = computed(() => pricing.payPerSend); // Round 1: flat rate
+const customDesignFee = computed(() =>
+  isCustomDesignRequest.value ? pricing.customDesignFee : 0,
+);
 const totalCost = computed(
-  () => householdCount.value * perCardRate.value * seqLen.value,
+  () =>
+    householdCount.value * perCardRate.value * seqLen.value +
+    customDesignFee.value,
 );
 
 // Seeding
@@ -135,6 +173,125 @@ const sendSeedCopy = ref(draftStore.draft?.review?.sendSeedCopy ?? true);
 const seedAddress = computed(
   () => brandKitStore.brandKit?.address ?? "Your address on file",
 );
+
+// POS-161 — effective return address: draft override, else org default.
+// Server still enforces presence at print submit; we only warn inline.
+const orgReturnAddress = ref<OrgReturnAddress | null>(null);
+const orgReturnAddressLoaded = ref(false);
+const editingReturnAddress = ref(false);
+const returnAddressForm = ref({
+  name: "",
+  address: "",
+  address2: "",
+  city: "",
+  state: "",
+  zip: "",
+});
+const returnAddressFormError = ref<string | null>(null);
+
+const ZIP_RE = /^\d{5}(-\d{4})?$/;
+const STATE_RE = /^[A-Za-z]{2}$/;
+
+function orgToDesignAddress(
+  addr: OrgReturnAddress | null,
+): DesignReturnAddress | null {
+  if (!addr?.address || !addr.city || !addr.state || !addr.zip) return null;
+  return {
+    ...(addr.name ? { name: addr.name } : {}),
+    address: addr.address,
+    ...(addr.address2 ? { address2: addr.address2 } : {}),
+    city: addr.city,
+    state: addr.state,
+    zip: addr.zip,
+  };
+}
+
+const draftReturnAddress = computed(
+  () => draftStore.draft?.design?.returnAddress ?? null,
+);
+
+const effectiveReturnAddress = computed<DesignReturnAddress | null>(() => {
+  if (draftReturnAddress.value) return draftReturnAddress.value;
+  return orgToDesignAddress(orgReturnAddress.value);
+});
+
+const returnAddressIsOverride = computed(() => !!draftReturnAddress.value);
+
+const returnAddressLines = computed(() => {
+  const a = effectiveReturnAddress.value;
+  if (!a) return null;
+  const lines: string[] = [];
+  if (a.name) lines.push(a.name);
+  lines.push(a.address);
+  if (a.address2) lines.push(a.address2);
+  lines.push(`${a.city}, ${a.state} ${a.zip}`);
+  return lines;
+});
+
+function fillReturnAddressForm(addr: DesignReturnAddress | null) {
+  returnAddressForm.value = {
+    name: addr?.name ?? "",
+    address: addr?.address ?? "",
+    address2: addr?.address2 ?? "",
+    city: addr?.city ?? "",
+    state: addr?.state ?? "",
+    zip: addr?.zip ?? "",
+  };
+  returnAddressFormError.value = null;
+}
+
+function startEditReturnAddress() {
+  fillReturnAddressForm(effectiveReturnAddress.value);
+  editingReturnAddress.value = true;
+}
+
+function cancelEditReturnAddress() {
+  editingReturnAddress.value = false;
+  returnAddressFormError.value = null;
+}
+
+function validateReturnAddressForm(): string | null {
+  const f = returnAddressForm.value;
+  if (!f.address.trim()) return "Street address is required.";
+  if (!f.city.trim()) return "City is required.";
+  if (!STATE_RE.test(f.state.trim())) return "State must be a 2-letter code.";
+  if (!ZIP_RE.test(f.zip.trim())) {
+    return "ZIP must be 5 digits or ZIP+4 (12345 or 12345-6789).";
+  }
+  return null;
+}
+
+function saveReturnAddressOverride() {
+  const err = validateReturnAddressForm();
+  if (err) {
+    returnAddressFormError.value = err;
+    return;
+  }
+  const f = returnAddressForm.value;
+  const next: DesignReturnAddress = {
+    address: f.address.trim(),
+    city: f.city.trim(),
+    state: f.state.trim().toUpperCase(),
+    zip: f.zip.trim(),
+  };
+  if (f.name.trim()) next.name = f.name.trim();
+  if (f.address2.trim()) next.address2 = f.address2.trim();
+  draftStore.setReturnAddress(next);
+  editingReturnAddress.value = false;
+  returnAddressFormError.value = null;
+}
+
+async function loadOrgReturnAddress() {
+  try {
+    orgReturnAddress.value = await getReturnAddress();
+  } catch (e) {
+    // Route may not exist yet (parallel server work) — treat as missing.
+    console.warn("[StepReview] getReturnAddress failed", e);
+    orgReturnAddress.value = null;
+  } finally {
+    orgReturnAddressLoaded.value = true;
+  }
+}
 
 // Approve — gated on P0 #4 consolidated confirmation, AND on a non-empty
 // audience: an empty custom-area draw used to sail through to an active
@@ -267,12 +424,18 @@ async function approve() {
         <ReviewSummary
           :draft-id="draftStore.draft?.id"
           :cards="designCards"
+          :design-source="designSource"
+          :uploaded-front-url="uploadedFrontUrl"
         />
       </div>
 
       <!-- Print proof bar — Phase 4D task 29. Same flow as StepDesign's
-           Generate Proof but framed as final pre-approval verification. -->
+           Generate Proof but framed as final pre-approval verification.
+           Hidden for uploaded/requested designs: the render pipeline only
+           knows sequenceCards, so a proof here would show AI cards that
+           contradict the preview above (cross-phase review finding). -->
       <div
+        v-if="designSource !== 'uploaded' && designSource !== 'requested'"
         class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
       >
         <div class="text-sm text-gray-500">
@@ -384,15 +547,28 @@ async function approve() {
           data-testid="zero-households-warning"
           class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
         >
-          Your target area has no households, so this campaign can't be
-          approved yet.
-          <button
-            class="font-semibold underline"
-            @click="draftStore.goToStep(2)"
-          >
-            Go back to Pick Your Neighborhood
-          </button>
-          and choose an area with at least one household.
+          <template v-if="goal?.goalType === 'send_to_list'">
+            Your list has no deliverable addresses, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to your list
+            </button>
+            and upload at least one deliverable address.
+          </template>
+          <template v-else>
+            Your target area has no households, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to Pick Your Neighborhood
+            </button>
+            and choose an area with at least one household.
+          </template>
         </div>
       </div>
 
@@ -407,6 +583,7 @@ async function approve() {
       <CostBreakdown
         :household-count="householdCount"
         :sequence-length="seqLen"
+        :include-custom-design-fee="isCustomDesignRequest"
         class="mt-5"
       />
 
@@ -425,6 +602,201 @@ async function approve() {
       <p v-if="sendSeedCopy" class="text-xs text-gray-400 ml-6">
         Mailing to: {{ seedAddress }}
       </p>
+
+      <!-- POS-161: business return address (org default or campaign override) -->
+      <div
+        class="mt-5 p-3 bg-white rounded-lg border border-gray-200"
+        data-testid="return-address-summary"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="text-xs text-gray-400 uppercase tracking-wider">
+            Return address
+          </div>
+          <button
+            v-if="!editingReturnAddress"
+            type="button"
+            class="text-xs text-[#47bfa9] hover:text-[#3aa893]"
+            data-testid="return-address-edit"
+            @click="startEditReturnAddress"
+          >
+            Edit
+          </button>
+        </div>
+
+        <div
+          v-if="!orgReturnAddressLoaded && !effectiveReturnAddress"
+          class="mt-1 text-sm text-gray-400"
+        >
+          Loading…
+        </div>
+
+        <div
+          v-else-if="!editingReturnAddress && returnAddressLines"
+          class="mt-1"
+          data-testid="return-address-display"
+        >
+          <p
+            v-for="(line, i) in returnAddressLines"
+            :key="i"
+            class="text-sm text-[#0b2d50] leading-snug"
+          >
+            {{ line }}
+          </p>
+          <p
+            v-if="returnAddressIsOverride"
+            class="mt-1 text-xs text-gray-400"
+            data-testid="return-address-override-badge"
+          >
+            Campaign override
+          </p>
+          <p
+            v-else
+            class="mt-1 text-xs text-gray-400"
+            data-testid="return-address-org-default-badge"
+          >
+            Account default
+          </p>
+        </div>
+
+        <div
+          v-else-if="!editingReturnAddress && orgReturnAddressLoaded"
+          class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+          data-testid="return-address-missing-warning"
+        >
+          <router-link
+            to="/app/settings"
+            class="font-semibold underline"
+            data-testid="return-address-settings-link"
+          >
+            Add your business mailing address — required to send
+          </router-link>
+        </div>
+
+        <div
+          v-if="editingReturnAddress"
+          class="mt-3 space-y-2"
+          data-testid="return-address-edit-form"
+        >
+          <div>
+            <label
+              for="review-return-name"
+              class="block text-xs text-gray-500"
+            >
+              Name (optional)
+            </label>
+            <input
+              id="review-return-name"
+              v-model="returnAddressForm.name"
+              type="text"
+              data-testid="review-return-name"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div>
+            <label
+              for="review-return-address"
+              class="block text-xs text-gray-500"
+            >
+              Street address
+            </label>
+            <input
+              id="review-return-address"
+              v-model="returnAddressForm.address"
+              type="text"
+              data-testid="review-return-address"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div>
+            <label
+              for="review-return-address2"
+              class="block text-xs text-gray-500"
+            >
+              Apt/Suite (optional)
+            </label>
+            <input
+              id="review-return-address2"
+              v-model="returnAddressForm.address2"
+              type="text"
+              data-testid="review-return-address2"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label
+                for="review-return-city"
+                class="block text-xs text-gray-500"
+              >
+                City
+              </label>
+              <input
+                id="review-return-city"
+                v-model="returnAddressForm.city"
+                type="text"
+                data-testid="review-return-city"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="review-return-state"
+                class="block text-xs text-gray-500"
+              >
+                State
+              </label>
+              <input
+                id="review-return-state"
+                v-model="returnAddressForm.state"
+                type="text"
+                maxlength="2"
+                data-testid="review-return-state"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm uppercase text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="review-return-zip"
+                class="block text-xs text-gray-500"
+              >
+                ZIP
+              </label>
+              <input
+                id="review-return-zip"
+                v-model="returnAddressForm.zip"
+                type="text"
+                data-testid="review-return-zip"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+          </div>
+          <p
+            v-if="returnAddressFormError"
+            class="text-xs text-red-600"
+            data-testid="return-address-form-error"
+          >
+            {{ returnAddressFormError }}
+          </p>
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+              data-testid="return-address-cancel"
+              @click="cancelEditReturnAddress"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="text-xs font-semibold text-white bg-[#47bfa9] hover:bg-[#3aa893] rounded-md px-3 py-1.5"
+              data-testid="return-address-save"
+              @click="saveReturnAddressOverride"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Payment method (mock) -->
       <div class="mt-5 p-3 bg-white rounded-lg border border-gray-200">

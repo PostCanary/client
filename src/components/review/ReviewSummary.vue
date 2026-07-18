@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import type { CardDesign } from "@/types/campaign";
+import type { CardDesign, DesignSource } from "@/types/campaign";
 import { previewCard } from "@/api/renderJobs";
 
 // S69 — Step 4 (Review & Send) previews render via server-rendered
@@ -11,10 +11,24 @@ import { previewCard } from "@/api/renderJobs";
 // Step 3 shows. Drake caught the mismatch at T-1 to demo. ONE RENDERING
 // RULE (mems 429/430): on-screen = preview-card PNG everywhere in the
 // wizard. Same pattern as SequenceView thumbnails (S67 mems 546/547).
+// POS-149: Flow v2 checkout preview. When the campaign's design came from
+// the $199 design-request brief, there are no sequenceCards to render yet
+// (a human designer hasn't produced them) — show Tyler's "your custom
+// design" placeholder instead. When the customer uploaded their own
+// artwork, show that front image directly rather than round-tripping
+// through the server preview-card renderer (there's nothing server-side
+// to render — it's a flat upload). Absent/'generated' keeps the existing
+// server-rendered-PNG carousel exactly as before.
 const props = defineProps<{
   draftId: string | undefined;
   cards: CardDesign[];
+  designSource?: DesignSource;
+  uploadedFrontUrl?: string | null;
 }>();
+
+const isPlaceholderMode = computed(
+  () => props.designSource === "requested" || props.designSource === "uploaded",
+);
 
 type CardStatus = "pending" | "loading" | "ready" | "failed";
 
@@ -79,7 +93,7 @@ async function fetchOne(
 }
 
 async function fetchAll() {
-  if (!props.draftId || props.cards.length === 0) {
+  if (isPlaceholderMode.value || !props.draftId || props.cards.length === 0) {
     cardUrls.value = [];
     cardStatus.value = [];
     return;
@@ -127,8 +141,8 @@ function nextCard() {
 
 <template>
   <div class="flex flex-col items-center gap-4">
-    <!-- Card switcher (only if multiple cards) -->
-    <div v-if="totalCards > 1" class="flex items-center gap-3">
+    <!-- Card switcher (only if multiple cards, and not a placeholder mode) -->
+    <div v-if="!isPlaceholderMode && totalCards > 1" class="flex items-center gap-3">
       <button
         class="text-gray-400 hover:text-gray-600 disabled:opacity-30"
         :disabled="currentCardIndex === 0"
@@ -161,8 +175,25 @@ function nextCard() {
         class="flex items-center justify-center bg-gray-50"
         style="aspect-ratio: 9 / 6;"
       >
+        <!-- Design-request brief ($199): no rendered cards exist yet, a
+             human designer produces them after checkout. -->
+        <div
+          v-if="designSource === 'requested'"
+          data-testid="custom-design-placeholder"
+          class="flex items-center justify-center w-full h-full border-2 border-dashed border-gray-300 bg-white"
+        >
+          <span class="text-lg font-medium text-gray-400">your custom design</span>
+        </div>
+        <!-- Customer-uploaded artwork: nothing to server-render, show the
+             front image they supplied directly. -->
         <img
-          v-if="currentUrl && currentStatus === 'ready'"
+          v-else-if="designSource === 'uploaded' && uploadedFrontUrl"
+          :src="uploadedFrontUrl"
+          alt="Uploaded design preview"
+          class="w-full h-full object-contain"
+        />
+        <img
+          v-else-if="currentUrl && currentStatus === 'ready'"
           :src="currentUrl"
           :alt="`Card ${currentCardIndex + 1} preview`"
           class="w-full h-full object-contain"
@@ -190,9 +221,9 @@ function nextCard() {
       </div>
     </div>
 
-    <!-- Card purpose label -->
+    <!-- Card purpose label (generated cards only) -->
     <span
-      v-if="currentCard"
+      v-if="!isPlaceholderMode && currentCard"
       class="text-xs text-gray-400 uppercase tracking-wider"
     >
       {{ currentCard.cardPurpose === 'offer' ? 'Offer Card' :

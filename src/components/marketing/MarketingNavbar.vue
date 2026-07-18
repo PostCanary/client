@@ -34,10 +34,10 @@ function closeTools() {
 
 const onAuthClick = () => {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/dashboard", "login");
+    auth.openLoginModal("/app/home", "login");
     return;
   }
-  window.location.href = "/dashboard";
+  window.location.href = "/app/home";
 };
 
 const navLinks = [

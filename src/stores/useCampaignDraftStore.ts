@@ -8,8 +8,11 @@ import type {
   GoalSelection,
   TargetingSelection,
   DesignSelection,
+  DesignReturnAddress,
   ReviewSelection,
   AudienceWizardState,
+  UploadedDesignAsset,
+  DesignRequestBrief,
 } from "@/types/campaign";
 import type {
   AudienceCostPreview,
@@ -249,19 +252,58 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       opts?: { source?: "user" | "system"; layout?: TemplateLayoutType },
     ) {
       if (!this.draft) return;
+      const prev = this.draft.design;
       this.setDesign(
         {
           templateId: cards[0]?.templateId ?? "",
           templateLayoutType:
             opts?.layout ??
-            this.draft.design?.templateLayoutType ??
+            prev?.templateLayoutType ??
             "full-bleed",
           isCustomUpload: false,
           customUploadUrl: null,
           sequenceCards: cards,
+          // Preserve fields that live alongside the card sequence so a
+          // card edit cannot wipe a campaign return-address override.
+          ...(prev?.designSource !== undefined
+            ? { designSource: prev.designSource }
+            : {}),
+          ...(prev?.uploadedAsset !== undefined
+            ? { uploadedAsset: prev.uploadedAsset }
+            : {}),
+          ...(prev?.designRequest !== undefined
+            ? { designRequest: prev.designRequest }
+            : {}),
+          ...(prev?.returnAddress
+            ? { returnAddress: prev.returnAddress }
+            : {}),
         },
         opts,
       );
+    },
+
+    /**
+     * POS-161: per-campaign return-address override. Patches design without
+     * flipping designUserEdited (not a creative edit) and without completing
+     * step 3. Seeds a minimal DesignSelection when design is still null so
+     * Review can set the override before cards exist.
+     */
+    setReturnAddress(returnAddress: DesignReturnAddress | null) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      if (returnAddress) {
+        this.draft.design = { ...base, returnAddress };
+      } else {
+        const { returnAddress: _drop, ...rest } = base;
+        this.draft.design = rest;
+      }
+      this._debounceSave();
     },
 
     /** Explicit "I reviewed step 3" signal for the case where the user
@@ -270,6 +312,63 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
      * goNext when advancing past step 3 (POS-138). */
     markDesignReviewed() {
       if (!this.draft) return;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Flow v2 (POS-147/POS-156): customer uploaded their own front/back
+     * artwork (server-stored URLs on the asset, never base64).
+     * `this.draft.design` may still be null for a fresh draft, so this
+     * seeds a minimal DesignSelection rather than assuming
+     * setDesign/setSequenceCards already ran. */
+    setUploadedDesign(asset: UploadedDesignAsset) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "uploaded",
+        uploadedAsset: asset,
+        designRequest: null,
+      };
+      // Count as a design edit so an in-flight generateCardsForDraft's
+      // mid-generation guard sees it (cross-phase review finding: without
+      // this, a late generation result clobbered the upload).
+      _designRevision++;
+      this.draft.designUserEdited = true;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Flow v2 (POS-148): customer requested a $199 professional design
+     * instead of uploading or using the studio. Network delivery of the
+     * brief to the server (POST /api/design-requests) is handled by the
+     * caller (StepUploadDesign) as fire-and-forget — this action's job is
+     * only to record the choice on the draft so step 3 completes. */
+    setDesignRequest(brief: DesignRequestBrief) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "requested",
+        designRequest: brief,
+        uploadedAsset: null,
+      };
+      _designRevision++;
+      this.draft.designUserEdited = true;
       this._markComplete(3);
       this._clearReview(3);
       this._debounceSave();
@@ -405,6 +504,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async generateCardsForDraft() {
       if (!this.draft || _generatingCards) return;
+      // Flow v2: an explicit customer choice (own artwork / $199 request)
+      // must never be overwritten by background generation.
+      const src = this.draft.design?.designSource;
+      if (src === "uploaded" || src === "requested") return;
       // Captured before ANY await so every design edit after this call
       // starts counts as a mid-generation modification.
       const revisionAtStart = _designRevision;
@@ -443,6 +546,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           seqLen,
           breakdown,
         );
+
+        // Flow v2 re-check after the awaits: the customer may have uploaded
+        // or requested a design while generation was in flight.
+        const srcNow = this.draft.design?.designSource;
+        if (srcNow === "uploaded" || srcNow === "requested") return;
 
         // S73 race fix: the user edited the design while the AI calls were
         // in flight. Their cards are what's on screen — never replace them
@@ -487,6 +595,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             }));
           }
         }
+        const prevReturn = this.draft.design?.returnAddress;
         this.setDesign(
           {
             templateId: outCards[0]?.templateId ?? "",
@@ -494,6 +603,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             isCustomUpload: false,
             customUploadUrl: null,
             sequenceCards: outCards,
+            ...(prevReturn ? { returnAddress: prevReturn } : {}),
           },
           { source: "system" },
         );

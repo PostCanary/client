@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router";
+// POS-151: campaign history card — design preview, Campaign Date, Audience
+// Type, Number of Pieces Sent per the Dashboard Flow Flow-3 wireframe.
+// Click anywhere on the card (outside actions) opens the "Your Campaign"
+// modal; pause/resume stay inline since they're time-sensitive actions.
 import type { MailCampaign } from "@/types/campaign";
+import {
+  campaignAudienceType,
+  campaignDesignPreviewUrl,
+  campaignPiecesSent,
+} from "@/utils/campaignDisplay";
 import CampaignStatusBadge from "./CampaignStatusBadge.vue";
 
 const props = defineProps<{
@@ -8,11 +16,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (e: "open", id: string): void;
   (e: "pause", id: string): void;
   (e: "resume", id: string): void;
 }>();
-
-const router = useRouter();
 
 const isPausable = ["approved", "printing", "in_transit"].includes(
   props.campaign.status,
@@ -30,35 +37,56 @@ function formatDate(iso: string): string {
 
 <template>
   <div
-    class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-    @click="router.push(`/app/campaigns/${campaign.id}`)"
+    class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col"
+    @click="emit('open', campaign.id)"
   >
-    <div class="flex items-start justify-between">
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <h3 class="font-semibold text-[#0b2d50] truncate">
-            {{ campaign.name }}
-          </h3>
-          <CampaignStatusBadge :status="campaign.status" />
+    <!-- Design preview — full card width, postcard aspect -->
+    <div class="w-full bg-gray-100 border-b border-gray-200" style="aspect-ratio: 3 / 2">
+      <img
+        v-if="campaignDesignPreviewUrl(campaign)"
+        :src="campaignDesignPreviewUrl(campaign) as string"
+        alt="Campaign design preview"
+        class="h-full w-full object-cover"
+        draggable="false"
+      />
+      <div
+        v-else
+        class="flex h-full w-full items-center justify-center px-2 text-center"
+        data-testid="campaign-list-card-preview-placeholder"
+      >
+        <span class="text-sm font-medium text-gray-400">Preview pending</span>
+      </div>
+    </div>
+
+    <div class="p-4 flex-1 flex flex-col gap-2">
+      <div class="flex items-start justify-between gap-3">
+        <h3 class="font-semibold text-[#0b2d50] leading-snug">
+          {{ campaign.name }}
+        </h3>
+        <CampaignStatusBadge :status="campaign.status" class="shrink-0" />
+      </div>
+
+      <div class="text-sm text-gray-500 space-y-1">
+        <div class="flex justify-between">
+          <span>Campaign Date</span>
+          <span class="text-[#0b2d50] font-medium">{{ formatDate(campaign.createdAt) }}</span>
         </div>
-        <div class="flex items-center gap-4 text-sm text-gray-500">
-          <span>{{ campaign.householdCount.toLocaleString() }} households</span>
-          <span>{{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}</span>
-          <span>${{ campaign.totalCost.toFixed(2) }}</span>
+        <div class="flex justify-between">
+          <span>Audience Type</span>
+          <span class="text-[#0b2d50] font-medium capitalize">{{ campaignAudienceType(campaign) }}</span>
         </div>
-        <div class="text-xs text-gray-400 mt-1">
-          Created {{ formatDate(campaign.createdAt) }}
+        <div class="flex justify-between">
+          <span>Pieces Sent</span>
+          <span class="text-[#0b2d50] font-medium">{{ campaignPiecesSent(campaign).toLocaleString() }}</span>
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="flex items-center gap-2 ml-4 shrink-0" @click.stop>
-        <button
-          class="text-sm font-medium text-[#47bfa9] hover:underline"
-          @click="router.push(`/app/campaigns/${campaign.id}`)"
-        >
-          View
-        </button>
+      <div
+        v-if="isPausable || isResumable"
+        class="mt-auto pt-2 flex justify-end"
+        @click.stop
+      >
         <button
           v-if="isPausable"
           class="text-sm font-medium text-amber-600 hover:underline"

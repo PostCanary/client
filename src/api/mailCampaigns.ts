@@ -24,6 +24,10 @@ interface MailCampaignResponse {
   draft_id: string | null;
   created_at: string;
   updated_at: string;
+  // POS-154 / server PR #132: present once the server's mail-campaigns
+  // serializer ships; absent on older server builds pre-deploy, so treat
+  // it as optional rather than required.
+  audience_id?: string | null;
 }
 
 interface ListResponse {
@@ -32,6 +36,15 @@ interface ListResponse {
 }
 
 function toMailCampaign(r: MailCampaignResponse): MailCampaign {
+  // Flow v2 uploaded/request designs store sequenceCards as [] (or omit
+  // cards entirely). Never leave `cards` non-array — detail page and
+  // list helpers call .every / .filter / .length without further guards.
+  const rawCards = r.cards_data;
+  const cards = Array.isArray(rawCards) ? rawCards : [];
+  const design = r.design_data && typeof r.design_data === "object"
+    ? r.design_data
+    : null;
+
   return {
     id: r.id,
     orgId: r.org_id,
@@ -39,13 +52,23 @@ function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     status: r.status as MailCampaign["status"],
     goalType: r.goal_type as MailCampaign["goalType"],
     serviceType: r.service_type,
-    sequenceLength: r.sequence_length,
-    householdCount: r.household_count,
-    totalCost: r.total_cost,
-    totalSpent: r.total_spent,
-    cards: r.cards_data ?? [],
+    // send_to_list Flow v2: server may serialize null for counts/cost when
+    // the draft had no targeting slice (households live on the audience).
+    sequenceLength:
+      typeof r.sequence_length === "number" ? r.sequence_length : null,
+    householdCount:
+      typeof r.household_count === "number" ? r.household_count : null,
+    totalCost: typeof r.total_cost === "number" ? r.total_cost : null,
+    totalSpent: typeof r.total_spent === "number" ? r.total_spent : 0,
+    cards,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    targetingData: r.targeting_data ?? null,
+    audienceId: r.audience_id ?? null,
+    // POS-162: surface design snapshot so detail can render uploaded
+    // front artwork when cards_data is empty.
+    designSource: design?.designSource as MailCampaign["designSource"],
+    uploadedAsset: (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null,
   };
 }
 
@@ -123,6 +146,17 @@ export async function purchaseCampaignRecords(
     `/api/mail-campaigns/${campaignId}/purchase-records`,
     { qty },
   );
+}
+
+// POS-154: streams the real per-recipient CSV for a send_to_list campaign
+// (server PR #132, GET /api/mail-campaigns/<id>/audience-csv). 404s when
+// the campaign has no linked audience (area campaigns, or list campaigns
+// approved before the audience_id migration) — callers must catch that
+// and fall back to the client-generated summary CSV.
+export async function getAudienceCsv(campaignId: string): Promise<Blob> {
+  return get<Blob>(`/api/mail-campaigns/${campaignId}/audience-csv`, {
+    responseType: "blob",
+  });
 }
 
 export async function pauseMailCampaign(id: string): Promise<MailCampaign> {

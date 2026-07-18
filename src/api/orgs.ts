@@ -1,5 +1,5 @@
 // src/api/orgs.ts
-import { get, postJson, del_, api } from "@/api/http";
+import { get, postJson, putJson, del_, api } from "@/api/http";
 
 export interface Org {
   id: string;
@@ -125,4 +125,36 @@ export async function getInvitationDetails(
 
 export async function acceptInvitation(token: string): Promise<void> {
   await postJson<void>(`/api/invitations/${token}/accept`);
+}
+
+// ---------------------------------------------------------------------------
+// Org return address (POS-161) — account-level default for postcard mailing.
+// Path is one-line-changeable if the server settles on a different route.
+// ---------------------------------------------------------------------------
+
+/** Server shape for GET/PUT /api/organizations/return-address */
+export interface OrgReturnAddress {
+  name: string | null;
+  address: string;
+  address2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export async function getReturnAddress(): Promise<OrgReturnAddress | null> {
+  const res = await get<{ return_address: OrgReturnAddress | null }>(
+    "/api/organizations/return-address",
+  );
+  return res.return_address ?? null;
+}
+
+export async function updateReturnAddress(
+  returnAddress: OrgReturnAddress,
+): Promise<OrgReturnAddress | null> {
+  const res = await putJson<{ return_address: OrgReturnAddress | null }>(
+    "/api/organizations/return-address",
+    { return_address: returnAddress },
+  );
+  return res.return_address ?? null;
 }

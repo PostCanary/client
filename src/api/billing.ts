@@ -29,6 +29,8 @@ export type PlanCode = "INSIGHT" | "PERFORMANCE" | "PRECISION" | "ELITE";
 export interface PricingPayload {
   pay_per_send_cents: number;
   subscription_rates_cents: Record<PlanCode, number>;
+  // Optional until the server ships it (Flow v2 $199 design fee).
+  custom_design_fee_cents?: number;
 }
 
 export async function fetchPricing(): Promise<PricingPayload> {

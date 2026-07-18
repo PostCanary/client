@@ -6,12 +6,72 @@
 import StepReview from "@/components/wizard/StepReview.vue";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
-import type { CampaignDraft } from "@/types/campaign";
+import type { CampaignDraft, DesignSelection } from "@/types/campaign";
 
 const now = new Date().toISOString();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
-const emptyDraft = new URLSearchParams(window.location.search).get("emptyDraft") === "1";
+const params = new URLSearchParams(window.location.search);
+const emptyDraft = params.get("emptyDraft") === "1";
+
+// POS-149: drives ReviewSummary/CostBreakdown through the Flow v2
+// designSource states from a plain URL param, so Playwright can seed
+// requested/uploaded/absent without a real Step 3 build.
+const designSourceParam = params.get("designSource");
+// POS-161: seed a campaign-level return-address override without going
+// through Step 3. When absent, Review falls back to the org default
+// (mocked via GET /api/organizations/return-address).
+const draftReturnAddressParam = params.get("draftReturnAddress");
+// POS-156: uploaded designs store server media URLs, not base64 data URLs.
+const SAMPLE_UPLOADED_FRONT =
+  "/media/design-uploads/mock-org/sample-front.png";
+
+const designSourceExtras: Partial<DesignSelection> =
+  designSourceParam === "requested"
+    ? {
+        designSource: "requested",
+        designRequest: {
+          fullName: "Alex Owner",
+          email: "alex@example.test",
+          phone: "(612) 887-2109",
+          websiteAddress: "totalcomfort.example",
+          template: 1,
+          notes: "Keep it teal, match our van wrap.",
+          submittedAt: now,
+        },
+      }
+    : designSourceParam === "uploaded"
+      ? {
+          designSource: "uploaded",
+          uploadedAsset: {
+            fileName: "front.png",
+            mimeType: "image/png",
+            fileSizeBytes: 2048,
+            widthPx: 1875,
+            heightPx: 1275,
+            frontUrl: SAMPLE_UPLOADED_FRONT,
+            backUrl: null,
+          },
+        }
+      : {};
+
+const draftReturnExtras: Partial<DesignSelection> =
+  draftReturnAddressParam === "1"
+    ? {
+        returnAddress: {
+          name: "Draft Override HVAC",
+          address: "999 Override Lane",
+          city: "Minneapolis",
+          state: "MN",
+          zip: "55401",
+        },
+      }
+    : {};
+
+const designExtras: Partial<DesignSelection> = {
+  ...designSourceExtras,
+  ...draftReturnExtras,
+};
 
 brandKitStore.brandKit = {
   industry: "hvac",
@@ -93,6 +153,7 @@ draftStore.draft = emptyDraft
         isCustomUpload: false,
         customUploadUrl: null,
         sequenceCards: [],
+        ...designExtras,
       },
       review: null,
       createdAt: now,

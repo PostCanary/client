@@ -25,12 +25,16 @@ const kpis = [
       </div>
       <div class="text-2xl font-bold text-[#0b2d50]">
         <template v-if="kpi.key === 'households'">
-          {{ campaign.householdCount.toLocaleString() }}
+          {{
+            typeof campaign.householdCount === "number"
+              ? campaign.householdCount.toLocaleString()
+              : "—"
+          }}
         </template>
         <template v-else-if="kpi.key === 'calls'">0</template>
         <template v-else-if="kpi.key === 'revenue'">$0</template>
         <template v-else-if="kpi.key === 'spent'">
-          ${{ campaign.totalSpent.toFixed(2) }}
+          ${{ (campaign.totalSpent ?? 0).toFixed(2) }}
         </template>
       </div>
       <div class="text-xs text-gray-400 mt-1">

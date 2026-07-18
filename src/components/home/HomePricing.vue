@@ -83,12 +83,12 @@ const onGetStartedClick = async (tierId: PlanCode) => {
   if (starterBusy.value) return;
 
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/dashboard", "signup");
+    auth.openLoginModal("/app/home", "signup");
     return;
   }
 
   if (auth.isSubscribed) {
-    router.push("/dashboard");
+    router.push("/app/home");
     return;
   }
 
