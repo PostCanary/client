@@ -442,6 +442,16 @@ export interface DesignRequestBrief {
   submittedAt: string                  // ISO datetime
 }
 
+/** Business return address stamped on postcards (design_snapshot.returnAddress). */
+export interface DesignReturnAddress {
+  name?: string
+  address: string
+  address2?: string
+  city: string
+  state: string
+  zip: string
+}
+
 export interface DesignSelection {
   templateId: string
   templateLayoutType: TemplateLayoutType
@@ -452,6 +462,9 @@ export interface DesignSelection {
   designSource?: DesignSource
   uploadedAsset?: UploadedDesignAsset | null
   designRequest?: DesignRequestBrief | null
+  // POS-161: per-campaign override of the org default return address.
+  // Server print path reads design_snapshot.returnAddress with these keys.
+  returnAddress?: DesignReturnAddress
 }
 
 // ============================================================

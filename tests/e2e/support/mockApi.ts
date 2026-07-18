@@ -20,6 +20,8 @@ type RequestLog = {
   designRequests: Array<JsonMap>;
   // POS-156: multipart design asset uploads (POST /api/design-uploads).
   designUploads: Array<{ fileName: string | null; mimeType: string | null; size: number | null }>;
+  // POS-161: PUT /api/organizations/return-address payloads.
+  returnAddressUpdates: JsonMap[];
 };
 
 export type MockAppState = {
@@ -59,6 +61,9 @@ export type MockAppState = {
   // by hand. `null` (default) preserves the original hardcoded response so
   // every pre-existing spec is unaffected.
   draftOverride: JsonMap | null;
+  // POS-161: org-level business return address for GET/PUT
+  // /api/organizations/return-address. null = not configured.
+  returnAddress: JsonMap | null;
 };
 
 const ORG_ALPHA = {
@@ -779,8 +784,11 @@ export function createMockAppState(): MockAppState {
       scrapeRequests: [],
       designRequests: [],
       designUploads: [],
+      returnAddressUpdates: [],
     },
     draftOverride: null,
+    // POS-161: default null so existing specs see "not configured".
+    returnAddress: null,
   };
 
   syncSession(state);
@@ -1006,6 +1014,43 @@ export async function installMockApi(page: Page, state: MockAppState) {
 
     if (pathname === "/api/orgs" && method === "GET") {
       return json(route, { orgs: state.orgs });
+    }
+
+    // POS-161 — org-level business return address (account default for print).
+    if (pathname === "/api/organizations/return-address" && method === "GET") {
+      return json(route, { return_address: state.returnAddress });
+    }
+    if (pathname === "/api/organizations/return-address" && method === "PUT") {
+      const payload = parseJson(route);
+      const next = payload.return_address ?? null;
+      // Minimal server-side shape validation mirror for client tests.
+      if (
+        !next ||
+        typeof next.address !== "string" ||
+        !next.address.trim() ||
+        typeof next.city !== "string" ||
+        !next.city.trim() ||
+        typeof next.state !== "string" ||
+        !/^[A-Za-z]{2}$/.test(String(next.state).trim()) ||
+        typeof next.zip !== "string" ||
+        !/^\d{5}(-\d{4})?$/.test(String(next.zip).trim())
+      ) {
+        return json(route, { error: "invalid_return_address" }, 400);
+      }
+      const saved = {
+        name: next.name == null || next.name === "" ? null : String(next.name),
+        address: String(next.address).trim(),
+        address2:
+          next.address2 == null || next.address2 === ""
+            ? null
+            : String(next.address2),
+        city: String(next.city).trim(),
+        state: String(next.state).trim().toUpperCase(),
+        zip: String(next.zip).trim(),
+      };
+      state.returnAddress = saved;
+      state.requestLog.returnAddressUpdates.push(saved);
+      return json(route, { return_address: saved });
     }
 
     const orgMembersMatch = pathname.match(/^\/api\/orgs\/([^/]+)\/members\/?$/);

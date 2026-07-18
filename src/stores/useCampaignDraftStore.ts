@@ -8,6 +8,7 @@ import type {
   GoalSelection,
   TargetingSelection,
   DesignSelection,
+  DesignReturnAddress,
   ReviewSelection,
   AudienceWizardState,
   UploadedDesignAsset,
@@ -251,19 +252,58 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       opts?: { source?: "user" | "system"; layout?: TemplateLayoutType },
     ) {
       if (!this.draft) return;
+      const prev = this.draft.design;
       this.setDesign(
         {
           templateId: cards[0]?.templateId ?? "",
           templateLayoutType:
             opts?.layout ??
-            this.draft.design?.templateLayoutType ??
+            prev?.templateLayoutType ??
             "full-bleed",
           isCustomUpload: false,
           customUploadUrl: null,
           sequenceCards: cards,
+          // Preserve fields that live alongside the card sequence so a
+          // card edit cannot wipe a campaign return-address override.
+          ...(prev?.designSource !== undefined
+            ? { designSource: prev.designSource }
+            : {}),
+          ...(prev?.uploadedAsset !== undefined
+            ? { uploadedAsset: prev.uploadedAsset }
+            : {}),
+          ...(prev?.designRequest !== undefined
+            ? { designRequest: prev.designRequest }
+            : {}),
+          ...(prev?.returnAddress
+            ? { returnAddress: prev.returnAddress }
+            : {}),
         },
         opts,
       );
+    },
+
+    /**
+     * POS-161: per-campaign return-address override. Patches design without
+     * flipping designUserEdited (not a creative edit) and without completing
+     * step 3. Seeds a minimal DesignSelection when design is still null so
+     * Review can set the override before cards exist.
+     */
+    setReturnAddress(returnAddress: DesignReturnAddress | null) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      if (returnAddress) {
+        this.draft.design = { ...base, returnAddress };
+      } else {
+        const { returnAddress: _drop, ...rest } = base;
+        this.draft.design = rest;
+      }
+      this._debounceSave();
     },
 
     /** Explicit "I reviewed step 3" signal for the case where the user
@@ -555,6 +595,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             }));
           }
         }
+        const prevReturn = this.draft.design?.returnAddress;
         this.setDesign(
           {
             templateId: outCards[0]?.templateId ?? "",
@@ -562,6 +603,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             isCustomUpload: false,
             customUploadUrl: null,
             sequenceCards: outCards,
+            ...(prevReturn ? { returnAddress: prevReturn } : {}),
           },
           { source: "system" },
         );
