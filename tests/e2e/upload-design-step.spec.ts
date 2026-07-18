@@ -79,6 +79,10 @@ test("design-request form blocks submit until required fields are filled", async
   await expect(page.getByTestId("design-request-submit")).toBeDisabled();
 
   await page.getByTestId("design-request-template-2").click();
+  // Template picked, but phone (server-required) is still empty — blocked.
+  await expect(page.getByTestId("design-request-submit")).toBeDisabled();
+
+  await page.getByTestId("design-request-phone").fill("555-123-4567");
   await expect(page.getByTestId("design-request-submit")).toBeEnabled();
 });
 
@@ -86,9 +90,13 @@ test("submitting a valid design request enables Next and posts the brief", async
   const state = await gotoStep3(page);
 
   await page.getByTestId("buy-design-link").click();
-  await page.getByTestId("design-request-phone").fill("555-123-4567");
   await page.getByTestId("design-request-notes").fill("Please use our brand colors.");
   await page.getByTestId("design-request-template-3").click();
+  // Phone is required by the server contract — Submit must stay disabled
+  // until it's filled (staging QA regression, 2026-07-17).
+  await expect(page.getByTestId("design-request-submit")).toBeDisabled();
+  await page.getByTestId("design-request-phone").fill("555-123-4567");
+  await expect(page.getByTestId("design-request-submit")).toBeEnabled();
   await page.getByTestId("design-request-submit").click();
 
   await expect(page.getByTestId("design-request-modal")).toHaveCount(0);

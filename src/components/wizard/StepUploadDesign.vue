@@ -243,6 +243,10 @@ const canSubmitDesignRequest = computed(() => {
   return (
     requestForm.fullName.trim().length > 0 &&
     EMAIL_RE.test(requestForm.email.trim()) &&
+    // Server contract requires phone (design_requests.py 400s without it) —
+    // staging QA 2026-07-17 caught a submit that "succeeded" client-side
+    // while the POST was rejected.
+    requestForm.phone.trim().length > 0 &&
     requestForm.template !== null
   );
 });
