@@ -39,7 +39,7 @@ test("rejecting an undersized image shows an actionable error message", async ({
 });
 
 test("accepting a print-spec-compliant PNG shows the preview and enables Next", async ({ page }) => {
-  await gotoStep3(page);
+  const state = await gotoStep3(page);
 
   const validPng = makeSolidPng(1875, 2775);
   await page.getByTestId("upload-front-input").setInputFiles({
@@ -52,6 +52,10 @@ test("accepting a print-spec-compliant PNG shows the preview and enables Next", 
   await expect(page.getByTestId("upload-front-preview")).toContainText("front.png");
   await expect(page.getByTestId("upload-front-error")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+
+  // POS-156: file is posted to /api/design-uploads (server-stored URL), not
+  // inlined as base64 on the draft.
+  await expect.poll(() => state.requestLog.designUploads.length).toBe(1);
 });
 
 test("opening the design-request modal blurs the background content", async ({ page }) => {

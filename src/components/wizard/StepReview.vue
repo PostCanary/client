@@ -72,9 +72,11 @@ const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []
 const designSource = computed<DesignSource | undefined>(
   () => draftStore.draft?.design?.designSource,
 );
-const uploadedFrontUrl = computed(
-  () => draftStore.draft?.design?.uploadedAsset?.frontDataUrl ?? null,
-);
+const uploadedFrontUrl = computed(() => {
+  const url = draftStore.draft?.design?.uploadedAsset?.frontUrl ?? null;
+  // Server returns root-relative /media/... paths — resolve against API_BASE.
+  return url ? mediaSrc(url) : null;
+});
 const isCustomDesignRequest = computed(() => designSource.value === "requested");
 const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);

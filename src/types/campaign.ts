@@ -424,10 +424,12 @@ export interface UploadedDesignAsset {
   fileSizeBytes: number
   widthPx: number | null
   heightPx: number | null
-  // Client-side preview until server-side asset storage lands. Front is
-  // required for a valid upload; back may be null (blank back).
-  frontDataUrl: string | null
-  backDataUrl: string | null
+  // Server-stored media URLs from POST /api/design-uploads (POS-156).
+  // Front is required for a valid upload; back may be null (blank back).
+  // Never store base64 data URLs here — they bloat draft JSONB past the
+  // beaconSave 60KB keepalive cap.
+  frontUrl: string | null
+  backUrl: string | null
 }
 
 export interface DesignRequestBrief {

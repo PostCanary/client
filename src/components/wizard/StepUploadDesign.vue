@@ -11,13 +11,14 @@
        brief is stored on the draft and POSTed to /api/design-requests.
 -->
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useMessage } from "naive-ui";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useAuthStore } from "@/stores/auth";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
-import { postJson } from "@/api/http";
+import { postJson, postMultipart } from "@/api/http";
+import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
 
 const draftStore = useCampaignDraftStore();
@@ -83,32 +84,70 @@ function validateImageDimensions(width: number, height: number): FileCheck {
   return { ok: true };
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
+/** Read image dimensions via a temporary object URL (never base64). */
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-    reader.readAsDataURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width, height });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read image"));
+    };
+    img.src = objectUrl;
   });
 }
 
-function readImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error("Could not read image"));
-    img.src = dataUrl;
-  });
+/** POST /api/design-uploads response (snake_case server contract). */
+interface DesignUploadResponse {
+  asset_id: string;
+  url: string;
+  mime_type: string;
+  file_size_bytes: number;
+  width_px: number | null;
+  height_px: number | null;
+}
+
+function uploadErrorMessage(err: unknown, fileName: string): string {
+  const e = err as Error & { status?: number; data?: { error?: string | { code?: string; message?: string } } };
+  const errField = e.data?.error;
+  const code =
+    typeof errField === "string"
+      ? errField
+      : errField && typeof errField === "object"
+        ? (errField.code ?? errField.message ?? "")
+        : "";
+  if (e.status === 400) {
+    return code
+      ? `"${fileName}" was rejected (${code}). Please check the file and try again.`
+      : `"${fileName}" was rejected. Please check the file and try again.`;
+  }
+  if (e.status === 401) {
+    return "Please sign in again to upload your design.";
+  }
+  if (e.status === 402) {
+    return "A subscription is required to upload designs.";
+  }
+  return `Couldn't upload "${fileName}". Please try again.`;
 }
 
 // --- Dropzones -----------------------------------------------------------
+// previewUrl is a local blob: URL for in-step thumbnails only — never
+// written into the draft store. serverUrl is the durable /media/... path.
 interface LocalFileState {
   fileName: string;
   mimeType: string;
   fileSizeBytes: number;
   widthPx: number | null;
   heightPx: number | null;
-  dataUrl: string | null;
+  previewUrl: string | null;
+  serverUrl: string | null;
+  ownsObjectUrl: boolean;
 }
 
 const frontFile = ref<LocalFileState | null>(null);
@@ -119,27 +158,52 @@ const frontDragging = ref(false);
 const backDragging = ref(false);
 const frontProcessing = ref(false);
 const backProcessing = ref(false);
+const frontUploadProgress = ref<number | null>(null);
+const backUploadProgress = ref<number | null>(null);
 const frontInputEl = ref<HTMLInputElement | null>(null);
 const backInputEl = ref<HTMLInputElement | null>(null);
 
+function revokeLocalPreview(state: LocalFileState | null) {
+  if (state?.ownsObjectUrl && state.previewUrl) {
+    URL.revokeObjectURL(state.previewUrl);
+  }
+}
+
 function commitUpload() {
-  if (!frontFile.value) return;
+  if (!frontFile.value?.serverUrl) return;
   const asset: UploadedDesignAsset = {
     fileName: frontFile.value.fileName,
     mimeType: frontFile.value.mimeType,
     fileSizeBytes: frontFile.value.fileSizeBytes,
     widthPx: frontFile.value.widthPx,
     heightPx: frontFile.value.heightPx,
-    frontDataUrl: frontFile.value.dataUrl,
-    backDataUrl: backFile.value?.dataUrl ?? null,
+    frontUrl: frontFile.value.serverUrl,
+    backUrl: backFile.value?.serverUrl ?? null,
   };
   draftStore.setUploadedDesign(asset);
+}
+
+async function uploadDesignFile(
+  file: File,
+  onProgress: (percent: number) => void,
+): Promise<DesignUploadResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  return postMultipart<DesignUploadResponse>("/api/design-uploads", form, {
+    onUploadProgress: (evt) => {
+      if (evt.total && evt.total > 0) {
+        onProgress(Math.min(100, Math.round((evt.loaded / evt.total) * 100)));
+      }
+    },
+  });
 }
 
 async function handleFile(file: File, side: "front" | "back") {
   const errorRef = side === "front" ? frontError : backError;
   const processingRef = side === "front" ? frontProcessing : backProcessing;
+  const progressRef = side === "front" ? frontUploadProgress : backUploadProgress;
   errorRef.value = null;
+  progressRef.value = null;
 
   const typeCheck = validateFileTypeAndSize(file);
   if (!typeCheck.ok) {
@@ -150,16 +214,9 @@ async function handleFile(file: File, side: "front" | "back") {
   processingRef.value = true;
   try {
     const isPdf = file.type === "application/pdf";
-    let dataUrl: string;
-    try {
-      dataUrl = await readFileAsDataUrl(file);
-    } catch {
-      errorRef.value = `Couldn't read "${file.name}". Please try again.`;
-      return;
-    }
-
     let widthPx: number | null = null;
     let heightPx: number | null = null;
+
     if (isPdf) {
       // TODO: PDF dimension parsing isn't implemented (would need a pdf.js
       // dependency) — accepted on type/size alone, dimensions recorded as
@@ -167,7 +224,7 @@ async function handleFile(file: File, side: "front" | "back") {
     } else {
       let dims: { width: number; height: number };
       try {
-        dims = await readImageDimensions(dataUrl);
+        dims = await readImageDimensions(file);
       } catch {
         errorRef.value = `Couldn't read "${file.name}" as an image. Please try a different file.`;
         return;
@@ -181,22 +238,45 @@ async function handleFile(file: File, side: "front" | "back") {
       heightPx = dims.height;
     }
 
+    // Local thumbnail only — blob URL is revoked on replace/unmount.
+    // Do NOT put base64 or blob URLs into the draft store.
+    const previewUrl = isPdf ? null : URL.createObjectURL(file);
+    const ownsObjectUrl = previewUrl !== null;
+
+    progressRef.value = 0;
+    let uploaded: DesignUploadResponse;
+    try {
+      uploaded = await uploadDesignFile(file, (pct) => {
+        progressRef.value = pct;
+      });
+    } catch (err) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      errorRef.value = uploadErrorMessage(err, file.name);
+      return;
+    }
+
     const state: LocalFileState = {
       fileName: file.name,
-      mimeType: file.type,
-      fileSizeBytes: file.size,
-      widthPx,
-      heightPx,
-      dataUrl,
+      mimeType: uploaded.mime_type || file.type,
+      fileSizeBytes: uploaded.file_size_bytes || file.size,
+      widthPx: uploaded.width_px ?? widthPx,
+      heightPx: uploaded.height_px ?? heightPx,
+      previewUrl,
+      serverUrl: uploaded.url,
+      ownsObjectUrl,
     };
+
     if (side === "front") {
+      revokeLocalPreview(frontFile.value);
       frontFile.value = state;
     } else {
+      revokeLocalPreview(backFile.value);
       backFile.value = state;
     }
     commitUpload();
   } finally {
     processingRef.value = false;
+    progressRef.value = null;
   }
 }
 
@@ -214,15 +294,29 @@ function onDrop(e: DragEvent, side: "front" | "back") {
 }
 
 function replaceFront() {
+  revokeLocalPreview(frontFile.value);
   frontFile.value = null;
   frontError.value = null;
+  frontUploadProgress.value = null;
   if (frontInputEl.value) frontInputEl.value.value = "";
 }
 
 function replaceBack() {
+  revokeLocalPreview(backFile.value);
   backFile.value = null;
   backError.value = null;
+  backUploadProgress.value = null;
   if (backInputEl.value) backInputEl.value.value = "";
+  // Re-commit front-only asset so the draft drops the previous back URL.
+  commitUpload();
+}
+
+function processingLabel(side: "front" | "back"): string {
+  const progress = side === "front" ? frontUploadProgress.value : backUploadProgress.value;
+  if (progress !== null) {
+    return progress >= 100 ? "Finishing upload…" : `Uploading… ${progress}%`;
+  }
+  return "Checking your file…";
 }
 
 // --- Design request modal --------------------------------------------
@@ -317,23 +411,29 @@ async function submitDesignRequest() {
 onMounted(() => {
   const design = draftStore.draft?.design;
   const asset = design?.uploadedAsset;
-  if (asset) {
+  if (asset?.frontUrl) {
     frontFile.value = {
       fileName: asset.fileName,
       mimeType: asset.mimeType,
       fileSizeBytes: asset.fileSizeBytes,
       widthPx: asset.widthPx,
       heightPx: asset.heightPx,
-      dataUrl: asset.frontDataUrl,
+      // Server media path — not an object URL, so never revoke.
+      previewUrl: mediaSrc(asset.frontUrl),
+      serverUrl: asset.frontUrl,
+      ownsObjectUrl: false,
     };
-    if (asset.backDataUrl) {
+    if (asset.backUrl) {
+      const backIsPdf = asset.backUrl.toLowerCase().endsWith(".pdf");
       backFile.value = {
         fileName: "Back design",
-        mimeType: "",
+        mimeType: backIsPdf ? "application/pdf" : "image/png",
         fileSizeBytes: 0,
         widthPx: null,
         heightPx: null,
-        dataUrl: asset.backDataUrl,
+        previewUrl: mediaSrc(asset.backUrl),
+        serverUrl: asset.backUrl,
+        ownsObjectUrl: false,
       };
     }
   }
@@ -346,6 +446,11 @@ onMounted(() => {
     requestForm.template = request.template;
     requestForm.notes = request.notes;
   }
+});
+
+onBeforeUnmount(() => {
+  revokeLocalPreview(frontFile.value);
+  revokeLocalPreview(backFile.value);
 });
 
 const designSource = computed(() => draftStore.draft?.design?.designSource ?? null);
@@ -373,8 +478,8 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 
         <div v-if="frontFile" class="border border-gray-200 rounded-xl p-4 flex items-center gap-4" data-testid="upload-front-preview">
           <img
-            v-if="frontFile.dataUrl && frontFile.mimeType.startsWith('image/')"
-            :src="frontFile.dataUrl"
+            v-if="frontFile.previewUrl && frontFile.mimeType.startsWith('image/')"
+            :src="frontFile.previewUrl"
             alt="Front design preview"
             class="w-20 h-28 object-cover rounded-lg border border-gray-100 shrink-0"
           />
@@ -400,7 +505,10 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
         <label
           v-else
           class="block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
-          :class="frontDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+          :class="[
+            frontDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300',
+            frontProcessing ? 'pointer-events-none opacity-70' : '',
+          ]"
           data-testid="upload-front-dropzone"
           @dragover.prevent="frontDragging = true"
           @dragleave.prevent="frontDragging = false"
@@ -412,10 +520,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             class="sr-only"
             accept="application/pdf,image/png,image/jpeg"
             data-testid="upload-front-input"
+            :disabled="frontProcessing"
             @change="onFileInputChange($event, 'front')"
           />
           <p class="text-sm text-gray-500">
-            {{ frontProcessing ? 'Checking your file…' : 'Drag & drop your front design, or click to browse' }}
+            {{ frontProcessing ? processingLabel('front') : 'Drag & drop your front design, or click to browse' }}
           </p>
           <p class="text-xs text-gray-400 mt-1">PDF, PNG, or JPEG — 1875x2775px minimum (300 DPI, full bleed)</p>
         </label>
@@ -431,8 +540,8 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 
         <div v-if="backFile" class="border border-gray-200 rounded-xl p-4 flex items-center gap-4" data-testid="upload-back-preview">
           <img
-            v-if="backFile.dataUrl && backFile.mimeType.startsWith('image/')"
-            :src="backFile.dataUrl"
+            v-if="backFile.previewUrl && backFile.mimeType.startsWith('image/')"
+            :src="backFile.previewUrl"
             alt="Back design preview"
             class="w-20 h-28 object-cover rounded-lg border border-gray-100 shrink-0"
           />
@@ -458,7 +567,10 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
         <label
           v-else
           class="block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
-          :class="backDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300'"
+          :class="[
+            backDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300',
+            backProcessing ? 'pointer-events-none opacity-70' : '',
+          ]"
           data-testid="upload-back-dropzone"
           @dragover.prevent="backDragging = true"
           @dragleave.prevent="backDragging = false"
@@ -470,10 +582,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             class="sr-only"
             accept="application/pdf,image/png,image/jpeg"
             data-testid="upload-back-input"
+            :disabled="backProcessing"
             @change="onFileInputChange($event, 'back')"
           />
           <p class="text-sm text-gray-500">
-            {{ backProcessing ? 'Checking your file…' : 'Drag & drop your back design, or click to browse (optional)' }}
+            {{ backProcessing ? processingLabel('back') : 'Drag & drop your back design, or click to browse (optional)' }}
           </p>
           <p class="text-xs text-gray-400 mt-1">Leave blank for a blank back</p>
         </label>

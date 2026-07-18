@@ -18,8 +18,9 @@ const emptyDraft = params.get("emptyDraft") === "1";
 // designSource states from a plain URL param, so Playwright can seed
 // requested/uploaded/absent without a real Step 3 build.
 const designSourceParam = params.get("designSource");
+// POS-156: uploaded designs store server media URLs, not base64 data URLs.
 const SAMPLE_UPLOADED_FRONT =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiM3AwBv7QMCaZrQZQAAAABJRU5ErkJggg==";
+  "/media/design-uploads/mock-org/sample-front.png";
 
 const designExtras: Partial<DesignSelection> =
   designSourceParam === "requested"
@@ -44,8 +45,8 @@ const designExtras: Partial<DesignSelection> =
             fileSizeBytes: 2048,
             widthPx: 1875,
             heightPx: 1275,
-            frontDataUrl: SAMPLE_UPLOADED_FRONT,
-            backDataUrl: null,
+            frontUrl: SAMPLE_UPLOADED_FRONT,
+            backUrl: null,
           },
         }
       : {};

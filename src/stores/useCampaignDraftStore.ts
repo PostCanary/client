@@ -277,10 +277,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this._debounceSave();
     },
 
-    /** Flow v2 (POS-147): customer uploaded their own front/back artwork
-     * instead of using the studio. `this.draft.design` may still be null
-     * for a fresh draft, so this seeds a minimal DesignSelection rather
-     * than assuming setDesign/setSequenceCards already ran. */
+    /** Flow v2 (POS-147/POS-156): customer uploaded their own front/back
+     * artwork (server-stored URLs on the asset, never base64).
+     * `this.draft.design` may still be null for a fresh draft, so this
+     * seeds a minimal DesignSelection rather than assuming
+     * setDesign/setSequenceCards already ran. */
     setUploadedDesign(asset: UploadedDesignAsset) {
       if (!this.draft) return;
       const base: DesignSelection = this.draft.design ?? {

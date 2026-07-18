@@ -127,7 +127,8 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     await expect(page.getByTestId("custom-design-placeholder")).toHaveCount(0);
     const uploadedImg = page.getByRole("img", { name: "Uploaded design preview" });
     await expect(uploadedImg).toBeVisible();
-    await expect(uploadedImg).toHaveAttribute("src", /^data:image\/png;base64,/);
+    // POS-156: preview is a server media URL, not a base64 data URL.
+    await expect(uploadedImg).toHaveAttribute("src", /\/media\/design-uploads\//);
 
     await expect(page.getByTestId("custom-design-fee-line")).toHaveCount(0);
   });

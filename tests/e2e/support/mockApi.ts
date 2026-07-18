@@ -18,6 +18,8 @@ type RequestLog = {
   audienceSuppressions: string[];
   scrapeRequests: Array<{ website_url?: string }>;
   designRequests: Array<JsonMap>;
+  // POS-156: multipart design asset uploads (POST /api/design-uploads).
+  designUploads: Array<{ fileName: string | null; mimeType: string | null; size: number | null }>;
 };
 
 export type MockAppState = {
@@ -776,6 +778,7 @@ export function createMockAppState(): MockAppState {
       audienceSuppressions: [],
       scrapeRequests: [],
       designRequests: [],
+      designUploads: [],
     },
     draftOverride: null,
   };
@@ -1197,6 +1200,33 @@ export async function installMockApi(page: Page, state: MockAppState) {
       return json(
         route,
         { id: `mock-design-request-${state.requestLog.designRequests.length}`, status: "received" },
+        201,
+      );
+    }
+
+    // POS-156: server-stored design uploads (multipart field `file`).
+    // Returns a durable /media/design-uploads/... URL — never echoes base64.
+    if (pathname === "/api/design-uploads" && method === "POST") {
+      const contentType = route.request().headers()["content-type"] ?? "";
+      // Playwright multipart posts still expose postDataBuffer; we only need
+      // to log that an upload happened and return a stable contract body.
+      const buffer = route.request().postDataBuffer();
+      state.requestLog.designUploads.push({
+        fileName: contentType.includes("multipart") ? "uploaded-file" : null,
+        mimeType: contentType || null,
+        size: buffer?.length ?? null,
+      });
+      const n = state.requestLog.designUploads.length;
+      return json(
+        route,
+        {
+          asset_id: `mock-design-asset-${n}`,
+          url: `/media/design-uploads/mock-org/asset-${n}.png`,
+          mime_type: "image/png",
+          file_size_bytes: buffer?.length ?? 0,
+          width_px: 1875,
+          height_px: 2775,
+        },
         201,
       );
     }
