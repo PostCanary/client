@@ -12,6 +12,7 @@ import PrintJobConfirmModal, {
   type PrintJobConfirmPayload,
 } from "@/components/campaigns/PrintJobConfirmModal.vue";
 import { usePrintJob } from "@/composables/usePrintJob";
+import { purchaseCampaignRecords } from "@/api/mailCampaigns";
 import type { PrintJobSubmitInputs } from "@/api/printJobs";
 import { campaignDesignPreviewUrl } from "@/utils/campaignDisplay";
 import { mediaSrc } from "@/utils/mediaSrc";
@@ -62,9 +63,35 @@ const isUploadedDesign = computed(
 );
 
 // Ops print path only makes sense when there is a design surface to submit.
-const showPrintJobControls = computed(
-  () => hasLegacyCards.value || isUploadedDesign.value,
+// Legacy ops path only: the modal submits /api/print_jobs with a template
+// UUID, which uploaded-design campaigns don't have (their sanctioned retry
+// is replaying purchase-records — see retryPrintSubmission below).
+const showPrintJobControls = computed(() => hasLegacyCards.value);
+
+// Flow v2 recovery: purchase-records replay is idempotent and re-runs the
+// print bridge for a campaign held at records_purchased (e.g. the bridge
+// failed after billing settled).
+const showRetryPrintSubmission = computed(
+  () =>
+    isUploadedDesign.value && campaign.value?.status === "records_purchased",
 );
+const retryingPrint = ref(false);
+const retryPrintError = ref<string | null>(null);
+
+async function retryPrintSubmission() {
+  if (!campaign.value || retryingPrint.value) return;
+  retryingPrint.value = true;
+  retryPrintError.value = null;
+  try {
+    await purchaseCampaignRecords(campaign.value.id, 1);
+    await fetch();
+  } catch (e: any) {
+    retryPrintError.value =
+      e?.message ?? "Retry failed — the campaign is unchanged. Try again.";
+  } finally {
+    retryingPrint.value = false;
+  }
+}
 
 // Targeting / map block is only meaningful for area campaigns with data.
 const showTargetingSummary = computed(() => {
@@ -101,10 +128,7 @@ async function onPrintJobSubmit(payload: PrintJobConfirmPayload) {
   const cards = campaign.value.cards ?? [];
   const inputs: PrintJobSubmitInputs = {
     campaign_id: campaign.value.id,
-    design_template_id:
-      cards[payload.cardNumber - 1]?.previewImageUrl ??
-      campaign.value.uploadedAsset?.frontUrl ??
-      "",
+    design_template_id: cards[payload.cardNumber - 1]?.previewImageUrl ?? "",
     partner_id: "mock",
     return_address: payload.returnAddress,
     front_request_body: {},
@@ -176,6 +200,16 @@ onMounted(() => {
         <CampaignStatusBadge :status="campaign.status" />
       </div>
       <div class="flex items-center gap-3">
+        <button
+          v-if="showRetryPrintSubmission"
+          type="button"
+          class="bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#3aa893] transition-colors disabled:opacity-50"
+          :disabled="retryingPrint"
+          data-testid="retry-print-submission"
+          @click="retryPrintSubmission"
+        >
+          {{ retryingPrint ? "Retrying…" : "Retry print submission" }}
+        </button>
         <SubmitPrintJobButton
           v-if="showPrintJobControls"
           :campaign="campaign"
@@ -191,6 +225,14 @@ onMounted(() => {
         />
       </div>
     </div>
+
+    <p
+      v-if="retryPrintError"
+      class="mb-4 text-sm text-red-600"
+      data-testid="retry-print-error"
+    >
+      {{ retryPrintError }}
+    </p>
 
     <!-- Core meta: created date + recipients when available -->
     <div
