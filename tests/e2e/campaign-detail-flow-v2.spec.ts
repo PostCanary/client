@@ -198,3 +198,84 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
     await expect(page.getByText("Targeting Summary")).toBeVisible();
   });
 });
+
+test.describe("Flow v2 print recovery (Codex review P2)", () => {
+  test("retry button replays purchase-records and refreshes to submitted", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    let purchaseCalls = 0;
+    let campaignStatus = "records_purchased";
+
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ status: campaignStatus })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) => {
+        purchaseCalls += 1;
+        campaignStatus = "submitted_to_partner";
+        return json(route, {
+          ok: true,
+          source: "audience",
+          record_count: 1,
+          print_submit_status: "submitted",
+        });
+      },
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+
+    const retry = page.getByTestId("retry-print-submission");
+    await expect(retry).toBeVisible();
+    // The legacy ops modal must NOT be offered for uploaded designs.
+    await expect(page.getByText("Submit Print Job")).toHaveCount(0);
+
+    await retry.click();
+    await expect
+      .poll(() => purchaseCalls, { timeout: 5000 })
+      .toBe(1);
+    // Refetch after success shows the advanced status and hides the button.
+    await expect(page.getByTestId("campaign-detail").getByText("In production")).toBeVisible();
+    await expect(retry).toHaveCount(0);
+  });
+
+  test("retry failure surfaces an error and keeps the button", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ status: "records_purchased" })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) =>
+        json(
+          route,
+          { error: "print_submit_failed", message: "Partner rejected artwork" },
+          502,
+        ),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect(page.getByTestId("retry-print-error")).toBeVisible();
+    await expect(page.getByTestId("retry-print-submission")).toBeVisible();
+  });
+
+  test("retry button absent once already submitted", async ({ page }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ status: "submitted_to_partner" })),
+    );
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await expect(page.getByTestId("campaign-detail")).toBeVisible();
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+  });
+});
