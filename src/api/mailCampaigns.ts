@@ -36,6 +36,15 @@ interface ListResponse {
 }
 
 function toMailCampaign(r: MailCampaignResponse): MailCampaign {
+  // Flow v2 uploaded/request designs store sequenceCards as [] (or omit
+  // cards entirely). Never leave `cards` non-array — detail page and
+  // list helpers call .every / .filter / .length without further guards.
+  const rawCards = r.cards_data;
+  const cards = Array.isArray(rawCards) ? rawCards : [];
+  const design = r.design_data && typeof r.design_data === "object"
+    ? r.design_data
+    : null;
+
   return {
     id: r.id,
     orgId: r.org_id,
@@ -43,15 +52,23 @@ function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     status: r.status as MailCampaign["status"],
     goalType: r.goal_type as MailCampaign["goalType"],
     serviceType: r.service_type,
-    sequenceLength: r.sequence_length,
-    householdCount: r.household_count,
-    totalCost: r.total_cost,
-    totalSpent: r.total_spent,
-    cards: r.cards_data ?? [],
+    // send_to_list Flow v2: server may serialize null for counts/cost when
+    // the draft had no targeting slice (households live on the audience).
+    sequenceLength:
+      typeof r.sequence_length === "number" ? r.sequence_length : null,
+    householdCount:
+      typeof r.household_count === "number" ? r.household_count : null,
+    totalCost: typeof r.total_cost === "number" ? r.total_cost : null,
+    totalSpent: typeof r.total_spent === "number" ? r.total_spent : 0,
+    cards,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     targetingData: r.targeting_data ?? null,
     audienceId: r.audience_id ?? null,
+    // POS-162: surface design snapshot so detail can render uploaded
+    // front artwork when cards_data is empty.
+    designSource: design?.designSource as MailCampaign["designSource"],
+    uploadedAsset: (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null,
   };
 }
 

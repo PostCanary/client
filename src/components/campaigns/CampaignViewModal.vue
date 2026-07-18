@@ -85,9 +85,15 @@ function downloadSummaryCsv(c: MailCampaign) {
     ["Campaign", c.name],
     ["Audience Type", "List"],
     ["Campaign Date", formatDate(c.createdAt)],
-    ["Households", String(c.householdCount)],
+    [
+      "Households",
+      typeof c.householdCount === "number" ? String(c.householdCount) : "",
+    ],
     ["Pieces Sent", String(piecesSent.value ?? 0)],
-    ["Total Cost", c.totalCost.toFixed(2)],
+    [
+      "Total Cost",
+      typeof c.totalCost === "number" ? c.totalCost.toFixed(2) : "",
+    ],
   ];
   const csv = rows
     .map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))

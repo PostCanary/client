@@ -13,6 +13,8 @@ import PrintJobConfirmModal, {
 } from "@/components/campaigns/PrintJobConfirmModal.vue";
 import { usePrintJob } from "@/composables/usePrintJob";
 import type { PrintJobSubmitInputs } from "@/api/printJobs";
+import { campaignDesignPreviewUrl } from "@/utils/campaignDisplay";
+import { mediaSrc } from "@/utils/mediaSrc";
 
 const route = useRoute();
 const router = useRouter();
@@ -25,18 +27,84 @@ const printJob = usePrintJob();
 const showPrintModal = ref(false);
 const printJobError = ref<string | null>(null);
 
-const hasDesign = computed(
-  () => campaign.value?.cards.every((c) => !!c.previewImageUrl) ?? false,
+// Legacy sequence cards with previews (template/AI path). Empty for Flow
+// v2 designSource='uploaded' — never call .every on a missing array.
+const hasLegacyCards = computed(() => {
+  const cards = campaign.value?.cards;
+  return Array.isArray(cards) && cards.length > 0;
+});
+const hasDesign = computed(() => {
+  const cards = campaign.value?.cards;
+  if (!Array.isArray(cards) || cards.length === 0) {
+    // Uploaded artwork counts as a design for print-job readiness.
+    if (campaign.value?.designSource === "uploaded") {
+      return !!campaign.value.uploadedAsset?.frontUrl;
+    }
+    return false;
+  }
+  return cards.every((c) => !!c.previewImageUrl);
+});
+const recipientCount = computed(() => {
+  const n = campaign.value?.householdCount;
+  return typeof n === "number" ? n : 0;
+});
+const hasRecipientCount = computed(
+  () => typeof campaign.value?.householdCount === "number",
 );
-const recipientCount = computed(() => campaign.value?.householdCount ?? 0);
+
+// Preview: uploaded front via design snapshot, else first card preview.
+const designPreviewUrl = computed(() => {
+  if (!campaign.value) return null;
+  return campaignDesignPreviewUrl(campaign.value);
+});
+const isUploadedDesign = computed(
+  () => campaign.value?.designSource === "uploaded",
+);
+
+// Ops print path only makes sense when there is a design surface to submit.
+const showPrintJobControls = computed(
+  () => hasLegacyCards.value || isUploadedDesign.value,
+);
+
+// Targeting / map block is only meaningful for area campaigns with data.
+const showTargetingSummary = computed(() => {
+  const c = campaign.value;
+  if (!c) return false;
+  if (c.targetingData && Object.keys(c.targetingData).length > 0) return true;
+  // Keep a compact summary for campaigns that still have sequence/cost stats.
+  return (
+    typeof c.sequenceLength === "number" ||
+    typeof c.totalCost === "number" ||
+    typeof c.householdCount === "number"
+  );
+});
+
+function formatCreatedAt(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatGoal(goalType: string | null | undefined): string {
+  if (!goalType) return "—";
+  return String(goalType).replace(/_/g, " ");
+}
 
 async function onPrintJobSubmit(payload: PrintJobConfirmPayload) {
   if (!campaign.value) return;
   printJobError.value = null;
+  const cards = campaign.value.cards ?? [];
   const inputs: PrintJobSubmitInputs = {
     campaign_id: campaign.value.id,
     design_template_id:
-      campaign.value.cards[payload.cardNumber - 1]?.previewImageUrl ?? "",
+      cards[payload.cardNumber - 1]?.previewImageUrl ??
+      campaign.value.uploadedAsset?.frontUrl ??
+      "",
     partner_id: "mock",
     return_address: payload.returnAddress,
     front_request_body: {},
@@ -86,8 +154,8 @@ onMounted(() => {
     </button>
   </div>
 
-  <!-- Campaign detail -->
-  <div v-else class="max-w-5xl mx-auto py-8 px-4">
+  <!-- Campaign detail — safe for every campaign shape (legacy + Flow v2) -->
+  <div v-else class="max-w-5xl mx-auto py-8 px-4" data-testid="campaign-detail">
     <!-- Back link -->
     <button
       class="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
@@ -99,16 +167,17 @@ onMounted(() => {
       All Campaigns
     </button>
 
-    <!-- Header -->
+    <!-- Header: name + status always present -->
     <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-bold text-[#0b2d50]">
+      <div class="flex items-center gap-3 flex-wrap">
+        <h1 class="text-2xl font-bold text-[#0b2d50]" data-testid="campaign-detail-name">
           {{ campaign.name }}
         </h1>
         <CampaignStatusBadge :status="campaign.status" />
       </div>
       <div class="flex items-center gap-3">
         <SubmitPrintJobButton
+          v-if="showPrintJobControls"
           :campaign="campaign"
           :recipient-count="recipientCount"
           :has-design="hasDesign"
@@ -120,6 +189,31 @@ onMounted(() => {
           @pause="pause"
           @resume="resume"
         />
+      </div>
+    </div>
+
+    <!-- Core meta: created date + recipients when available -->
+    <div
+      class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600 mb-6"
+      data-testid="campaign-detail-meta"
+    >
+      <div>
+        <span class="text-gray-500">Created:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium">
+          {{ formatCreatedAt(campaign.createdAt) }}
+        </span>
+      </div>
+      <div v-if="hasRecipientCount">
+        <span class="text-gray-500">Recipients:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium" data-testid="campaign-detail-recipients">
+          {{ recipientCount.toLocaleString() }}
+        </span>
+      </div>
+      <div v-if="campaign.goalType">
+        <span class="text-gray-500">Goal:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+          {{ formatGoal(campaign.goalType) }}
+        </span>
       </div>
     </div>
 
@@ -138,49 +232,83 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- KPI cards -->
+    <!-- Design preview: uploaded front artwork or first card thumbnail -->
+    <div
+      v-if="designPreviewUrl || isUploadedDesign"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      data-testid="campaign-detail-design"
+    >
+      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Design</h3>
+      <div
+        class="w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+        style="aspect-ratio: 3 / 2;"
+      >
+        <img
+          v-if="designPreviewUrl"
+          :src="designPreviewUrl"
+          :alt="isUploadedDesign ? 'Uploaded design preview' : 'Campaign design preview'"
+          class="h-full w-full object-cover"
+          draggable="false"
+          data-testid="campaign-detail-design-preview"
+        />
+        <div
+          v-else
+          class="flex h-full w-full items-center justify-center"
+          data-testid="campaign-detail-design-placeholder"
+        >
+          <span class="text-xs font-medium text-gray-400">Preview pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI cards (defensive inside component for null counts) -->
     <CampaignKPICards :campaign="campaign" class="mb-8" />
 
-    <!-- Sequence timeline -->
+    <!-- Sequence timeline — legacy card list only when cards exist -->
     <SequenceTimeline
+      v-if="hasLegacyCards"
       :cards="campaign.cards"
       :brand-colors="brandKitStore.brandKit?.brandColors"
       :campaign-status="campaign.status"
       class="mb-8"
     />
 
-    <!-- Targeting summary -->
-    <div class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+    <!-- Targeting / stats summary — only when at least one field is present -->
+    <div
+      v-if="showTargetingSummary"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+    >
       <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">
-        Targeting Summary
+        {{ campaign.targetingData ? "Targeting Summary" : "Campaign Summary" }}
       </h3>
       <div class="flex items-start gap-4">
-        <!-- Placeholder map rectangle -->
+        <!-- Map placeholder only when targeting geometry exists -->
         <div
+          v-if="campaign.targetingData"
           class="w-48 h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center shrink-0"
         >
           <span class="text-xs text-gray-400">Map preview</span>
         </div>
         <div class="space-y-2 text-sm">
-          <div>
+          <div v-if="campaign.goalType">
             <span class="text-gray-500">Goal:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium">
-              {{ campaign.goalType.replace(/_/g, " ") }}
+            <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+              {{ formatGoal(campaign.goalType) }}
             </span>
           </div>
-          <div>
+          <div v-if="hasRecipientCount">
             <span class="text-gray-500">Households:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
-              {{ campaign.householdCount.toLocaleString() }}
+              {{ recipientCount.toLocaleString() }}
             </span>
           </div>
-          <div>
+          <div v-if="typeof campaign.sequenceLength === 'number'">
             <span class="text-gray-500">Sequence:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
               {{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}
             </span>
           </div>
-          <div>
+          <div v-if="typeof campaign.totalCost === 'number'">
             <span class="text-gray-500">Total cost:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
               ${{ campaign.totalCost.toFixed(2) }}
@@ -190,13 +318,18 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Print job confirm modal -->
+    <!-- Print job confirm modal — only when print controls are available -->
     <PrintJobConfirmModal
+      v-if="showPrintJobControls"
       :open="showPrintModal"
       :org-id="campaign.orgId"
       :recipient-count="recipientCount"
-      :card-count="campaign.cards.length"
-      :front-preview-url="campaign.cards[0]?.previewImageUrl ?? null"
+      :card-count="hasLegacyCards ? campaign.cards.length : 1"
+      :front-preview-url="
+        campaign.cards[0]?.previewImageUrl
+          ? mediaSrc(campaign.cards[0].previewImageUrl)
+          : designPreviewUrl
+      "
       :submitting="printJob.phase.value === 'submitting'"
       @submit="onPrintJobSubmit"
       @close="showPrintModal = false; printJobError = null"

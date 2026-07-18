@@ -659,13 +659,24 @@ export interface TemplateDefinition {
 // UI labels still say "Campaign" — customers don't see type names.
 // The existing Campaign/useCampaignStore stays UNTOUCHED.
 
+// Server CHECK (models.py) + legacy UI statuses. Flow v2 send path uses
+// records_purchased / submitted_to_partner / in_production / returned /
+// failed / cancelled; older clients also emit printing / paused / etc.
 export type MailCampaignStatus =
   | 'draft'
   | 'approved'
   | 'pending_moderation'
+  | 'purchasing_records'
+  | 'records_purchased'
+  | 'submitted_to_partner'
+  | 'in_production'
   | 'printing'
   | 'in_transit'
   | 'delivered'
+  | 'returned'
+  | 'failed'
+  | 'held'
+  | 'cancelled'
   | 'results_ready'
   | 'completed'
   | 'paused'
@@ -677,10 +688,13 @@ export interface MailCampaign {
   status: MailCampaignStatus
   goalType: CampaignGoalType
   serviceType: string | null
-  sequenceLength: number
-  householdCount: number
-  totalCost: number
+  // Nullable: send_to_list Flow v2 drafts often leave sequenceLength /
+  // householdCount / totalCost unset at approve time (no targeting slice).
+  sequenceLength: number | null
+  householdCount: number | null
+  totalCost: number | null
   totalSpent: number
+  // Empty for designSource='uploaded' (sequenceCards snapshot is []).
   cards: MailCampaignCard[]
   createdAt: string
   updatedAt: string
@@ -694,6 +708,10 @@ export interface MailCampaign {
   // before #132 shipped — callers must degrade to the summary CSV in
   // both of those cases, not just when the server 404s.
   audienceId: string | null
+  // POS-162: design snapshot fields (from design_data). Needed so detail
+  // can show uploaded artwork when cards_data is empty.
+  designSource?: DesignSource
+  uploadedAsset?: UploadedDesignAsset | null
 }
 
 export interface MailCampaignCard {
