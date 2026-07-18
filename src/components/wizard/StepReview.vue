@@ -78,7 +78,17 @@ const uploadedFrontUrl = computed(() => {
   return url ? mediaSrc(url) : null;
 });
 const isCustomDesignRequest = computed(() => designSource.value === "requested");
-const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
+// Send-to-a-list campaigns have no targeting slice — their recipient count
+// is the uploaded audience's post-suppression deliverable count (dry-run
+// find 2026-07-18: review showed "0 households" and blocked approval).
+const householdCount = computed(() => {
+  if (goal.value?.goalType === "send_to_list") {
+    return (
+      draftStore.draft?.audience?.suppressionResult?.deliverable_count ?? 0
+    );
+  }
+  return targeting.value?.finalHouseholdCount ?? 0;
+});
 const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
@@ -407,15 +417,28 @@ async function approve() {
           data-testid="zero-households-warning"
           class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
         >
-          Your target area has no households, so this campaign can't be
-          approved yet.
-          <button
-            class="font-semibold underline"
-            @click="draftStore.goToStep(2)"
-          >
-            Go back to Pick Your Neighborhood
-          </button>
-          and choose an area with at least one household.
+          <template v-if="goal?.goalType === 'send_to_list'">
+            Your list has no deliverable addresses, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to your list
+            </button>
+            and upload at least one deliverable address.
+          </template>
+          <template v-else>
+            Your target area has no households, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to Pick Your Neighborhood
+            </button>
+            and choose an area with at least one household.
+          </template>
         </div>
       </div>
 
