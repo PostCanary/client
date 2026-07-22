@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, watch } from "vue";
 // POS-151: campaign history card — design preview, Campaign Date, Audience
 // Type, Number of Pieces Sent per the Dashboard Flow Flow-3 wireframe.
 // Click anywhere on the card (outside actions) opens the "Your Campaign"
@@ -25,6 +26,16 @@ const isPausable = ["approved", "printing", "in_transit"].includes(
   props.campaign.status,
 );
 const isResumable = props.campaign.status === "paused";
+const previewUrl = computed(() => campaignDesignPreviewUrl(props.campaign));
+const previewFailed = ref(false);
+
+watch(previewUrl, () => {
+  previewFailed.value = false;
+});
+
+function handlePreviewError() {
+  previewFailed.value = true;
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -43,18 +54,21 @@ function formatDate(iso: string): string {
     <!-- Design preview — full card width, postcard aspect -->
     <div class="w-full bg-gray-100 border-b border-gray-200" style="aspect-ratio: 3 / 2">
       <img
-        v-if="campaignDesignPreviewUrl(campaign)"
-        :src="campaignDesignPreviewUrl(campaign) as string"
+        v-if="previewUrl && !previewFailed"
+        :src="previewUrl"
         alt="Campaign design preview"
         class="h-full w-full object-cover"
         draggable="false"
+        @error="handlePreviewError"
       />
       <div
         v-else
         class="flex h-full w-full items-center justify-center px-2 text-center"
         data-testid="campaign-list-card-preview-placeholder"
       >
-        <span class="text-sm font-medium text-gray-400">Preview pending</span>
+        <span class="text-sm font-medium text-gray-400">
+          {{ previewUrl ? "Preview unavailable" : "Preview pending" }}
+        </span>
       </div>
     </div>
 

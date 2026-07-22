@@ -9,6 +9,10 @@ const UPLOADED_FRONT =
   "/media/design-uploads/org-alpha/front-abc123.png";
 const LEGACY_PREVIEW =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiM3AwBv7QMCaZrQZQAAAABJRU5ErkJggg==";
+const VALID_PREVIEW_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiM3AwBv7QMCaZrQZQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({
@@ -115,6 +119,9 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
   }) => {
     const state = createMockAppState();
     await installMockApi(page, state);
+    await page.route("**/media/design-uploads/org-alpha/front-abc123.png", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: VALID_PREVIEW_PNG }),
+    );
 
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", async (route) => {
       return json(route, flowV2UploadedCampaign());
@@ -148,6 +155,9 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
   }) => {
     const state = createMockAppState();
     await installMockApi(page, state);
+    await page.route("**/media/design-uploads/org-alpha/front-abc123.png", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: VALID_PREVIEW_PNG }),
+    );
 
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", async (route) => {
       return json(
@@ -169,6 +179,44 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
     );
     await expect(page.getByTestId("campaign-detail-recipients")).toHaveCount(0);
     await expect(page.getByTestId("campaign-detail-design-preview")).toBeVisible();
+  });
+
+  test("Flow v2 with a failed uploaded asset shows a deterministic placeholder", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", async (route) => {
+      return json(
+        route,
+        flowV2UploadedCampaign({
+          design_data: {
+            designSource: "uploaded",
+            sequenceCards: [],
+            uploadedAsset: {
+              fileName: "front.png",
+              mimeType: "image/png",
+              fileSizeBytes: 12000,
+              widthPx: 1875,
+              heightPx: 1275,
+              frontUrl: "/media/design-uploads/org-alpha/missing.png",
+              backUrl: null,
+            },
+          },
+        }),
+      );
+    });
+    await page.route("**/media/design-uploads/org-alpha/missing.png", (route) =>
+      route.fulfill({ status: 404, body: "missing" }),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+
+    await expect(page.getByTestId("campaign-detail-design-placeholder")).toContainText(
+      "Preview unavailable",
+    );
+    await expect(page.getByTestId("campaign-detail-design-preview")).toHaveCount(0);
   });
 
   test("legacy template campaign still renders name + card preview", async ({

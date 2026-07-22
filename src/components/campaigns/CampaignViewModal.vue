@@ -43,6 +43,15 @@ const piecesSent = computed(() =>
 const previewUrl = computed(() =>
   props.campaign ? campaignDesignPreviewUrl(props.campaign) : null,
 );
+const previewFailed = ref(false);
+
+watch(previewUrl, () => {
+  previewFailed.value = false;
+});
+
+function handlePreviewError() {
+  previewFailed.value = true;
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -161,17 +170,18 @@ async function downloadAudience() {
       <div v-else class="modal-body">
         <div class="preview-wrap">
           <img
-            v-if="previewUrl"
+            v-if="previewUrl && !previewFailed"
             :src="previewUrl"
             alt="Campaign design preview"
             class="preview-img"
+            @error="handlePreviewError"
           />
           <div
             v-else
             class="preview-placeholder"
             data-testid="campaign-modal-preview-placeholder"
           >
-            Preview pending
+            {{ previewUrl ? "Preview unavailable" : "Preview pending" }}
           </div>
         </div>
 
