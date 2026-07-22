@@ -134,6 +134,10 @@ async function bootCampaignsPage(page: Page) {
   await page.goto("/app/campaigns");
 }
 
+async function selectSentTab(page: Page) {
+  await page.getByRole("button", { name: /^Sent/ }).click();
+}
+
 test.describe("Campaigns history (POS-151)", () => {
   test("shows Draft / Sent tabs and defaults to Draft", async ({ page }) => {
     await bootCampaignsPage(page);
@@ -173,6 +177,7 @@ test.describe("Campaigns history (POS-151)", () => {
   }) => {
     await bootCampaignsPage(page);
 
+    await selectSentTab(page);
     await page.getByText("Send to a List — Spring VIPs").click();
 
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
@@ -191,6 +196,7 @@ test.describe("Campaigns history (POS-151)", () => {
     await bootCampaignsPage(page);
 
     // List campaign → Download Audience
+    await selectSentTab(page);
     await page.getByText("Send to a List — Spring VIPs").click();
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Download Audience" })).toBeVisible();
@@ -199,7 +205,7 @@ test.describe("Campaigns history (POS-151)", () => {
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toHaveCount(0);
 
     // Area campaign → View Map, reveals the map preview on click
-    await page.getByRole("button", { name: /^Sent/ }).click();
+    await selectSentTab(page);
     await page.getByText("Target an Area — Phoenix, AZ").click();
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Download Audience" })).toHaveCount(0);
@@ -244,6 +250,7 @@ test.describe("Campaigns history (POS-151)", () => {
     );
 
     await page.goto("/app/campaigns");
+    await selectSentTab(page);
     await page.getByText("Send to a List — Spring VIPs").click();
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
 
@@ -273,6 +280,7 @@ test.describe("Campaigns history (POS-151)", () => {
       },
     );
 
+    await selectSentTab(page);
     await page.getByText("Send to a List — Spring VIPs").click();
     await expect(page.getByRole("dialog", { name: "Your Campaign" })).toBeVisible();
 
