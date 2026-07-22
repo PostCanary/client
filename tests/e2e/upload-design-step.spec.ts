@@ -50,12 +50,48 @@ test("accepting a print-spec-compliant PNG shows the preview and enables Next", 
 
   await expect(page.getByTestId("upload-front-preview")).toBeVisible();
   await expect(page.getByTestId("upload-front-preview")).toContainText("front.png");
+  await expect(page.getByRole("img", { name: "Front design preview" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Front design preview" })).toHaveAttribute(
+    "src",
+    /^blob:/,
+  );
   await expect(page.getByTestId("upload-front-error")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
 
   // POS-156: file is posted to /api/design-uploads (server-stored URL), not
   // inlined as base64 on the draft.
   await expect.poll(() => state.requestLog.designUploads.length).toBe(1);
+});
+
+test("accepting a PDF shows the browser PDF preview instead of a file placeholder", async ({
+  page,
+}) => {
+  await gotoStep3(page);
+  await page.route("**/api/design-uploads", (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        asset_id: "mock-pdf-asset",
+        url: "/media/design-uploads/mock-org/asset-1.pdf",
+        mime_type: "application/pdf",
+        file_size_bytes: 32,
+        width_px: null,
+        height_px: null,
+      }),
+    }),
+  );
+
+  await page.getByTestId("upload-front-input").setInputFiles({
+    name: "front.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n% POS-173 preview fixture\n"),
+  });
+
+  await expect(page.getByTestId("upload-front-preview")).toBeVisible();
+  await expect(page.getByTestId("upload-front-pdf-preview")).toBeVisible();
+  await expect(page.getByTestId("upload-front-preview")).toContainText("front.pdf");
+  await expect(page.getByTestId("upload-front-preview")).not.toContainText("Preview unavailable");
 });
 
 test("opening the design-request modal blurs the background content", async ({ page }) => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useCampaignDetail } from "@/composables/useCampaignDetail";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -61,15 +61,6 @@ const designPreviewUrl = computed(() => {
 const isUploadedDesign = computed(
   () => campaign.value?.designSource === "uploaded",
 );
-const designPreviewFailed = ref(false);
-
-watch(designPreviewUrl, () => {
-  designPreviewFailed.value = false;
-});
-
-function handleDesignPreviewError() {
-  designPreviewFailed.value = true;
-}
 
 // Ops print path only makes sense when there is a design surface to submit.
 // Legacy ops path only: the modal submits /api/print_jobs with a template
@@ -295,22 +286,19 @@ onMounted(() => {
         style="aspect-ratio: 3 / 2;"
       >
         <img
-          v-if="designPreviewUrl && !designPreviewFailed"
+          v-if="designPreviewUrl"
           :src="designPreviewUrl"
           :alt="isUploadedDesign ? 'Uploaded design preview' : 'Campaign design preview'"
           class="h-full w-full object-cover"
           draggable="false"
           data-testid="campaign-detail-design-preview"
-          @error="handleDesignPreviewError"
         />
         <div
           v-else
           class="flex h-full w-full items-center justify-center"
           data-testid="campaign-detail-design-placeholder"
         >
-          <span class="text-xs font-medium text-gray-400">
-            {{ designPreviewUrl ? "Preview unavailable" : "Preview pending" }}
-          </span>
+          <span class="text-xs font-medium text-gray-400">Preview pending</span>
         </div>
       </div>
     </div>

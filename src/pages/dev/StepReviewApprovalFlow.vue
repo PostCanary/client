@@ -18,13 +18,16 @@ const emptyDraft = params.get("emptyDraft") === "1";
 // designSource states from a plain URL param, so Playwright can seed
 // requested/uploaded/absent without a real Step 3 build.
 const designSourceParam = params.get("designSource");
+const uploadedPreviewParam = params.get("uploadedPreview");
 // POS-161: seed a campaign-level return-address override without going
 // through Step 3. When absent, Review falls back to the org default
 // (mocked via GET /api/organizations/return-address).
 const draftReturnAddressParam = params.get("draftReturnAddress");
 // POS-156: uploaded designs store server media URLs, not base64 data URLs.
 const SAMPLE_UPLOADED_FRONT =
-  "/media/design-uploads/mock-org/sample-front.png";
+  uploadedPreviewParam === "missing"
+    ? ""
+    : "/media/design-uploads/mock-org/sample-front.png";
 
 const designSourceExtras: Partial<DesignSelection> =
   designSourceParam === "requested"

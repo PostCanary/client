@@ -8,6 +8,10 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 // being built in parallel — this spec drives the draft store directly.
 
 const DRAFT_ID = "11111111-1111-4111-8111-111111111111";
+const VALID_PREVIEW_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8AARLJgwiM3AwBv7QMCaZrQZQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({
@@ -121,6 +125,9 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     page,
   }) => {
     await installMocks(page);
+    await page.route("**/media/design-uploads/mock-org/sample-front.png", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: VALID_PREVIEW_PNG }),
+    );
 
     await page.goto("/dev/step-review-approval-flow?designSource=uploaded");
 
@@ -131,6 +138,21 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     await expect(uploadedImg).toHaveAttribute("src", /\/media\/design-uploads\//);
 
     await expect(page.getByTestId("custom-design-fee-line")).toHaveCount(0);
+  });
+
+  test("uploaded: failed front asset shows a deterministic unavailable state", async ({
+    page,
+  }) => {
+    await installMocks(page);
+
+    await page.goto(
+      "/dev/step-review-approval-flow?designSource=uploaded&uploadedPreview=missing",
+    );
+
+    await expect(page.getByTestId("uploaded-design-preview-placeholder")).toContainText(
+      "Uploaded design preview unavailable",
+    );
+    await expect(page.getByRole("img", { name: "Uploaded design preview" })).toHaveCount(0);
   });
 
   test("absent designSource: unchanged current behavior (no placeholder, no fee line)", async ({

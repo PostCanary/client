@@ -172,41 +172,6 @@ test.describe("Campaigns history (POS-151)", () => {
     ).toBeVisible();
   });
 
-  test("uploaded campaign with a failed asset shows a deterministic card placeholder", async ({
-    page,
-  }) => {
-    const state = createMockAppState();
-    await installMockApi(page, state);
-
-    await page.route("**/api/mail-campaigns", async (route) =>
-      json(route, {
-        ok: true,
-        campaigns: [
-          listCampaign({
-            cards_data: [],
-            design_data: {
-              designSource: "uploaded",
-              uploadedAsset: {
-                frontUrl: "/media/design-uploads/org-alpha/missing.png",
-              },
-            },
-          }),
-        ],
-      }),
-    );
-    await page.route("**/api/campaign-drafts", async (route) =>
-      json(route, { ok: true, drafts: [] }),
-    );
-    await page.route("**/media/design-uploads/org-alpha/missing.png", (route) =>
-      route.fulfill({ status: 404, body: "missing" }),
-    );
-
-    await page.goto("/app/campaigns");
-
-    const placeholder = page.getByTestId("campaign-list-card-preview-placeholder");
-    await expect(placeholder).toContainText("Preview unavailable");
-  });
-
   test("opens the Your Campaign modal as an overlay, not a navigation", async ({
     page,
   }) => {

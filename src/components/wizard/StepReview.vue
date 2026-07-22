@@ -87,6 +87,9 @@ const uploadedFrontUrl = computed(() => {
   // Server returns root-relative /media/... paths — resolve against API_BASE.
   return url ? mediaSrc(url) : null;
 });
+const uploadedFrontMimeType = computed(
+  () => draftStore.draft?.design?.uploadedAsset?.mimeType ?? null,
+);
 const isCustomDesignRequest = computed(() => designSource.value === "requested");
 // Send-to-a-list campaigns have no targeting slice — their recipient count
 // is the uploaded audience's post-suppression deliverable count (dry-run
@@ -426,6 +429,7 @@ async function approve() {
           :cards="designCards"
           :design-source="designSource"
           :uploaded-front-url="uploadedFrontUrl"
+          :uploaded-front-mime-type="uploadedFrontMimeType"
         />
       </div>
 

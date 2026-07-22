@@ -239,9 +239,10 @@ async function handleFile(file: File, side: "front" | "back") {
     }
 
     // Local thumbnail only — blob URL is revoked on replace/unmount.
-    // Do NOT put base64 or blob URLs into the draft store.
-    const previewUrl = isPdf ? null : URL.createObjectURL(file);
-    const ownsObjectUrl = previewUrl !== null;
+    // Browser PDF viewers can render this object URL directly in the card;
+    // do NOT put base64 or blob URLs into the draft store.
+    const previewUrl = URL.createObjectURL(file);
+    const ownsObjectUrl = true;
 
     progressRef.value = 0;
     let uploaded: DesignUploadResponse;
@@ -483,8 +484,18 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             alt="Front design preview"
             class="w-20 h-28 object-cover rounded-lg border border-gray-100 shrink-0"
           />
+          <object
+            v-else-if="frontFile.previewUrl && frontFile.mimeType === 'application/pdf'"
+            :data="frontFile.previewUrl"
+            type="application/pdf"
+            aria-label="Front design PDF preview"
+            data-testid="upload-front-pdf-preview"
+            class="w-20 h-28 rounded-lg border border-gray-100 bg-gray-50 shrink-0"
+          >
+            <span class="text-xs text-gray-400">PDF preview unavailable</span>
+          </object>
           <div v-else class="w-20 h-28 rounded-lg border border-gray-100 bg-gray-50 flex items-center justify-center shrink-0 text-gray-400 text-xs">
-            PDF
+            Preview unavailable
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-[#0b2d50] truncate">{{ frontFile.fileName }}</p>
@@ -545,8 +556,18 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             alt="Back design preview"
             class="w-20 h-28 object-cover rounded-lg border border-gray-100 shrink-0"
           />
+          <object
+            v-else-if="backFile.previewUrl && backFile.mimeType === 'application/pdf'"
+            :data="backFile.previewUrl"
+            type="application/pdf"
+            aria-label="Back design PDF preview"
+            data-testid="upload-back-pdf-preview"
+            class="w-20 h-28 rounded-lg border border-gray-100 bg-gray-50 shrink-0"
+          >
+            <span class="text-xs text-gray-400">PDF preview unavailable</span>
+          </object>
           <div v-else class="w-20 h-28 rounded-lg border border-gray-100 bg-gray-50 flex items-center justify-center shrink-0 text-gray-400 text-xs">
-            {{ backFile.mimeType === 'application/pdf' ? 'PDF' : 'File' }}
+            Preview unavailable
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-[#0b2d50] truncate">{{ backFile.fileName }}</p>

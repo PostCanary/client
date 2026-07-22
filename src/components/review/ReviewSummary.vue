@@ -24,6 +24,7 @@ const props = defineProps<{
   cards: CardDesign[];
   designSource?: DesignSource;
   uploadedFrontUrl?: string | null;
+  uploadedFrontMimeType?: string | null;
 }>();
 
 const isPlaceholderMode = computed(
@@ -43,6 +44,11 @@ const currentUrl = computed(() => cardUrls.value[currentCardIndex.value] ?? null
 const currentStatus = computed<CardStatus>(
   () => cardStatus.value[currentCardIndex.value] ?? "pending",
 );
+const uploadedPreviewFailed = ref(false);
+const isUploadedPdf = computed(
+  () => props.uploadedFrontMimeType === "application/pdf",
+);
+let uploadedPreviewKey = "";
 
 function revokeAll() {
   for (const u of revokeList) URL.revokeObjectURL(u);
@@ -131,6 +137,21 @@ watch(
   () => fetchAll(),
 );
 
+watch(
+  () => [props.uploadedFrontUrl, props.uploadedFrontMimeType],
+  ([url, mimeType]) => {
+    const nextKey = `${url ?? ""}|${mimeType ?? ""}`;
+    if (nextKey !== uploadedPreviewKey) {
+      uploadedPreviewKey = nextKey;
+      uploadedPreviewFailed.value = false;
+    }
+  },
+);
+
+function handleUploadedPreviewError() {
+  uploadedPreviewFailed.value = true;
+}
+
 function prevCard() {
   if (currentCardIndex.value > 0) currentCardIndex.value--;
 }
@@ -186,12 +207,30 @@ function nextCard() {
         </div>
         <!-- Customer-uploaded artwork: nothing to server-render, show the
              front image they supplied directly. -->
+        <object
+          v-else-if="designSource === 'uploaded' && uploadedFrontUrl && isUploadedPdf && !uploadedPreviewFailed"
+          :data="uploadedFrontUrl"
+          type="application/pdf"
+          aria-label="Uploaded design preview"
+          class="w-full h-full"
+          @error="handleUploadedPreviewError"
+        >
+          <span class="text-sm text-gray-400">Uploaded design preview unavailable</span>
+        </object>
         <img
-          v-else-if="designSource === 'uploaded' && uploadedFrontUrl"
+          v-else-if="designSource === 'uploaded' && uploadedFrontUrl && !isUploadedPdf && !uploadedPreviewFailed"
           :src="uploadedFrontUrl"
           alt="Uploaded design preview"
           class="w-full h-full object-contain"
+          @error="handleUploadedPreviewError"
         />
+        <div
+          v-else-if="designSource === 'uploaded'"
+          data-testid="uploaded-design-preview-placeholder"
+          class="flex items-center justify-center w-full h-full text-sm text-gray-400"
+        >
+          Uploaded design preview unavailable
+        </div>
         <img
           v-else-if="currentUrl && currentStatus === 'ready'"
           :src="currentUrl"

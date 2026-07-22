@@ -1256,6 +1256,8 @@ export async function installMockApi(page: Page, state: MockAppState) {
       // Playwright multipart posts still expose postDataBuffer; we only need
       // to log that an upload happened and return a stable contract body.
       const buffer = route.request().postDataBuffer();
+      const multipartBody = buffer?.toString("utf8") ?? "";
+      const isPdf = multipartBody.includes('filename="front.pdf"');
       state.requestLog.designUploads.push({
         fileName: contentType.includes("multipart") ? "uploaded-file" : null,
         mimeType: contentType || null,
@@ -1266,11 +1268,11 @@ export async function installMockApi(page: Page, state: MockAppState) {
         route,
         {
           asset_id: `mock-design-asset-${n}`,
-          url: `/media/design-uploads/mock-org/asset-${n}.png`,
-          mime_type: "image/png",
+          url: `/media/design-uploads/mock-org/asset-${n}.${isPdf ? "pdf" : "png"}`,
+          mime_type: isPdf ? "application/pdf" : "image/png",
           file_size_bytes: buffer?.length ?? 0,
-          width_px: 1875,
-          height_px: 2775,
+          width_px: isPdf ? null : 1875,
+          height_px: isPdf ? null : 2775,
         },
         201,
       );
