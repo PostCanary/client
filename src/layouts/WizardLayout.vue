@@ -1,12 +1,23 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { RouterView, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useMessage } from "naive-ui";
 import LogoUrl from "@/assets/source-logo-02.png";
+import WizardProgress from "@/components/wizard/WizardProgress.vue";
+import type { WizardStep } from "@/types/campaign";
 
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
 const message = useMessage();
+const currentStep = computed(() => draftStore.currentStep as WizardStep);
+const completedSteps = computed(
+  () => (draftStore.draft?.completedSteps ?? []) as WizardStep[],
+);
+
+function goToStep(step: WizardStep) {
+  draftStore.goToStep(step);
+}
 
 async function handleClose() {
   try {
@@ -24,12 +35,24 @@ async function handleClose() {
     <!-- Top bar -->
     <header class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
       <!-- Logo -->
-      <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47bfa9]"
+        aria-label="PostCanary home"
+        data-testid="wizard-logo"
+        @click="handleClose"
+      >
         <img :src="LogoUrl" alt="PostCanary" class="h-20 sm:h-24 w-auto object-contain -my-4 sm:-my-5" />
-      </div>
+      </button>
 
-      <!-- Progress bar slot (WizardProgress rendered inside SendWizard) -->
-      <div id="wizard-progress-slot" class="flex-1 max-w-2xl mx-8" />
+      <!-- Progress remains in the shared header for every wizard route. -->
+      <div id="wizard-progress-slot" class="flex-1 max-w-2xl mx-8">
+        <WizardProgress
+          :current-step="currentStep"
+          :completed-steps="completedSteps"
+          @goto="goToStep"
+        />
+      </div>
 
       <!-- Close button -->
       <button

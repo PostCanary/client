@@ -5,7 +5,6 @@ import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useAuthStore } from "@/stores/auth";
 import { useScrapeRegenWatcher } from "@/composables/useScrapeRegenWatcher";
-import WizardProgress from "./WizardProgress.vue";
 import StepGoal from "./StepGoal.vue";
 import StepTargeting from "./StepTargeting.vue";
 import StepUploadDesign from "./StepUploadDesign.vue";
@@ -86,10 +85,6 @@ const canAdvance = computed(() => {
   return draftStore.isStepComplete(step.value as WizardStep);
 });
 
-function goToStep(s: WizardStep) {
-  draftStore.goToStep(s);
-}
-
 function goBack() {
   if (step.value > 1) {
     draftStore.goToStep((step.value - 1) as WizardStep);
@@ -147,15 +142,6 @@ onBeforeRouteLeave(async () => {
 
 <template>
   <div class="flex flex-col h-full">
-    <!-- Progress bar (teleported into WizardLayout header) -->
-    <Teleport to="#wizard-progress-slot">
-      <WizardProgress
-        :current-step="step as WizardStep"
-        :completed-steps="completedSteps as WizardStep[]"
-        @goto="goToStep"
-      />
-    </Teleport>
-
     <!-- Always-mounted at fixed height so save/error state doesn't cause layout shift. -->
     <div
       class="h-7 shrink-0 text-xs flex items-center justify-center px-4 transition-colors"

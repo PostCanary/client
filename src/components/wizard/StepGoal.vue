@@ -118,6 +118,7 @@ async function chooseTargetArea() {
 async function chooseSendToList() {
   if (!sendToListGoal) return;
   commitGoal(sendToListGoal);
+  draftStore.goToStep(2);
   await router.push(
     draftStore.draft?.id
       ? `/app/send/${draftStore.draft.id}/sttl-step-2`
@@ -298,14 +299,8 @@ onMounted(async () => {
     color 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
-/* Wireframe: Target an Area rendered filled teal; both fill + slightly grow
- * on hover (same treatment as the homepage cards). */
-.audience-option--primary {
-  background: var(--app-teal, #47bfa9);
-  border-color: var(--app-teal, #47bfa9);
-  color: #fff;
-}
-
+/* Both choices share the same hover treatment; neither is highlighted until
+ * the customer points at it. */
 .audience-option:hover,
 .audience-option:focus-visible {
   background: var(--app-teal, #47bfa9);
@@ -313,12 +308,6 @@ onMounted(async () => {
   color: #fff;
   transform: scale(1.03);
   box-shadow: 0 8px 24px rgba(71, 191, 169, 0.35);
-}
-
-.audience-option--primary:hover,
-.audience-option--primary:focus-visible {
-  background: var(--app-teal-hover, #3aa893);
-  border-color: var(--app-teal-hover, #3aa893);
 }
 
 .audience-option:focus-visible {

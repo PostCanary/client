@@ -24,6 +24,44 @@ test("Step 1 shows the two audience options; Send to a List opens the SttL route
 
   await expect(page).toHaveURL(/\/app\/send\/mock-draft-001\/sttl-step-2$/);
   await expect(page.getByRole("heading", { name: "Upload your audience CSV" })).toBeVisible();
+  await expect(page.getByTestId("wizard-logo")).toBeVisible();
+  await expect(page.getByTitle("Save and exit")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pick Your Area/ })).toBeVisible();
+});
+
+test("wizard logo and X both exit to home", async ({ page }) => {
+  const state = createMockAppState();
+  await installMockApi(page, state);
+
+  await page.goto("/app/send");
+  await page.getByTestId("wizard-logo").click();
+  await expect(page).toHaveURL(/\/app\/home$/);
+
+  await page.goto("/app/send");
+  await page.getByTitle("Save and exit").click();
+  await expect(page).toHaveURL(/\/app\/home$/);
+});
+
+test("only the hovered audience option is highlighted", async ({ page }) => {
+  const state = createMockAppState();
+  await installMockApi(page, state);
+
+  await page.goto("/app/send");
+  const areaOption = page.getByTestId("choose-target-area");
+  const listOption = page.getByTestId("choose-send-to-list");
+  const teal = "rgb(71, 191, 169)";
+  const white = "rgb(255, 255, 255)";
+
+  await expect(areaOption).toHaveCSS("background-color", white);
+  await expect(listOption).toHaveCSS("background-color", white);
+
+  await areaOption.hover();
+  await expect(areaOption).toHaveCSS("background-color", teal);
+  await expect(listOption).toHaveCSS("background-color", white);
+
+  await listOption.hover();
+  await expect(listOption).toHaveCSS("background-color", teal);
+  await expect(areaOption).toHaveCSS("background-color", white);
 });
 
 test("Target an Area commits the goal and advances to the map step", async ({ page }) => {

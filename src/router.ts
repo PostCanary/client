@@ -209,19 +209,37 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/app/send-to-a-list/:audienceId",
     name: "SttLStep2ExistingAudience",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
   {
     path: "/app/send/:draftId/sttl-step-2",
     name: "SttLStep2",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
   {
     path: "/app/send/sttl-step-2",
     name: "SttLStep2NewDraft",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
 
