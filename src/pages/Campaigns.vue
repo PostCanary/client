@@ -61,9 +61,8 @@ onMounted(async () => {
 });
 
 const tabs: { key: CampaignTab; label: string }[] = [
-  { key: "in_progress", label: "In Progress" },
+  { key: "draft", label: "Draft" },
   { key: "sent", label: "Sent" },
-  { key: "drafts", label: "Drafts" },
 ];
 
 async function handlePause(id: string) {
@@ -86,9 +85,8 @@ function resumeDraft(draftId: string) {
 }
 
 const emptyMessages: Record<CampaignTab, string> = {
-  in_progress: "No campaigns in progress. Send your first postcards →",
+  draft: "No drafts. Start a new campaign to see it here.",
   sent: "No sent campaigns yet.",
-  drafts: "No drafts. Start a new campaign to see it here.",
 };
 </script>
 
@@ -130,7 +128,7 @@ const emptyMessages: Record<CampaignTab, string> = {
 
     <!-- Filters -->
     <CampaignFilters
-      v-if="activeTab !== 'drafts'"
+      v-if="activeTab === 'sent'"
       v-model:search-query="searchQuery"
       v-model:sort-by="sortBy"
       class="mb-4"
@@ -143,17 +141,10 @@ const emptyMessages: Record<CampaignTab, string> = {
       />
     </div>
 
-    <!-- Campaign list (in_progress/sent tabs) -->
-    <template v-else-if="activeTab !== 'drafts'">
+    <!-- Sent campaign list; internal lifecycle statuses stay on the cards. -->
+    <template v-else-if="activeTab === 'sent'">
       <div v-if="filtered.length === 0" class="text-center py-12">
         <p class="text-gray-400">{{ emptyMessages[activeTab] }}</p>
-        <button
-          v-if="activeTab === 'in_progress'"
-          class="mt-3 text-sm text-[#47bfa9] font-medium hover:underline"
-          @click="router.push('/app/send')"
-        >
-          Send your first postcards
-        </button>
       </div>
       <!-- Wireframe Flow 3: preview-forward tiles in a responsive grid,
            not a compact list — the design IS the card. -->
@@ -169,10 +160,10 @@ const emptyMessages: Record<CampaignTab, string> = {
       </div>
     </template>
 
-    <!-- Drafts tab -->
+    <!-- Draft tab -->
     <template v-else>
       <div v-if="drafts.length === 0" class="text-center py-12">
-        <p class="text-gray-400">{{ emptyMessages.drafts }}</p>
+        <p class="text-gray-400">{{ emptyMessages.draft }}</p>
       </div>
       <div v-else class="space-y-3">
         <div

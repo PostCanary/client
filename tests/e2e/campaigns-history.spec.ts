@@ -1,4 +1,4 @@
-// POS-151: Campaigns history — In Progress / Sent tabs, card fields,
+// POS-171/POS-151: Campaigns history — Draft / Sent tabs, card fields,
 // "Your Campaign" modal, and the list-vs-area conditional affordance
 // (download for list campaigns, map view for area campaigns).
 import { expect, test, type Page, type Route } from "@playwright/test";
@@ -110,22 +110,47 @@ async function bootCampaignsPage(page: Page) {
     return json(route, areaCampaign());
   });
   await page.route("**/api/campaign-drafts", async (route) => {
-    return json(route, { ok: true, drafts: [] });
+    return json(route, {
+      ok: true,
+      drafts: [
+        {
+          id: "draft-1",
+          org_id: "org-alpha",
+          created_by: "user-owner",
+          current_step: 2,
+          completed_steps: [1],
+          needs_review_steps: [],
+          data: {
+            goal: { goalLabel: "Spring HVAC Draft" },
+          },
+          schema_version: 1,
+          created_at: "2026-05-31T00:00:00Z",
+          updated_at: "2026-05-31T00:00:00Z",
+        },
+      ],
+    });
   });
 
   await page.goto("/app/campaigns");
 }
 
 test.describe("Campaigns history (POS-151)", () => {
-  test("shows In Progress / Sent tabs with card fields", async ({ page }) => {
+  test("shows Draft / Sent tabs and defaults to Draft", async ({ page }) => {
     await bootCampaignsPage(page);
 
-    await expect(page.getByRole("button", { name: /In Progress/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Draft/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Sent/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /In Progress/ })).toHaveCount(0);
 
-    // In Progress tab (default) shows the list campaign (status=approved/printing)
+    // Draft is sourced from campaign_drafts, not persisted mail campaigns.
+    await expect(page.getByText("Spring HVAC Draft")).toBeVisible();
+    await expect(page.getByText("Send to a List — Spring VIPs")).toHaveCount(0);
+
+    await page.getByRole("button", { name: /^Sent/ }).click();
+    // Sent contains all persisted post-approval campaigns, regardless of
+    // their internal lifecycle status.
     await expect(page.getByText("Send to a List — Spring VIPs")).toBeVisible();
-    await expect(page.getByText("Target an Area — Phoenix, AZ")).toHaveCount(0);
+    await expect(page.getByText("Target an Area — Phoenix, AZ")).toBeVisible();
 
     const card = page.locator("div").filter({ hasText: "Send to a List — Spring VIPs" }).first();
     await expect(card.getByText("list", { exact: true })).toBeVisible();
@@ -134,11 +159,6 @@ test.describe("Campaigns history (POS-151)", () => {
     await expect(
       page.getByRole("img", { name: "Campaign design preview" }).first(),
     ).toBeVisible();
-
-    // Switch to Sent — the area campaign (status=delivered) lives there
-    await page.getByRole("button", { name: /^Sent/ }).click();
-    await expect(page.getByText("Target an Area — Phoenix, AZ")).toBeVisible();
-    await expect(page.getByText("Send to a List — Spring VIPs")).toHaveCount(0);
 
     const areaCard = page.locator("div").filter({ hasText: "Target an Area — Phoenix, AZ" }).first();
     await expect(areaCard.getByText("area", { exact: true })).toBeVisible();

@@ -4,18 +4,16 @@ import type { MailCampaign, CampaignDraft } from "@/types/campaign";
 import { listMailCampaigns } from "@/api/mailCampaigns";
 import { listDrafts } from "@/api/campaignDrafts";
 
-// POS-151: Campaigns history — In Progress / Sent tabs per the Dashboard
-// Flow wireframe (Flow 3), with Drafts kept as a third tab so the existing
-// resume/delete-draft UX isn't lost (the wireframe only calls out two).
-export type CampaignTab = "in_progress" | "sent" | "drafts";
-
-const SENT_STATUSES = ["delivered", "results_ready", "completed"];
+// Customer-facing campaign tabs are separate from the internal mail-campaign
+// lifecycle: drafts come from campaign_drafts, while every persisted
+// post-approval mail campaign belongs in Sent.
+export type CampaignTab = "draft" | "sent";
 
 export function useCampaignList() {
   const campaigns = ref<MailCampaign[]>([]);
   const drafts = ref<CampaignDraft[]>([]);
   const loading = ref(false);
-  const activeTab = ref<CampaignTab>("in_progress");
+  const activeTab = ref<CampaignTab>("draft");
   const searchQuery = ref("");
   const sortBy = ref<"newest" | "oldest">("newest");
 
@@ -37,9 +35,10 @@ export function useCampaignList() {
 
     // Filter by tab
     if (activeTab.value === "sent") {
-      list = list.filter((c) => SENT_STATUSES.includes(c.status));
-    } else if (activeTab.value === "in_progress") {
-      list = list.filter((c) => !SENT_STATUSES.includes(c.status));
+      // Keep the server lifecycle opaque to customers. This intentionally
+      // includes approved, paused, printing, in_transit, delivered, results,
+      // completed, and any future post-approval status.
+      list = list.filter((c) => c.status !== "draft");
     }
 
     // Search
@@ -59,12 +58,8 @@ export function useCampaignList() {
   });
 
   const tabCounts = computed(() => ({
-    in_progress: campaigns.value.filter(
-      (c) => !SENT_STATUSES.includes(c.status),
-    ).length,
-    sent: campaigns.value.filter((c) => SENT_STATUSES.includes(c.status))
-      .length,
-    drafts: drafts.value.length,
+    draft: drafts.value.length,
+    sent: campaigns.value.filter((c) => c.status !== "draft").length,
   }));
 
   return {
