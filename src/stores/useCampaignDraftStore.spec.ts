@@ -35,13 +35,15 @@ vi.mock("@/stores/useBrandKitStore", () => ({
 }));
 vi.mock("@/api/campaignDrafts", () => ({
   saveDraft: vi.fn().mockResolvedValue(undefined),
-  getDraft: vi.fn(),
+  loadDraft: vi.fn(),
   createDraft: vi.fn(),
   deleteDraft: vi.fn(),
   listDrafts: vi.fn(),
 }));
 
 import { useCampaignDraftStore } from "./useCampaignDraftStore";
+import { loadDraft } from "@/api/campaignDrafts";
+import { GOAL_DEFAULTS } from "@/types/campaign";
 
 function makeCard(n: number, purpose: string) {
   return {
@@ -95,7 +97,13 @@ describe("generateCardsForDraft — overwrite race", () => {
 
     await store.generateCardsForDraft();
 
-    expect(store.draft!.design?.sequenceCards).toHaveLength(3);
+    expect(generateCardsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "neighbor_marketing",
+      1,
+      expect.anything(),
+    );
+    expect(store.draft!.design?.sequenceCards).toHaveLength(1);
     expect(store.draft!.design?.sequenceCards?.[0]?.resolvedContent.headline).toBe(
       "Generated 1",
     );
@@ -168,7 +176,7 @@ describe("generateCardsForDraft — overwrite race", () => {
 
     const design = store.draft!.design!;
     // Generated cards still arrive (the user had nothing on screen)...
-    expect(design.sequenceCards).toHaveLength(3);
+    expect(design.sequenceCards).toHaveLength(1);
     // ...but remapped onto the layout the user picked.
     expect(design.templateLayoutType).toBe("photo-top");
     expect(design.sequenceCards[0]!.renderTemplateId).toBe("photo-top-front-v1");
@@ -369,7 +377,7 @@ describe("setDesign / markDesignReviewed — POS-138: step 3 checkmark requires 
 
     await store.generateCardsForDraft();
 
-    expect(store.draft!.design?.sequenceCards).toHaveLength(3);
+    expect(store.draft!.design?.sequenceCards).toHaveLength(1);
     expect(store.draft!.completedSteps).not.toContain(3);
   });
 
@@ -424,5 +432,98 @@ describe("setSequenceCards — single-owner card writes (2026-07-07 refactor)", 
     store.setSequenceCards([card("a")], { source: "system" });
     expect(store.draft!.designUserEdited).toBeFalsy();
     expect(store.draft!.completedSteps).not.toContain(3);
+  });
+});
+
+describe("POS-174 single-mailing draft normalization", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(loadDraft).mockReset();
+  });
+
+  it("normalizes a resumed generated three-card draft before it can be reviewed", async () => {
+    const legacyDraft = {
+      id: "legacy-draft",
+      campaignType: "targeted",
+      currentStep: 4,
+      completedSteps: [1, 2, 3, 4],
+      needsReviewSteps: [],
+      goal: { goalType: "neighbor_marketing", sequenceLength: 3 },
+      targeting: {
+        sequenceLength: 3,
+        estimatedCostSingle: 9.9,
+        estimatedCostSequence: 29.7,
+      },
+      audience: null,
+      design: {
+        templateId: "offer",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [makeCard(1, "offer"), makeCard(2, "proof"), makeCard(3, "last_chance")],
+      },
+      review: {
+        campaignName: "Legacy campaign",
+        schedules: [
+          { cardNumber: 1, scheduledDate: "2026-07-30", estimatedDeliveryDate: "2026-08-04" },
+          { cardNumber: 2, scheduledDate: "2026-08-13", estimatedDeliveryDate: "2026-08-18" },
+          { cardNumber: 3, scheduledDate: "2026-08-27", estimatedDeliveryDate: "2026-09-01" },
+        ],
+        perCardCosts: [9.9, 9.9, 9.9],
+      },
+    } as any;
+    vi.mocked(loadDraft).mockResolvedValue(legacyDraft);
+
+    const store = useCampaignDraftStore();
+    await store.resume("legacy-draft");
+
+    expect(store.draft!.goal!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.estimatedCostSequence).toBe(9.9);
+    expect(store.draft!.design!.sequenceCards).toHaveLength(1);
+    expect(store.draft!.review).toBeNull();
+    expect(store.draft!.completedSteps).not.toContain(3);
+    expect(store.draft!.completedSteps).not.toContain(4);
+    expect(store.draft!.needsReviewSteps).toEqual([3, 4]);
+    expect(store.singleMailingReviewRequired).toBe(true);
+  });
+
+  it("keeps uploaded and requested designs card-less while enforcing one mailing", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+
+    store.setUploadedDesign({ frontUrl: "/media/front.png" } as any);
+    expect(store.draft!.design!.sequenceCards).toEqual([]);
+
+    store.setDesignRequest({ fullName: "Alex" } as any);
+    expect(store.draft!.design!.sequenceCards).toEqual([]);
+  });
+
+  it("stores a one-mailing targeting estimate and one review cost line", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+
+    store.setTargeting({
+      sequenceLength: 3,
+      estimatedCostSingle: 12.5,
+      estimatedCostSequence: 37.5,
+    } as any);
+    store.setReview({
+      schedules: [
+        { cardNumber: 1, scheduledDate: "2026-07-30", estimatedDeliveryDate: "2026-08-04" },
+        { cardNumber: 2, scheduledDate: "2026-08-13", estimatedDeliveryDate: "2026-08-18" },
+      ],
+      perCardCosts: [12.5, 12.5],
+    } as any);
+
+    expect(store.draft!.targeting!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.estimatedCostSequence).toBe(12.5);
+    expect(store.draft!.review!.schedules).toHaveLength(1);
+    expect(store.draft!.review!.perCardCosts).toEqual([12.5]);
+  });
+
+  it("uses one-mailing defaults for both target-area and send-to-list starts", () => {
+    expect(GOAL_DEFAULTS.target_area.defaultPostcards).toBe(1);
+    expect(GOAL_DEFAULTS.send_to_list.defaultPostcards).toBe(1);
   });
 });

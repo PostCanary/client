@@ -99,7 +99,7 @@ function commitGoal(goal: GoalDefinition) {
     goalType: goal.type,
     goalLabel: goal.label,
     serviceType: draftStore.draft?.goal?.serviceType ?? null,
-    sequenceLength: goal.defaults.defaultPostcards,
+    sequenceLength: 1,
     sequenceSpacingDays: goal.defaults.spacingWeeks * 7,
     otherGoalText: null,
   };

@@ -100,15 +100,15 @@ export interface CampaignGoalDefaults {
 
 // Maps goal type to its defaults (auto-applied in Step 2)
 export const GOAL_DEFAULTS: Record<CampaignGoalType, CampaignGoalDefaults> = {
-  neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
   send_to_list:        { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
-  seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 2, spacingWeeks: 1 },
-  win_back:            { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 3 },
-  cross_service_promo: { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 2, spacingWeeks: 2 },
-  new_mover:           { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  other:               { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 1, spacingWeeks: 1 },
+  win_back:            { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 3 },
+  cross_service_promo: { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  new_mover:           { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  other:               { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
 }
 
 // ============================================================
@@ -119,7 +119,7 @@ export interface GoalSelection {
   goalType: CampaignGoalType
   goalLabel: string                    // display name
   serviceType: string | null           // which service (for seasonal, cross-service)
-  sequenceLength: number               // 1-3 cards
+  sequenceLength: number               // exactly one mailing
   sequenceSpacingDays: number          // days between cards
   otherGoalText: string | null         // free text for "other"
 }

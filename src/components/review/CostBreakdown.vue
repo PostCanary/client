@@ -48,7 +48,7 @@ const totalCost = computed(() =>
         class="flex justify-between text-sm"
       >
         <span class="text-gray-500">
-          Card {{ card.cardNumber }}:
+          Mailing:
           {{ formatNumber(householdCount) }} &times;
           ${{ perCardRate.toFixed(2) }}
         </span>
@@ -73,7 +73,7 @@ const totalCost = computed(() =>
       </div>
     </div>
     <p class="text-xs text-gray-400 mt-2">
-      Charged per card when it goes to print — not all upfront.
+      Charged when this mailing goes to print — not all upfront.
     </p>
   </div>
 </template>

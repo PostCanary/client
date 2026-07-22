@@ -55,6 +55,10 @@ async function installApprovalFlowMocks(page: Page) {
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
 
+  await page.route("**/preview-card/1", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
+  );
+
   await page.route(`**/api/campaign-drafts/${DRAFT_ID}`, (route) =>
     json(route, {
       ok: true,
@@ -80,7 +84,7 @@ test.describe("StepReview approval artifact flow", () => {
     await page.getByLabel(/I confirm all information/i).check();
 
     await expect(
-      page.getByRole("button", { name: /Approve & Send Card 1/i }),
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
     ).toBeDisabled();
   });
 
@@ -160,7 +164,7 @@ test.describe("StepReview approval artifact flow", () => {
 
     await page.goto("/dev/step-review-approval-flow");
     await page.getByLabel(/I confirm all information/i).check();
-    await page.getByRole("button", { name: /Approve & Send Card 1/i }).click();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
 
     await expect(page.getByText("Your campaign is live!")).toBeVisible();
     expect(sideEffects).toEqual(["create", "artifact", "purchase"]);
@@ -271,7 +275,7 @@ test.describe("StepReview approval artifact flow", () => {
     await page.goto("/dev/step-review-approval-flow");
     await page.getByLabel(/I confirm all information/i).check();
     const approveButton = page.getByRole("button", {
-      name: /Approve & Send Card 1/i,
+      name: /Approve & Send Mailing/i,
     });
 
     await approveButton.click();
@@ -286,5 +290,27 @@ test.describe("StepReview approval artifact flow", () => {
     expect(artifactCalls).toBe(2);
     expect(draftSaveCalls).toBe(1);
     expect(sideEffects).toEqual(["create", "artifact", "artifact", "purchase"]);
+  });
+
+  test("shows an actionable message when the server requires a one-mailing review", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    await page.route("**/api/mail-campaigns", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      return json(
+        route,
+        { error: { details: { code: "single_mailing_required" } } },
+        400,
+      );
+    });
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(
+      page.getByText(/This draft needs a one-mailing review before it can be approved/i),
+    ).toBeVisible();
   });
 });

@@ -65,6 +65,10 @@ async function installMocks(page: Page) {
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
 
+  await page.route("**/preview-card/1", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
+  );
+
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
       pay_per_send_cents: 99,

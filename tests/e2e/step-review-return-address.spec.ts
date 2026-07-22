@@ -74,6 +74,10 @@ async function installMocks(
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
 
+  await page.route("**/preview-card/1", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
+  );
+
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
       pay_per_send_cents: 99,
@@ -189,7 +193,7 @@ test.describe("StepReview return address (POS-161)", () => {
     // With households + empty name filled later — we only assert warning
     // does not remove the Approve control.
     await expect(
-      page.getByRole("button", { name: /Approve & Send Card 1/i }),
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
     ).toBeVisible();
   });
 

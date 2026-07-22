@@ -102,7 +102,7 @@ const householdCount = computed(() => {
   }
   return targeting.value?.finalHouseholdCount ?? 0;
 });
-const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
+const seqLen = computed(() => 1);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
 onMounted(() => {
@@ -136,22 +136,19 @@ const targetingMethodLabel = computed(() => {
 // Schedule — pre-fill from Step 1 spacing
 const schedules = ref<CardSchedule[]>([]);
 onMounted(() => {
-  if (draftStore.draft?.review?.schedules?.length) {
+  if (draftStore.draft?.review?.schedules?.length === 1) {
     schedules.value = draftStore.draft.review.schedules;
   } else {
     const today = new Date();
-    const spacing = goal.value?.sequenceSpacingDays ?? 14;
-    schedules.value = Array.from({ length: seqLen.value }, (_, i) => {
-      const send = new Date(today);
-      send.setDate(send.getDate() + 5 + i * spacing);
-      const deliver = new Date(send);
-      deliver.setDate(deliver.getDate() + 5);
-      return {
-        cardNumber: i + 1,
-        scheduledDate: send.toISOString().split("T")[0] ?? "",
-        estimatedDeliveryDate: deliver.toISOString().split("T")[0] ?? "",
-      };
-    });
+    const send = new Date(today);
+    send.setDate(send.getDate() + 5);
+    const deliver = new Date(send);
+    deliver.setDate(deliver.getDate() + 5);
+    schedules.value = [{
+      cardNumber: 1,
+      scheduledDate: send.toISOString().split("T")[0] ?? "",
+      estimatedDeliveryDate: deliver.toISOString().split("T")[0] ?? "",
+    }];
   }
 });
 
@@ -167,7 +164,7 @@ const customDesignFee = computed(() =>
 );
 const totalCost = computed(
   () =>
-    householdCount.value * perCardRate.value * seqLen.value +
+    householdCount.value * perCardRate.value +
     customDesignFee.value,
 );
 
@@ -306,9 +303,28 @@ const canApprove = computed(
     !approving.value &&
     Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
-    schedules.value.length > 0 &&
+    hasSingleMailingIntent.value &&
+    !legacyDraftNeedsDesignReview.value &&
     householdCount.value > 0 &&
     acknowledgedAccuracy.value,
+);
+
+const isCustomerSuppliedDesign = computed(
+  () => designSource.value === "uploaded" || designSource.value === "requested",
+);
+const hasSingleMailingIntent = computed(() => {
+  const draft = draftStore.draft;
+  if (!draft || draft.goal?.sequenceLength !== 1 || schedules.value.length !== 1) {
+    return false;
+  }
+  if (draft.targeting && draft.targeting.sequenceLength !== 1) return false;
+  return isCustomerSuppliedDesign.value
+    ? designCards.value.length === 0
+    : designCards.value.length === 1;
+});
+const legacyDraftNeedsDesignReview = computed(
+  () =>
+    draftStore.singleMailingReviewRequired && draftStore.needsReview(3),
 );
 
 async function approve() {
@@ -325,9 +341,7 @@ async function approve() {
     paymentMethodId: null,
     paymentMethodLabel: "Visa ending in 4242",
     totalCost: totalCost.value,
-    perCardCosts: Array(seqLen.value).fill(
-      householdCount.value * perCardRate.value,
-    ),
+    perCardCosts: [householdCount.value * perCardRate.value],
     agreedToTerms: acknowledgedAccuracy.value,
   };
 
@@ -377,7 +391,13 @@ async function approve() {
 
     approved.value = true;
   } catch (e: any) {
-    draftStore.error = "Failed to approve campaign. Please try again.";
+    if (e?.status === 400 && e?.data?.error?.details?.code === "single_mailing_required") {
+      draftStore.error =
+        "This draft needs a one-mailing review before it can be approved. " +
+        "Review the design and schedule, then try again.";
+    } else {
+      draftStore.error = "Failed to approve campaign. Please try again.";
+    }
   } finally {
     approving.value = false;
   }
@@ -394,11 +414,7 @@ async function approve() {
       Your campaign is live!
     </h2>
     <p class="text-gray-500 mb-6 max-w-md">
-      Card 1 is in production and will mail in about 5 business days.
-      <template v-if="seqLen > 1">
-        Cards 2{{ seqLen > 2 ? `-${seqLen}` : "" }} will follow on
-        schedule unless you pause.
-      </template>
+      Your mailing is in production and will mail in about 5 business days.
     </p>
     <p class="text-xs text-gray-400 mb-6">
       You can cancel within 1 hour if you change your mind.
@@ -582,6 +598,23 @@ async function approve() {
         :sequence-spacing-days="goal?.sequenceSpacingDays ?? 14"
         @update="updateSchedule"
       />
+
+      <div
+        v-if="legacyDraftNeedsDesignReview || !hasSingleMailingIntent"
+        data-testid="single-mailing-warning"
+        class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+      >
+        This draft was previously configured for multiple mailings. It has
+        been updated to one mailing; review the design and schedule before
+        approving it.
+        <button
+          v-if="legacyDraftNeedsDesignReview"
+          class="ml-1 font-semibold underline"
+          @click="draftStore.goToStep(3)"
+        >
+          Review design
+        </button>
+      </div>
 
       <!-- Cost -->
       <CostBreakdown
@@ -832,6 +865,14 @@ async function approve() {
         </label>
       </div>
 
+      <p
+        v-if="draftStore.error"
+        class="mt-3 text-sm text-red-600"
+        role="alert"
+      >
+        {{ draftStore.error }}
+      </p>
+
       <!-- Approve button -->
       <button
         class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
@@ -844,13 +885,9 @@ async function approve() {
           />
           Approving...
         </template>
-        <template v-else> Approve & Send Card 1 </template>
+        <template v-else> Approve & Send Mailing </template>
       </button>
-      <p v-if="seqLen > 1" class="text-xs text-gray-400 text-center mt-2">
-        Cards {{ seqLen > 2 ? `2-${seqLen}` : "2" }} send on schedule
-        unless you pause. You can cancel within 1 hour.
-      </p>
-      <p v-else class="text-xs text-gray-400 text-center mt-2">
+      <p class="text-xs text-gray-400 text-center mt-2">
         You can cancel within 1 hour.
       </p>
     </div>

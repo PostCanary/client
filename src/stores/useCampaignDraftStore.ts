@@ -49,6 +49,63 @@ let _saveChain: Promise<void> | null = null;
 let _saveRevision = 0;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
+const SINGLE_MAILING_COUNT = 1;
+
+/**
+ * New campaigns have one mailing. Keep this migration at the draft boundary so
+ * historical approved campaigns remain untouched on their read-only paths.
+ */
+function normalizeDraftForSingleMailing(draft: CampaignDraft): boolean {
+  let normalized = false;
+  let generatedCardsTrimmed = false;
+
+  if (draft.goal && draft.goal.sequenceLength !== SINGLE_MAILING_COUNT) {
+    draft.goal = { ...draft.goal, sequenceLength: SINGLE_MAILING_COUNT };
+    normalized = true;
+  }
+
+  if (
+    draft.targeting &&
+    (draft.targeting.sequenceLength !== SINGLE_MAILING_COUNT ||
+      draft.targeting.estimatedCostSequence !==
+        draft.targeting.estimatedCostSingle)
+  ) {
+    draft.targeting = {
+      ...draft.targeting,
+      sequenceLength: SINGLE_MAILING_COUNT,
+      estimatedCostSequence: draft.targeting.estimatedCostSingle,
+    };
+    normalized = true;
+  }
+
+  const design = draft.design;
+  const isCustomerSupplied =
+    design?.designSource === "uploaded" || design?.designSource === "requested";
+  if (!isCustomerSupplied && (design?.sequenceCards.length ?? 0) > 1) {
+    draft.design = {
+      ...design!,
+      sequenceCards: design!.sequenceCards.slice(0, SINGLE_MAILING_COUNT),
+    };
+    generatedCardsTrimmed = true;
+    normalized = true;
+  }
+
+  if (normalized) {
+    // A persisted three-card review may carry three schedules and a triple
+    // charge. Clear it so Step 4 rebuilds a single schedule and cost line.
+    draft.review = null;
+    draft.completedSteps = draft.completedSteps.filter((step) => step !== 4);
+    if (generatedCardsTrimmed) {
+      draft.completedSteps = draft.completedSteps.filter((step) => step !== 3);
+    }
+    const reviewSteps: WizardStep[] = generatedCardsTrimmed ? [3, 4] : [4];
+    draft.needsReviewSteps = Array.from(
+      new Set([...draft.needsReviewSteps, ...reviewSteps]),
+    ).sort() as WizardStep[];
+  }
+
+  return normalized;
+}
 
 export const useCampaignDraftStore = defineStore("campaignDraft", {
   state: () => ({
@@ -61,6 +118,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     audienceSource: null as "csv" | "existing" | null,
     suppressionResult: null as AudienceSuppressionResult | null,
     costPreview: null as AudienceCostPreview | null,
+    // Runtime-only notice for a resumed legacy draft. The persisted
+    // needsReviewSteps are the durable gate; this gives the customer an
+    // explicit explanation during the same session.
+    singleMailingReviewRequired: false,
   }),
 
   getters: {
@@ -109,6 +170,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       try {
         const draft = await createDraft();
         this.draft = draft;
+        this.singleMailingReviewRequired = false;
       } catch (e: any) {
         this.error = "Failed to start campaign. Please try again.";
         throw e;
@@ -122,6 +184,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.error = null;
       try {
         this.draft = await loadDraft(draftId);
+        this.singleMailingReviewRequired = normalizeDraftForSingleMailing(
+          this.draft,
+        );
+        if (this.singleMailingReviewRequired) this._debounceSave();
       } catch (e: any) {
         this.error = "Failed to load draft. Please try again.";
         throw e;
@@ -147,7 +213,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     setGoal(goal: GoalSelection) {
       if (!this.draft) return;
       const goalChanged = this.draft.goal?.goalType !== goal.goalType;
-      this.draft.goal = goal;
+      this.draft.goal = { ...goal, sequenceLength: SINGLE_MAILING_COUNT };
       this._markComplete(1);
 
       if (goalChanged && this.draft.completedSteps.length > 1) {
@@ -157,13 +223,18 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           this.draft!.completedSteps.includes(s as WizardStep),
         ) as WizardStep[];
       }
+      this.normalizeSingleMailingDraft();
       this._debounceSave();
       this.generateCardsForDraft();
     },
 
     setTargeting(targeting: TargetingSelection) {
       if (!this.draft) return;
-      this.draft.targeting = targeting;
+      this.draft.targeting = {
+        ...targeting,
+        sequenceLength: SINGLE_MAILING_COUNT,
+        estimatedCostSequence: targeting.estimatedCostSingle,
+      };
       this._markComplete(2);
       this._clearReview(2);
       // Flag steps 3 and 4 for review — cost/schedule data depends on targeting
@@ -226,7 +297,13 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     setDesign(design: DesignSelection, opts?: { source?: "user" | "system" }) {
       if (!this.draft) return;
       _designRevision++;
-      this.draft.design = design;
+      this.draft.design = {
+        ...design,
+        sequenceCards:
+          design.designSource === "uploaded" || design.designSource === "requested"
+            ? design.sequenceCards
+            : design.sequenceCards.slice(0, SINGLE_MAILING_COUNT),
+      };
       if ((opts?.source ?? "user") === "user") {
         this.draft.designUserEdited = true;
         this._markComplete(3);
@@ -262,7 +339,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             "full-bleed",
           isCustomUpload: false,
           customUploadUrl: null,
-          sequenceCards: cards,
+          sequenceCards: cards.slice(0, SINGLE_MAILING_COUNT),
           // Preserve fields that live alongside the card sequence so a
           // card edit cannot wipe a campaign return-address override.
           ...(prev?.designSource !== undefined
@@ -336,6 +413,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         designSource: "uploaded",
         uploadedAsset: asset,
         designRequest: null,
+        sequenceCards: [],
       };
       // Count as a design edit so an in-flight generateCardsForDraft's
       // mid-generation guard sees it (cross-phase review finding: without
@@ -366,6 +444,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         designSource: "requested",
         designRequest: brief,
         uploadedAsset: null,
+        sequenceCards: [],
       };
       _designRevision++;
       this.draft.designUserEdited = true;
@@ -376,7 +455,14 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     setReview(review: ReviewSelection) {
       if (!this.draft) return;
-      this.draft.review = review;
+      this.draft.review = {
+        ...review,
+        schedules: review.schedules.slice(0, SINGLE_MAILING_COUNT).map((schedule) => ({
+          ...schedule,
+          cardNumber: 1,
+        })),
+        perCardCosts: review.perCardCosts.slice(0, SINGLE_MAILING_COUNT),
+      };
       this._markComplete(4);
       this._debounceSave();
     },
@@ -402,6 +488,13 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.audienceSource = null;
       this.suppressionResult = null;
       this.costPreview = null;
+    },
+
+    normalizeSingleMailingDraft(): boolean {
+      if (!this.draft) return false;
+      const normalized = normalizeDraftForSingleMailing(this.draft);
+      if (normalized) this.singleMailingReviewRequired = true;
+      return normalized;
     },
 
     goToStep(step: WizardStep) {
@@ -533,7 +626,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         }
 
         const goalType = (this.draft.goal?.goalType ?? "neighbor_marketing") as CampaignGoalType;
-        const seqLen = this.draft.goal?.sequenceLength ?? 3;
+        const seqLen = SINGLE_MAILING_COUNT;
         const breakdown = this.draft.targeting?.recipientBreakdown ?? {
           newProspects: 400,
           pastCustomers: 30,

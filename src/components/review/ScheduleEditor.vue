@@ -91,7 +91,7 @@ function updateDate(cardNumber: number, newDate: string) {
       class="flex items-center gap-3"
     >
       <span class="text-sm text-gray-500 w-16 shrink-0">
-        Card {{ card.cardNumber }}:
+        Mailing date:
       </span>
       <input
         type="date"

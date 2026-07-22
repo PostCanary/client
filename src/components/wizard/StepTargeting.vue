@@ -157,7 +157,7 @@ const finalHouseholdCount = computed(() =>
     : apiCount.value + apiExclusions.value.pastCustomers
 );
 const pastInArea = computed(() => apiExclusions.value.pastCustomers);
-const sequenceLength = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
+const sequenceLength = computed(() => 1);
 const pricing = usePricing();
 const estimatedCostSequence = computed(
   () => finalHouseholdCount.value * pricing.payPerSend * sequenceLength.value,
@@ -241,7 +241,7 @@ function commitTargeting() {
     // premature/fabricated finalHouseholdCount: 0. The finalHouseholdCount
     // watcher below re-triggers this once countReady flips true.
     if (!countReady.value) return;
-    const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
+    const seqLen = 1;
     const perCard = pricing.payPerSend;
 
     const targeting: TargetingSelection = {

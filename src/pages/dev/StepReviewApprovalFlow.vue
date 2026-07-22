@@ -6,7 +6,7 @@
 import StepReview from "@/components/wizard/StepReview.vue";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
-import type { CampaignDraft, DesignSelection } from "@/types/campaign";
+import type { CampaignDraft, CardDesign, DesignSelection } from "@/types/campaign";
 
 const now = new Date().toISOString();
 const draftStore = useCampaignDraftStore();
@@ -75,6 +75,24 @@ const designExtras: Partial<DesignSelection> = {
   ...designSourceExtras,
   ...draftReturnExtras,
 };
+const generatedCards: CardDesign[] = designSourceParam
+  ? []
+  : [
+      {
+        cardNumber: 1,
+        cardPurpose: "offer",
+        templateId: "HAC-1000",
+        renderTemplateId: "hac-1000-front-v1",
+        previewImageUrl: "",
+        overrides: {},
+        resolvedContent: { headline: "Keep your home comfortable" },
+        backContent: {},
+        headlineCandidates: [],
+        offerReason: "Test harness",
+        reviewReason: "Test harness",
+        templateReason: "Test harness",
+      } as unknown as CardDesign,
+    ];
 
 brandKitStore.brandKit = {
   industry: "hvac",
@@ -155,7 +173,7 @@ draftStore.draft = emptyDraft
         templateLayoutType: "full-bleed",
         isCustomUpload: false,
         customUploadUrl: null,
-        sequenceCards: [],
+        sequenceCards: generatedCards,
         ...designExtras,
       },
       review: null,
