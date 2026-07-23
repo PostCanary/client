@@ -16,12 +16,15 @@ type RequestLog = {
   draftCreates: number;
   draftSaves: Array<{ draftId: string; payload: JsonMap }>;
   draftLoads: string[];
+  draftCreates: number;
   audienceApprovals: string[];
   audienceSuppressions: string[];
   scrapeRequests: Array<{ website_url?: string }>;
   designRequests: Array<JsonMap>;
   // POS-156: multipart design asset uploads (POST /api/design-uploads).
   designUploads: Array<{ fileName: string | null; mimeType: string | null; size: number | null }>;
+  designCreates: JsonMap[];
+  designDeletes: string[];
   // POS-161: PUT /api/organizations/return-address payloads.
   returnAddressUpdates: JsonMap[];
 };
@@ -66,6 +69,7 @@ export type MockAppState = {
   // POS-161: org-level business return address for GET/PUT
   // /api/organizations/return-address. null = not configured.
   returnAddress: JsonMap | null;
+  designs: JsonMap[];
 };
 
 const ORG_ALPHA = {
@@ -783,16 +787,20 @@ export function createMockAppState(): MockAppState {
       draftCreates: 0,
       draftSaves: [],
       draftLoads: [],
+      draftCreates: 0,
       audienceApprovals: [],
       audienceSuppressions: [],
       scrapeRequests: [],
       designRequests: [],
       designUploads: [],
+      designCreates: [],
+      designDeletes: [],
       returnAddressUpdates: [],
     },
     draftOverride: null,
     // POS-161: default null so existing specs see "not configured".
     returnAddress: null,
+    designs: [],
   };
 
   syncSession(state);
@@ -1252,6 +1260,47 @@ export async function installMockApi(page: Page, state: MockAppState) {
         { id: `mock-design-request-${state.requestLog.designRequests.length}`, status: "received" },
         201,
       );
+    }
+
+    if (pathname === "/api/designs" && method === "GET") {
+      return json(route, { ok: true, designs: state.designs });
+    }
+
+    if (pathname === "/api/designs" && method === "POST") {
+      const payload = parseJson(route);
+      state.requestLog.designCreates.push(payload);
+      const created = {
+        id: `saved-design-${state.requestLog.designCreates.length}`,
+        ...payload,
+        uploaded_asset: {
+          fileName: payload.front_asset.file_name,
+          mimeType: payload.front_asset.mime_type,
+          fileSizeBytes: payload.front_asset.file_size_bytes,
+          widthPx: payload.front_asset.width_px,
+          heightPx: payload.front_asset.height_px,
+          frontUrl: payload.front_asset.url,
+          backUrl: payload.back_asset?.url ?? null,
+        },
+        created_at: "2026-07-23T12:00:00Z",
+        updated_at: "2026-07-23T12:00:00Z",
+      };
+      state.designs.unshift(created);
+      return json(route, { ok: true, design: created }, 201);
+    }
+
+    const designMatch = pathname.match(/^\/api\/designs\/([^/]+)$/);
+    if (designMatch && method === "GET") {
+      const id = decodeURIComponent(designMatch[1]);
+      const found = state.designs.find((design) => design.id === id);
+      return found
+        ? json(route, { ok: true, design: found })
+        : json(route, { error: { message: "Design not found" } }, 404);
+    }
+    if (designMatch && method === "DELETE") {
+      const id = decodeURIComponent(designMatch[1]);
+      state.requestLog.designDeletes.push(id);
+      state.designs = state.designs.filter((design) => design.id !== id);
+      return json(route, { ok: true });
     }
 
     // POS-156: server-stored design uploads (multipart field `file`).

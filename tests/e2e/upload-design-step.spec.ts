@@ -63,6 +63,46 @@ test("accepting a print-spec-compliant PNG shows the preview and enables Next", 
   await expect.poll(() => state.requestLog.designUploads.length).toBe(1);
 });
 
+test("selecting from Designs reuses the saved asset without uploading again", async ({ page }) => {
+  const state = await gotoStep3(page, (mock) => {
+    mock.designs = [
+      {
+        id: "saved-design-1",
+        name: "July postcard",
+        front_asset: {
+          url: "/media/design-uploads/mock-org/saved-front.png",
+          file_name: "saved-front.png",
+          mime_type: "image/png",
+          file_size_bytes: 1234,
+          width_px: 1875,
+          height_px: 2775,
+        },
+        back_asset: null,
+        blank_back: true,
+        uploaded_asset: {
+          fileName: "saved-front.png",
+          mimeType: "image/png",
+          fileSizeBytes: 1234,
+          widthPx: 1875,
+          heightPx: 2775,
+          frontUrl: "/media/design-uploads/mock-org/saved-front.png",
+          backUrl: null,
+        },
+        created_at: "2026-07-23T12:00:00Z",
+        updated_at: "2026-07-23T12:00:00Z",
+      },
+    ];
+  });
+
+  await page.getByTestId("open-design-library").click();
+  await expect(page.getByTestId("design-library-picker")).toBeVisible();
+  await page.getByTestId("select-library-design-saved-design-1").click();
+
+  await expect(page.getByTestId("upload-front-preview")).toContainText("saved-front.png");
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  expect(state.requestLog.designUploads).toHaveLength(0);
+});
+
 test("accepting a PDF shows the browser PDF preview instead of a file placeholder", async ({
   page,
 }) => {

@@ -18,6 +18,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
 import { postJson, postMultipart } from "@/api/http";
+import { listDesigns, type DesignLibraryEntry } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
 
@@ -26,6 +27,51 @@ const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 const pricing = usePricing();
 const message = useMessage();
+const showDesignLibrary = ref(false);
+const designLibraryLoading = ref(false);
+const designLibrary = ref<DesignLibraryEntry[]>([]);
+const designLibraryError = ref("");
+
+async function openDesignLibrary() {
+  showDesignLibrary.value = true;
+  designLibraryLoading.value = true;
+  designLibraryError.value = "";
+  try {
+    designLibrary.value = await listDesigns();
+  } catch {
+    designLibraryError.value = "Could not load your saved designs.";
+  } finally {
+    designLibraryLoading.value = false;
+  }
+}
+
+function selectLibraryDesign(design: DesignLibraryEntry) {
+  draftStore.setUploadedDesign(design.uploaded_asset);
+  frontFile.value = {
+    fileName: design.front_asset.file_name,
+    mimeType: design.front_asset.mime_type,
+    fileSizeBytes: design.front_asset.file_size_bytes,
+    widthPx: design.front_asset.width_px,
+    heightPx: design.front_asset.height_px,
+    previewUrl: mediaSrc(design.front_asset.url),
+    serverUrl: design.front_asset.url,
+    ownsObjectUrl: false,
+  };
+  backFile.value = design.back_asset
+    ? {
+        fileName: design.back_asset.file_name,
+        mimeType: design.back_asset.mime_type,
+        fileSizeBytes: design.back_asset.file_size_bytes,
+        widthPx: design.back_asset.width_px,
+        heightPx: design.back_asset.height_px,
+        previewUrl: mediaSrc(design.back_asset.url),
+        serverUrl: design.back_asset.url,
+        ownsObjectUrl: false,
+      }
+    : null;
+  showDesignLibrary.value = false;
+  message.success(`Selected "${design.name}"`);
+}
 
 // --- Print-spec gate ---------------------------------------------------
 // 6x9in postcard, 0.125in bleed/side -> full-bleed artwork is 6.25x9.25in.
@@ -470,6 +516,15 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
         Upload print-ready artwork for your postcard, or have our team design one for you.
       </p>
 
+      <button
+        type="button"
+        class="w-full mb-5 rounded-xl border border-[#47bfa9] bg-[#47bfa9]/5 px-4 py-3 text-sm font-semibold text-[#178e7c] hover:bg-[#47bfa9]/10"
+        data-testid="open-design-library"
+        @click="openDesignLibrary"
+      >
+        Upload from Designs
+      </button>
+
       <!-- Front dropzone (required) -->
       <div class="mb-5">
         <div class="flex items-center justify-between mb-2">
@@ -638,6 +693,63 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       </div>
     </div>
 
+    <div
+      v-if="showDesignLibrary"
+      class="design-library-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose a saved design"
+      data-testid="design-library-picker"
+    >
+      <button
+        type="button"
+        class="design-library-backdrop"
+        aria-label="Close saved designs"
+        @click="showDesignLibrary = false"
+      />
+      <section class="design-library-modal">
+        <header class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-[#0b2d50]">Choose from Designs</h2>
+            <p class="text-xs text-gray-500 mt-1">Reuse saved artwork without uploading it again.</p>
+          </div>
+          <button type="button" aria-label="Close" @click="showDesignLibrary = false">✕</button>
+        </header>
+        <p v-if="designLibraryLoading" class="text-sm text-gray-500">Loading designs…</p>
+        <p v-else-if="designLibraryError" class="text-sm text-red-600" role="alert">
+          {{ designLibraryError }}
+        </p>
+        <p v-else-if="!designLibrary.length" class="text-sm text-gray-500">
+          No saved designs yet. Upload one from the Designs area first.
+        </p>
+        <div v-else class="design-library-grid">
+          <button
+            v-for="design in designLibrary"
+            :key="design.id"
+            type="button"
+            class="design-library-option"
+            :data-testid="`select-library-design-${design.id}`"
+            @click="selectLibraryDesign(design)"
+          >
+            <img
+              v-if="design.front_asset.mime_type.startsWith('image/')"
+              :src="mediaSrc(design.front_asset.url)"
+              :alt="`${design.name} front`"
+            />
+            <object
+              v-else
+              :data="mediaSrc(design.front_asset.url)"
+              type="application/pdf"
+              tabindex="-1"
+              aria-hidden="true"
+            />
+            <strong>{{ design.name }}</strong>
+            <span>{{ design.blank_back ? "Blank back" : "Front + back" }}</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
     <!-- Postcard Design Request modal -->
     <div v-if="showDesignRequestModal" class="design-request-overlay" data-testid="design-request-modal">
       <div class="design-request-backdrop" data-testid="design-request-backdrop" @click="closeDesignRequestModal"></div>
@@ -721,6 +833,72 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
   filter: blur(10px);
   opacity: 0.4;
   pointer-events: none;
+}
+
+.design-library-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.design-library-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.design-library-modal {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  background: white;
+  padding: 24px;
+}
+
+.design-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.design-library-option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  padding: 0 0 10px;
+  color: #64748b;
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+}
+
+.design-library-option img,
+.design-library-option object {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #f8fafc;
+  pointer-events: none;
+}
+
+.design-library-option strong,
+.design-library-option span {
+  padding: 0 10px;
+}
+
+.design-library-option strong {
+  color: #0b2d50;
+  font-size: 13px;
 }
 
 .design-request-overlay {
