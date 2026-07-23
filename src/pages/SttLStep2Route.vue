@@ -3,14 +3,17 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import SttLStep2 from "@/components/wizard/strategies/SttLStep2.vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
+import { useAuthStore } from "@/stores/auth";
 import type { AudienceCostPreview, AudienceSuppressionResult } from "@/types/audiences";
 
 const route = useRoute();
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
+const auth = useAuthStore();
 
 const selectedFile = ref<File | null>(null);
 const approvedAudienceId = ref<string | null>(null);
+const loadError = ref(false);
 
 const existingAudienceId = computed(() => {
   const fromParam = route.params.audienceId;
@@ -31,30 +34,6 @@ const campaignId = computed(() => {
   return draftStore.draft?.id ?? null;
 });
 
-function ensureDraft() {
-  if (draftStore.draft) return;
-  draftStore.$patch({
-    draft: {
-      id: campaignId.value || "mock-draft-001",
-      orgId: "mock-org",
-      currentStep: 2,
-      completedSteps: [1],
-      needsReviewSteps: [],
-      campaignType: "targeted",
-      goal: null,
-      targeting: null,
-      audience: null,
-      design: null,
-      review: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      schemaVersion: 1,
-    },
-    loading: false,
-    error: null,
-  });
-}
-
 async function loadDraftIfNeeded() {
   const draftId = route.params.draftId;
   if (
@@ -66,11 +45,18 @@ async function loadDraftIfNeeded() {
       await draftStore.resume(draftId);
       return;
     } catch {
-      ensureDraft();
+      loadError.value = true;
       return;
     }
   }
-  ensureDraft();
+  if (!draftStore.draft) {
+    await draftStore.startNew(auth.orgId || "mock-org");
+    // This route is itself the Send-to-a-List audience step. Preserve the
+    // existing direct-entry convention that Step 1 is already behind it,
+    // while keeping all of that state local until approval enters Step 3.
+    draftStore.draft!.currentStep = 2;
+    draftStore.draft!.completedSteps = [1];
+  }
 }
 
 function onFileChange(event: Event) {
@@ -102,16 +88,11 @@ async function onApproved(audienceId: string) {
     audienceSource: audienceSource.value,
   });
 
-  // Resume the wizard on the design step — approveAudienceState only marks
-  // step 2 complete, it doesn't move draft.currentStep (that's an explicit
-  // action everywhere else in the wizard, e.g. WizardShell's Next button).
-  // Persist before navigating: SendWizard re-resumes the draft from the
-  // server on mount, so an unsaved currentStep would be lost on the hop.
-  draftStore.goToStep(3);
-  await draftStore.saveNow();
+  // Step 3 is the persistence boundary. enterStepThree creates the server
+  // draft, saves the approved audience state, and only then lets us navigate.
+  const targetDraftId = await draftStore.enterStepThree();
 
-  const targetDraftId = campaignId.value;
-  router.push(targetDraftId ? `/app/send/${targetDraftId}` : "/app/send");
+  router.push(`/app/send/${targetDraftId}`);
 }
 
 function goBack() {
@@ -132,7 +113,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
+  <div
+    v-if="loadError"
+    class="flex min-h-full flex-col items-center justify-center px-6 text-center"
+  >
+    <h1 class="text-xl font-semibold text-[#0b2d50]">Something went wrong</h1>
+    <p class="mt-2 text-sm text-slate-600">We couldn't load this campaign draft.</p>
+  </div>
+  <div v-else class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
     <div class="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white shadow-sm">
       <div
         v-if="audienceSource === 'csv' && !selectedFile"

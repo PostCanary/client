@@ -20,6 +20,18 @@ function goToStep(step: WizardStep) {
 }
 
 async function handleClose() {
+  if (
+    !draftStore.isPersisted &&
+    !window.confirm(
+      "Do you want to exit? Campaigns are only saved once you've arrived at step 3.",
+    )
+  ) {
+    return;
+  }
+  if (!draftStore.isPersisted) {
+    router.push("/app/home");
+    return;
+  }
   try {
     await draftStore.saveNow();
     message.success("Your progress is saved");

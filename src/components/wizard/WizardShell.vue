@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useAuthStore } from "@/stores/auth";
@@ -12,6 +12,8 @@ import StepReview from "./StepReview.vue";
 import type { WizardStep } from "@/types/campaign";
 
 const draftStore = useCampaignDraftStore();
+const route = useRoute();
+const router = useRouter();
 const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 
@@ -91,8 +93,18 @@ function goBack() {
   }
 }
 
-function goNext() {
+async function goNext() {
   if (step.value < 4 && canAdvance.value) {
+    if (step.value === 2) {
+      const draftId = await draftStore.enterStepThree();
+      if (route.params.draftId !== draftId) {
+        await router.replace({
+          path: `/app/send/${draftId}`,
+          query: route.query,
+        });
+      }
+      return;
+    }
     // POS-138: leaving step 3 forward is the explicit "reviewed" signal —
     // auto-generated cards never complete the step on their own (see
     // setDesign in useCampaignDraftStore), so this is what checks it off
@@ -106,7 +118,11 @@ function goNext() {
 
 // Force-save on browser close/refresh using keepalive fetch (survives tab close)
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (draftStore.draft && draftStore.draft.completedSteps.length > 0) {
+  if (
+    draftStore.isPersisted &&
+    draftStore.draft &&
+    draftStore.draft.completedSteps.length > 0
+  ) {
     e.preventDefault();
   }
   // Use beaconSave (fetch+keepalive) instead of async saveNow — browsers don't
@@ -116,6 +132,7 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 
 // Intercept browser back — go to previous wizard step instead of leaving
 function handlePopstate() {
+  if (!draftStore.isPersisted) return;
   if (step.value > 1) {
     // Push state back so we stay in the wizard
     window.history.pushState(null, "", window.location.href);
@@ -125,17 +142,28 @@ function handlePopstate() {
 
 window.addEventListener("beforeunload", handleBeforeUnload);
 window.addEventListener("popstate", handlePopstate);
-// Push initial state so first back press triggers popstate instead of leaving
-window.history.pushState(null, "", window.location.href);
+let historyGuardArmed = false;
+const stopPersistedWatch = watch(
+  () => draftStore.isPersisted,
+  (isPersisted) => {
+    if (isPersisted && !historyGuardArmed) {
+      // Persisted drafts keep the existing in-wizard browser-back behavior.
+      window.history.pushState(null, "", window.location.href);
+      historyGuardArmed = true;
+    }
+  },
+  { immediate: true },
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("popstate", handlePopstate);
+  stopPersistedWatch();
 });
 
 // Save on route leave
 onBeforeRouteLeave(async () => {
-  await draftStore.saveNow();
+  if (draftStore.isPersisted) await draftStore.saveNow();
   return true;
 });
 </script>

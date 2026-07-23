@@ -25,8 +25,9 @@ test("Designs page shows curated render-backed templates and starts the wizard f
     .click();
 
   await expect(page).toHaveURL(
-    /\/app\/send\/mock-draft-001\?templateId=hvac-hac-1000-full-bleed-offer-v1&goal=neighbor_marketing$/,
+    /\/app\/send\?templateId=hvac-hac-1000-full-bleed-offer-v1&goal=neighbor_marketing$/,
   );
+  expect(state.requestLog.draftCreates).toBe(0);
   // Flow v2 (POS-146): Step 1 is now the two-option audience choice.
   await expect(page.getByTestId("choose-target-area")).toBeVisible();
   await expect(page.getByTestId("choose-send-to-list")).toBeVisible();

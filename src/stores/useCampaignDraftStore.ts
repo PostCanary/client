@@ -46,6 +46,7 @@ let _generatingCards = false;
 // made during the generation window (S73 live-observed race).
 let _designRevision = 0;
 let _saveChain: Promise<void> | null = null;
+let _persistForStepThreeChain: Promise<string> | null = null;
 let _saveRevision = 0;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
@@ -145,6 +146,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       return (state.draft.completedSteps.length / 4) * 100;
     },
     isDirty: (): boolean => _dirty,
+    isPersisted: (state): boolean => Boolean(state.draft?.id),
   },
 
   actions: {
@@ -164,22 +166,40 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     // --- Lifecycle ---
-    async startNew() {
-      this.loading = true;
+    async startNew(orgId: string) {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = null;
+      _pendingSave = false;
+      _retryCount = 0;
+      _dirty = false;
+      _saveChain = null;
+      _persistForStepThreeChain = null;
       this.error = null;
-      try {
-        const draft = await createDraft();
-        this.draft = draft;
-        this.singleMailingReviewRequired = false;
-      } catch (e: any) {
-        this.error = "Failed to start campaign. Please try again.";
-        throw e;
-      } finally {
-        this.loading = false;
-      }
+      const now = new Date().toISOString();
+      this.draft = {
+        id: "",
+        orgId,
+        currentStep: 1,
+        completedSteps: [],
+        needsReviewSteps: [],
+        campaignType: "targeted",
+        goal: null,
+        targeting: null,
+        audience: null,
+        design: null,
+        review: null,
+        createdAt: now,
+        updatedAt: now,
+        schemaVersion: 1,
+      };
+      this.singleMailingReviewRequired = false;
+      this.loading = false;
     },
 
     async resume(draftId: string) {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = null;
+      _persistForStepThreeChain = null;
       this.loading = true;
       this.error = null;
       try {
@@ -198,8 +218,77 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async discard() {
       if (this.draft) {
-        await deleteDraft(this.draft.id);
+        if (this.draft.id) await deleteDraft(this.draft.id);
         this.draft = null;
+      }
+    },
+
+    /**
+     * Step 3 is the persistence boundary for new campaigns. The create call
+     * uses the existing draft endpoint, then the first save copies the
+     * in-memory Step 1/2 selections into that server draft before Step 3
+     * renders. A shared promise prevents double-clicks/retries from creating
+     * duplicate drafts.
+     */
+    async enterStepThree(): Promise<string> {
+      if (!this.draft) throw new Error("Campaign draft is not initialized");
+
+      if (this.draft.id) {
+        this.goToStep(3);
+        await this.saveNow();
+        return this.draft.id;
+      }
+
+      if (_persistForStepThreeChain) return _persistForStepThreeChain;
+
+      const localDraft = this.draft;
+      _persistForStepThreeChain = (async () => {
+        this.saving = true;
+        this.error = null;
+        let createdId: string | null = null;
+        try {
+          const created = await createDraft();
+          createdId = created.id;
+          // The user may have changed Step 2 state while the POST was in
+          // flight. Merge the latest in-memory selections, not a stale copy.
+          const latest = this.draft === localDraft ? this.draft : localDraft;
+          this.draft = {
+            ...created,
+            ...latest,
+            id: created.id,
+            orgId: created.orgId,
+            currentStep: 3,
+            createdAt: created.createdAt,
+            updatedAt: created.updatedAt,
+            schemaVersion: created.schemaVersion,
+          };
+          _dirty = true;
+          _saveRevision++;
+          this.saving = false;
+          await this.saveNow(true);
+          return this.draft.id;
+        } catch (error) {
+          // POST succeeded but the initial PUT did not: roll the empty server
+          // row back so a retry cannot leave or multiply phantom drafts.
+          if (createdId) {
+            try {
+              await deleteDraft(createdId);
+            } catch {
+              // Preserve the original persistence error for the UI.
+            }
+          }
+          this.draft = localDraft;
+          this.error = "Failed to save campaign. Please try again.";
+          throw error;
+        } finally {
+          this.saving = false;
+        }
+      })();
+
+      try {
+        return await _persistForStepThreeChain;
+      } finally {
+        _persistForStepThreeChain = null;
       }
     },
 
@@ -536,13 +625,8 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       _saveTimer = setTimeout(() => this._save(), 500);
     },
 
-    async _save() {
-      if (!this.draft) return;
-      // MOCK MODE: skip API save
-      if (import.meta.env.VITE_SKIP_AUTH === "true") {
-        this.lastSavedAt = new Date().toISOString();
-        return;
-      }
+    async _save(throwOnFailure = false) {
+      if (!this.draft || !this.draft.id) return;
       if (this.saving) {
         _pendingSave = true;
         if (_saveChain) await _saveChain;
@@ -562,7 +646,12 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         } else {
           _pendingSave = true;
         }
-      } catch {
+      } catch (error) {
+        if (throwOnFailure) {
+          this.error = "Unable to save. Please try again.";
+          _pendingSave = false;
+          throw error;
+        }
         if (_retryCount < MAX_RETRIES) {
           _retryCount++;
           this.error = "Save failed — retrying...";
@@ -590,9 +679,9 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       }
     },
 
-    async saveNow() {
+    async saveNow(throwOnFailure = false) {
       if (_saveTimer) clearTimeout(_saveTimer);
-      await this._save();
+      await this._save(throwOnFailure);
     },
 
     async generateCardsForDraft() {
@@ -718,13 +807,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     /** Best-effort save that survives tab close via fetch keepalive. */
     beaconSave() {
-      if (!this.draft || !_dirty) return;
-      // Mirror _save() guards
-      if (import.meta.env.VITE_SKIP_AUTH === "true") {
-        this.lastSavedAt = new Date().toISOString();
-        _dirty = false;
-        return;
-      }
+      if (!this.draft?.id || !_dirty) return;
       const payload = {
         current_step: this.draft.currentStep,
         completed_steps: this.draft.completedSteps,

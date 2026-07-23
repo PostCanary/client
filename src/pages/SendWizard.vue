@@ -34,34 +34,9 @@ onMounted(async () => {
   const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
 
   if (skipAuth) {
-    // Create a local mock draft without API call
-    draftStore.$patch({
-      draft: {
-        id: "mock-draft-001",
-        orgId: "mock-org",
-        currentStep: 1 as 1,
-        completedSteps: [] as (1 | 2 | 3 | 4)[],
-        needsReviewSteps: [] as (1 | 2 | 3 | 4)[],
-        goal: null,
-        targeting: null,
-        audience: null,
-        design: null,
-        review: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        schemaVersion: 1,
-      },
-      loading: false,
-      error: null,
-    });
+    await draftStore.startNew(auth.orgId || "mock-org");
     // Hydrate brand kit with mock data so setup screen is skipped
     await brandKitStore.fetch();
-    if (!route.params.draftId && draftStore.draft?.id) {
-      await router.replace({
-        path: `/app/send/${draftStore.draft.id}`,
-        query: route.query,
-      });
-    }
     initializing.value = false;
     return;
   }
@@ -83,7 +58,7 @@ onMounted(async () => {
     if (draftId) {
       await draftStore.resume(draftId);
     } else {
-      await draftStore.startNew();
+      await draftStore.startNew(auth.orgId);
     }
     // Hydrate brand kit for design step
     if (!brandKitStore.hydrated) {
@@ -99,41 +74,10 @@ onMounted(async () => {
     // call stays as an idempotent backstop.
     void brandKitStore.ensureScraped();
   } catch {
-    // API endpoints not available yet — fall back to mock draft
-    // so the wizard is always usable (removed once backend is wired)
-    draftStore.$patch({
-      draft: {
-        id: "mock-draft-001",
-        orgId: auth.orgId || "mock-org",
-        currentStep: 1 as 1,
-        completedSteps: [] as (1 | 2 | 3 | 4)[],
-        needsReviewSteps: [] as (1 | 2 | 3 | 4)[],
-        goal: null,
-        targeting: null,
-        audience: null,
-        design: null,
-        review: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        schemaVersion: 1,
-      },
-      loading: false,
-      error: null,
-    });
-    await brandKitStore.fetch();
-    void brandKitStore.ensureScraped();
+    // A failed resume must not silently replace the requested persisted
+    // draft with a local phantom campaign.
+    initError.value = true;
   } finally {
-    // Single URL sync point: whichever path produced the draft (API or
-    // fallback), put the draft id in the URL before the wizard renders.
-    // Preserves query params (?templateId=…&goal=…, ?from=recommendation)
-    // and keeps refresh/deep-links resuming this draft instead of forking
-    // a new one.
-    if (!route.params.draftId && draftStore.draft?.id) {
-      await router.replace({
-        path: `/app/send/${draftStore.draft.id}`,
-        query: route.query,
-      });
-    }
     initializing.value = false;
   }
 });

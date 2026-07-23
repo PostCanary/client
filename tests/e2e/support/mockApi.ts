@@ -13,6 +13,8 @@ type RequestLog = {
   resumeCalls: number;
   cancelCalls: number;
   changePlanCalls: string[];
+  draftCreates: number;
+  draftSaves: Array<{ draftId: string; payload: JsonMap }>;
   draftLoads: string[];
   audienceApprovals: string[];
   audienceSuppressions: string[];
@@ -778,6 +780,8 @@ export function createMockAppState(): MockAppState {
       resumeCalls: 0,
       cancelCalls: 0,
       changePlanCalls: [],
+      draftCreates: 0,
+      draftSaves: [],
       draftLoads: [],
       audienceApprovals: [],
       audienceSuppressions: [],
@@ -1179,6 +1183,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
     }
 
     if (pathname === "/api/campaign-drafts" && method === "POST") {
+      state.requestLog.draftCreates += 1;
       return json(
         route,
         {
@@ -1281,6 +1286,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
     if (draftMatch && method === "PUT") {
       const draftId = decodeURIComponent(draftMatch[1]);
       const payload = parseJson(route);
+      state.requestLog.draftSaves.push({ draftId, payload });
       return json(route, {
         ok: true,
         id: draftId,
