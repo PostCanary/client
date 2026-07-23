@@ -40,41 +40,40 @@ interface SidebarItem {
   to: string
   routeName: string
   label: string
-  icon: 'svg' | 'component'
-  svgSrc?: string
-  component?: any
-  section: 'home' | 'send' | 'results' | 'account'
+  component: any
+  section: 'home' | 'send' | 'analytics' | 'account'
 }
 
 const sidebarItems: SidebarItem[] = [
-  // HOME (standalone, above sections)
-  { to: '/app/home', routeName: 'AppHome', label: 'Home', icon: 'component', component: HomeOutline, section: 'home' },
+  { to: '/app/home', routeName: 'AppHome', label: 'Home', component: HomeOutline, section: 'home' },
 
-  // SEND MAIL section
-  { to: '/app/campaigns', routeName: 'Campaigns', label: 'Campaigns', icon: 'component', component: DocumentTextOutline, section: 'send' },
-  { to: '/app/designs', routeName: 'Designs', label: 'Designs', icon: 'component', component: ColorPaletteOutline, section: 'send' },
+  { to: '/app/campaigns', routeName: 'Campaigns', label: 'Campaigns', component: DocumentTextOutline, section: 'send' },
+  { to: '/app/designs', routeName: 'Designs', label: 'Designs', component: ColorPaletteOutline, section: 'send' },
 
-  // RESULTS section
-  { to: '/app/dashboard', routeName: 'Dashboard', label: 'Dashboard', icon: 'component', component: StatsChartOutline, section: 'results' },
-  { to: '/app/map', routeName: 'Heatmap', label: 'Map', icon: 'component', component: MapOutline, section: 'results' },
-  { to: '/app/analytics', routeName: 'Analytics', label: 'Analysis', icon: 'component', component: BarChartOutline, section: 'results' },
-  { to: '/app/demographics', routeName: 'Demographics', label: 'Audience', icon: 'component', component: PeopleOutline, section: 'results' },
-  { to: '/app/history', routeName: 'History', label: 'History', icon: 'component', component: TimeOutline, section: 'results' },
+  { to: '/app/dashboard', routeName: 'Dashboard', label: 'Dashboard', component: StatsChartOutline, section: 'analytics' },
+  { to: '/app/map', routeName: 'Heatmap', label: 'Map', component: MapOutline, section: 'analytics' },
+  { to: '/app/analytics', routeName: 'Analytics', label: 'Analysis', component: BarChartOutline, section: 'analytics' },
+  { to: '/app/demographics', routeName: 'Demographics', label: 'Audience', component: PeopleOutline, section: 'analytics' },
+  { to: '/app/history', routeName: 'History', label: 'Upload History', component: TimeOutline, section: 'analytics' },
 
-  // ACCOUNT section (pinned to bottom)
-  { to: '/app/audience/do-not-mail', routeName: 'DoNotMail', label: 'Do Not Mail', icon: 'component', component: BanOutline, section: 'account' },
-  { to: '/app/settings', routeName: 'Settings', label: 'Settings', icon: 'component', component: SettingsOutline, section: 'account' },
+  { to: '/app/audience/do-not-mail', routeName: 'DoNotMail', label: 'Do Not Mail', component: BanOutline, section: 'account' },
+  { to: '/app/settings', routeName: 'Settings', label: 'Settings', component: SettingsOutline, section: 'account' },
 ]
 
 /* ── Section grouping ──────────────────────────────────── */
 const homeItems = sidebarItems.filter(i => i.section === 'home')
 const sendItems = sidebarItems.filter(i => i.section === 'send')
-const resultsItems = sidebarItems.filter(i => i.section === 'results')
+const analyticsItems = sidebarItems.filter(i => i.section === 'analytics')
 const accountItems = sidebarItems.filter(i => i.section === 'account')
+const analyticsRouteNames = new Set(analyticsItems.map(item => item.routeName))
 
 /* ── Active detection (use route.name, not path — handles aliases) ── */
 function isActive(routeName: string): boolean {
   return route.name === routeName
+}
+
+function isAnalyticsRoute(): boolean {
+  return analyticsRouteNames.has(String(route.name ?? ''))
 }
 
 /* ── Navigation ────────────────────────────────────────── */
@@ -86,6 +85,11 @@ function navigate(path: string, label?: string, section?: string) {
 function onSendPostcardsClick() {
   captureEvent('sidebar_send_postcards_clicked', { collapsed: isCollapsed.value })
   router.push('/app/send')
+}
+
+function onAnalyticsClick() {
+  captureEvent('sidebar_item_clicked', { item: 'Analytics', section: 'analytics', collapsed: isCollapsed.value })
+  router.push('/app/dashboard')
 }
 
 /* ── Sign out (same as existing Sidebar.vue) ────────────── */
@@ -127,8 +131,7 @@ async function onSignOut() {
           @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
-          <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
-          <img v-else :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
+          <component :is="item.component" class="item-icon item-icon--component" />
           <span class="sidebar-label">{{ item.label }}</span>
         </button>
       </li>
@@ -156,11 +159,8 @@ async function onSignOut() {
       </button>
     </div>
 
-    <!-- SEND MAIL section (hidden until the org has postcards access, S85) -->
-    <template v-if="auth.hasPostcards">
-    <div class="section-divider"></div>
-    <span v-if="!isCollapsed" class="section-header">SEND MAIL</span>
-    <ul class="nav-section">
+    <!-- Postcard destinations retain their existing organization feature gate. -->
+    <ul v-if="auth.hasPostcards" class="nav-section">
       <li v-for="item in sendItems" :key="item.routeName">
         <button
           class="sidebar-item"
@@ -171,33 +171,46 @@ async function onSignOut() {
           @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
-          <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
-          <img v-else :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
+          <component :is="item.component" class="item-icon item-icon--component" />
           <span class="sidebar-label">{{ item.label }}</span>
         </button>
       </li>
     </ul>
 
-    </template>
-
-    <!-- RESULTS section -->
-    <div class="section-divider"></div>
-    <span v-if="!isCollapsed" class="section-header">RESULTS</span>
+    <!-- Analytics is a destination and the parent of the existing result pages.
+         Route-derived expansion handles aliases, direct links, and refreshes. -->
     <ul class="nav-section">
-      <li v-for="item in resultsItems" :key="item.routeName">
+      <li>
         <button
-          class="sidebar-item"
-          :class="{ active: isActive(item.routeName) }"
-          :aria-current="isActive(item.routeName) ? 'page' : undefined"
-          :title="isCollapsed ? item.label : undefined"
-          :aria-label="item.label"
-          @click="navigate(item.to, item.label, item.section)"
+          class="sidebar-item analytics-parent"
+          :class="{ active: isAnalyticsRoute() }"
+          :title="isCollapsed ? 'Analytics' : undefined"
+          aria-label="Analytics"
+          aria-controls="analytics-submenu"
+          :aria-expanded="isAnalyticsRoute()"
+          @click="onAnalyticsClick"
           type="button"
         >
-          <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
-          <img v-else :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
-          <span class="sidebar-label">{{ item.label }}</span>
+          <component :is="BarChartOutline" class="item-icon item-icon--component" />
+          <span class="sidebar-label">Analytics</span>
         </button>
+
+        <ul v-if="isAnalyticsRoute()" id="analytics-submenu" class="analytics-submenu">
+          <li v-for="item in analyticsItems" :key="item.routeName">
+            <button
+              class="sidebar-item analytics-submenu-item"
+              :class="{ active: isActive(item.routeName) }"
+              :aria-current="isActive(item.routeName) ? 'page' : undefined"
+              :title="isCollapsed ? item.label : undefined"
+              :aria-label="item.label"
+              @click="navigate(item.to, item.label, item.section)"
+              type="button"
+            >
+              <component :is="item.component" class="item-icon item-icon--component" />
+              <span class="sidebar-label">{{ item.label }}</span>
+            </button>
+          </li>
+        </ul>
       </li>
     </ul>
 
@@ -217,8 +230,7 @@ async function onSignOut() {
           @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
-          <component v-if="item.icon === 'component'" :is="item.component" class="item-icon item-icon--component" />
-          <img v-else :src="item.svgSrc" alt="" class="item-icon item-icon--svg" draggable="false" />
+          <component :is="item.component" class="item-icon item-icon--component" />
           <span class="sidebar-label">{{ item.label }}</span>
         </button>
       </li>
@@ -377,6 +389,30 @@ async function onSignOut() {
 
 .nav-section--bottom {
   padding-bottom: 4px;
+}
+
+.analytics-submenu {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.analytics-submenu-item {
+  font-size: 13px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.analytics-submenu-item .item-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar.collapsed .analytics-submenu {
+  padding-left: 0;
 }
 
 /* ── Sidebar items ────────────────────────────────────── */

@@ -25,10 +25,9 @@ test.describe("postcards feature gate — unapproved org", () => {
     await expect(
       page.getByRole("button", { name: "Send Postcards", exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByText("SEND MAIL")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Designs", exact: true })).toHaveCount(0);
     // Ungated nav still present
-    await expect(page.getByRole("button", { name: "Dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Analytics", exact: true })).toBeVisible();
   });
 
   test("direct navigation to gated routes lands on early access", async ({

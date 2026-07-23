@@ -156,7 +156,7 @@ const routes: RouteRecordRaw[] = [
         name: "History",
         alias: "/history", // ✅ clean URL
         component: () => import("@/pages/History.vue"),
-        meta: { title: `History • ${BRAND.name}`, navbarTitle: "History" },
+        meta: { title: `Upload History • ${BRAND.name}`, navbarTitle: "Upload History" },
       },
       {
         path: "team",
