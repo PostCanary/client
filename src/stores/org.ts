@@ -11,6 +11,7 @@ import {
   switchOrg as apiSwitchOrg,
 } from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 
 export const useOrgStore = defineStore("org", {
   state: () => ({
@@ -88,6 +89,9 @@ export const useOrgStore = defineStore("org", {
 
     async switchOrg(orgId: string) {
       await apiSwitchOrg(orgId);
+      // The target tenant is known before /auth/me refreshes. Clear the prior
+      // tenant immediately so its drafts cannot remain visible meanwhile.
+      useCampaignDraftListStore().setActiveOrg(orgId);
       // Refresh auth store to pick up new org context
       const auth = useAuthStore();
       await auth.fetchMe();

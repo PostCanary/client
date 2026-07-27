@@ -8,12 +8,28 @@ vi.mock("@/api/campaignDrafts", () => ({
 import { listDrafts } from "@/api/campaignDrafts";
 import { useCampaignDraftListStore } from "./useCampaignDraftListStore";
 
-function persistedDraft(id: string, currentStep: number, needsReview = false) {
+function persistedDraft(
+  id: string,
+  orgId: string,
+  currentStep: number,
+  needsReview = false,
+) {
   return {
     id,
+    orgId,
     currentStep,
     needsReviewSteps: needsReview ? [3, 4] : [],
   } as any;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
 }
 
 describe("useCampaignDraftListStore", () => {
@@ -22,64 +38,129 @@ describe("useCampaignDraftListStore", () => {
     vi.mocked(listDrafts).mockReset();
   });
 
-  it("counts the full persisted dataset, including Step 2 and review-required drafts", async () => {
+  it("counts the full persisted dataset for its recorded organization", async () => {
     vi.mocked(listDrafts).mockResolvedValue([
-      persistedDraft("returned-to-step-2", 2),
-      persistedDraft("at-step-3", 3),
-      persistedDraft("older-review-required", 4, true),
+      persistedDraft("returned-to-step-2", "org-a", 2),
+      persistedDraft("at-step-3", "org-a", 3),
+      persistedDraft("older-review-required", "org-a", 4, true),
     ]);
+    const store = useCampaignDraftListStore();
+    store.setActiveOrg("org-a");
 
-    const firstConsumer = useCampaignDraftListStore();
-    const secondConsumer = useCampaignDraftListStore();
+    expect(store.count).toBeNull();
+    await expect(store.refresh("org-a")).resolves.toBe(true);
 
-    expect(firstConsumer.count).toBeNull();
-    await expect(firstConsumer.refresh()).resolves.toBe(true);
-
-    expect(secondConsumer).toBe(firstConsumer);
-    expect(secondConsumer.drafts.map((draft) => draft.id)).toEqual([
+    expect(store.loadedOrgId).toBe("org-a");
+    expect(store.drafts.map((draft) => draft.id)).toEqual([
       "returned-to-step-2",
       "at-step-3",
       "older-review-required",
     ]);
-    expect(secondConsumer.count).toBe(3);
+    expect(store.count).toBe(3);
   });
 
-  it("hides unknown initial state and retains the last good count after refresh failure", async () => {
-    const store = useCampaignDraftListStore();
-    vi.mocked(listDrafts).mockRejectedValueOnce(new Error("offline"));
-
-    await expect(store.refresh()).resolves.toBe(false);
-    expect(store.count).toBeNull();
-    expect(store.drafts).toEqual([]);
-
-    vi.mocked(listDrafts).mockResolvedValueOnce([
-      persistedDraft("draft-1", 2),
-      persistedDraft("draft-2", 4),
+  it("clears the prior tenant immediately when the active org changes", async () => {
+    vi.mocked(listDrafts).mockResolvedValue([
+      persistedDraft("org-a-draft", "org-a", 3),
     ]);
-    await expect(store.refresh()).resolves.toBe(true);
-    expect(store.count).toBe(2);
+    const store = useCampaignDraftListStore();
+    store.setActiveOrg("org-a");
+    await store.refresh("org-a");
+    store.error = "old error";
 
-    vi.mocked(listDrafts).mockRejectedValueOnce(new Error("offline again"));
-    await expect(store.refresh()).resolves.toBe(false);
+    store.setActiveOrg("org-b");
+
+    expect(store.activeOrgId).toBe("org-b");
+    expect(store.loadedOrgId).toBeNull();
+    expect(store.drafts).toEqual([]);
+    expect(store.hasLoaded).toBe(false);
+    expect(store.count).toBeNull();
+    expect(store.error).toBeNull();
+  });
+
+  it("starts the new org independently and ignores a late prior-org response", async () => {
+    const orgA = deferred<any[]>();
+    const orgB = deferred<any[]>();
+    vi.mocked(listDrafts)
+      .mockReturnValueOnce(orgA.promise)
+      .mockReturnValueOnce(orgB.promise);
+    const store = useCampaignDraftListStore();
+
+    store.setActiveOrg("org-a");
+    const refreshA = store.refresh("org-a");
+    store.setActiveOrg("org-b");
+    const refreshB = store.refresh("org-b");
+
+    expect(listDrafts).toHaveBeenCalledTimes(2);
+    orgB.resolve([persistedDraft("org-b-draft", "org-b", 3)]);
+    await expect(refreshB).resolves.toBe(true);
+    expect(store.count).toBe(1);
+    expect(store.drafts[0]?.id).toBe("org-b-draft");
+
+    orgA.resolve([
+      persistedDraft("org-a-draft-1", "org-a", 3),
+      persistedDraft("org-a-draft-2", "org-a", 4),
+    ]);
+    await expect(refreshA).resolves.toBe(false);
+    expect(store.activeOrgId).toBe("org-b");
+    expect(store.loadedOrgId).toBe("org-b");
+    expect(store.count).toBe(1);
+    expect(store.drafts[0]?.id).toBe("org-b-draft");
+  });
+
+  it("deduplicates only requests for the same org revision", async () => {
+    const orgA = deferred<any[]>();
+    const orgB = deferred<any[]>();
+    vi.mocked(listDrafts)
+      .mockReturnValueOnce(orgA.promise)
+      .mockReturnValueOnce(orgB.promise);
+    const store = useCampaignDraftListStore();
+
+    store.setActiveOrg("org-a");
+    const firstA = store.refresh("org-a");
+    const secondA = store.refresh("org-a");
+    expect(listDrafts).toHaveBeenCalledTimes(1);
+
+    store.setActiveOrg("org-b");
+    const firstB = store.refresh("org-b");
+    const secondB = store.refresh("org-b");
+    expect(listDrafts).toHaveBeenCalledTimes(2);
+
+    orgA.resolve([]);
+    orgB.resolve([persistedDraft("org-b-draft", "org-b", 3)]);
+    await expect(Promise.all([firstA, secondA])).resolves.toEqual([
+      false,
+      false,
+    ]);
+    await expect(Promise.all([firstB, secondB])).resolves.toEqual([true, true]);
+  });
+
+  it("retains the last good same-org dataset when refresh fails", async () => {
+    const store = useCampaignDraftListStore();
+    store.setActiveOrg("org-a");
+    vi.mocked(listDrafts).mockResolvedValueOnce([
+      persistedDraft("draft-1", "org-a", 2),
+      persistedDraft("draft-2", "org-a", 4),
+    ]);
+    await expect(store.refresh("org-a")).resolves.toBe(true);
+
+    vi.mocked(listDrafts).mockRejectedValueOnce(new Error("offline"));
+    await expect(store.refresh("org-a")).resolves.toBe(false);
+
+    expect(store.activeOrgId).toBe("org-a");
+    expect(store.loadedOrgId).toBe("org-a");
     expect(store.count).toBe(2);
     expect(store.drafts).toHaveLength(2);
+    expect(store.error).toBe("Unable to refresh campaign drafts.");
   });
 
-  it("coalesces concurrent refreshes into one API request", async () => {
-    let resolve!: (drafts: any[]) => void;
-    vi.mocked(listDrafts).mockReturnValueOnce(
-      new Promise((done) => {
-        resolve = done;
-      }),
-    );
+  it("ignores a stale mutation caller from a different org", async () => {
     const store = useCampaignDraftListStore();
+    store.setActiveOrg("org-b");
 
-    const first = store.refresh();
-    const second = store.refresh();
-    resolve([persistedDraft("draft-1", 3)]);
+    await expect(store.refresh("org-a")).resolves.toBe(false);
 
-    await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
-    expect(listDrafts).toHaveBeenCalledTimes(1);
-    expect(store.count).toBe(1);
+    expect(listDrafts).not.toHaveBeenCalled();
+    expect(store.activeOrgId).toBe("org-b");
   });
 });

@@ -21,7 +21,11 @@ describe("approveCampaignDraft", () => {
   });
 
   it("refreshes the shared draft list immediately after approval succeeds", async () => {
-    const campaign = { id: "campaign-1", status: "approved" } as any;
+    const campaign = {
+      id: "campaign-1",
+      orgId: "org-1",
+      status: "approved",
+    } as any;
     vi.mocked(approveMailCampaign).mockResolvedValue(campaign);
 
     await expect(approveCampaignDraft("draft-1")).resolves.toBe(campaign);

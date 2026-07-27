@@ -11,6 +11,6 @@ export async function approveCampaignDraft(
   draftId: string,
 ): Promise<MailCampaign> {
   const campaign = await approveMailCampaign(draftId);
-  void useCampaignDraftListStore().refresh();
+  void useCampaignDraftListStore().refresh(campaign.orgId);
   return campaign;
 }

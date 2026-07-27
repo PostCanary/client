@@ -229,6 +229,19 @@ describe("POS-166 — Step 3 persistence boundary", () => {
     expect(store.isPersisted).toBe(false);
     expect(store.currentStep).toBe(1);
   });
+
+  it("refreshes the deleted draft's org without requiring the sidebar", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.draft!.orgId = "org-1";
+    vi.mocked(deleteDraft).mockResolvedValue(undefined);
+
+    await store.discard();
+
+    expect(deleteDraft).toHaveBeenCalledWith("draft-1");
+    await vi.waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1));
+    expect(store.draft).toBeNull();
+  });
 });
 
 describe("generateCardsForDraft — overwrite race", () => {

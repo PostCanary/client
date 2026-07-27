@@ -221,7 +221,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       if (this.draft) {
         if (this.draft.id) {
           await deleteDraft(this.draft.id);
-          void useCampaignDraftListStore().refresh();
+          void useCampaignDraftListStore().refresh(this.draft.orgId);
         }
         this.draft = null;
       }
@@ -270,7 +270,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           _saveRevision++;
           this.saving = false;
           await this.saveNow(true);
-          void useCampaignDraftListStore().refresh();
+          void useCampaignDraftListStore().refresh(this.draft.orgId);
           return this.draft.id;
         } catch (error) {
           // POST succeeded but the initial PUT did not: roll the empty server

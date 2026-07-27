@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import type { MailCampaign } from "@/types/campaign";
 import { listMailCampaigns } from "@/api/mailCampaigns";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { useAuthStore } from "@/stores/auth";
 
 // Customer-facing campaign tabs are separate from the internal mail-campaign
 // lifecycle: drafts come from campaign_drafts, while every persisted
@@ -12,6 +13,7 @@ export type CampaignTab = "draft" | "sent";
 
 export function useCampaignList() {
   const campaigns = ref<MailCampaign[]>([]);
+  const auth = useAuthStore();
   const draftListStore = useCampaignDraftListStore();
   const { drafts, count: draftCount } = storeToRefs(draftListStore);
   const loading = ref(false);
@@ -21,10 +23,12 @@ export function useCampaignList() {
 
   async function fetch() {
     loading.value = true;
+    const orgId = auth.orgId;
+    draftListStore.setActiveOrg(orgId);
     try {
       const [campaignResult] = await Promise.allSettled([
         listMailCampaigns(),
-        draftListStore.refresh(),
+        orgId ? draftListStore.refresh(orgId) : Promise.resolve(false),
       ]);
       if (campaignResult.status === "fulfilled") {
         campaigns.value = campaignResult.value;

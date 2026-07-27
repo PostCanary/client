@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 import { useCampaignList } from "./useCampaignList";
+import { useAuthStore } from "@/stores/auth";
 
 const { listMailCampaignsMock, listDraftsMock } = vi.hoisted(() => ({
   listMailCampaignsMock: vi.fn(),
@@ -30,6 +31,10 @@ const mailCampaigns = [
 describe("useCampaignList", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    useAuthStore().me = {
+      authenticated: true,
+      org_id: "org-1",
+    } as any;
     listMailCampaignsMock.mockReset().mockResolvedValue(mailCampaigns);
     listDraftsMock.mockReset().mockResolvedValue([
       { id: "draft-1", currentStep: 2, goal: { goalLabel: "Customer Draft" } },

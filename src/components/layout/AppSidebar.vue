@@ -42,8 +42,9 @@ const { isCollapsed } = useSidebar()
 
 watch(
   () => auth.orgId,
-  (orgId, previousOrgId) => {
-    if (orgId && orgId !== previousOrgId) void draftListStore.refresh()
+  (orgId) => {
+    draftListStore.setActiveOrg(orgId)
+    if (orgId) void draftListStore.refresh(orgId)
   },
   { immediate: true },
 )

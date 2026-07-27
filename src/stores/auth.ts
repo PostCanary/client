@@ -16,6 +16,7 @@ import {
   authLogout,
 } from "@/api/auth";
 import { identifyUser, resetUser, captureEvent } from "@/composables/usePostHog";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 
 type LoginMode = "login" | "signup";
 
@@ -328,6 +329,9 @@ export const useAuthStore = defineStore("auth", {
         try {
           const me = await authMe();
           this.me = me;
+          useCampaignDraftListStore().setActiveOrg(
+            me.authenticated ? me.org_id ?? null : null,
+          );
 
           if (me.authenticated) {
             if (me.email) {
@@ -352,6 +356,7 @@ export const useAuthStore = defineStore("auth", {
           console.error("[auth] fetchMe failed", err);
           const fallback: AuthMeResponse = { authenticated: false };
           this.me = fallback;
+          useCampaignDraftListStore().setActiveOrg(null);
           this.profile = null;
           this.onboardingOpen = false;
           return fallback;
@@ -366,6 +371,8 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async logout(): Promise<void> {
+      // Clear tenant-scoped UI state before the logout request can yield.
+      useCampaignDraftListStore().setActiveOrg(null);
       try {
         await authLogout();
       } catch (err) {
@@ -374,6 +381,7 @@ export const useAuthStore = defineStore("auth", {
 
       resetUser();
       this.me = { authenticated: false };
+      useCampaignDraftListStore().setActiveOrg(null);
       this.profile = null;
       this.onboardingOpen = false;
       this.loginModalOpen = false;
