@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadEnvironmentFile } from "dotenv";
+
+loadEnvironmentFile({ path: ".env.test.local", quiet: true });
+
 const liveBaseURL = process.env.E2E_LIVE_BASE_URL ?? "http://localhost:8080";
 
 /**
