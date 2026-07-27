@@ -477,6 +477,29 @@ export interface CardSchedule {
   estimatedDeliveryDate: string        // ISO date
 }
 
+export interface MailScheduleAvailability {
+  ok: true
+  earliest_mailing_date: string
+  timezone: 'America/Los_Angeles'
+  approval_cutoff_local: string
+  cutoff_inclusive: boolean
+  processing_business_days: number
+  holiday_calendar: 'us_federal_observed_nationwide'
+}
+
+export type MailScheduleInvalidReason =
+  | 'missing_scheduled_date'
+  | 'malformed_scheduled_date'
+  | 'ineligible_scheduled_date'
+  | 'scheduled_date_before_earliest'
+
+export interface MailScheduleInvalidDetails
+  extends Omit<MailScheduleAvailability, 'ok'> {
+  code: 'mail_schedule_invalid'
+  reason: MailScheduleInvalidReason
+  selected_mailing_date?: string
+}
+
 export interface ReviewSelection {
   campaignName: string                 // auto-generated, editable
   schedules: CardSchedule[]

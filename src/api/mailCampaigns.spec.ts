@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { postJson } from "@/api/http";
-import { createApprovalArtifact } from "@/api/mailCampaigns";
+import { get, postJson } from "@/api/http";
+import {
+  createApprovalArtifact,
+  getMailScheduleAvailability,
+} from "@/api/mailCampaigns";
 
 vi.mock("@/api/http", () => ({
   api: vi.fn(),
@@ -11,6 +14,7 @@ vi.mock("@/api/http", () => ({
 
 describe("mail campaign approval artifacts", () => {
   beforeEach(() => {
+    vi.mocked(get).mockReset();
     vi.mocked(postJson).mockReset();
   });
 
@@ -44,5 +48,25 @@ describe("mail campaign approval artifacts", () => {
         terms_version: "accuracy-rights-v1",
       },
     );
+  });
+
+  it("gets the authenticated organization's authoritative schedule availability", async () => {
+    vi.mocked(get).mockResolvedValue({
+      ok: true,
+      earliest_mailing_date: "2026-07-29",
+      timezone: "America/Los_Angeles",
+      approval_cutoff_local: "17:00:00",
+      cutoff_inclusive: true,
+      processing_business_days: 1,
+      holiday_calendar: "us_federal_observed_nationwide",
+    });
+
+    const result = await getMailScheduleAvailability();
+
+    expect(get).toHaveBeenCalledWith(
+      "/api/mail-campaigns/schedule-availability",
+    );
+    expect(result.earliest_mailing_date).toBe("2026-07-29");
+    expect(result.timezone).toBe("America/Los_Angeles");
   });
 });

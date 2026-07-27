@@ -64,6 +64,17 @@ async function installMocks(page: Page) {
   );
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
+  await page.route("**/api/mail-campaigns/schedule-availability", (route) =>
+    json(route, {
+      ok: true,
+      earliest_mailing_date: "2026-07-29",
+      timezone: "America/Los_Angeles",
+      approval_cutoff_local: "17:00:00",
+      cutoff_inclusive: true,
+      processing_business_days: 1,
+      holiday_calendar: "us_federal_observed_nationwide",
+    }),
+  );
 
   await page.route("**/preview-card/1", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
@@ -102,7 +113,7 @@ async function installMocks(page: Page) {
 test.describe("StepReview design-source checkout deltas (POS-149)", () => {
   test("requested: shows 'your custom design' placeholder and $199 line item in the total", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await installMocks(page);
 
     await page.goto("/dev/step-review-approval-flow?designSource=requested");
@@ -123,6 +134,20 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     // plus the $199.00 design fee = $208.90.
     const costPanel = page.locator("text=Total").locator("..");
     await expect(costPanel).toContainText("$208.90");
+
+    await expect(
+      page.getByTestId("professional-design-schedule-block"),
+    ).toContainText(
+      "guaranteed mailing date will be calculated after you approve the final customer proof",
+    );
+    await expect(
+      page.getByRole("button", { name: /Awaiting Final Proof Approval/i }),
+    ).toBeDisabled();
+    await expect(page.getByTestId("mailing-date-input")).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath("pos-175-requested-design-block.png"),
+      fullPage: true,
+    });
   });
 
   test("uploaded: shows the uploaded front image as the preview, no design fee", async ({
@@ -142,6 +167,32 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     await expect(uploadedImg).toHaveAttribute("src", /\/media\/design-uploads\//);
 
     await expect(page.getByTestId("custom-design-fee-line")).toHaveCount(0);
+    await expect(page.getByTestId("mailing-date-input")).toHaveValue(
+      "2026-07-29",
+    );
+  });
+
+  test("saved-library artwork uses the same guaranteed schedule as a direct upload", async ({
+    page,
+  }) => {
+    await installMocks(page);
+    await page.route("**/media/design-uploads/mock-org/sample-front.png", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: VALID_PREVIEW_PNG }),
+    );
+
+    await page.goto(
+      "/dev/step-review-approval-flow?designSource=uploaded&source=library",
+    );
+
+    await expect(page.getByTestId("mailing-date-input")).toHaveValue(
+      "2026-07-29",
+    );
+    await expect(page.getByTestId("mailing-date-input")).toHaveAttribute(
+      "min",
+      "2026-07-29",
+    );
+    await expect(page.getByTestId("professional-design-schedule-block"))
+      .toHaveCount(0);
   });
 
   test("uploaded: failed front asset shows a deterministic unavailable state", async ({

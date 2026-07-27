@@ -55,6 +55,18 @@ async function installApprovalFlowMocks(page: Page) {
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
 
+  await page.route("**/api/mail-campaigns/schedule-availability", (route) =>
+    json(route, {
+      ok: true,
+      earliest_mailing_date: "2026-07-29",
+      timezone: "America/Los_Angeles",
+      approval_cutoff_local: "17:00:00",
+      cutoff_inclusive: true,
+      processing_business_days: 1,
+      holiday_calendar: "us_federal_observed_nationwide",
+    }),
+  );
+
   await page.route("**/preview-card/1", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
   );
@@ -77,6 +89,90 @@ async function installApprovalFlowMocks(page: Page) {
 }
 
 test.describe("StepReview approval artifact flow", () => {
+  test("keeps approval disabled while schedule availability is loading", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    let releaseAvailability!: () => void;
+    const availabilityReleased = new Promise<void>((resolve) => {
+      releaseAvailability = resolve;
+    });
+    await page.route(
+      "**/api/mail-campaigns/schedule-availability",
+      async (route) => {
+        await availabilityReleased;
+        return json(route, {
+          ok: true,
+          earliest_mailing_date: "2026-07-29",
+          timezone: "America/Los_Angeles",
+          approval_cutoff_local: "17:00:00",
+          cutoff_inclusive: true,
+          processing_business_days: 1,
+          holiday_calendar: "us_federal_observed_nationwide",
+        });
+      },
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    const approveButton = page.getByRole("button", {
+      name: /Approve & Send Mailing/i,
+    });
+    await page.getByLabel(/I confirm all information/i).check();
+
+    await expect(page.getByTestId("schedule-availability-loading")).toBeVisible();
+    await expect(approveButton).toBeDisabled();
+
+    releaseAvailability();
+    await expect(page.getByTestId("mailing-date-input")).toHaveValue(
+      "2026-07-29",
+    );
+    await expect(approveButton).toBeEnabled();
+  });
+
+  test("keeps approval disabled when schedule availability fails", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    await page.route(
+      "**/api/mail-campaigns/schedule-availability",
+      (route) => json(route, { error: { message: "unavailable" } }, 503),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+
+    await expect(page.getByTestId("schedule-availability-error")).toContainText(
+      "Retry before approving",
+    );
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
+    ).toBeDisabled();
+  });
+
+  test("allows the exact minimum and later weekdays but blocks a weekend", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+
+    const dateInput = page.getByTestId("mailing-date-input");
+    const approveButton = page.getByRole("button", {
+      name: /Approve & Send Mailing/i,
+    });
+    await expect(dateInput).toHaveValue("2026-07-29");
+    await expect(approveButton).toBeEnabled();
+
+    await dateInput.fill("2026-07-30");
+    await expect(approveButton).toBeEnabled();
+
+    await dateInput.fill("2026-08-01");
+    await expect(page.getByTestId("mailing-date-validation")).toContainText(
+      "must fall on a weekday",
+    );
+    await expect(approveButton).toBeDisabled();
+  });
+
   test("keeps approve disabled when no draft is loaded", async ({ page }) => {
     await installApprovalFlowMocks(page);
 
@@ -312,5 +408,45 @@ test.describe("StepReview approval artifact flow", () => {
     await expect(
       page.getByText(/This draft needs a one-mailing review before it can be approved/i),
     ).toBeVisible();
+  });
+
+  test("refreshes the minimum and selection after a stale schedule rejection", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    await page.route("**/api/mail-campaigns", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      return json(
+        route,
+        {
+          error: {
+            details: {
+              code: "mail_schedule_invalid",
+              reason: "scheduled_date_before_earliest",
+              earliest_mailing_date: "2026-07-30",
+              timezone: "America/Los_Angeles",
+              approval_cutoff_local: "17:00:00",
+              cutoff_inclusive: true,
+              processing_business_days: 1,
+              holiday_calendar: "us_federal_observed_nationwide",
+              selected_mailing_date: "2026-07-29",
+            },
+          },
+        },
+        400,
+      );
+    });
+
+    await page.goto("/dev/step-review-approval-flow");
+    const mailingDate = page.getByTestId("mailing-date-input");
+    await expect(mailingDate).toHaveValue("2026-07-29");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(mailingDate).toHaveAttribute("min", "2026-07-30");
+    await expect(mailingDate).toHaveValue("2026-07-30");
+    await expect(page.getByTestId("mailing-date-action-message")).toContainText(
+      "the rest of your draft is unchanged",
+    );
   });
 });

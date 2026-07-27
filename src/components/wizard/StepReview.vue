@@ -10,6 +10,7 @@ import type {
   DesignReturnAddress,
   DesignSource,
   MailCampaign,
+  MailScheduleInvalidDetails,
   ReviewSelection,
 } from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
@@ -19,6 +20,13 @@ import {
   createApprovalArtifact,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
+import {
+  isSelectedMailingDateValid,
+  isValidIsoDate,
+  isWeekendIsoDate,
+  scheduleForDate,
+  useMailScheduleAvailability,
+} from "@/composables/useMailScheduleAvailability";
 import {
   getReturnAddress,
   type OrgReturnAddress,
@@ -135,26 +143,59 @@ const targetingMethodLabel = computed(() => {
 
 // Schedule — pre-fill from Step 1 spacing
 const schedules = ref<CardSchedule[]>([]);
+const scheduleAvailability = useMailScheduleAvailability();
+const scheduleActionMessage = ref<string | null>(null);
+
+async function loadScheduleAvailability() {
+  scheduleActionMessage.value = null;
+  const result = await scheduleAvailability.load();
+  if (!result) {
+    schedules.value = [];
+    return;
+  }
+
+  const saved = draftStore.draft?.review?.schedules?.[0]?.scheduledDate ?? "";
+  const initialDate = isSelectedMailingDateValid(saved, result)
+    ? saved
+    : result.earliest_mailing_date;
+  schedules.value = [scheduleForDate(initialDate)];
+}
+
 onMounted(() => {
-  if (draftStore.draft?.review?.schedules?.length === 1) {
-    schedules.value = draftStore.draft.review.schedules;
-  } else {
-    const today = new Date();
-    const send = new Date(today);
-    send.setDate(send.getDate() + 5);
-    const deliver = new Date(send);
-    deliver.setDate(deliver.getDate() + 5);
-    schedules.value = [{
-      cardNumber: 1,
-      scheduledDate: send.toISOString().split("T")[0] ?? "",
-      estimatedDeliveryDate: deliver.toISOString().split("T")[0] ?? "",
-    }];
+  // Requested professional design is not schedule-ready until a future final
+  // customer proof approval exists. Do not show or calculate a guaranteed date.
+  if (!isCustomDesignRequest.value) {
+    void loadScheduleAvailability();
   }
 });
 
 function updateSchedule(updated: CardSchedule[]) {
-  schedules.value = updated;
+  schedules.value = updated.slice(0, 1);
+  scheduleActionMessage.value = null;
 }
+
+const selectedMailingDate = computed(
+  () => schedules.value[0]?.scheduledDate ?? "",
+);
+const selectedMailingDateValid = computed(() =>
+  isSelectedMailingDateValid(
+    selectedMailingDate.value,
+    scheduleAvailability.availability.value,
+  ),
+);
+const scheduleValidityMessage = computed(() => {
+  const selected = selectedMailingDate.value;
+  const availability = scheduleAvailability.availability.value;
+  if (!availability || !selected) return null;
+  if (!isValidIsoDate(selected)) return "Choose a valid mailing date.";
+  if (selected < availability.earliest_mailing_date) {
+    return `Choose ${availability.earliest_mailing_date} or a later eligible date.`;
+  }
+  if (isWeekendIsoDate(selected)) {
+    return "Mailing dates must fall on a weekday. Holidays are confirmed by the server when you approve.";
+  }
+  return null;
+});
 
 // Cost
 const pricing = usePricing();
@@ -306,7 +347,11 @@ const canApprove = computed(
     hasSingleMailingIntent.value &&
     !legacyDraftNeedsDesignReview.value &&
     householdCount.value > 0 &&
-    acknowledgedAccuracy.value,
+    acknowledgedAccuracy.value &&
+    !isCustomDesignRequest.value &&
+    !scheduleAvailability.loading.value &&
+    !scheduleAvailability.error.value &&
+    selectedMailingDateValid.value,
 );
 
 const isCustomerSuppliedDesign = computed(
@@ -391,7 +436,29 @@ async function approve() {
 
     approved.value = true;
   } catch (e: any) {
-    if (e?.status === 400 && e?.data?.error?.details?.code === "single_mailing_required") {
+    const details = e?.data?.error?.details;
+    if (e?.status === 400 && details?.code === "mail_schedule_invalid") {
+      const invalidDetails = details as MailScheduleInvalidDetails;
+      scheduleAvailability.applyInvalidDetails(invalidDetails);
+      const refreshedSchedules = [
+        scheduleForDate(invalidDetails.earliest_mailing_date),
+      ];
+      schedules.value = refreshedSchedules;
+      // Keep the refreshed date with the otherwise unchanged draft so leaving
+      // and returning to Review cannot resurrect the rejected selection.
+      draftStore.setReview({ ...review, schedules: refreshedSchedules });
+      scheduleActionMessage.value =
+        `Mailing availability changed. We updated your mailing date to ` +
+        `${invalidDetails.earliest_mailing_date}. Review it and approve again; ` +
+        `the rest of your draft is unchanged.`;
+      draftStore.error = null;
+    } else if (
+      e?.status === 400 &&
+      details?.code === "proof_approval_required"
+    ) {
+      draftStore.error =
+        "Final customer proof approval is required before a guaranteed mailing date can be calculated.";
+    } else if (e?.status === 400 && details?.code === "single_mailing_required") {
       draftStore.error =
         "This draft needs a one-mailing review before it can be approved. " +
         "Review the design and schedule, then try again.";
@@ -593,14 +660,37 @@ async function approve() {
       </div>
 
       <!-- Schedule -->
+      <div
+        v-if="isCustomDesignRequest"
+        class="rounded-lg border border-amber-200 bg-amber-50 p-3"
+        data-testid="professional-design-schedule-block"
+      >
+        <h4 class="text-sm font-semibold text-[#0b2d50]">
+          Final proof approval required
+        </h4>
+        <p class="mt-1 text-xs leading-relaxed text-amber-800">
+          Your professional design request is not ready to schedule yet. Your
+          guaranteed mailing date will be calculated after you approve the
+          final customer proof.
+        </p>
+      </div>
       <ScheduleEditor
+        v-else
         :schedules="schedules"
-        :sequence-spacing-days="goal?.sequenceSpacingDays ?? 14"
+        :availability="scheduleAvailability.availability.value"
+        :loading="scheduleAvailability.loading.value"
+        :error="scheduleAvailability.error.value"
+        :validity-message="scheduleValidityMessage"
+        :action-message="scheduleActionMessage"
         @update="updateSchedule"
+        @retry="loadScheduleAvailability"
       />
 
       <div
-        v-if="legacyDraftNeedsDesignReview || !hasSingleMailingIntent"
+        v-if="
+          !isCustomDesignRequest &&
+          (legacyDraftNeedsDesignReview || !hasSingleMailingIntent)
+        "
         data-testid="single-mailing-warning"
         class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
       >
@@ -884,6 +974,9 @@ async function approve() {
             class="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin align-middle mr-2"
           />
           Approving...
+        </template>
+        <template v-else-if="isCustomDesignRequest">
+          Awaiting Final Proof Approval
         </template>
         <template v-else> Approve & Send Mailing </template>
       </button>

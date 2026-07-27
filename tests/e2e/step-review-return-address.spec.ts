@@ -73,6 +73,17 @@ async function installMocks(
   );
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
+  await page.route("**/api/mail-campaigns/schedule-availability", (route) =>
+    json(route, {
+      ok: true,
+      earliest_mailing_date: "2026-07-29",
+      timezone: "America/Los_Angeles",
+      approval_cutoff_local: "17:00:00",
+      cutoff_inclusive: true,
+      processing_business_days: 1,
+      holiday_calendar: "us_federal_observed_nationwide",
+    }),
+  );
 
   await page.route("**/preview-card/1", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),

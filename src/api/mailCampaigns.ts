@@ -1,7 +1,10 @@
 // src/api/mailCampaigns.ts
 // SEPARATE from campaigns.ts — that's for analytics campaigns
 import { get, postJson, api } from "@/api/http";
-import type { MailCampaign } from "@/types/campaign";
+import type {
+  MailCampaign,
+  MailScheduleAvailability,
+} from "@/types/campaign";
 
 interface MailCampaignResponse {
   ok: boolean;
@@ -89,6 +92,12 @@ export async function approveMailCampaign(
     draft_id: draftId,
   });
   return toMailCampaign(res);
+}
+
+export async function getMailScheduleAvailability(): Promise<MailScheduleAvailability> {
+  return get<MailScheduleAvailability>(
+    "/api/mail-campaigns/schedule-availability",
+  );
 }
 
 export interface ApprovalArtifactResponse {
