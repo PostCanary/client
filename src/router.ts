@@ -180,6 +180,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign", requiresFeature: "postcards" },
       },
       {
+        path: "dev/step-review-approval-flow",
+        name: "DevAppStepReviewApprovalFlow",
+        component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
+        meta: {
+          title: "Step Review Approval Flow (dev)",
+          navbarTitle: "Review",
+          requiresFeature: "postcards",
+        },
+      },
+      {
         path: "print-jobs/:id",
         name: "PrintJobStatus",
         component: () => import("@/pages/PrintJobStatus.vue"),
