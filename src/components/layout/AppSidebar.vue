@@ -1,7 +1,10 @@
 <!-- src/components/layout/AppSidebar.vue -->
 <script setup lang="ts">
+import { watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCampaignDraftListStore } from '@/stores/useCampaignDraftListStore'
 import { useSidebar } from '@/composables/useSidebar'
 import { BRAND } from '@/config/brand'
 import { captureEvent } from '@/composables/usePostHog'
@@ -33,7 +36,17 @@ import {
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const draftListStore = useCampaignDraftListStore()
+const { count: draftCount } = storeToRefs(draftListStore)
 const { isCollapsed } = useSidebar()
+
+watch(
+  () => auth.orgId,
+  (orgId, previousOrgId) => {
+    if (orgId && orgId !== previousOrgId) void draftListStore.refresh()
+  },
+  { immediate: true },
+)
 
 /* ── Navigation items ────────────────────────────────────── */
 interface SidebarItem {
@@ -74,6 +87,19 @@ function isActive(routeName: string): boolean {
 
 function isAnalyticsRoute(): boolean {
   return analyticsRouteNames.has(String(route.name ?? ''))
+}
+
+function itemAccessibleLabel(item: SidebarItem): string {
+  if (
+    item.routeName === 'Campaigns' &&
+    draftCount.value !== null &&
+    draftCount.value > 0
+  ) {
+    return `${item.label}, ${draftCount.value} campaign ${
+      draftCount.value === 1 ? 'draft' : 'drafts'
+    }`
+  }
+  return item.label
 }
 
 /* ── Navigation ────────────────────────────────────────── */
@@ -166,13 +192,25 @@ async function onSignOut() {
           class="sidebar-item"
           :class="{ active: isActive(item.routeName) }"
           :aria-current="isActive(item.routeName) ? 'page' : undefined"
-          :title="isCollapsed ? item.label : undefined"
-          :aria-label="item.label"
+          :title="isCollapsed ? itemAccessibleLabel(item) : undefined"
+          :aria-label="itemAccessibleLabel(item)"
           @click="navigate(item.to, item.label, item.section)"
           type="button"
         >
           <component :is="item.component" class="item-icon item-icon--component" />
           <span class="sidebar-label">{{ item.label }}</span>
+          <span
+            v-if="
+              item.routeName === 'Campaigns' &&
+              draftCount !== null &&
+              draftCount > 0
+            "
+            class="draft-count-badge"
+            data-testid="sidebar-draft-count"
+            aria-hidden="true"
+          >
+            {{ draftCount }}
+          </span>
         </button>
       </li>
     </ul>
@@ -495,6 +533,32 @@ async function onSignOut() {
   opacity: 0;
   width: 0;
   pointer-events: none;
+}
+
+.draft-count-badge {
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sidebar.collapsed .draft-count-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  font-size: 10px;
 }
 
 /* ── Spacer ───────────────────────────────────────────── */

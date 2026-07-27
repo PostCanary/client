@@ -33,6 +33,7 @@ import {
 } from "@/data/templates";
 import type { CampaignGoalType } from "@/types/campaign";
 import { disarmScrapeRegenWatcher } from "@/composables/scrapeRegenState";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -218,7 +219,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async discard() {
       if (this.draft) {
-        if (this.draft.id) await deleteDraft(this.draft.id);
+        if (this.draft.id) {
+          await deleteDraft(this.draft.id);
+          void useCampaignDraftListStore().refresh();
+        }
         this.draft = null;
       }
     },
@@ -266,6 +270,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           _saveRevision++;
           this.saving = false;
           await this.saveNow(true);
+          void useCampaignDraftListStore().refresh();
           return this.draft.id;
         } catch (error) {
           // POST succeeded but the initial PUT did not: roll the empty server

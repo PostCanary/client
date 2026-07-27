@@ -1,8 +1,9 @@
 // src/composables/useCampaignList.ts
 import { ref, computed } from "vue";
-import type { MailCampaign, CampaignDraft } from "@/types/campaign";
+import { storeToRefs } from "pinia";
+import type { MailCampaign } from "@/types/campaign";
 import { listMailCampaigns } from "@/api/mailCampaigns";
-import { listDrafts } from "@/api/campaignDrafts";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 
 // Customer-facing campaign tabs are separate from the internal mail-campaign
 // lifecycle: drafts come from campaign_drafts, while every persisted
@@ -11,7 +12,8 @@ export type CampaignTab = "draft" | "sent";
 
 export function useCampaignList() {
   const campaigns = ref<MailCampaign[]>([]);
-  const drafts = ref<CampaignDraft[]>([]);
+  const draftListStore = useCampaignDraftListStore();
+  const { drafts, count: draftCount } = storeToRefs(draftListStore);
   const loading = ref(false);
   const activeTab = ref<CampaignTab>("draft");
   const searchQuery = ref("");
@@ -20,11 +22,13 @@ export function useCampaignList() {
   async function fetch() {
     loading.value = true;
     try {
-      const [c, d] = await Promise.all([listMailCampaigns(), listDrafts()]);
-      campaigns.value = c;
-      drafts.value = d;
-    } catch {
-      // Fail silently — empty lists shown
+      const [campaignResult] = await Promise.allSettled([
+        listMailCampaigns(),
+        draftListStore.refresh(),
+      ]);
+      if (campaignResult.status === "fulfilled") {
+        campaigns.value = campaignResult.value;
+      }
     } finally {
       loading.value = false;
     }
@@ -58,7 +62,7 @@ export function useCampaignList() {
   });
 
   const tabCounts = computed(() => ({
-    draft: drafts.value.length,
+    draft: draftCount.value,
     sent: campaigns.value.filter((c) => c.status !== "draft").length,
   }));
 

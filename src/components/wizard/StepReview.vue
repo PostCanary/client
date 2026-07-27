@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
+import { approveCampaignDraft } from "@/composables/approveCampaignDraft";
 import type {
   CardSchedule,
   DesignReturnAddress,
@@ -15,7 +16,6 @@ import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
 import {
-  approveMailCampaign,
   createApprovalArtifact,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
@@ -355,7 +355,7 @@ async function approve() {
       // has already consumed and deleted.
       draftStore.setReview(review);
       await draftStore.saveNow();
-      campaign = await approveMailCampaign(draftStore.draft!.id);
+      campaign = await approveCampaignDraft(draftStore.draft!.id);
     }
     approvedCampaign.value = campaign;
 

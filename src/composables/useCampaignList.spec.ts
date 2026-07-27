@@ -1,9 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { createPinia, setActivePinia } from "pinia";
 import { useCampaignList } from "./useCampaignList";
 
+const { listMailCampaignsMock, listDraftsMock } = vi.hoisted(() => ({
+  listMailCampaignsMock: vi.fn(),
+  listDraftsMock: vi.fn(),
+}));
+
 vi.mock("@/api/mailCampaigns", () => ({
-  listMailCampaigns: vi.fn(async () => [
+  listMailCampaigns: listMailCampaignsMock,
+}));
+
+vi.mock("@/api/campaignDrafts", () => ({
+  listDrafts: listDraftsMock,
+}));
+
+const mailCampaigns = [
     { id: "approved", status: "approved", name: "Approved", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
     { id: "paused", status: "paused", name: "Paused", createdAt: "2026-01-02", updatedAt: "2026-01-02" },
     { id: "printing", status: "printing", name: "Printing", createdAt: "2026-01-03", updatedAt: "2026-01-03" },
@@ -12,16 +25,17 @@ vi.mock("@/api/mailCampaigns", () => ({
     { id: "results", status: "results_ready", name: "Results", createdAt: "2026-01-06", updatedAt: "2026-01-06" },
     { id: "completed", status: "completed", name: "Completed", createdAt: "2026-01-07", updatedAt: "2026-01-07" },
     { id: "draft-mail", status: "draft", name: "Server Draft", createdAt: "2026-01-08", updatedAt: "2026-01-08" },
-  ]),
-}));
-
-vi.mock("@/api/campaignDrafts", () => ({
-  listDrafts: vi.fn(async () => [
-    { id: "draft-1", goal: { goalLabel: "Customer Draft" } },
-  ]),
-}));
+  ];
 
 describe("useCampaignList", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    listMailCampaignsMock.mockReset().mockResolvedValue(mailCampaigns);
+    listDraftsMock.mockReset().mockResolvedValue([
+      { id: "draft-1", currentStep: 2, goal: { goalLabel: "Customer Draft" } },
+    ]);
+  });
+
   it("defaults to Draft and puts every post-approval status in Sent", async () => {
     const list = useCampaignList();
     expect(list.activeTab.value).toBe("draft");
@@ -44,5 +58,16 @@ describe("useCampaignList", () => {
       "paused",
       "approved",
     ]);
+  });
+
+  it("keeps mail campaigns available when the shared draft refresh fails", async () => {
+    listDraftsMock.mockRejectedValueOnce(new Error("draft endpoint offline"));
+    const list = useCampaignList();
+
+    await list.fetch();
+    await nextTick();
+
+    expect(list.campaigns.value).toHaveLength(8);
+    expect(list.tabCounts.value).toEqual({ draft: null, sent: 7 });
   });
 });

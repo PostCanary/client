@@ -38,13 +38,14 @@ vi.mock("@/api/campaignDrafts", () => ({
   loadDraft: vi.fn(),
   createDraft: vi.fn(),
   deleteDraft: vi.fn(),
-  listDrafts: vi.fn(),
+  listDrafts: vi.fn().mockResolvedValue([]),
 }));
 
 import { useCampaignDraftStore } from "./useCampaignDraftStore";
 import {
   createDraft,
   deleteDraft,
+  listDrafts,
   loadDraft,
   saveDraft,
 } from "@/api/campaignDrafts";
@@ -88,6 +89,7 @@ describe("POS-166 — Step 3 persistence boundary", () => {
     vi.mocked(createDraft).mockReset();
     vi.mocked(loadDraft).mockReset();
     vi.mocked(deleteDraft).mockReset();
+    vi.mocked(listDrafts).mockReset().mockResolvedValue([]);
     vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
   });
 
@@ -135,6 +137,7 @@ describe("POS-166 — Step 3 persistence boundary", () => {
         targeting: expect.objectContaining({ estimatedCostSingle: 79 }),
       }),
     );
+    await vi.waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1));
   });
 
   it("deduplicates concurrent Step 3 entry for a send-to-list campaign", async () => {

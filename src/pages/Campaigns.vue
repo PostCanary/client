@@ -118,10 +118,22 @@ const emptyMessages: Record<CampaignTab, string> = {
       >
         {{ tab.label }}
         <span
-          v-if="tabCounts[tab.key] > 0"
+          v-if="
+            tab.key === 'draft' &&
+            tabCounts.draft !== null &&
+            tabCounts.draft > 0
+          "
+          class="ml-1 inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white"
+          data-testid="campaigns-draft-count"
+          :aria-label="`${tabCounts.draft} campaign ${tabCounts.draft === 1 ? 'draft' : 'drafts'}`"
+        >
+          {{ tabCounts.draft }}
+        </span>
+        <span
+          v-else-if="tab.key === 'sent' && tabCounts.sent > 0"
           class="ml-1 text-xs text-gray-400"
         >
-          ({{ tabCounts[tab.key] }})
+          ({{ tabCounts.sent }})
         </span>
       </button>
     </div>
