@@ -88,8 +88,10 @@ watch(
     const draftId = draftStore.draft?.id;
     if (!draftId) return;
     void router.replace({
-      name: "SttLStep2",
-      params: { draftId },
+      // Navigate by concrete path rather than the parent's route name. The
+      // named parent resolves only WizardLayout and omits its empty-path child,
+      // which renders a blank <main> until a hard reload matches the URL.
+      path: `/app/send/${draftId}/sttl-step-2`,
       query: {
         ...route.query,
         ...(audienceId ? { audienceId } : {}),

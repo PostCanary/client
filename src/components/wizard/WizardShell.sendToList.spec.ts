@@ -70,8 +70,7 @@ describe("WizardShell Send-to-a-List Step 2 routing (POS-190)", () => {
     await flushPromises();
 
     expect(replaceMock).toHaveBeenCalledWith({
-      name: "SttLStep2",
-      params: { draftId: "draft-1" },
+      path: "/app/send/draft-1/sttl-step-2",
       query: { audienceId: "aud-123" },
     });
   });
