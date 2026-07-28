@@ -9,7 +9,7 @@ import LoginModal from "@/components/LoginModal.vue";
 import DemoModal from "@/components/DemoModal.vue";
 import ChatWidget from "@/components/chat/ChatWidget.vue";
 import { useDemoStore } from "@/stores/demo";
-import { topLevelRouteViewKey } from "@/utils/routeViewKey";
+import { applicationRouteViewKey } from "@/utils/routeViewKey";
 import "@/styles/index.css";
 
 const auth = useAuthStore();
@@ -25,7 +25,7 @@ const showChat = computed(() => !route.path.startsWith("/app/send"));
 // depth, leaving the new child route as an empty comment until a hard reload.
 // Remount only when the top-level route record changes; query updates within a
 // page should not tear down the application shell.
-const routeViewKey = computed(() => topLevelRouteViewKey(route));
+const routeViewKey = computed(() => applicationRouteViewKey(route));
 </script>
 
 <template>

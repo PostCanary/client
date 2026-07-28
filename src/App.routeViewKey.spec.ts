@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { topLevelRouteViewKey } from "@/utils/routeViewKey";
+import { applicationRouteViewKey } from "@/utils/routeViewKey";
 
 describe("App router-view remount key (POS-190)", () => {
   it("changes when navigation switches between the standard wizard and list review", () => {
@@ -9,13 +9,13 @@ describe("App router-view remount key (POS-190)", () => {
     };
     const listReview = {
       path: "/app/send/draft-1/sttl-step-2",
-      matched: [{ path: "/app/send/:draftId/sttl-step-2" }],
+      // Vue Router can retain the standard wizard's record identity during
+      // this replace, which is the live regression this key must survive.
+      matched: [{ path: "/app/send/:draftId?" }],
     };
 
-    expect(topLevelRouteViewKey(standardWizard)).toBe("/app/send/:draftId?");
-    expect(topLevelRouteViewKey(listReview)).toBe(
-      "/app/send/:draftId/sttl-step-2",
-    );
+    expect(applicationRouteViewKey(standardWizard)).toBe("send-wizard");
+    expect(applicationRouteViewKey(listReview)).toBe("send-list-review");
   });
 
   it("falls back to the concrete path when no route record is matched", () => {
@@ -24,6 +24,6 @@ describe("App router-view remount key (POS-190)", () => {
       matched: [],
     };
 
-    expect(topLevelRouteViewKey(route)).toBe(route.path);
+    expect(applicationRouteViewKey(route)).toBe("send-list-review");
   });
 });
