@@ -67,6 +67,38 @@ function retryScrape() {
 const step = computed(() => draftStore.currentStep);
 const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
 
+// POS-190: Send-to-a-List owns a dedicated Step 2 route. Persisted list
+// drafts used to fall through to the area-targeting component whenever the
+// customer returned from Step 3/4, which both hid the approved list and
+// exposed controls whose counts were not included at checkout.
+watch(
+  [
+    step,
+    () => draftStore.draft?.goal?.goalType,
+    () => draftStore.draft?.audience?.audienceId,
+  ],
+  ([nextStep, goalType, audienceId]) => {
+    if (
+      nextStep !== 2 ||
+      goalType !== "send_to_list" ||
+      route.path.includes("/sttl-step-2")
+    ) {
+      return;
+    }
+    const draftId = draftStore.draft?.id;
+    if (!draftId) return;
+    void router.replace({
+      name: "SttLStep2",
+      params: { draftId },
+      query: {
+        ...route.query,
+        ...(audienceId ? { audienceId } : {}),
+      },
+    });
+  },
+  { immediate: true },
+);
+
 // POS-147/148 (Flow v2): step 3 is now Upload Your Design — advance once
 // the customer has either uploaded artwork or requested a paid design.
 // The legacy "cards exist" fallback applies ONLY to drafts that already

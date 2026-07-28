@@ -12,6 +12,7 @@ const draftStore = useCampaignDraftStore();
 const auth = useAuthStore();
 
 const selectedFile = ref<File | null>(null);
+const fileSelectionError = ref<string | null>(null);
 const approvedAudienceId = ref<string | null>(null);
 const loadError = ref(false);
 
@@ -59,17 +60,33 @@ async function loadDraftIfNeeded() {
   }
 }
 
+function selectCsvFile(file: File | null) {
+  fileSelectionError.value = null;
+  if (!file) {
+    selectedFile.value = null;
+    return;
+  }
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    selectedFile.value = null;
+    fileSelectionError.value = "Choose a CSV file.";
+    return;
+  }
+  selectedFile.value = file;
+  draftStore.setAudienceState({
+    audienceSource: "csv",
+    audienceId: null,
+    suppressionResult: null,
+    costPreview: null,
+  });
+}
+
 function onFileChange(event: Event) {
   const files = (event.target as HTMLInputElement).files;
-  selectedFile.value = files?.[0] ?? null;
-  if (selectedFile.value) {
-    draftStore.setAudienceState({
-      audienceSource: "csv",
-      audienceId: null,
-      suppressionResult: null,
-      costPreview: null,
-    });
-  }
+  selectCsvFile(files?.[0] ?? null);
+}
+
+function onFileDrop(event: DragEvent) {
+  selectCsvFile(event.dataTransfer?.files?.[0] ?? null);
 }
 
 function onStateChange(state: {
@@ -141,6 +158,9 @@ onMounted(async () => {
         <label
           class="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 text-center transition-colors hover:border-[#47bfa9] hover:bg-[#47bfa9]/5"
           data-testid="sttl-upload-dropzone"
+          @dragenter.prevent
+          @dragover.prevent
+          @drop.prevent="onFileDrop"
         >
           <span class="text-sm font-medium text-[#0b2d50]">
             Drop CSV here or choose a file
@@ -154,6 +174,14 @@ onMounted(async () => {
             @change="onFileChange"
           >
         </label>
+        <p
+          v-if="fileSelectionError"
+          class="text-sm text-red-600"
+          role="alert"
+          data-testid="sttl-file-error"
+        >
+          {{ fileSelectionError }}
+        </p>
       </div>
 
       <SttLStep2
