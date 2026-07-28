@@ -4,6 +4,7 @@ import { get, postJson } from "@/api/http";
 import {
   createApprovalArtifact,
   getMailScheduleAvailability,
+  purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 
 vi.mock("@/api/http", () => ({
@@ -68,5 +69,23 @@ describe("mail campaign approval artifacts", () => {
     );
     expect(result.earliest_mailing_date).toBe("2026-07-29");
     expect(result.timezone).toBe("America/Los_Angeles");
+  });
+
+  it("uses the server-owned print recovery contract", async () => {
+    vi.mocked(postJson).mockResolvedValue({
+      order_id: "EXISTING-ORDER-99",
+      record_count: 2,
+      sample: [],
+      source: "idempotent_cache_by_campaign",
+      print_submit_status: "submitted",
+    });
+
+    const result = await purchaseCampaignRecords("campaign-1", 1);
+
+    expect(postJson).toHaveBeenCalledWith(
+      "/api/mail-campaigns/campaign-1/purchase-records",
+      { qty: 1 },
+    );
+    expect(result.print_submit_status).toBe("submitted");
   });
 });

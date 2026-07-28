@@ -142,6 +142,7 @@ export interface PurchaseRecordsResponse {
     zip4: string | null;
   }>;
   source: string;
+  print_submit_status: "submitted" | "retry_pending";
 }
 
 // Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous data-partner

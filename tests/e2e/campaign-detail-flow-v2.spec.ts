@@ -199,14 +199,16 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
   });
 });
 
-test.describe("Flow v2 print recovery (Codex review P2)", () => {
-  test("retry button replays purchase-records and refreshes to submitted", async ({
+test.describe("operator fulfillment recovery contract", () => {
+  test("uploaded design replays purchase-records and never calls raw print submit", async ({
     page,
   }) => {
     const state = createMockAppState();
     await installMockApi(page, state);
 
     let purchaseCalls = 0;
+    let rawPrintSubmitCalls = 0;
+    let purchaseBody: unknown;
     let campaignStatus = "records_purchased";
 
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
@@ -216,33 +218,41 @@ test.describe("Flow v2 print recovery (Codex review P2)", () => {
       "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
       (route) => {
         purchaseCalls += 1;
+        purchaseBody = route.request().postDataJSON();
         campaignStatus = "submitted_to_partner";
         return json(route, {
-          ok: true,
-          source: "audience",
+          order_id: "EXISTING-ORDER-99",
+          sample: [],
+          source: "idempotent_cache_by_campaign",
           record_count: 1,
           print_submit_status: "submitted",
         });
       },
     );
+    await page.route("**/api/print_jobs/submit", (route) => {
+      rawPrintSubmitCalls += 1;
+      return json(route, { error: "raw_submit_must_not_be_called" }, 500);
+    });
 
     await page.goto("/app/campaigns/campaign-flow-v2-1");
 
     const retry = page.getByTestId("retry-print-submission");
     await expect(retry).toBeVisible();
-    // The legacy ops modal must NOT be offered for uploaded designs.
+    await expect(retry).toHaveText("Retry fulfillment");
     await expect(page.getByText("Submit Print Job")).toHaveCount(0);
 
     await retry.click();
     await expect
       .poll(() => purchaseCalls, { timeout: 5000 })
       .toBe(1);
+    expect(purchaseBody).toEqual({ qty: 1 });
+    expect(rawPrintSubmitCalls).toBe(0);
     // Refetch after success shows the advanced status and hides the button.
     await expect(page.getByTestId("campaign-detail").getByText("In production")).toBeVisible();
     await expect(retry).toHaveCount(0);
   });
 
-  test("retry failure surfaces an error and keeps the button", async ({
+  test("server retry_pending response surfaces an error and keeps recovery available", async ({
     page,
   }) => {
     const state = createMockAppState();
@@ -254,18 +264,70 @@ test.describe("Flow v2 print recovery (Codex review P2)", () => {
     await page.route(
       "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
       (route) =>
-        json(
-          route,
-          { error: "print_submit_failed", message: "Partner rejected artwork" },
-          502,
-        ),
+        json(route, {
+          order_id: "EXISTING-ORDER-99",
+          sample: [],
+          source: "idempotent_cache_by_campaign",
+          record_count: 1,
+          print_submit_status: "retry_pending",
+        }),
     );
 
     await page.goto("/app/campaigns/campaign-flow-v2-1");
     await page.getByTestId("retry-print-submission").click();
 
     await expect(page.getByTestId("retry-print-error")).toBeVisible();
+    await expect(page.getByTestId("retry-print-error")).toContainText(
+      "still queued for recovery",
+    );
     await expect(page.getByTestId("retry-print-submission")).toBeVisible();
+  });
+
+  test("legacy card campaign uses the same server-owned recovery contract", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    let purchaseCalls = 0;
+    let campaignStatus = "records_purchased";
+    await page.route("**/api/mail-campaigns/campaign-legacy-1", (route) =>
+      json(route, legacyTemplateCampaign({ status: campaignStatus })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-legacy-1/purchase-records",
+      (route) => {
+        purchaseCalls += 1;
+        expect(route.request().postDataJSON()).toEqual({ qty: 1 });
+        campaignStatus = "submitted_to_partner";
+        return json(route, {
+          order_id: "EXISTING-ORDER-99",
+          sample: [],
+          source: "idempotent_cache_by_campaign",
+          record_count: 2,
+          print_submit_status: "submitted",
+        });
+      },
+    );
+
+    await page.goto("/app/campaigns/campaign-legacy-1");
+    await expect(page.getByText("Submit Print Job")).toHaveCount(0);
+    await page.getByTestId("retry-print-submission").click();
+    await expect.poll(() => purchaseCalls).toBe(1);
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+  });
+
+  test("member role cannot see the operator recovery action", async ({ page }) => {
+    const state = createMockAppState();
+    state.authMe.org_role = "member";
+    await installMockApi(page, state);
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ status: "records_purchased" })),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await expect(page.getByTestId("campaign-detail")).toBeVisible();
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
   });
 
   test("retry button absent once already submitted", async ({ page }) => {

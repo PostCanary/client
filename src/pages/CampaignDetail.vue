@@ -7,26 +7,17 @@ import CampaignStatusBadge from "@/components/campaigns/CampaignStatusBadge.vue"
 import CampaignKPICards from "@/components/campaigns/CampaignKPICards.vue";
 import SequenceTimeline from "@/components/campaigns/SequenceTimeline.vue";
 import CampaignActions from "@/components/campaigns/CampaignActions.vue";
-import SubmitPrintJobButton from "@/components/campaigns/SubmitPrintJobButton.vue";
-import PrintJobConfirmModal, {
-  type PrintJobConfirmPayload,
-} from "@/components/campaigns/PrintJobConfirmModal.vue";
-import { usePrintJob } from "@/composables/usePrintJob";
 import { purchaseCampaignRecords } from "@/api/mailCampaigns";
-import type { PrintJobSubmitInputs } from "@/api/printJobs";
+import { useAuthStore } from "@/stores/auth";
 import { campaignDesignPreviewUrl } from "@/utils/campaignDisplay";
-import { mediaSrc } from "@/utils/mediaSrc";
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 const campaignId = route.params.id as string;
 const { campaign, loading, error, fetch, pause, resume } =
   useCampaignDetail(campaignId);
-
-const printJob = usePrintJob();
-const showPrintModal = ref(false);
-const printJobError = ref<string | null>(null);
 
 // Legacy sequence cards with previews (template/AI path). Empty for Flow
 // v2 designSource='uploaded' — never call .every on a missing array.
@@ -62,18 +53,15 @@ const isUploadedDesign = computed(
   () => campaign.value?.designSource === "uploaded",
 );
 
-// Ops print path only makes sense when there is a design surface to submit.
-// Legacy ops path only: the modal submits /api/print_jobs with a template
-// UUID, which uploaded-design campaigns don't have (their sanctioned retry
-// is replaying purchase-records — see retryPrintSubmission below).
-const showPrintJobControls = computed(() => hasLegacyCards.value);
-
-// Flow v2 recovery: purchase-records replay is idempotent and re-runs the
-// print bridge for a campaign held at records_purchased (e.g. the bridge
-// failed after billing settled).
+// Recovery is intentionally limited to org operators. Replaying
+// purchase-records is the canonical idempotent recovery contract: after
+// billing settles it reuses the existing records and derives the design,
+// partner, return address, and postcard size on the server.
 const showRetryPrintSubmission = computed(
   () =>
-    isUploadedDesign.value && campaign.value?.status === "records_purchased",
+    (auth.orgRole === "owner" || auth.orgRole === "admin") &&
+    campaign.value?.status === "records_purchased" &&
+    hasDesign.value,
 );
 const retryingPrint = ref(false);
 const retryPrintError = ref<string | null>(null);
@@ -83,11 +71,17 @@ async function retryPrintSubmission() {
   retryingPrint.value = true;
   retryPrintError.value = null;
   try {
-    await purchaseCampaignRecords(campaign.value.id, 1);
+    const result = await purchaseCampaignRecords(campaign.value.id, 1);
+    if (result.print_submit_status !== "submitted") {
+      throw new Error(
+        "The mailing is still queued for recovery. No duplicate charge or order was created.",
+      );
+    }
     await fetch();
   } catch (e: any) {
     retryPrintError.value =
-      e?.message ?? "Retry failed — the campaign is unchanged. Try again.";
+      e?.message ??
+      "Fulfillment retry failed — the campaign is unchanged. Try again.";
   } finally {
     retryingPrint.value = false;
   }
@@ -120,34 +114,6 @@ function formatCreatedAt(iso: string | null | undefined): string {
 function formatGoal(goalType: string | null | undefined): string {
   if (!goalType) return "—";
   return String(goalType).replace(/_/g, " ");
-}
-
-async function onPrintJobSubmit(payload: PrintJobConfirmPayload) {
-  if (!campaign.value) return;
-  printJobError.value = null;
-  const cards = campaign.value.cards ?? [];
-  const inputs: PrintJobSubmitInputs = {
-    campaign_id: campaign.value.id,
-    design_template_id: cards[payload.cardNumber - 1]?.previewImageUrl ?? "",
-    partner_id: "mock",
-    return_address: payload.returnAddress,
-    front_request_body: {},
-    back_request_body: {},
-    has_merge_fields: false,
-  };
-  const resultPhase = await printJob.submit(inputs);
-  if (resultPhase === "failed") {
-    if (printJob.existingJobId.value) {
-      showPrintModal.value = false;
-      router.push(`/app/print-jobs/${printJob.existingJobId.value}`);
-      return;
-    }
-    printJobError.value =
-      printJob.error.value?.message ?? "Submission failed. Please try again.";
-    return;
-  }
-  showPrintModal.value = false;
-  router.push(`/app/print-jobs/${printJob.jobId.value}`);
 }
 
 onMounted(() => {
@@ -208,16 +174,8 @@ onMounted(() => {
           data-testid="retry-print-submission"
           @click="retryPrintSubmission"
         >
-          {{ retryingPrint ? "Retrying…" : "Retry print submission" }}
+          {{ retryingPrint ? "Retrying…" : "Retry fulfillment" }}
         </button>
-        <SubmitPrintJobButton
-          v-if="showPrintJobControls"
-          :campaign="campaign"
-          :recipient-count="recipientCount"
-          :has-design="hasDesign"
-          :active-print-job-status="null"
-          @open-modal="showPrintModal = true"
-        />
         <CampaignActions
           :campaign="campaign"
           @pause="pause"
@@ -257,21 +215,6 @@ onMounted(() => {
           {{ formatGoal(campaign.goalType) }}
         </span>
       </div>
-    </div>
-
-    <!-- Print job submission error banner -->
-    <div
-      v-if="printJobError"
-      class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between"
-      role="alert"
-    >
-      <span>{{ printJobError }}</span>
-      <button
-        class="ml-3 text-red-500 hover:text-red-700 font-medium shrink-0"
-        @click="printJobError = null"
-      >
-        Dismiss
-      </button>
     </div>
 
     <!-- Design preview: uploaded front artwork or first card thumbnail -->
@@ -360,21 +303,5 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Print job confirm modal — only when print controls are available -->
-    <PrintJobConfirmModal
-      v-if="showPrintJobControls"
-      :open="showPrintModal"
-      :org-id="campaign.orgId"
-      :recipient-count="recipientCount"
-      :card-count="hasLegacyCards ? campaign.cards.length : 1"
-      :front-preview-url="
-        campaign.cards[0]?.previewImageUrl
-          ? mediaSrc(campaign.cards[0].previewImageUrl)
-          : designPreviewUrl
-      "
-      :submitting="printJob.phase.value === 'submitting'"
-      @submit="onPrintJobSubmit"
-      @close="showPrintModal = false; printJobError = null"
-    />
   </div>
 </template>
