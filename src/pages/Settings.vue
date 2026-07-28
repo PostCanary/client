@@ -1,7 +1,7 @@
 <!-- src/pages/Settings.vue -->
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
 
 import { useUserProfile } from "@/composables/useUserProfile";
@@ -10,9 +10,12 @@ import {
   changeSubscriptionPlan,
   createBillingPortalSession,
   createCheckoutSession,
+  createSetupSession,
+  fetchPaymentMethodSummary,
   pauseSubscription,
   resumeSubscription,
   type BillingState,
+  type PaymentMethodSummary,
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
@@ -46,8 +49,11 @@ const planModalOpen = ref(false);
 const pauseModalOpen = ref(false);
 const cancelModalOpen = ref(false);
 const selectedPlan = ref<PlanCode | null>(null);
+const paymentMethod = ref<PaymentMethodSummary | null>(null);
+const paymentMethodLoading = ref(false);
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const orgStore = useOrgStore();
 const brandKitStore = useBrandKitStore();
@@ -194,6 +200,13 @@ const currentPlanLabel = computed(() => {
 const hasManagedSubscription = computed(
   () => billingStatus.value === "active" || billingStatus.value === "paused" || !!currentPlanCode.value
 );
+const paymentMethodActionLabel = computed(() =>
+  hasManagedSubscription.value
+    ? "Payment methods & invoices"
+    : paymentMethod.value?.has_payment_method
+      ? "Change payment method"
+      : "Add payment method"
+);
 const canResumeSubscription = computed(
   () => billingStatus.value === "paused" || cancelAtPeriodEnd.value || pauseAtPeriodEnd.value
 );
@@ -272,7 +285,25 @@ onMounted(async () => {
   if (!brandKitStore.hydrated) await brandKitStore.fetch();
   syncBizNameFromKit();
   void loadReturnAddress();
+  void loadPaymentMethod();
+  if (route.query.billing === "card_saved") {
+    message.success("Payment method saved.");
+  } else if (route.query.billing === "card_setup_cancelled") {
+    message.info("Payment method setup was canceled.");
+  }
 });
+
+async function loadPaymentMethod() {
+  paymentMethodLoading.value = true;
+  try {
+    paymentMethod.value = await fetchPaymentMethodSummary();
+  } catch (err) {
+    console.error("[Settings] Failed to load payment method:", err);
+    paymentMethod.value = null;
+  } finally {
+    paymentMethodLoading.value = false;
+  }
+}
 
 async function onSubmit() {
   const prevWebsiteUrl = (profile.value?.website_url ?? "").trim();
@@ -325,16 +356,32 @@ async function onManageBilling() {
   billingBusy.value = true;
 
   try {
-    const { url } = await createBillingPortalSession();
+    const { url } = hasManagedSubscription.value
+      ? await createBillingPortalSession()
+      : await createSetupSession("/app/settings");
     if (url) {
       window.location.href = url;
       return;
     }
-    console.error("[Settings] No billing portal URL returned from backend");
-    message.error("Unable to open the billing portal right now.");
-  } catch (err) {
+    console.error("[Settings] No billing URL returned from backend");
+    message.error("Unable to open billing right now.");
+  } catch (err: any) {
+    if (
+      hasManagedSubscription.value &&
+      err?.data?.error === "no_stripe_customer"
+    ) {
+      try {
+        const { url } = await createSetupSession("/app/settings");
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+      } catch (setupErr) {
+        console.error("[Settings] Failed to open card setup:", setupErr);
+      }
+    }
     console.error("[Settings] Failed to open billing portal:", err);
-    message.error("Unable to open the billing portal right now.");
+    message.error("Unable to open billing right now.");
   } finally {
     billingBusy.value = false;
   }
@@ -960,14 +1007,13 @@ function onReplayTour() {
             </button>
 
             <button
-              v-if="hasManagedSubscription"
               type="button"
               class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="billingBusy"
+              :disabled="billingBusy || paymentMethodLoading"
               data-testid="settings-manage-billing"
               @click="onManageBilling"
             >
-              Payment methods &amp; invoices
+              {{ paymentMethodActionLabel }}
             </button>
 
             <button

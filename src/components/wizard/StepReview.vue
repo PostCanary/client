@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
@@ -21,6 +21,11 @@ import {
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 import {
+  createSetupSession,
+  fetchPaymentMethodSummary,
+  type PaymentMethodSummary,
+} from "@/api/billing";
+import {
   isSelectedMailingDateValid,
   isValidIsoDate,
   isWeekendIsoDate,
@@ -35,6 +40,7 @@ import { useRenderJob } from "@/composables/useRenderJob";
 import { mediaSrc } from "@/utils/mediaSrc";
 
 const router = useRouter();
+const route = useRoute();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 
@@ -58,6 +64,49 @@ const approving = ref(false);
 const approved = ref(false);
 const approvedCampaign = ref<MailCampaign | null>(null);
 const APPROVAL_TERMS_VERSION = "accuracy-rights-v1";
+const paymentMethod = ref<PaymentMethodSummary | null>(null);
+const paymentMethodLoading = ref(true);
+const paymentMethodError = ref<string | null>(null);
+const paymentMethodBusy = ref(false);
+const paymentStatusMessage = ref<string | null>(null);
+
+const paymentReady = computed(
+  () =>
+    paymentMethod.value !== null &&
+    (!paymentMethod.value.required || paymentMethod.value.has_payment_method),
+);
+
+async function loadPaymentMethod() {
+  paymentMethodLoading.value = true;
+  paymentMethodError.value = null;
+  try {
+    paymentMethod.value = await fetchPaymentMethodSummary();
+  } catch (err) {
+    console.error("[StepReview] Failed to load payment method:", err);
+    paymentMethod.value = null;
+    paymentMethodError.value =
+      "We couldn't verify your payment method. Retry before approving.";
+  } finally {
+    paymentMethodLoading.value = false;
+  }
+}
+
+async function managePaymentMethod() {
+  if (paymentMethodBusy.value) return;
+  paymentMethodBusy.value = true;
+  paymentMethodError.value = null;
+  try {
+    const { url } = await createSetupSession(route.fullPath);
+    if (!url) throw new Error("No card setup URL returned");
+    window.location.href = url;
+  } catch (err) {
+    console.error("[StepReview] Failed to open card setup:", err);
+    paymentMethodError.value =
+      "We couldn't open secure card setup. Please try again.";
+  } finally {
+    paymentMethodBusy.value = false;
+  }
+}
 
 // Brief #6 P0 #4: Consolidated accuracy + rights confirmation before
 // Approve is enabled. V1 spec line 989: "Mandatory confirmation checkboxes
@@ -130,6 +179,12 @@ onMounted(() => {
     campaignName.value = `${goalLabel}${areaStr} — ${date}`;
   }
   void loadOrgReturnAddress();
+  void loadPaymentMethod();
+  if (route.query.billing === "card_saved") {
+    paymentStatusMessage.value = "Payment method saved.";
+  } else if (route.query.billing === "card_setup_cancelled") {
+    paymentStatusMessage.value = "Payment method setup was canceled.";
+  }
 });
 
 // Targeting method label
@@ -348,6 +403,7 @@ const canApprove = computed(
     !legacyDraftNeedsDesignReview.value &&
     householdCount.value > 0 &&
     acknowledgedAccuracy.value &&
+    paymentReady.value &&
     !isCustomDesignRequest.value &&
     !scheduleAvailability.loading.value &&
     !scheduleAvailability.error.value &&
@@ -384,7 +440,7 @@ async function approve() {
     seedAddress: seedAddress.value,
     additionalSeeds: [],
     paymentMethodId: null,
-    paymentMethodLabel: "Visa ending in 4242",
+    paymentMethodLabel: paymentMethod.value?.label ?? null,
     totalCost: totalCost.value,
     perCardCosts: [householdCount.value * perCardRate.value],
     agreedToTerms: acknowledgedAccuracy.value,
@@ -427,9 +483,29 @@ async function approve() {
       // Campaign exists at status='approved' (server rolled back from
       // 'purchasing_records' on failure). Show actionable error so customer
       // can retry. The endpoint is idempotent — re-clicking Approve is safe.
-      draftStore.error =
-        "Campaign approved and proof saved, but we couldn't purchase the mailing list. " +
-        "Tap Approve again to retry, or check your data filters.";
+      if (
+        purchaseErr?.status === 402 &&
+        purchaseErr?.data?.error === "payment_method_required"
+      ) {
+        if (paymentMethod.value) {
+          paymentMethod.value = {
+            ...paymentMethod.value,
+            required: true,
+            has_payment_method: false,
+            brand: null,
+            last4: null,
+            exp_month: null,
+            exp_year: null,
+            label: null,
+          };
+        }
+        draftStore.error =
+          "Your campaign is approved, but it hasn't been sent because a valid payment method is required. Add a card, then tap Approve again.";
+      } else {
+        draftStore.error =
+          "Campaign approved and proof saved, but we couldn't purchase the mailing list. " +
+          "Tap Approve again to retry, or check your data filters.";
+      }
       approving.value = false;
       return;
     }
@@ -925,11 +1001,76 @@ async function approve() {
         </div>
       </div>
 
-      <!-- Payment method (mock) -->
-      <div class="mt-5 p-3 bg-white rounded-lg border border-gray-200">
+      <!-- Real Stripe payment readiness. Approval fails closed until checked. -->
+      <div
+        class="mt-5 p-3 bg-white rounded-lg border border-gray-200"
+        data-testid="payment-method-summary"
+      >
         <div class="text-xs text-gray-400">Payment method</div>
-        <div class="text-sm text-[#0b2d50]">Visa ending in 4242</div>
-        <button class="text-xs text-[#47bfa9] mt-1">Change</button>
+        <div
+          v-if="paymentMethodLoading"
+          class="text-sm text-gray-500"
+        >
+          Checking payment method…
+        </div>
+        <div
+          v-else-if="paymentMethod?.has_payment_method"
+          class="text-sm text-[#0b2d50]"
+          data-testid="payment-method-label"
+        >
+          {{ paymentMethod.label || "Card on file" }}
+        </div>
+        <div
+          v-else-if="paymentMethod && !paymentMethod.required"
+          class="text-sm text-[#0b2d50]"
+          data-testid="payment-method-covered"
+        >
+          Included with your plan
+        </div>
+        <div
+          v-else
+          class="text-sm text-amber-700"
+          data-testid="payment-method-missing"
+        >
+          No payment method on file
+        </div>
+        <button
+          type="button"
+          class="text-xs text-[#47bfa9] mt-1 disabled:opacity-50"
+          data-testid="payment-method-change"
+          :disabled="paymentMethodBusy"
+          @click="managePaymentMethod"
+        >
+          {{
+            paymentMethod?.has_payment_method
+              ? "Change"
+              : paymentMethodBusy
+                ? "Opening secure setup…"
+                : "Add payment method"
+          }}
+        </button>
+        <button
+          v-if="paymentMethodError"
+          type="button"
+          class="ml-3 text-xs font-medium text-red-600 underline"
+          data-testid="payment-method-retry"
+          @click="loadPaymentMethod"
+        >
+          Retry
+        </button>
+        <p
+          v-if="paymentMethodError"
+          class="mt-1 text-xs text-red-600"
+          role="alert"
+        >
+          {{ paymentMethodError }}
+        </p>
+        <p
+          v-if="paymentStatusMessage"
+          class="mt-1 text-xs text-emerald-700"
+        >
+          {{ paymentStatusMessage }}
+        </p>
       </div>
 
       <!-- P0 #4: consolidated accuracy + rights acknowledgement.

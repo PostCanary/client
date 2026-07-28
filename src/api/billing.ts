@@ -14,6 +14,17 @@ export interface CheckoutSessionResult {
   url: string | null;
 }
 
+export interface PaymentMethodSummary {
+  billing_type: "subscription_included" | "internal" | "pay_per_send";
+  required: boolean;
+  has_payment_method: boolean;
+  brand: string | null;
+  last4: string | null;
+  exp_month: number | null;
+  exp_year: number | null;
+  label: string | null;
+}
+
 /* ------------------------------------------------------------------
  * Tiered subscription checkout
  * Backend: POST /api/billing/create-checkout-session
@@ -122,6 +133,30 @@ export async function createBillingPortalSession(): Promise<CheckoutSessionResul
 
   if (!url) {
     console.error("[billing.api] No portal URL returned from backend", data);
+  }
+
+  return { url };
+}
+
+export async function fetchPaymentMethodSummary(): Promise<PaymentMethodSummary> {
+  return api<PaymentMethodSummary>("/api/billing/payment-method");
+}
+
+export async function createSetupSession(
+  returnPath: string,
+): Promise<CheckoutSessionResult> {
+  const data = await postJson<CheckoutSessionRaw>(
+    "/api/billing/create-setup-session",
+    { return_path: returnPath },
+  );
+
+  const url =
+    (data.checkout_url && String(data.checkout_url)) ||
+    (data.url && String(data.url)) ||
+    null;
+
+  if (!url) {
+    console.error("[billing.api] No setup URL returned from backend", data);
   }
 
   return { url };
