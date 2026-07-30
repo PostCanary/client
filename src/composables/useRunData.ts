@@ -220,9 +220,12 @@ export function useRunData() {
     endDate.value = range.end ?? undefined;
   }
 
-  function setStatusIfChanged(s: RunStatus | null) {
+  function setStatusIfChanged(
+    s: RunStatus | null,
+    expectedTenantRevision = runStore.tenantRevision,
+  ) {
     if (!statusEquals(status.value as any, s)) {
-      runStore.setStatus(s as any);
+      runStore.setStatus(s as any, expectedTenantRevision);
     }
   }
 
@@ -249,7 +252,9 @@ export function useRunData() {
     return { r: r ?? null, m: m ?? null };
   }
 
-  async function fetchResultAndMatches(): Promise<void> {
+  async function fetchResultAndMatches(
+    expectedTenantRevision = runStore.tenantRevision,
+  ): Promise<void> {
     runResultLoading.value = true;
     matchesLoading.value = true;
 
@@ -261,30 +266,42 @@ export function useRunData() {
       // Campaign changes should always reconcile the cache to the latest API response,
       // including empty lists/null payloads, so "All Campaigns" cannot get stuck on
       // a previously selected campaign view.
-      runStore.setResultAndMatches(r ?? null, nextMatches);
+      runStore.setResultAndMatches(r ?? null, nextMatches, expectedTenantRevision);
     } finally {
       runResultLoading.value = false;
       matchesLoading.value = false;
     }
   }
 
-  async function ensureLatestDoneVisible(maxAttempts = 24, delayMs = 450): Promise<void> {
+  async function ensureLatestDoneVisible(
+    maxAttempts = 24,
+    delayMs = 450,
+    expectedTenantRevision = runStore.tenantRevision,
+  ): Promise<void> {
     // Handles: run is done, but /latest/*?require=done returns 204 briefly.
     for (let i = 0; i < maxAttempts; i++) {
+      if (runStore.tenantRevision !== expectedTenantRevision) return;
       const { r, m } = await fetchLatestDoneResultAndMatches();
       if (r && m) {
         const nextMatches = Array.isArray((m as any).matches) ? (m as any).matches : [];
-        runStore.setResultAndMatches(r, nextMatches);
+        runStore.setResultAndMatches(r, nextMatches, expectedTenantRevision);
         return;
       }
       await sleep(delayMs);
     }
   }
 
-  async function pollGeocodingPhase(myToken: number, intervalMs: number): Promise<RunStatus | null> {
+  async function pollGeocodingPhase(
+    myToken: number,
+    intervalMs: number,
+    expectedTenantRevision: number,
+  ): Promise<RunStatus | null> {
     // We keep the loader open but unlocked; user can close manually.
     for (let j = 0; j < GEOCODE_MAX_TICKS; j++) {
-      if (pollToken !== myToken) return null;
+      if (
+        pollToken !== myToken ||
+        runStore.tenantRevision !== expectedTenantRevision
+      ) return null;
 
       let s2: RunStatus | null = null;
       statusLoading.value = true;
@@ -295,7 +312,7 @@ export function useRunData() {
       }
 
       if (s2) {
-        setStatusIfChanged(s2);
+        setStatusIfChanged(s2, expectedTenantRevision);
         setActiveRunId((s2 as any)?.run_id ?? null);
 
         // If geocoding is still actively updating, keep the loader “in geocoding phase”
@@ -324,16 +341,18 @@ export function useRunData() {
   // Public API: one-shot refresh
   // ---------------------------
   async function refreshOnce(): Promise<void> {
+    const expectedTenantRevision = runStore.tenantRevision;
     error.value = null;
     statusLoading.value = true;
 
     try {
       const s = await fetchStatus();
-      setStatusIfChanged(s);
+      if (runStore.tenantRevision !== expectedTenantRevision) return;
+      setStatusIfChanged(s, expectedTenantRevision);
       setActiveRunId((s as any)?.run_id ?? null);
 
       // Always attempt to show latest DONE results if they exist
-      await fetchResultAndMatches();
+      await fetchResultAndMatches(expectedTenantRevision);
     } catch (e: any) {
       error.value = e?.message || "Failed to load run status";
     } finally {
@@ -360,6 +379,7 @@ export function useRunData() {
     if (runId) setActiveRunId(runId);
 
     const myToken = ++pollToken;
+    const expectedTenantRevision = runStore.tenantRevision;
     polling.value = true;
 
     let nullTicks = 0;
@@ -374,15 +394,19 @@ export function useRunData() {
       }
 
       for (let i = 0; i < maxTicks; i++) {
-        if (pollToken !== myToken) return null;
+        if (
+          pollToken !== myToken ||
+          runStore.tenantRevision !== expectedTenantRevision
+        ) return null;
 
         statusLoading.value = true;
         let s: RunStatus | null = null;
 
         try {
           s = await fetchStatus();
+          if (runStore.tenantRevision !== expectedTenantRevision) return null;
           last = s;
-          setStatusIfChanged(s);
+          setStatusIfChanged(s, expectedTenantRevision);
           setActiveRunId((s as any)?.run_id ?? null);
         } finally {
           statusLoading.value = false;
@@ -432,8 +456,8 @@ export function useRunData() {
 
         if (isDone(s)) {
           // Pull DONE data without requiring refresh
-          await fetchResultAndMatches();
-          await ensureLatestDoneVisible();
+          await fetchResultAndMatches(expectedTenantRevision);
+          await ensureLatestDoneVisible(24, 450, expectedTenantRevision);
 
           window.dispatchEvent(
             new CustomEvent("mt:run-completed", { detail: { run_id: (s as any).run_id, status: s } })
@@ -448,7 +472,11 @@ export function useRunData() {
               loader.setProgress(Math.max(loader.progress, geocodeLoaderProgress(s)));
               loader.setMessage(statusLabel(s));
 
-              const s2 = await pollGeocodingPhase(myToken, intervalMs);
+              const s2 = await pollGeocodingPhase(
+                myToken,
+                intervalMs,
+                expectedTenantRevision,
+              );
               if (s2) return s2;
             }
 
