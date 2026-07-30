@@ -3,10 +3,27 @@ import { defineStore } from "pinia";
 import type { RunStatus, RunResult, MatchRow } from "@/api/runs";
 
 export const LEGACY_RUN_CACHE_KEY = "mt:run-cache:v1";
+export const LEGACY_RETURN_ADDRESS_CACHE_PREFIX = "postcanary:lastReturnAddress:";
 
-export function purgeLegacyRunCache(): void {
+export function purgeLegacySensitiveCaches(): void {
   try {
-    globalThis.localStorage?.removeItem(LEGACY_RUN_CACHE_KEY);
+    const storage = globalThis.localStorage;
+    if (!storage) return;
+
+    storage.removeItem(LEGACY_RUN_CACHE_KEY);
+
+    const returnAddressKeys = Array.from(
+      { length: storage.length },
+      (_, index) => storage.key(index),
+    ).filter(
+      (key): key is string =>
+        typeof key === "string" &&
+        key.startsWith(LEGACY_RETURN_ADDRESS_CACHE_PREFIX),
+    );
+
+    for (const key of returnAddressKeys) {
+      storage.removeItem(key);
+    }
   } catch {
     // Storage can be unavailable in hardened/private browser contexts.
   }
@@ -28,7 +45,7 @@ export const useRunStore = defineStore("run", {
       if (this.hydrated) return;
 
       // POS-202: never hydrate tenant data from browser-persistent storage.
-      purgeLegacyRunCache();
+      purgeLegacySensitiveCaches();
       this.hydrated = true;
     },
 
@@ -36,7 +53,7 @@ export const useRunStore = defineStore("run", {
       // Keep the existing in-session store contract without persisting customer
       // addresses, revenue, run IDs, or user IDs across identity boundaries.
       this.savedAt = new Date().toISOString();
-      purgeLegacyRunCache();
+      purgeLegacySensitiveCaches();
     },
 
     clear() {
@@ -45,7 +62,7 @@ export const useRunStore = defineStore("run", {
       this.runResult = null;
       this.matches = [];
       this.tenantRevision += 1;
-      purgeLegacyRunCache();
+      purgeLegacySensitiveCaches();
       this.hydrated = true;
     },
 

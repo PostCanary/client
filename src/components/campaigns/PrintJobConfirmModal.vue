@@ -49,10 +49,6 @@ const state = ref("");
 const zip5 = ref("");
 const zip4 = ref("");
 
-function localStorageKey() {
-  return `postcanary:lastReturnAddress:${props.orgId}`;
-}
-
 function clearReturnAddress() {
   name.value = "";
   line1.value = "";
@@ -63,55 +59,11 @@ function clearReturnAddress() {
   zip4.value = "";
 }
 
-function asString(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-
-function loadFromLocalStorage(opts: { isTenantChange?: boolean } = {}) {
-  // On tenant (orgId) change, ANY load failure must clear to avoid bleeding
-  // a previous org's typed return address into the new org context. On
-  // same-org rehydrations (mount + props.open reopen), preserve in-progress
-  // typed fields when storage is corrupt / unavailable / non-object so the
-  // user does not lose data they entered manually.
-  const failureClears = opts.isTenantChange === true;
-  let parsed: Record<string, unknown> | null = null;
-  try {
-    const raw = window.localStorage.getItem(localStorageKey());
-    if (!raw) {
-      // No stored value for this org → clear any in-memory residue from prior org.
-      clearReturnAddress();
-      return;
-    }
-    const decoded = JSON.parse(raw) as unknown;
-    if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
-      parsed = decoded as Record<string, unknown>;
-    }
-  } catch {
-    // localStorage unavailable or corrupt JSON.
-    if (failureClears) clearReturnAddress();
-    return;
-  }
-  if (!parsed) {
-    // Stored value was non-object (array / primitive).
-    if (failureClears) clearReturnAddress();
-    return;
-  }
-  // Successful read: replace refs from validated parse.
-  name.value = asString(parsed.name);
-  line1.value = asString(parsed.line_1);
-  line2.value = asString(parsed.line_2);
-  city.value = asString(parsed.city);
-  state.value = asString(parsed.state);
-  zip5.value = asString(parsed.zip5);
-  zip4.value = asString(parsed.zip4);
-}
-
 function resetCardNumber() {
   cardNumber.value = props.cardCount > 0 ? 1 : 1;
 }
 
 onMounted(() => {
-  loadFromLocalStorage();
   resetCardNumber();
 });
 
@@ -119,7 +71,6 @@ watch(
   () => props.open,
   async (isOpen) => {
     if (isOpen) {
-      loadFromLocalStorage();
       resetCardNumber();
       await nextTick();
       try {
@@ -140,9 +91,7 @@ onBeforeUnmount(() => {
 watch(
   () => props.orgId,
   () => {
-    if (props.open) {
-      loadFromLocalStorage({ isTenantChange: true });
-    }
+    clearReturnAddress();
   },
 );
 

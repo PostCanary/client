@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { LEGACY_RUN_CACHE_KEY, useRunStore } from "@/stores/useRunStore";
+import {
+  LEGACY_RETURN_ADDRESS_CACHE_PREFIX,
+  LEGACY_RUN_CACHE_KEY,
+  purgeLegacySensitiveCaches,
+  useRunStore,
+} from "@/stores/useRunStore";
 
 function legacyPayload() {
   return {
@@ -40,6 +45,24 @@ describe("useRunStore tenant isolation", () => {
     useRunStore().hydrate();
 
     expect(localStorage.getItem(LEGACY_RUN_CACHE_KEY)).toBeNull();
+  });
+
+  it("purges legacy return addresses for every tenant without removing unrelated preferences", () => {
+    localStorage.setItem(
+      `${LEGACY_RETURN_ADDRESS_CACHE_PREFIX}org-a`,
+      JSON.stringify({ name: "Account A", line_1: "123 Private St" }),
+    );
+    localStorage.setItem(
+      `${LEGACY_RETURN_ADDRESS_CACHE_PREFIX}org-b`,
+      JSON.stringify({ name: "Account B", line_1: "456 Private Ave" }),
+    );
+    localStorage.setItem("pc:sidebar-collapsed", "1");
+
+    purgeLegacySensitiveCaches();
+
+    expect(localStorage.getItem(`${LEGACY_RETURN_ADDRESS_CACHE_PREFIX}org-a`)).toBeNull();
+    expect(localStorage.getItem(`${LEGACY_RETURN_ADDRESS_CACHE_PREFIX}org-b`)).toBeNull();
+    expect(localStorage.getItem("pc:sidebar-collapsed")).toBe("1");
   });
 
   it("keeps current run data in memory without writing localStorage", () => {
