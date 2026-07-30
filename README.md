@@ -62,6 +62,13 @@ npm run preview
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
 
+## Client-side data retention
+
+- Customer records, addresses, revenue, analytics results, and other tenant-scoped data must not be stored in `localStorage`, `sessionStorage`, or IndexedDB.
+- Tenant-scoped API data stays in memory and is fetched only after the authenticated user and active organization are confirmed.
+- Tenant-scoped state must be cleared on logout, failed or anonymous reauthentication, authenticated identity changes, account deletion, and successful organization switches.
+- Any future browser-persistent cache must contain only non-sensitive data and must be versioned, TTL-bound, scoped to the current user and organization, and identity-validated before hydration.
+
 ## Project Structure
 
 ```
@@ -76,4 +83,3 @@ client/
 │   └── styles/       # Global styles
 └── public/           # Static assets
 ```
-
