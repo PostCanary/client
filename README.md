@@ -64,9 +64,10 @@ npm run preview
 
 ## Client-side data retention
 
-- Customer records, addresses, revenue, analytics results, and other tenant-scoped data must not be stored in `localStorage`, `sessionStorage`, or IndexedDB.
-- Tenant-scoped API data stays in memory and is fetched only after the authenticated user and active organization are confirmed.
-- Tenant-scoped state must be cleared on logout, failed or anonymous reauthentication, authenticated identity changes, account deletion, and successful organization switches.
+- Customer records, addresses, revenue, analytics results, and other sensitive tenant-scoped data must not be stored in `localStorage`, `sessionStorage`, or IndexedDB.
+- API response payloads containing customer data, PII, or analytics results stay in memory and are fetched only after the authenticated user and active organization are confirmed.
+- Sensitive tenant-scoped state and run-result caches must be cleared on logout, failed or anonymous reauthentication, authenticated identity changes, account deletion, and successful organization switches.
+- Opaque resource identifiers used only for navigation or workflow resumption, such as campaign or run IDs, may be persisted without their associated payloads. They must never be treated as proof of authorization; server-side tenant authorization is required whenever they are used.
 - Any future browser-persistent cache must contain only non-sensitive data and must be versioned, TTL-bound, scoped to the current user and organization, and identity-validated before hydration.
 
 ## Project Structure

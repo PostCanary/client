@@ -156,7 +156,7 @@ function statusLabel(s: RunStatus | null): string {
   return "Working…";
 }
 
-// Avoid localStorage writes every tick unless status actually changed
+// Avoid unnecessary reactive-store writes every tick unless status changed.
 function statusEquals(a: RunStatus | null, b: RunStatus | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -190,7 +190,7 @@ export function useRunData() {
   const loader = useLoader();
 
   // ---------------------------
-  // Store-backed state (persists via localStorage)
+  // Store-backed state (memory-only; cleared across tenant transitions)
   // ---------------------------
   const runStore = useRunStore();
   runStore.hydrate();
