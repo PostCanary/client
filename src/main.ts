@@ -10,12 +10,17 @@ import "@/styles/print-scale.css";
 
 import { initPostHog } from "@/composables/usePostHog";
 import { useAuthStore } from "@/stores/auth";
+import { purgeLegacyRunCache } from "@/stores/useRunStore";
 import {
   HTTP_EVENT_AUTH_REQUIRED,
   HTTP_EVENT_SUBSCRIPTION_REQUIRED,
   type HttpGateEventDetail,
 } from "@/api/http";
 import { shouldReloadForChunkError } from "@/utils/chunkReload";
+
+// POS-202: remove address-level caches written by earlier client versions
+// before authentication or any tenant-scoped route can render.
+purgeLegacyRunCache();
 
 // POS-126: we deploy many times a day and Vercel serves /assets/* as
 // immutable, so a tab open across a deploy will fail to preload a lazy

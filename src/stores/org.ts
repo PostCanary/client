@@ -12,6 +12,7 @@ import {
 } from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { useRunStore } from "@/stores/useRunStore";
 
 export const useOrgStore = defineStore("org", {
   state: () => ({
@@ -92,6 +93,9 @@ export const useOrgStore = defineStore("org", {
       // The target tenant is known before /auth/me refreshes. Clear the prior
       // tenant immediately so its drafts cannot remain visible meanwhile.
       useCampaignDraftListStore().setActiveOrg(orgId);
+      // The server session now points at a different tenant. Clear the prior
+      // tenant's in-memory analytics before fetching or rendering new context.
+      useRunStore().clear();
       // Refresh auth store to pick up new org context
       const auth = useAuthStore();
       await auth.fetchMe();
