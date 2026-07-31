@@ -508,8 +508,10 @@ export interface ReviewSelection {
   additionalSeeds: string[]            // charged at per-card rate
   paymentMethodId: string | null       // Stripe PM
   paymentMethodLabel: string | null    // "Visa ending 4242"
-  totalCost: number
-  perCardCosts: number[]
+  // Legacy display-only estimates. New approval flows omit these because the
+  // durable order quote and charge are server-owned.
+  totalCost?: number
+  perCardCosts?: number[]
   agreedToTerms: boolean
 }
 
@@ -704,6 +706,61 @@ export type MailCampaignStatus =
   | 'completed'
   | 'paused'
 
+export interface MailCampaignOrderCounts {
+  approved: number | null
+  requested: number | null
+  purchased: number | null
+  printable: number | null
+  billed: number | null
+  submitted: number | null
+  accepted: number | null
+  mailed: number | null
+  delivered: number | null
+  returned: number | null
+  failed: number | null
+  refunded: number | null
+}
+
+export interface MailCampaignOrderAmounts {
+  currency: string | null
+  unit_rate_cents: number | null
+  quoted_cents: number | null
+  authorized_cents: number | null
+  charged_cents: number | null
+  refunded_cents: number | null
+  net_cents: number | null
+}
+
+export type MailCampaignRecoveryAction =
+  | 'none'
+  | 'retry_purchase'
+  | 'contact_support'
+
+export interface MailCampaignOrderArtwork {
+  front_sha256: string | null
+  back_sha256: string | null
+}
+
+/**
+ * Durable server-owned order reconciliation projection (POS-197).
+ *
+ * Every field remains nullable because historical campaigns pre-date the
+ * durable contract and partially completed orders legitimately have gaps.
+ * Artwork hash keys are server-owned and intentionally not inferred here.
+ */
+export interface MailCampaignOrder {
+  contract_version: number | null
+  mailing_count: number | null
+  counts: MailCampaignOrderCounts
+  amounts: MailCampaignOrderAmounts
+  artwork: MailCampaignOrderArtwork | null
+  payment_state: string | null
+  fulfillment_state: string | null
+  reconciliation_state: string | null
+  reconciliation_reason: string | null
+  recovery_action: MailCampaignRecoveryAction | null
+}
+
 export interface MailCampaign {
   id: string
   orgId: string
@@ -735,6 +792,11 @@ export interface MailCampaign {
   // can show uploaded artwork when cards_data is empty.
   designSource?: DesignSource
   uploadedAsset?: UploadedDesignAsset | null
+  // POS-197: authoritative recipient, money, artwork, payment, fulfillment,
+  // and reconciliation state. Null for campaigns created before the durable
+  // order contract; callers may then render legacy values as explicitly
+  // unavailable/fallback data, but must never infer vendor progress.
+  order: MailCampaignOrder | null
 }
 
 export interface MailCampaignCard {

@@ -3,6 +3,11 @@
 import { get, postJson, api } from "@/api/http";
 import type {
   MailCampaign,
+  MailCampaignOrder,
+  MailCampaignOrderAmounts,
+  MailCampaignOrderArtwork,
+  MailCampaignOrderCounts,
+  MailCampaignRecoveryAction,
   MailScheduleAvailability,
 } from "@/types/campaign";
 
@@ -15,10 +20,10 @@ interface MailCampaignResponse {
   status: string;
   goal_type: string;
   service_type: string | null;
-  sequence_length: number;
-  household_count: number;
-  total_cost: number;
-  total_spent: number;
+  sequence_length: number | null;
+  household_count: number | null;
+  total_cost: number | null;
+  total_spent: number | null;
   targeting_data: Record<string, any> | null;
   design_data: Record<string, any> | null;
   schedule_data: any;
@@ -31,6 +36,7 @@ interface MailCampaignResponse {
   // serializer ships; absent on older server builds pre-deploy, so treat
   // it as optional rather than required.
   audience_id?: string | null;
+  order?: unknown;
 }
 
 interface ListResponse {
@@ -38,7 +44,95 @@ interface ListResponse {
   campaigns: MailCampaignResponse[];
 }
 
-function toMailCampaign(r: MailCampaignResponse): MailCampaign {
+const ORDER_COUNT_KEYS = [
+  "approved",
+  "requested",
+  "purchased",
+  "printable",
+  "billed",
+  "submitted",
+  "accepted",
+  "mailed",
+  "delivered",
+  "returned",
+  "failed",
+  "refunded",
+] as const satisfies readonly (keyof MailCampaignOrderCounts)[];
+
+const ORDER_AMOUNT_KEYS = [
+  "unit_rate_cents",
+  "quoted_cents",
+  "authorized_cents",
+  "charged_cents",
+  "refunded_cents",
+  "net_cents",
+] as const satisfies readonly Exclude<keyof MailCampaignOrderAmounts, "currency">[];
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function nullableNonNegativeInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function normalizeCounts(value: unknown): MailCampaignOrderCounts {
+  const raw = isObject(value) ? value : {};
+  return Object.fromEntries(
+    ORDER_COUNT_KEYS.map((key) => [key, nullableNonNegativeInteger(raw[key])]),
+  ) as unknown as MailCampaignOrderCounts;
+}
+
+function normalizeAmounts(value: unknown): MailCampaignOrderAmounts {
+  const raw = isObject(value) ? value : {};
+  const amounts = Object.fromEntries(
+    ORDER_AMOUNT_KEYS.map((key) => [key, nullableNonNegativeInteger(raw[key])]),
+  ) as unknown as Omit<MailCampaignOrderAmounts, "currency">;
+  return {
+    currency: nullableString(raw.currency),
+    ...amounts,
+  };
+}
+
+function normalizeArtwork(value: unknown): MailCampaignOrderArtwork | null {
+  if (!isObject(value)) return null;
+  return {
+    front_sha256: nullableString(value.front_sha256),
+    back_sha256: nullableString(value.back_sha256),
+  };
+}
+
+function normalizeRecoveryAction(value: unknown): MailCampaignRecoveryAction | null {
+  return value === "none" ||
+    value === "retry_purchase" ||
+    value === "contact_support"
+    ? value
+    : null;
+}
+
+export function normalizeOrderProjection(value: unknown): MailCampaignOrder | null {
+  if (!isObject(value)) return null;
+  return {
+    contract_version: nullableNonNegativeInteger(value.contract_version),
+    mailing_count: nullableNonNegativeInteger(value.mailing_count),
+    counts: normalizeCounts(value.counts),
+    amounts: normalizeAmounts(value.amounts),
+    artwork: normalizeArtwork(value.artwork),
+    payment_state: nullableString(value.payment_state),
+    fulfillment_state: nullableString(value.fulfillment_state),
+    reconciliation_state: nullableString(value.reconciliation_state),
+    reconciliation_reason: nullableString(value.reconciliation_reason),
+    recovery_action: normalizeRecoveryAction(value.recovery_action),
+  };
+}
+
+export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
   // Flow v2 uploaded/request designs store sequenceCards as [] (or omit
   // cards entirely). Never leave `cards` non-array — detail page and
   // list helpers call .every / .filter / .length without further guards.
@@ -72,6 +166,7 @@ function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     // front artwork when cards_data is empty.
     designSource: design?.designSource as MailCampaign["designSource"],
     uploadedAsset: (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null,
+    order: normalizeOrderProjection(r.order),
   };
 }
 
@@ -131,9 +226,12 @@ export async function createApprovalArtifact(
 }
 
 export interface PurchaseRecordsResponse {
-  order_id: string | null;
-  record_count: number;
-  sample: Array<{
+  order: MailCampaignOrder | null;
+  // Legacy response fields remain optional for rollout compatibility. They
+  // are never used as authority for quantity, price, or fulfillment state.
+  order_id?: string | null;
+  record_count?: number | null;
+  sample?: Array<{
     address_line_1: string;
     address_line_2: string | null;
     city: string;
@@ -141,8 +239,8 @@ export interface PurchaseRecordsResponse {
     zip5: string;
     zip4: string | null;
   }>;
-  source: string;
-  print_submit_status: "submitted" | "retry_pending";
+  source?: string | null;
+  print_submit_status?: string | null;
 }
 
 // Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous data-partner
@@ -150,12 +248,22 @@ export interface PurchaseRecordsResponse {
 // a successful purchase return the existing records without burning credits.
 export async function purchaseCampaignRecords(
   campaignId: string,
-  qty: number = 10,
 ): Promise<PurchaseRecordsResponse> {
-  return postJson<PurchaseRecordsResponse>(
+  const response = await api<unknown>(
     `/api/mail-campaigns/${campaignId}/purchase-records`,
-    { qty },
+    { method: "POST" },
   );
+  const raw = isObject(response) ? response : {};
+  return {
+    order: normalizeOrderProjection(raw.order),
+    order_id: nullableString(raw.order_id),
+    record_count: nullableNonNegativeInteger(raw.record_count),
+    sample: Array.isArray(raw.sample)
+      ? (raw.sample as PurchaseRecordsResponse["sample"])
+      : [],
+    source: nullableString(raw.source),
+    print_submit_status: nullableString(raw.print_submit_status),
+  };
 }
 
 // POS-154: streams the real per-recipient CSV for a send_to_list campaign

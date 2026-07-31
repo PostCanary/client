@@ -13,6 +13,11 @@ const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 const params = new URLSearchParams(window.location.search);
 const emptyDraft = params.get("emptyDraft") === "1";
+const requestedHouseholdCount = Number(params.get("households") ?? "10");
+const householdCount = Number.isSafeInteger(requestedHouseholdCount) && requestedHouseholdCount > 0
+  ? requestedHouseholdCount
+  : 10;
+const staleMultiMailing = params.get("multiMailing") === "1";
 
 // POS-149: drives ReviewSummary/CostBreakdown through the Flow v2
 // designSource states from a plain URL param, so Playwright can seed
@@ -92,6 +97,24 @@ const generatedCards: CardDesign[] = designSourceParam
         reviewReason: "Test harness",
         templateReason: "Test harness",
       } as unknown as CardDesign,
+      ...(staleMultiMailing
+        ? [
+            {
+              cardNumber: 2,
+              cardPurpose: "proof",
+              templateId: "HAC-1000",
+              renderTemplateId: "hac-1000-front-v1",
+              previewImageUrl: "",
+              overrides: {},
+              resolvedContent: { headline: "Second stale mailing" },
+              backContent: {},
+              headlineCandidates: [],
+              offerReason: "Test harness",
+              reviewReason: "Test harness",
+              templateReason: "Test harness",
+            } as unknown as CardDesign,
+          ]
+        : []),
     ];
 
 brandKitStore.brandKit = {
@@ -121,14 +144,14 @@ draftStore.draft = emptyDraft
         goalType: "neighbor_marketing",
         goalLabel: "Neighbor Marketing",
         serviceType: "HVAC Tune-Up",
-        sequenceLength: 1,
+        sequenceLength: staleMultiMailing ? 2 : 1,
         sequenceSpacingDays: 14,
         otherGoalText: null,
       },
       targeting: {
         campaignGoal: "neighbor_marketing",
         serviceType: "HVAC Tune-Up",
-        sequenceLength: 1,
+        sequenceLength: staleMultiMailing ? 2 : 1,
         sequenceSpacingDays: 14,
         areas: [{ type: "zip", coordinates: [], zipCode: "55422" }],
         method: "zip",
@@ -150,19 +173,19 @@ draftStore.draft = emptyDraft
         excludePastCustomers: false,
         excludeMailedWithinDays: 30,
         doNotMailCount: 0,
-        totalHouseholds: 10,
+        totalHouseholds: householdCount,
         excludedPastCustomers: 0,
         excludedRecentlyMailed: 0,
         excludedDoNotMail: 0,
-        finalHouseholdCount: 10,
+        finalHouseholdCount: householdCount,
         pastCustomersInArea: 0,
         recipientBreakdown: {
-          newProspects: 10,
+          newProspects: householdCount,
           pastCustomers: 0,
           pastCustomersIncluded: false,
         },
-        estimatedCostSingle: 7.9,
-        estimatedCostSequence: 7.9,
+        estimatedCostSingle: householdCount * 0.79,
+        estimatedCostSequence: householdCount * 0.79,
         countSource: "mock",
         savedAudienceName: null,
         eddmSelection: null,

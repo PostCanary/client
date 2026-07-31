@@ -555,7 +555,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           ...schedule,
           cardNumber: 1,
         })),
-        perCardCosts: review.perCardCosts.slice(0, SINGLE_MAILING_COUNT),
+        ...(review.perCardCosts
+          ? {
+              perCardCosts: review.perCardCosts.slice(0, SINGLE_MAILING_COUNT),
+            }
+          : {}),
       };
       this._markComplete(4);
       this._debounceSave();

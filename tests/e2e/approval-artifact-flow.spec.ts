@@ -18,6 +18,43 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
+function submittedOrder(count = 10, unitRateCents = 79) {
+  const amount = count * unitRateCents;
+  return {
+    contract_version: 1,
+    mailing_count: 1,
+    counts: {
+      approved: count,
+      requested: count,
+      purchased: count,
+      printable: count,
+      billed: count,
+      submitted: count,
+      accepted: null,
+      mailed: null,
+      delivered: null,
+      returned: null,
+      failed: null,
+      refunded: null,
+    },
+    amounts: {
+      currency: "usd",
+      unit_rate_cents: unitRateCents,
+      quoted_cents: amount,
+      authorized_cents: amount,
+      charged_cents: amount,
+      refunded_cents: 0,
+      net_cents: amount,
+    },
+    artwork: { front_sha256: "a".repeat(64) },
+    payment_state: "charged",
+    fulfillment_state: "submitted",
+    reconciliation_state: "in_sync",
+    reconciliation_reason: null,
+    recovery_action: "none",
+  };
+}
+
 async function installApprovalFlowMocks(page: Page) {
   await page.route("**/auth/me", (route) =>
     json(route, {
@@ -61,6 +98,42 @@ async function installApprovalFlowMocks(page: Page) {
   );
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
+  await page.route("**/api/billing/pricing", (route) =>
+    json(route, {
+      pay_per_send_cents: 79,
+      subscription_rates_cents: {
+        INSIGHT: 79,
+        PERFORMANCE: 79,
+        PRECISION: 79,
+        ELITE: 79,
+      },
+      custom_design_fee_cents: 19900,
+    }),
+  );
+  await page.route("**/api/billing/payment-method", (route) =>
+    json(route, {
+      billing_type: "subscription_included",
+      required: false,
+      has_payment_method: false,
+      brand: null,
+      last4: null,
+      exp_month: null,
+      exp_year: null,
+      label: null,
+    }),
+  );
+  await page.route("**/api/organizations/return-address", (route) =>
+    json(route, {
+      return_address: {
+        name: "Alpha HVAC",
+        address: "123 Comfort Way",
+        address2: null,
+        city: "Golden Valley",
+        state: "MN",
+        zip: "55422",
+      },
+    }),
+  );
 
   await page.route("**/api/mail-campaigns/schedule-availability", (route) =>
     json(route, {
@@ -195,7 +268,16 @@ test.describe("StepReview approval artifact flow", () => {
       json(route, { campaigns: [] }),
     );
     await page.route("**/api/billing/pricing", (route) =>
-      json(route, { pay_per_send: 0.79, custom_design_fee: 199 }),
+      json(route, {
+        pay_per_send_cents: 79,
+        subscription_rates_cents: {
+          INSIGHT: 79,
+          PERFORMANCE: 79,
+          PRECISION: 79,
+          ELITE: 79,
+        },
+        custom_design_fee_cents: 19900,
+      }),
     );
     await page.route("**/api/organizations/return-address", (route) =>
       json(route, {
@@ -285,9 +367,7 @@ test.describe("StepReview approval artifact flow", () => {
       (route) =>
         json(route, {
           order_id: "melissa-order-1",
-          record_count: 10,
-          sample: [],
-          source: "melissa",
+          order: submittedOrder(),
         }),
     );
 
@@ -331,7 +411,7 @@ test.describe("StepReview approval artifact flow", () => {
     ).toBeVisible();
 
     releaseArtifact();
-    await expect(page.getByText("Your campaign is live!")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mailing submitted" })).toBeVisible();
     await page.getByRole("button", { name: "View Campaign" }).click();
     await expect(page).toHaveURL(/\/app\/campaigns$/);
     await expect(page.getByText("No drafts. Start a new campaign")).toBeVisible();
@@ -452,9 +532,32 @@ test.describe("StepReview approval artifact flow", () => {
   test("saves approval proof before buying mailing records", async ({ page }) => {
     const sideEffects: string[] = [];
     let artifactPayload: Record<string, unknown> | null = null;
-    let purchasePayload: Record<string, unknown> | null = null;
+    let purchasePayload: string | null = null;
+    let savedReview: Record<string, unknown> | null = null;
 
     await installApprovalFlowMocks(page);
+
+    await page.route(`**/api/campaign-drafts/${DRAFT_ID}`, (route) => {
+      if (route.request().method() === "PUT") {
+        const payload = route.request().postDataJSON() as {
+          data?: { review?: Record<string, unknown> };
+        };
+        savedReview = payload.data?.review ?? null;
+      }
+      return json(route, {
+        ok: true,
+        id: DRAFT_ID,
+        org_id: ORG_ID,
+        created_by: "user-owner",
+        current_step: 4,
+        completed_steps: [1, 2, 3, 4],
+        needs_review_steps: [],
+        data: route.request().postDataJSON()?.data ?? {},
+        schema_version: 1,
+        created_at: "2026-05-25T02:20:00.000Z",
+        updated_at: "2026-05-25T02:20:01.000Z",
+      });
+    });
 
     await page.route("**/api/mail-campaigns", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
@@ -513,25 +616,81 @@ test.describe("StepReview approval artifact flow", () => {
       `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
       async (route) => {
         sideEffects.push("purchase");
-        purchasePayload = route.request().postDataJSON();
+        purchasePayload = route.request().postData();
         return json(route, {
           order_id: "melissa-order-1",
-          record_count: 10,
-          sample: [],
-          source: "melissa",
+          order: submittedOrder(250, 87),
         });
       },
+    );
+
+    await page.goto("/dev/step-review-approval-flow?households=250");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("heading", { name: "Mailing submitted" })).toBeVisible();
+    await expect(page.getByTestId("approved-order-amount")).toContainText("$217.50");
+    expect(sideEffects).toEqual(["create", "artifact", "purchase"]);
+    expect(artifactPayload?.acknowledged_at).toEqual(expect.any(String));
+    expect(artifactPayload?.terms_version).toBe("accuracy-rights-v1");
+    expect(purchasePayload).toBeNull();
+    expect(savedReview).not.toHaveProperty("totalCost");
+    expect(savedReview).not.toHaveProperty("perCardCosts");
+  });
+
+  test("never presents reconciliation-required purchase state as live or in production", async ({
+    page,
+  }) => {
+    await installApprovalFlowMocks(page);
+    await page.route("**/api/mail-campaigns", (route) =>
+      route.request().method() === "POST"
+        ? json(route, approvedCampaignResponse())
+        : route.fallback(),
+    );
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`,
+      (route) =>
+        json(route, {
+          ok: true,
+          id: "artifact-1",
+          org_id: ORG_ID,
+          mail_campaign_id: CAMPAIGN_ID,
+          created_by: "user-owner",
+          source_draft_id: DRAFT_ID,
+          artifact_type: "approval_proof",
+          storage_backend: "railway_volume",
+          storage_key: `orgs/${ORG_ID}/mail-campaigns/${CAMPAIGN_ID}/proof`,
+          manifest: {},
+          manifest_sha256: "a".repeat(64),
+          terms_version: "accuracy-rights-v1",
+          acknowledged_at: "2026-07-31T00:00:00Z",
+          created_at: "2026-07-31T00:00:00Z",
+        }),
+    );
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+      (route) =>
+        json(route, {
+          order: {
+            ...submittedOrder(),
+            fulfillment_state: "retry_pending",
+            reconciliation_state: "required",
+            reconciliation_reason: "ambiguous_vendor_state",
+            recovery_action: "contact_support",
+          },
+        }),
     );
 
     await page.goto("/dev/step-review-approval-flow");
     await page.getByLabel(/I confirm all information/i).check();
     await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
 
-    await expect(page.getByText("Your campaign is live!")).toBeVisible();
-    expect(sideEffects).toEqual(["create", "artifact", "purchase"]);
-    expect(artifactPayload?.acknowledged_at).toEqual(expect.any(String));
-    expect(artifactPayload?.terms_version).toBe("accuracy-rights-v1");
-    expect(purchasePayload).toEqual({ qty: 10 });
+    await expect(
+      page.getByRole("heading", { name: "Campaign needs attention" }),
+    ).toBeVisible();
+    await expect(page.getByText(/needs reconciliation/i)).toBeVisible();
+    await expect(page.getByText(/campaign is live/i)).toHaveCount(0);
+    await expect(page.getByText(/in production/i)).toHaveCount(0);
   });
 
   test("retries artifact failure without approving the deleted draft again", async ({
@@ -626,9 +785,7 @@ test.describe("StepReview approval artifact flow", () => {
         sideEffects.push("purchase");
         return json(route, {
           order_id: "melissa-order-1",
-          record_count: 10,
-          sample: [],
-          source: "melissa",
+          order: submittedOrder(),
         });
       },
     );
@@ -644,7 +801,7 @@ test.describe("StepReview approval artifact flow", () => {
     await expect(approveButton).toBeEnabled();
 
     await approveButton.click();
-    await expect(page.getByText("Your campaign is live!")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mailing submitted" })).toBeVisible();
     await page.waitForTimeout(700);
 
     expect(createCalls).toBe(1);

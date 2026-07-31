@@ -9,7 +9,12 @@ import SequenceTimeline from "@/components/campaigns/SequenceTimeline.vue";
 import CampaignActions from "@/components/campaigns/CampaignActions.vue";
 import { purchaseCampaignRecords } from "@/api/mailCampaigns";
 import { useAuthStore } from "@/stores/auth";
-import { campaignDesignPreviewUrl } from "@/utils/campaignDisplay";
+import {
+  campaignDesignPreviewUrl,
+  campaignOrderNeedsAttention,
+  campaignRecipientCount,
+  formatOrderAmount,
+} from "@/utils/campaignDisplay";
 
 const route = useRoute();
 const router = useRouter();
@@ -37,11 +42,10 @@ const hasDesign = computed(() => {
   return cards.every((c) => !!c.previewImageUrl);
 });
 const recipientCount = computed(() => {
-  const n = campaign.value?.householdCount;
-  return typeof n === "number" ? n : 0;
+  return campaign.value ? campaignRecipientCount(campaign.value) ?? 0 : 0;
 });
 const hasRecipientCount = computed(
-  () => typeof campaign.value?.householdCount === "number",
+  () => !!campaign.value && campaignRecipientCount(campaign.value) !== null,
 );
 
 // Preview: uploaded front via design snapshot, else first card preview.
@@ -60,8 +64,13 @@ const isUploadedDesign = computed(
 const showRetryPrintSubmission = computed(
   () =>
     (auth.orgRole === "owner" || auth.orgRole === "admin") &&
-    campaign.value?.status === "records_purchased" &&
+    campaign.value?.order?.recovery_action === "retry_purchase" &&
     hasDesign.value,
+);
+const showContactSupport = computed(
+  () =>
+    campaign.value?.order?.recovery_action === "contact_support" ||
+    (!!campaign.value?.order && campaignOrderNeedsAttention(campaign.value.order)),
 );
 const retryingPrint = ref(false);
 const retryPrintError = ref<string | null>(null);
@@ -71,10 +80,17 @@ async function retryPrintSubmission() {
   retryingPrint.value = true;
   retryPrintError.value = null;
   try {
-    const result = await purchaseCampaignRecords(campaign.value.id, 1);
-    if (result.print_submit_status !== "submitted") {
+    const result = await purchaseCampaignRecords(campaign.value.id);
+    if (!result.order) {
       throw new Error(
-        "The mailing is still queued for recovery. No duplicate charge or order was created.",
+        "The server did not return a confirmed order state. Contact support before trying again.",
+      );
+    }
+    if (campaignOrderNeedsAttention(result.order)) {
+      throw new Error(
+        result.order.recovery_action === "retry_purchase"
+          ? "The mailing is still safe to retry, but fulfillment has not started."
+          : "The order needs reconciliation. Contact support before trying again.",
       );
     }
     await fetch();
@@ -163,7 +179,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-[#0b2d50]" data-testid="campaign-detail-name">
           {{ campaign.name }}
         </h1>
-        <CampaignStatusBadge :status="campaign.status" />
+        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" />
       </div>
       <div class="flex items-center gap-3">
         <button
@@ -191,6 +207,23 @@ onMounted(() => {
     >
       {{ retryPrintError }}
     </p>
+
+    <div
+      v-if="showRetryPrintSubmission"
+      class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+      data-testid="campaign-recovery-retry"
+    >
+      Fulfillment did not start. An organization owner or admin can safely
+      retry this same order; the server will reuse its existing authority.
+    </div>
+    <div
+      v-else-if="showContactSupport"
+      class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      data-testid="campaign-recovery-support"
+    >
+      This order needs reconciliation. Contact support before retrying so a
+      duplicate charge or mailing is not created.
+    </div>
 
     <!-- Core meta: created date + recipients when available -->
     <div
@@ -249,6 +282,42 @@ onMounted(() => {
     <!-- KPI cards (defensive inside component for null counts) -->
     <CampaignKPICards :campaign="campaign" class="mb-8" />
 
+    <div
+      v-if="campaign.order"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      data-testid="campaign-order-reconciliation"
+    >
+      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Order reconciliation</h3>
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
+        <div v-for="key in ['approved', 'requested', 'purchased', 'printable', 'billed', 'submitted', 'accepted', 'mailed', 'delivered', 'returned', 'failed', 'refunded']" :key="key">
+          <dt class="text-gray-500 capitalize">{{ key }}</dt>
+          <dd class="font-semibold text-[#0b2d50]" :data-testid="`order-count-${key}`">
+            {{ campaign.order.counts[key as keyof typeof campaign.order.counts] ?? "—" }}
+          </dd>
+        </div>
+      </dl>
+      <dl class="mt-5 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
+        <div>
+          <dt class="text-gray-500">Server quote</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-quoted-amount">
+            {{ formatOrderAmount(campaign.order.amounts.quoted_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Charged</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-charged-amount">
+            {{ formatOrderAmount(campaign.order.amounts.charged_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Net after refunds</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-net-amount">
+            {{ formatOrderAmount(campaign.order.amounts.net_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+      </dl>
+    </div>
+
     <!-- Sequence timeline — legacy card list only when cards exist -->
     <SequenceTimeline
       v-if="hasLegacyCards"
@@ -282,7 +351,7 @@ onMounted(() => {
             </span>
           </div>
           <div v-if="hasRecipientCount">
-            <span class="text-gray-500">Households:</span>
+            <span class="text-gray-500">Recipients:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
               {{ recipientCount.toLocaleString() }}
             </span>
@@ -293,10 +362,12 @@ onMounted(() => {
               {{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}
             </span>
           </div>
-          <div v-if="typeof campaign.totalCost === 'number'">
+          <div v-if="campaign.order?.amounts.quoted_cents != null || typeof campaign.totalCost === 'number'">
             <span class="text-gray-500">Total cost:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
-              ${{ campaign.totalCost.toFixed(2) }}
+              {{ campaign.order?.amounts.quoted_cents != null
+                ? formatOrderAmount(campaign.order.amounts.quoted_cents, campaign.order.amounts.currency)
+                : `$${campaign.totalCost!.toFixed(2)}` }}
             </span>
           </div>
         </div>
