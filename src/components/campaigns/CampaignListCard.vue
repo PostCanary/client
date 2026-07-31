@@ -63,7 +63,7 @@ function formatDate(iso: string): string {
         <h3 class="font-semibold text-[#0b2d50] leading-snug">
           {{ campaign.name }}
         </h3>
-        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" class="shrink-0" />
+        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" class="shrink-0" />
       </div>
 
       <div class="text-sm text-gray-500 space-y-1">
@@ -77,7 +77,9 @@ function formatDate(iso: string): string {
         </div>
         <div class="flex justify-between">
           <span>Pieces Sent</span>
-          <span class="text-[#0b2d50] font-medium">{{ campaignPiecesSent(campaign).toLocaleString() }}</span>
+          <span class="text-[#0b2d50] font-medium">
+            {{ campaignPiecesSent(campaign)?.toLocaleString() ?? "—" }}
+          </span>
         </div>
       </div>
 

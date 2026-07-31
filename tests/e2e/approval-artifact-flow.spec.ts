@@ -46,10 +46,10 @@ function submittedOrder(count = 10, unitRateCents = 79) {
       refunded_cents: 0,
       net_cents: amount,
     },
-    artwork: { front_sha256: "a".repeat(64) },
-    payment_state: "charged",
+    artwork: { front_sha256: "a".repeat(64), back_sha256: "b".repeat(64) },
+    payment_state: "captured",
     fulfillment_state: "submitted",
-    reconciliation_state: "in_sync",
+    reconciliation_state: "not_required",
     reconciliation_reason: null,
     recovery_action: "none",
   };
@@ -113,6 +113,9 @@ async function installApprovalFlowMocks(page: Page) {
   await page.route("**/api/billing/payment-method", (route) =>
     json(route, {
       billing_type: "subscription_included",
+      currency: "usd",
+      unit_rate_cents: 79,
+      plan_code: "INSIGHT",
       required: false,
       has_payment_method: false,
       brand: null,
@@ -673,7 +676,7 @@ test.describe("StepReview approval artifact flow", () => {
         json(route, {
           order: {
             ...submittedOrder(),
-            fulfillment_state: "retry_pending",
+            fulfillment_state: "reconciliation_required",
             reconciliation_state: "required",
             reconciliation_reason: "ambiguous_vendor_state",
             recovery_action: "contact_support",
@@ -691,6 +694,154 @@ test.describe("StepReview approval artifact flow", () => {
     await expect(page.getByText(/needs reconciliation/i)).toBeVisible();
     await expect(page.getByText(/campaign is live/i)).toHaveCount(0);
     await expect(page.getByText(/in production/i)).toHaveCount(0);
+    await expect(page.getByText(/do not retry this order/i)).toBeVisible();
+  });
+
+  const malformedOrders: Array<[string, unknown]> = [
+    ["empty object", {}],
+    ["version mismatch", { ...submittedOrder(), contract_version: 2 }],
+    ["multiple mailings", { ...submittedOrder(), mailing_count: 2 }],
+    ["unknown action", { ...submittedOrder(), recovery_action: "try_again" }],
+    ["missing counts", { ...submittedOrder(), counts: undefined }],
+    ["missing amounts", { ...submittedOrder(), amounts: undefined }],
+    ["missing states", { ...submittedOrder(), payment_state: undefined }],
+  ];
+
+  for (const [caseName, malformedOrder] of malformedOrders) {
+    test(`fails closed without success copy for malformed order: ${caseName}`, async ({ page }) => {
+      await installApprovalFlowMocks(page);
+      await page.route("**/api/mail-campaigns", (route) =>
+        route.request().method() === "POST"
+          ? json(route, approvedCampaignResponse())
+          : route.fallback(),
+      );
+      await page.route(
+        `**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`,
+        (route) => json(route, {
+          ok: true,
+          id: "artifact-malformed",
+          org_id: ORG_ID,
+          mail_campaign_id: CAMPAIGN_ID,
+          created_by: "user-owner",
+          source_draft_id: DRAFT_ID,
+          artifact_type: "approval_proof",
+          storage_backend: "railway_volume",
+          storage_key: `orgs/${ORG_ID}/mail-campaigns/${CAMPAIGN_ID}/proof`,
+          manifest: {},
+          manifest_sha256: "a".repeat(64),
+          terms_version: "accuracy-rights-v1",
+          acknowledged_at: "2026-07-31T00:00:00Z",
+          created_at: "2026-07-31T00:00:00Z",
+        }),
+      );
+      await page.route(
+        `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+        (route) => json(route, { order: malformedOrder }),
+      );
+
+      await page.goto("/dev/step-review-approval-flow");
+      await page.getByLabel(/I confirm all information/i).check();
+      await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+      await expect(page.getByRole("alert")).toContainText(/did not return a confirmed order state/i);
+      await expect(page.getByText(/campaign is live/i)).toHaveCount(0);
+      await expect(page.getByText(/in production/i)).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: /Mailing submitted/i })).toHaveCount(0);
+    });
+  }
+
+  test("consumes a 409 reconciliation order without inviting another approval retry", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+    await page.route("**/api/mail-campaigns", (route) =>
+      route.request().method() === "POST"
+        ? json(route, approvedCampaignResponse())
+        : route.fallback(),
+    );
+    await page.route(`**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`, (route) =>
+      json(route, {
+        ok: true,
+        id: "artifact-reconciliation",
+        org_id: ORG_ID,
+        mail_campaign_id: CAMPAIGN_ID,
+        created_by: "user-owner",
+        source_draft_id: DRAFT_ID,
+        artifact_type: "approval_proof",
+        storage_backend: "railway_volume",
+        storage_key: `orgs/${ORG_ID}/mail-campaigns/${CAMPAIGN_ID}/proof`,
+        manifest: {},
+        manifest_sha256: "a".repeat(64),
+        terms_version: "accuracy-rights-v1",
+        acknowledged_at: "2026-07-31T00:00:00Z",
+        created_at: "2026-07-31T00:00:00Z",
+      }),
+    );
+    await page.route(`**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`, (route) =>
+      json(route, {
+        error: "reconciliation_required",
+        message: "Campaign purchase requires reconciliation",
+        order: {
+          ...submittedOrder(),
+          fulfillment_state: "reconciliation_required",
+          reconciliation_state: "required",
+          reconciliation_reason: "ambiguous_vendor_state",
+          recovery_action: "contact_support",
+        },
+      }, 409),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("heading", { name: "Campaign needs attention" })).toBeVisible();
+    await expect(page.getByText(/do not retry this order/i)).toBeVisible();
+    await expect(page.getByText(/tap approve again/i)).toHaveCount(0);
+    await expect(page.getByText(/in production/i)).toHaveCount(0);
+  });
+
+  test("fails closed on a malformed 409 reconciliation order without inviting retry", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+    await page.route("**/api/mail-campaigns", (route) =>
+      route.request().method() === "POST"
+        ? json(route, approvedCampaignResponse())
+        : route.fallback(),
+    );
+    await page.route(`**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`, (route) =>
+      json(route, {
+        ok: true,
+        id: "artifact-bad-reconciliation",
+        org_id: ORG_ID,
+        mail_campaign_id: CAMPAIGN_ID,
+        created_by: "user-owner",
+        source_draft_id: DRAFT_ID,
+        artifact_type: "approval_proof",
+        storage_backend: "railway_volume",
+        storage_key: `orgs/${ORG_ID}/mail-campaigns/${CAMPAIGN_ID}/proof`,
+        manifest: {},
+        manifest_sha256: "a".repeat(64),
+        terms_version: "accuracy-rights-v1",
+        acknowledged_at: "2026-07-31T00:00:00Z",
+        created_at: "2026-07-31T00:00:00Z",
+      }),
+    );
+    await page.route(`**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`, (route) =>
+      json(route, {
+        error: "reconciliation_required",
+        message: "Campaign purchase requires reconciliation",
+        order: {},
+      }, 409),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("alert")).toContainText(/contact support/i);
+    await expect(page.getByRole("alert")).toContainText(/do not approve or retry/i);
+    await expect(page.getByText(/tap approve again/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Approve & Send Mailing/i })).toBeDisabled();
+    await expect(page.getByText(/in production/i)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /Campaign needs attention/i })).toHaveCount(0);
   });
 
   test("retries artifact failure without approving the deleted draft again", async ({

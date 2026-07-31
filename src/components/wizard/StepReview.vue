@@ -18,6 +18,7 @@ import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
 import {
   createApprovalArtifact,
+  normalizeOrderProjection,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 import {
@@ -74,6 +75,7 @@ const paymentMethodLoading = ref(true);
 const paymentMethodError = ref<string | null>(null);
 const paymentMethodBusy = ref(false);
 const paymentStatusMessage = ref<string | null>(null);
+const reconciliationBlocked = ref(false);
 
 const paymentReady = computed(
   () =>
@@ -278,7 +280,7 @@ const approvalOutcomeCopy = computed(() => {
     return "Your campaign is approved, but fulfillment did not start. Open the campaign to safely retry.";
   }
   if (order.recovery_action === "contact_support" || campaignOrderNeedsAttention(order)) {
-    return "Your campaign is approved, but the order needs reconciliation. Contact support before trying again.";
+    return "Your campaign is approved, but the order needs reconciliation. Contact support and do not retry this order.";
   }
   const fulfillment = order.fulfillment_state?.toLowerCase() ?? "";
   if (["submitted", "accepted", "in_production", "printing", "printed"].includes(fulfillment)) {
@@ -463,6 +465,7 @@ const canApprove = computed(
     hasSingleMailingIntent.value &&
     !legacyDraftNeedsDesignReview.value &&
     !staleMultiMailingDraft.value &&
+    !reconciliationBlocked.value &&
     householdCount.value > 0 &&
     effectiveReturnAddress.value !== null &&
     acknowledgedAccuracy.value &&
@@ -554,9 +557,26 @@ async function approve() {
       }
       approvedOrder.value = purchase.order;
     } catch (purchaseErr: any) {
-      // Campaign exists at status='approved' (server rolled back from
-      // 'purchasing_records' on failure). Show actionable error so customer
-      // can retry. The endpoint is idempotent — re-clicking Approve is safe.
+      // Retry only known pre-provider failures. Reconciliation responses are
+      // terminal in this screen even when their projection is malformed.
+      const reconciliationOrder = normalizeOrderProjection(
+        purchaseErr?.data?.order,
+      );
+      if (
+        purchaseErr?.status === 409 &&
+        purchaseErr?.data?.error === "reconciliation_required"
+      ) {
+        reconciliationBlocked.value = true;
+        if (reconciliationOrder?.recovery_action === "contact_support") {
+          approvedOrder.value = reconciliationOrder;
+          approved.value = true;
+        } else {
+          draftStore.error =
+            "This campaign requires reconciliation, but its order details could not be confirmed. Contact support and do not approve or retry it again.";
+        }
+        approving.value = false;
+        return;
+      }
       if (
         purchaseErr?.status === 402 &&
         purchaseErr?.data?.error === "payment_method_required"
@@ -867,6 +887,7 @@ async function approve() {
       <CostBreakdown
         :household-count="householdCount"
         :sequence-length="seqLen"
+        :billing-summary="paymentMethod"
         :include-custom-design-fee="isCustomDesignRequest"
         class="mt-5"
       />
@@ -1106,7 +1127,7 @@ async function approve() {
           class="text-sm text-[#0b2d50]"
           data-testid="payment-method-covered"
         >
-          Included with your plan
+          Included with your {{ paymentMethod.plan_code || "account" }} plan
         </div>
         <div
           v-else

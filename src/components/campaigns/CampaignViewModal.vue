@@ -90,11 +90,13 @@ function downloadSummaryCsv(c: MailCampaign) {
       "Households",
       campaignRecipientCount(c) !== null ? String(campaignRecipientCount(c)) : "",
     ],
-    ["Pieces Sent", String(piecesSent.value ?? 0)],
+    ["Pieces Sent", piecesSent.value !== null ? String(piecesSent.value) : ""],
     [
       "Total Cost",
-      c.order?.amounts.net_cents != null
-        ? (c.order.amounts.net_cents / 100).toFixed(2)
+      c.order || c.orderContractPresent
+        ? c.order?.amounts.net_cents != null
+          ? (c.order!.amounts.net_cents! / 100).toFixed(2)
+          : ""
         : typeof c.totalCost === "number"
           ? c.totalCost.toFixed(2)
           : "",
@@ -182,7 +184,7 @@ async function downloadAudience() {
 
         <div class="flex items-center justify-between mt-4 mb-2">
           <h4 class="campaign-name">{{ campaign.name }}</h4>
-          <CampaignStatusBadge :status="campaign.status" :order="campaign.order" />
+          <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
         </div>
 
         <dl class="detail-grid">
