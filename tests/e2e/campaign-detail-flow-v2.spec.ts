@@ -373,6 +373,53 @@ test.describe("operator fulfillment recovery contract", () => {
     await expect(retry).toHaveCount(0);
   });
 
+  test("authoritative POST success removes retry when the follow-up GET fails", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    let detailCalls = 0;
+    let purchaseCalls = 0;
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) => {
+      detailCalls += 1;
+      if (detailCalls > 1) {
+        return json(route, { error: "refresh_failed" }, 500);
+      }
+      return json(route, flowV2UploadedCampaign({
+        order: durableOrder({
+          fulfillment_state: "pre_vendor_failed",
+          recovery_action: "retry_purchase",
+        }),
+      }));
+    });
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) => {
+        purchaseCalls += 1;
+        return json(route, {
+          order_id: "EXISTING-ORDER-99",
+          order: durableOrder({
+            fulfillment_state: "submitted",
+            counts: { submitted: 236 },
+          }),
+        });
+      },
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect.poll(() => purchaseCalls).toBe(1);
+    await expect.poll(() => detailCalls).toBe(2);
+    await expect(page.getByTestId("campaign-detail")).toBeVisible();
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+    await expect(page.getByText("In production")).toBeVisible();
+    await expect(page.getByTestId("retry-print-error")).toContainText(
+      /latest campaign details could not be refreshed/i,
+    );
+    await expect.poll(() => purchaseCalls).toBe(1);
+  });
+
   test("server pre-vendor failure response surfaces an error and keeps recovery available", async ({
     page,
   }) => {

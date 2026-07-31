@@ -108,6 +108,10 @@ async function retryPrintSubmission() {
       );
       return;
     }
+    // The POST response is the newest durable order fact. Install it before
+    // the best-effort detail refresh so a failed GET cannot leave the old
+    // pre_vendor_failed/retry_purchase projection clickable.
+    replaceRetryOrder(result.order);
     if (campaignOrderNeedsAttention(result.order)) {
       if (result.order.recovery_action === "retry_purchase") {
         retryPrintError.value =
@@ -121,6 +125,14 @@ async function retryPrintSubmission() {
       return;
     }
     await fetch();
+    if (error.value) {
+      // useCampaignDetail deliberately preserves the existing campaign on a
+      // failed fetch. Keep rendering the authoritative POST projection and
+      // surface only the refresh problem instead of restoring stale recovery.
+      error.value = null;
+      retryPrintError.value =
+        "Fulfillment was updated, but the latest campaign details could not be refreshed.";
+    }
   } catch (e: any) {
     if (
       e?.status === 409 &&
