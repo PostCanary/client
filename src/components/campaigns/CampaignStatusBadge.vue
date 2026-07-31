@@ -6,12 +6,17 @@ import { campaignStatusPresentation } from "@/utils/campaignDisplay";
 const props = defineProps<{
   status: MailCampaignStatus;
   order?: MailCampaignOrder | null;
+  orderContractPresent?: boolean;
 }>();
 
 // Prefer POS-197's durable order lifecycle; fall back to the legacy campaign
 // status only when no order exists.
 const config = computed(() =>
-  campaignStatusPresentation({ status: props.status, order: props.order ?? null }),
+  campaignStatusPresentation({
+    status: props.status,
+    order: props.order ?? null,
+    orderContractPresent: props.orderContractPresent,
+  }),
 );
 </script>
 

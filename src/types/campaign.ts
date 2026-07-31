@@ -797,6 +797,9 @@ export interface MailCampaign {
   // order contract; callers may then render legacy values as explicitly
   // unavailable/fallback data, but must never infer vendor progress.
   order: MailCampaignOrder | null
+  // Distinguishes a historical campaign with no durable order from a server
+  // response that attempted to provide one but failed contract validation.
+  orderContractPresent?: boolean
 }
 
 export interface MailCampaignCard {

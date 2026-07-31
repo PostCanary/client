@@ -179,7 +179,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-[#0b2d50]" data-testid="campaign-detail-name">
           {{ campaign.name }}
         </h1>
-        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" />
+        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
       </div>
       <div class="flex items-center gap-3">
         <button
@@ -362,11 +362,11 @@ onMounted(() => {
               {{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}
             </span>
           </div>
-          <div v-if="campaign.order?.amounts.quoted_cents != null || typeof campaign.totalCost === 'number'">
+          <div v-if="campaign.order || campaign.orderContractPresent || typeof campaign.totalCost === 'number'">
             <span class="text-gray-500">Total cost:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
-              {{ campaign.order?.amounts.quoted_cents != null
-                ? formatOrderAmount(campaign.order.amounts.quoted_cents, campaign.order.amounts.currency)
+              {{ campaign.order || campaign.orderContractPresent
+                ? formatOrderAmount(campaign.order?.amounts.quoted_cents, campaign.order?.amounts.currency)
                 : `$${campaign.totalCost!.toFixed(2)}` }}
             </span>
           </div>

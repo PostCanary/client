@@ -27,7 +27,10 @@ async function installMocks(
   page: Page,
   opts: {
     orgReturnAddress: typeof ORG_DEFAULT_ADDRESS | null;
-    payPerSendCents?: number;
+    billingType?: "subscription_included" | "pay_per_send";
+    unitRateCents?: number;
+    planCode?: "INSIGHT" | "PERFORMANCE" | "PRECISION" | "ELITE" | null;
+    invalidBillingSummary?: boolean;
   } = {
     orgReturnAddress: ORG_DEFAULT_ADDRESS,
   },
@@ -94,7 +97,7 @@ async function installMocks(
 
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
-      pay_per_send_cents: opts.payPerSendCents ?? 99,
+      pay_per_send_cents: 99,
       subscription_rates_cents: {
         INSIGHT: 79,
         PERFORMANCE: 79,
@@ -105,10 +108,18 @@ async function installMocks(
     }),
   );
   await page.route("**/api/billing/payment-method", (route) =>
-    json(route, {
-      billing_type: "subscription_included",
-      required: false,
-      has_payment_method: false,
+    json(route, opts.invalidBillingSummary ? {
+      billing_type: "pay_per_send",
+      required: true,
+      has_payment_method: true,
+      plan_code: null,
+    } : {
+      billing_type: opts.billingType ?? "subscription_included",
+      currency: "usd",
+      unit_rate_cents: opts.unitRateCents ?? 79,
+      plan_code: opts.planCode === undefined ? "INSIGHT" : opts.planCode,
+      required: opts.billingType === "pay_per_send",
+      has_payment_method: opts.billingType === "pay_per_send",
       brand: null,
       last4: null,
       exp_month: null,
@@ -250,17 +261,58 @@ test.describe("StepReview return address (POS-161)", () => {
     ).toBeDisabled();
   });
 
-  test("renders the current server rate instead of a client-owned price", async ({
+  test("renders the exact pay-per-send billing-summary rate", async ({
     page,
   }) => {
     await installMocks(page, {
       orgReturnAddress: ORG_DEFAULT_ADDRESS,
-      payPerSendCents: 137,
+      billingType: "pay_per_send",
+      unitRateCents: 99,
+      planCode: null,
     });
 
     await page.goto("/dev/step-review-approval-flow");
 
     const total = page.locator("text=Total").locator("..");
-    await expect(total).toContainText("$13.70");
+    await expect(total).toContainText("$9.90");
+    await expect(page.getByTestId("billing-cost-semantics")).toContainText(
+      "Server-confirmed pay-per-send rate",
+    );
+  });
+
+  test("shows subscriber rate as covered usage rather than a card charge", async ({ page }) => {
+    await installMocks(page, {
+      orgReturnAddress: ORG_DEFAULT_ADDRESS,
+      billingType: "subscription_included",
+      unitRateCents: 79,
+      planCode: "PERFORMANCE",
+    });
+
+    await page.goto("/dev/step-review-approval-flow");
+
+    await expect(page.getByText(/10 × \$0\.79/)).toBeVisible();
+    await expect(page.getByTestId("server-cost-total")).toHaveText("$0.00");
+    await expect(page.getByTestId("billing-cost-semantics")).toContainText(
+      "Covered by your PERFORMANCE plan",
+    );
+    await expect(page.getByTestId("billing-cost-semantics")).toContainText(
+      "no per-send card charge",
+    );
+  });
+
+  test("shows no paid quote and blocks approval when billing facts are incomplete", async ({ page }) => {
+    await installMocks(page, {
+      orgReturnAddress: ORG_DEFAULT_ADDRESS,
+      invalidBillingSummary: true,
+    });
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+
+    await expect(page.getByTestId("cost-unavailable")).toHaveText(
+      "Confirming server pricing…",
+    );
+    await expect(page.getByTestId("server-cost-total")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Approve & Send Mailing/i })).toBeDisabled();
   });
 });

@@ -43,9 +43,9 @@ const SENT_CARD_STATUSES = [
  * Flow v2 uploaded designs have empty cards[] — fall back to householdCount
  * once the campaign has left the pre-send "Preparing" states.
  */
-export function campaignPiecesSent(campaign: MailCampaign): number {
-  const submitted = campaign.order?.counts.submitted;
-  if (typeof submitted === "number") return submitted;
+export function campaignPiecesSent(campaign: MailCampaign): number | null {
+  if (campaign.order) return campaign.order.counts.submitted;
+  if (campaign.orderContractPresent) return null;
 
   const households =
     typeof campaign.householdCount === "number" ? campaign.householdCount : 0;
@@ -78,7 +78,9 @@ export function campaignRecipientCount(campaign: MailCampaign): number | null {
     ]) {
       if (typeof value === "number") return value;
     }
+    return null;
   }
+  if (campaign.orderContractPresent) return null;
   return typeof campaign.householdCount === "number"
     ? campaign.householdCount
     : null;
@@ -114,6 +116,42 @@ export function campaignOrderNeedsAttention(
   ) {
     return true;
   }
+  const counts = order.counts;
+  if ((counts.failed ?? 0) > 0 || (counts.returned ?? 0) > 0) return true;
+  if (
+    (counts.purchased !== null &&
+      counts.requested !== null &&
+      counts.purchased > counts.requested) ||
+    (counts.billed !== null &&
+      counts.purchased !== null &&
+      counts.billed > counts.purchased) ||
+    (counts.purchased !== null &&
+      counts.printable !== null &&
+      counts.printable > counts.purchased) ||
+    (counts.printable !== null &&
+      counts.submitted !== null &&
+      counts.submitted > counts.printable) ||
+    (counts.submitted !== null &&
+      counts.accepted !== null &&
+      counts.accepted > counts.submitted)
+  ) {
+    return true;
+  }
+  const fulfillment = normalizedState(order.fulfillment_state);
+  if (
+    ["submitted", "accepted", "partially_accepted", "in_production", "printed", "mailed", "delivered"].includes(fulfillment) &&
+    counts.printable !== null &&
+    counts.submitted !== counts.printable
+  ) {
+    return true;
+  }
+  if (
+    ["accepted", "partially_accepted", "in_production", "printed", "mailed", "delivered"].includes(fulfillment) &&
+    counts.submitted !== null &&
+    counts.accepted !== counts.submitted
+  ) {
+    return true;
+  }
   const reconciliation = normalizedState(order.reconciliation_state);
   if (reconciliation && !BENIGN_RECONCILIATION_STATES.has(reconciliation)) {
     return true;
@@ -135,7 +173,7 @@ export interface CampaignStatusPresentation {
  * never inherit a coarse campaign status that could overstate fulfillment.
  */
 export function campaignStatusPresentation(
-  campaign: Pick<MailCampaign, "status" | "order">,
+  campaign: Pick<MailCampaign, "status" | "order" | "orderContractPresent">,
 ): CampaignStatusPresentation {
   const order = campaign.order;
   if (order) {
@@ -169,6 +207,9 @@ export function campaignStatusPresentation(
       return { label: "Payment confirmed", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
     }
     return { label: "Status pending", color: "bg-gray-100 text-gray-600", dot: "bg-gray-400" };
+  }
+  if (campaign.orderContractPresent) {
+    return { label: "Status unavailable", color: "bg-red-100 text-red-700", dot: "bg-red-500" };
   }
 
   switch (campaign.status) {

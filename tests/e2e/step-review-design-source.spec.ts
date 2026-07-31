@@ -92,6 +92,21 @@ async function installMocks(page: Page) {
       custom_design_fee_cents: 19900,
     }),
   );
+  await page.route("**/api/billing/payment-method", (route) =>
+    json(route, {
+      billing_type: "subscription_included",
+      currency: "usd",
+      unit_rate_cents: 79,
+      plan_code: "INSIGHT",
+      required: false,
+      has_payment_method: false,
+      brand: null,
+      last4: null,
+      exp_month: null,
+      exp_year: null,
+      label: null,
+    }),
+  );
 
   await page.route(`**/api/campaign-drafts/${DRAFT_ID}`, (route) =>
     json(route, {
@@ -111,7 +126,7 @@ async function installMocks(page: Page) {
 }
 
 test.describe("StepReview design-source checkout deltas (POS-149)", () => {
-  test("requested: shows 'your custom design' placeholder and $199 line item in the total", async ({
+  test("requested: shows the custom-design placeholder without inventing a checkout quote", async ({
     page,
   }, testInfo) => {
     await installMocks(page);
@@ -128,12 +143,9 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     const feeLine = page.getByTestId("custom-design-fee-line");
     await expect(feeLine).toBeVisible();
     await expect(feeLine).toContainText("Custom design");
-    await expect(feeLine).toContainText("$199.00");
-
-    // Household count in the mock draft is 10, at $0.99/card x 1 card = $9.90,
-    // plus the $199.00 design fee = $208.90.
-    const costPanel = page.locator("text=Total").locator("..");
-    await expect(costPanel).toContainText("$208.90");
+    await expect(feeLine).toContainText("Confirmed separately");
+    await expect(feeLine).not.toContainText("$199.00");
+    await expect(page.getByTestId("server-cost-total")).toHaveText("$0.00");
 
     await expect(
       page.getByTestId("professional-design-schedule-block"),
@@ -221,7 +233,9 @@ test.describe("StepReview design-source checkout deltas (POS-149)", () => {
     await expect(page.getByRole("img", { name: "Uploaded design preview" })).toHaveCount(0);
     await expect(page.getByTestId("custom-design-fee-line")).toHaveCount(0);
 
-    const costPanel = page.locator("text=Total").locator("..");
-    await expect(costPanel).toContainText("$9.90");
+    await expect(page.getByTestId("server-cost-total")).toHaveText("$0.00");
+    await expect(page.getByTestId("billing-cost-semantics")).toContainText(
+      "covered usage",
+    );
   });
 });

@@ -15,6 +15,50 @@ vi.mock("@/api/http", () => ({
   postJson: vi.fn(),
 }));
 
+function validOrder(overrides: Record<string, unknown> = {}) {
+  const counts = {
+    approved: 250,
+    requested: 250,
+    purchased: 248,
+    printable: 245,
+    billed: 248,
+    submitted: 245,
+    accepted: null,
+    mailed: null,
+    delivered: null,
+    returned: null,
+    failed: null,
+    refunded: 0,
+    ...((overrides.counts as Record<string, unknown> | undefined) ?? {}),
+  };
+  const amounts = {
+    currency: "usd",
+    unit_rate_cents: 87,
+    quoted_cents: 21750,
+    authorized_cents: 21750,
+    charged_cents: 21576,
+    refunded_cents: 0,
+    net_cents: 21576,
+    ...((overrides.amounts as Record<string, unknown> | undefined) ?? {}),
+  };
+  return {
+    contract_version: 1,
+    mailing_count: 1,
+    artwork: {
+      front_sha256: "a".repeat(64),
+      back_sha256: "b".repeat(64),
+    },
+    payment_state: "captured",
+    fulfillment_state: "submitted",
+    reconciliation_state: "not_required",
+    reconciliation_reason: null,
+    recovery_action: "none",
+    ...overrides,
+    counts,
+    amounts,
+  };
+}
+
 describe("mail campaign approval artifacts", () => {
   beforeEach(() => {
     vi.mocked(get).mockReset();
@@ -77,18 +121,7 @@ describe("mail campaign approval artifacts", () => {
   it("posts no caller-owned quantity or price to the server-owned purchase contract", async () => {
     vi.mocked(api).mockResolvedValue({
       order_id: "EXISTING-ORDER-99",
-      order: {
-        contract_version: 1,
-        mailing_count: 1,
-        counts: { approved: 250, requested: 250, purchased: 248 },
-        amounts: { currency: "usd", unit_rate_cents: 87, quoted_cents: 21750 },
-        artwork: { front_sha256: "a".repeat(64) },
-        payment_state: "authorized",
-        fulfillment_state: "submitted",
-        reconciliation_state: "in_sync",
-        reconciliation_reason: null,
-        recovery_action: "none",
-      },
+      order: validOrder(),
     });
 
     const result = await purchaseCampaignRecords("campaign-1");
@@ -102,25 +135,81 @@ describe("mail campaign approval artifacts", () => {
     expect(result.order?.counts.failed).toBeNull();
   });
 
-  it("normalizes missing and malformed order fields to null without inventing values", () => {
-    const order = normalizeOrderProjection({
-      contract_version: 1,
-      mailing_count: "1",
-      counts: { approved: 12, requested: -1, delivered: 3.5 },
-      amounts: { currency: "usd", quoted_cents: 1044, charged_cents: "1044" },
-      artwork: { front_sha256: "abc", back_sha256: 7, ignored: "value" },
-      recovery_action: "try_again",
-    });
+  it.each([
+    ["empty object", {}],
+    ["version mismatch", validOrder({ contract_version: 2 })],
+    ["multiple mailings", validOrder({ mailing_count: 2 })],
+    ["unknown recovery action", validOrder({ recovery_action: "try_again" })],
+    ["missing counts", { ...validOrder(), counts: undefined }],
+    ["missing amounts", { ...validOrder(), amounts: undefined }],
+    ["missing payment state", validOrder({ payment_state: null })],
+    ["unknown fulfillment state", validOrder({ fulfillment_state: "maybe_sent" })],
+    ["missing reconciliation state", validOrder({ reconciliation_state: null })],
+    ["missing nullable actual key", (() => {
+      const value = validOrder();
+      const { failed: _failed, ...counts } = value.counts;
+      return { ...value, counts };
+    })()],
+    ["malformed nullable actual", validOrder({ counts: { failed: "1" } })],
+    ["wrong order currency", validOrder({ amounts: { currency: "eur" } })],
+  ])("rejects malformed durable order: %s", (_name, order) => {
+    expect(normalizeOrderProjection(order)).toBeNull();
+  });
 
-    expect(order).not.toBeNull();
-    expect(order?.mailing_count).toBeNull();
-    expect(order?.counts.approved).toBe(12);
-    expect(order?.counts.requested).toBeNull();
-    expect(order?.counts.delivered).toBeNull();
-    expect(order?.amounts.quoted_cents).toBe(1044);
-    expect(order?.amounts.charged_cents).toBeNull();
-    expect(order?.artwork).toEqual({ front_sha256: "abc", back_sha256: null });
-    expect(order?.recovery_action).toBeNull();
+  it("preserves nullable actuals after validating immutable order facts", () => {
+    const order = normalizeOrderProjection(validOrder({
+      counts: {
+        purchased: null,
+        printable: null,
+        billed: null,
+        submitted: null,
+        accepted: null,
+        mailed: null,
+        delivered: null,
+        returned: null,
+        failed: null,
+        refunded: null,
+      },
+      amounts: {
+        authorized_cents: 0,
+        charged_cents: 0,
+        refunded_cents: 0,
+        net_cents: 0,
+      },
+      payment_state: "covered",
+      fulfillment_state: "not_started",
+    }));
+
+    expect(order?.counts.purchased).toBeNull();
+    expect(order?.counts.submitted).toBeNull();
+    expect(order?.amounts.quoted_cents).toBe(21750);
+  });
+
+  it("accepts the server authorization-ambiguous reconciliation state", () => {
+    const order = normalizeOrderProjection(validOrder({
+      payment_state: "authorization_ambiguous",
+      fulfillment_state: "reconciliation_required",
+      reconciliation_state: "required",
+      reconciliation_reason: "stripe_authorization_ambiguous",
+      recovery_action: "contact_support",
+    }));
+
+    expect(order?.payment_state).toBe("authorization_ambiguous");
+    expect(order?.recovery_action).toBe("contact_support");
+  });
+
+  it("preserves overdelivery as durable reconciliation evidence", () => {
+    const order = normalizeOrderProjection(validOrder({
+      counts: { purchased: 260, printable: 250, billed: null, submitted: null },
+      fulfillment_state: "reconciliation_required",
+      reconciliation_state: "required",
+      reconciliation_reason: "recipient_overdelivery",
+      recovery_action: "contact_support",
+    }));
+
+    expect(order?.counts.approved).toBe(250);
+    expect(order?.counts.purchased).toBe(260);
+    expect(order?.reconciliation_state).toBe("required");
   });
 
   it("fails closed when the purchase response is not an object", async () => {
@@ -155,18 +244,14 @@ describe("mail campaign approval artifacts", () => {
       draft_id: null,
       created_at: "2026-07-31T00:00:00Z",
       updated_at: "2026-07-31T00:00:00Z",
-      order: {
-        contract_version: 1,
-        mailing_count: 1,
-        counts: { approved: 250, submitted: 240, delivered: 200, failed: 5 },
-        amounts: { currency: "usd", quoted_cents: 21750, charged_cents: 20880 },
-        artwork: null,
-        payment_state: "charged",
-        fulfillment_state: "retry_pending",
+      order: validOrder({
+        counts: { submitted: 240, accepted: 220, mailed: 210, delivered: 200, failed: 5 },
+        amounts: { charged_cents: 20880, net_cents: 20880 },
+        fulfillment_state: "partially_accepted",
         reconciliation_state: "required",
         reconciliation_reason: "partial_vendor_acceptance",
         recovery_action: "contact_support",
-      },
+      }),
     });
 
     const campaign = await getMailCampaign("campaign-1");
@@ -175,5 +260,36 @@ describe("mail campaign approval artifacts", () => {
     expect(campaign.order?.counts.delivered).toBe(200);
     expect(campaign.order?.counts.failed).toBe(5);
     expect(campaign.order?.amounts.charged_cents).toBe(20880);
+  });
+
+  it("distinguishes a malformed attempted order from a historical null order", async () => {
+    vi.mocked(get).mockResolvedValue({
+      ok: true,
+      id: "campaign-invalid-order",
+      org_id: "org-1",
+      created_by: "user-1",
+      name: "Invalid order",
+      status: "in_production",
+      goal_type: "send_to_list",
+      service_type: null,
+      sequence_length: 1,
+      household_count: 999,
+      total_cost: 999,
+      total_spent: 999,
+      targeting_data: null,
+      design_data: null,
+      schedule_data: null,
+      cards_data: [],
+      approved_at: null,
+      draft_id: null,
+      created_at: "2026-07-31T00:00:00Z",
+      updated_at: "2026-07-31T00:00:00Z",
+      order: {},
+    });
+
+    const campaign = await getMailCampaign("campaign-invalid-order");
+
+    expect(campaign.order).toBeNull();
+    expect(campaign.orderContractPresent).toBe(true);
   });
 });

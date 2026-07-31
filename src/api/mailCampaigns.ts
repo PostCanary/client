@@ -68,6 +68,40 @@ const ORDER_AMOUNT_KEYS = [
   "net_cents",
 ] as const satisfies readonly Exclude<keyof MailCampaignOrderAmounts, "currency">[];
 
+const ORDER_PAYMENT_STATES = new Set([
+  "authorization_pending",
+  "pending",
+  "covered",
+  "authorized",
+  "authorization_ambiguous",
+  "captured",
+  "subscription_applied",
+  "refunded",
+  "failed",
+  "voided",
+  "reconciliation_required",
+]);
+
+const ORDER_FULFILLMENT_STATES = new Set([
+  "not_started",
+  "vendor_started",
+  "pre_vendor_failed",
+  "reconciliation_required",
+  "draft",
+  "submitted",
+  "accepted",
+  "partially_accepted",
+  "in_production",
+  "printed",
+  "mailed",
+  "delivered",
+  "returned",
+  "failed",
+]);
+
+const ORDER_RECONCILIATION_STATES = new Set(["not_required", "required"]);
+const SHA256_RE = /^[a-f0-9]{64}$/;
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -116,19 +150,128 @@ function normalizeRecoveryAction(value: unknown): MailCampaignRecoveryAction | n
     : null;
 }
 
+function requiredState(value: unknown, allowed: ReadonlySet<string>): string | null {
+  return typeof value === "string" && allowed.has(value) ? value : null;
+}
+
+function hasStableOrderShape(value: Record<string, unknown>): boolean {
+  const counts = value.counts;
+  const amounts = value.amounts;
+  const artwork = value.artwork;
+  if (!isObject(counts) || !isObject(amounts) || !isObject(artwork)) {
+    return false;
+  }
+  const countsAreValid = ORDER_COUNT_KEYS.every(
+    (key) =>
+      key in counts &&
+      (counts[key] === null ||
+        (typeof counts[key] === "number" &&
+          Number.isSafeInteger(counts[key]) &&
+          (counts[key] as number) >= 0)),
+  );
+  const amountsAreValid = ORDER_AMOUNT_KEYS.every(
+    (key) =>
+      key in amounts &&
+      typeof amounts[key] === "number" &&
+      Number.isSafeInteger(amounts[key]) &&
+      (amounts[key] as number) >= 0,
+  );
+  return (
+    countsAreValid &&
+    amountsAreValid &&
+    amounts.currency === "usd" &&
+    typeof artwork.front_sha256 === "string" &&
+    typeof artwork.back_sha256 === "string" &&
+    (value.reconciliation_reason === null ||
+      (typeof value.reconciliation_reason === "string" &&
+        value.reconciliation_reason.trim().length > 0))
+  );
+}
+
+function isValidOrderFacts(
+  counts: MailCampaignOrderCounts,
+  amounts: MailCampaignOrderAmounts,
+  artwork: MailCampaignOrderArtwork | null,
+): boolean {
+  if (
+    counts.approved === null ||
+    counts.approved < 1 ||
+    counts.requested !== counts.approved ||
+    amounts.currency === null ||
+    amounts.currency !== "usd" ||
+    amounts.unit_rate_cents === null ||
+    amounts.quoted_cents === null ||
+    amounts.authorized_cents === null ||
+    amounts.charged_cents === null ||
+    amounts.refunded_cents === null ||
+    amounts.net_cents === null ||
+    amounts.quoted_cents !== counts.approved * amounts.unit_rate_cents ||
+    amounts.authorized_cents > amounts.quoted_cents ||
+    amounts.charged_cents > amounts.quoted_cents ||
+    amounts.refunded_cents > amounts.charged_cents ||
+    amounts.net_cents !== amounts.charged_cents - amounts.refunded_cents ||
+    !artwork?.front_sha256 ||
+    !SHA256_RE.test(artwork.front_sha256) ||
+    !artwork.back_sha256 ||
+    !SHA256_RE.test(artwork.back_sha256)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export function normalizeOrderProjection(value: unknown): MailCampaignOrder | null {
-  if (!isObject(value)) return null;
+  if (
+    !isObject(value) ||
+    value.contract_version !== 1 ||
+    value.mailing_count !== 1 ||
+    !hasStableOrderShape(value)
+  ) {
+    return null;
+  }
+  const counts = normalizeCounts(value.counts);
+  const amounts = normalizeAmounts(value.amounts);
+  const artwork = normalizeArtwork(value.artwork);
+  const paymentState = requiredState(value.payment_state, ORDER_PAYMENT_STATES);
+  const fulfillmentState = requiredState(
+    value.fulfillment_state,
+    ORDER_FULFILLMENT_STATES,
+  );
+  const reconciliationState = requiredState(
+    value.reconciliation_state,
+    ORDER_RECONCILIATION_STATES,
+  );
+  const recoveryAction = normalizeRecoveryAction(value.recovery_action);
+  const reconciliationReason = nullableString(value.reconciliation_reason);
+  if (
+    !paymentState ||
+    !fulfillmentState ||
+    !reconciliationState ||
+    !recoveryAction ||
+    !isValidOrderFacts(counts, amounts, artwork) ||
+    (reconciliationState === "required" && !reconciliationReason) ||
+    (reconciliationState === "required" && recoveryAction !== "contact_support") ||
+    (recoveryAction === "retry_purchase" && fulfillmentState !== "pre_vendor_failed") ||
+    (fulfillmentState === "pre_vendor_failed" &&
+      reconciliationState === "not_required" &&
+      recoveryAction !== "retry_purchase") ||
+    (["pending", "failed", "voided"].includes(paymentState) &&
+      recoveryAction !== "contact_support")
+  ) {
+    return null;
+  }
   return {
-    contract_version: nullableNonNegativeInteger(value.contract_version),
-    mailing_count: nullableNonNegativeInteger(value.mailing_count),
-    counts: normalizeCounts(value.counts),
-    amounts: normalizeAmounts(value.amounts),
-    artwork: normalizeArtwork(value.artwork),
-    payment_state: nullableString(value.payment_state),
-    fulfillment_state: nullableString(value.fulfillment_state),
-    reconciliation_state: nullableString(value.reconciliation_state),
-    reconciliation_reason: nullableString(value.reconciliation_reason),
-    recovery_action: normalizeRecoveryAction(value.recovery_action),
+    contract_version: 1,
+    mailing_count: 1,
+    counts,
+    amounts,
+    artwork,
+    payment_state: paymentState,
+    fulfillment_state: fulfillmentState,
+    reconciliation_state: reconciliationState,
+    reconciliation_reason: reconciliationReason,
+    recovery_action: recoveryAction,
   };
 }
 
@@ -167,6 +310,7 @@ export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     designSource: design?.designSource as MailCampaign["designSource"],
     uploadedAsset: (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null,
     order: normalizeOrderProjection(r.order),
+    orderContractPresent: r.order !== null && r.order !== undefined,
   };
 }
 
