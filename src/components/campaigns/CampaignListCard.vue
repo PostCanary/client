@@ -63,7 +63,7 @@ function formatDate(iso: string): string {
         <h3 class="font-semibold text-[#0b2d50] leading-snug">
           {{ campaign.name }}
         </h3>
-        <CampaignStatusBadge :status="campaign.status" class="shrink-0" />
+        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" class="shrink-0" />
       </div>
 
       <div class="text-sm text-gray-500 space-y-1">

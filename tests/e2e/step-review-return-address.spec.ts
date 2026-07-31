@@ -25,7 +25,10 @@ function json(route: Route, body: unknown, status = 200) {
 
 async function installMocks(
   page: Page,
-  opts: { orgReturnAddress: typeof ORG_DEFAULT_ADDRESS | null } = {
+  opts: {
+    orgReturnAddress: typeof ORG_DEFAULT_ADDRESS | null;
+    payPerSendCents?: number;
+  } = {
     orgReturnAddress: ORG_DEFAULT_ADDRESS,
   },
 ) {
@@ -85,13 +88,13 @@ async function installMocks(
     }),
   );
 
-  await page.route("**/preview-card/1", (route) =>
+  await page.route("**/preview-card/*", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: "preview" }),
   );
 
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
-      pay_per_send_cents: 99,
+      pay_per_send_cents: opts.payPerSendCents ?? 99,
       subscription_rates_cents: {
         INSIGHT: 79,
         PERFORMANCE: 79,
@@ -99,6 +102,18 @@ async function installMocks(
         ELITE: 79,
       },
       custom_design_fee_cents: 19900,
+    }),
+  );
+  await page.route("**/api/billing/payment-method", (route) =>
+    json(route, {
+      billing_type: "subscription_included",
+      required: false,
+      has_payment_method: false,
+      brand: null,
+      last4: null,
+      exp_month: null,
+      exp_year: null,
+      label: null,
     }),
   );
 
@@ -192,7 +207,7 @@ test.describe("StepReview return address (POS-161)", () => {
     const warning = page.getByTestId("return-address-missing-warning");
     await expect(warning).toBeVisible();
     await expect(warning).toContainText(
-      "Add your business mailing address — required to send",
+      "Add your business mailing address — approval is blocked until it is complete",
     );
     await expect(page.getByTestId("return-address-settings-link")).toHaveAttribute(
       "href",
@@ -200,12 +215,10 @@ test.describe("StepReview return address (POS-161)", () => {
     );
     await expect(page.getByTestId("return-address-display")).toHaveCount(0);
 
-    // Approve must still be available client-side (server enforces address).
-    // With households + empty name filled later — we only assert warning
-    // does not remove the Approve control.
-    await expect(
-      page.getByRole("button", { name: /Approve & Send Mailing/i }),
-    ).toBeVisible();
+    const approve = page.getByRole("button", { name: /Approve & Send Mailing/i });
+    await page.getByLabel(/I confirm all information/i).check();
+    await expect(approve).toBeVisible();
+    await expect(approve).toBeDisabled();
   });
 
   test("draft override takes precedence over org default", async ({ page }) => {
@@ -219,5 +232,35 @@ test.describe("StepReview return address (POS-161)", () => {
     await expect(display).toContainText("Minneapolis, MN 55401");
     await expect(display).not.toContainText("100 Main Street");
     await expect(page.getByTestId("return-address-override-badge")).toBeVisible();
+  });
+
+  test("rejects a stale multi-mailing draft clearly before approval", async ({
+    page,
+  }) => {
+    await installMocks(page, { orgReturnAddress: ORG_DEFAULT_ADDRESS });
+
+    await page.goto("/dev/step-review-approval-flow?multiMailing=1");
+    await page.getByLabel(/I confirm all information/i).check();
+
+    await expect(page.getByTestId("single-mailing-warning")).toContainText(
+      "cannot be approved",
+    );
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
+    ).toBeDisabled();
+  });
+
+  test("renders the current server rate instead of a client-owned price", async ({
+    page,
+  }) => {
+    await installMocks(page, {
+      orgReturnAddress: ORG_DEFAULT_ADDRESS,
+      payPerSendCents: 137,
+    });
+
+    await page.goto("/dev/step-review-approval-flow");
+
+    const total = page.locator("text=Total").locator("..");
+    await expect(total).toContainText("$13.70");
   });
 });

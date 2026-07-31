@@ -2,7 +2,11 @@
 // POS-151: derived display helpers for the Campaigns history list + "Your
 // Campaign" modal. Kept out of the MailCampaign type file since these are
 // UI-facing projections, not server contract fields.
-import type { MailCampaign, TargetingArea } from "@/types/campaign";
+import type {
+  MailCampaign,
+  MailCampaignOrder,
+  TargetingArea,
+} from "@/types/campaign";
 import { mediaSrc } from "@/utils/mediaSrc";
 
 export type CampaignAudienceType = "list" | "area";
@@ -40,6 +44,9 @@ const SENT_CARD_STATUSES = [
  * once the campaign has left the pre-send "Preparing" states.
  */
 export function campaignPiecesSent(campaign: MailCampaign): number {
+  const submitted = campaign.order?.counts.submitted;
+  if (typeof submitted === "number") return submitted;
+
   const households =
     typeof campaign.householdCount === "number" ? campaign.householdCount : 0;
   const cards = Array.isArray(campaign.cards) ? campaign.cards : [];
@@ -57,6 +64,162 @@ export function campaignPiecesSent(campaign: MailCampaign): number {
     (SENT_CARD_STATUSES as readonly string[]).includes(card.status),
   ).length;
   return sentCards * households;
+}
+
+/** Best available server-owned recipient population for customer display. */
+export function campaignRecipientCount(campaign: MailCampaign): number | null {
+  const counts = campaign.order?.counts;
+  if (counts) {
+    for (const value of [
+      counts.approved,
+      counts.requested,
+      counts.printable,
+      counts.purchased,
+    ]) {
+      if (typeof value === "number") return value;
+    }
+  }
+  return typeof campaign.householdCount === "number"
+    ? campaign.householdCount
+    : null;
+}
+
+const BENIGN_RECONCILIATION_STATES = new Set([
+  "none",
+  "in_sync",
+  "reconciled",
+  "not_required",
+]);
+const ATTENTION_TOKENS = [
+  "retry",
+  "fail",
+  "error",
+  "reconcil",
+  "ambiguous",
+  "blocked",
+  "declin",
+];
+
+function normalizedState(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+export function campaignOrderNeedsAttention(
+  order: MailCampaignOrder | null,
+): boolean {
+  if (!order) return false;
+  if (
+    order.recovery_action === "retry_purchase" ||
+    order.recovery_action === "contact_support"
+  ) {
+    return true;
+  }
+  const reconciliation = normalizedState(order.reconciliation_state);
+  if (reconciliation && !BENIGN_RECONCILIATION_STATES.has(reconciliation)) {
+    return true;
+  }
+  return [order.payment_state, order.fulfillment_state].some((state) => {
+    const normalized = normalizedState(state);
+    return ATTENTION_TOKENS.some((token) => normalized.includes(token));
+  });
+}
+
+export interface CampaignStatusPresentation {
+  label: string;
+  color: string;
+  dot: string;
+}
+
+/**
+ * Prefer the durable order lifecycle. Unknown order states stay neutral and
+ * never inherit a coarse campaign status that could overstate fulfillment.
+ */
+export function campaignStatusPresentation(
+  campaign: Pick<MailCampaign, "status" | "order">,
+): CampaignStatusPresentation {
+  const order = campaign.order;
+  if (order) {
+    if (campaignOrderNeedsAttention(order)) {
+      return {
+        label:
+          order.recovery_action === "retry_purchase"
+            ? "Retry available"
+            : "Needs attention",
+        color: "bg-red-100 text-red-700",
+        dot: "bg-red-500",
+      };
+    }
+
+    const fulfillment = normalizedState(order.fulfillment_state);
+    if (["delivered", "completed"].includes(fulfillment)) {
+      return { label: "Delivered", color: "bg-green-100 text-green-700", dot: "bg-green-500" };
+    }
+    if (["mailed", "in_transit"].includes(fulfillment)) {
+      return { label: "Mailed", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
+    }
+    if (["submitted", "accepted", "in_production", "printing", "printed"].includes(fulfillment)) {
+      return { label: "In production", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
+    }
+    if (fulfillment) {
+      return { label: "Preparing", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
+    }
+
+    const payment = normalizedState(order.payment_state);
+    if (payment) {
+      return { label: "Payment confirmed", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
+    }
+    return { label: "Status pending", color: "bg-gray-100 text-gray-600", dot: "bg-gray-400" };
+  }
+
+  switch (campaign.status) {
+    case "approved":
+    case "records_purchased":
+    case "purchasing_records":
+      return { label: "Preparing", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
+    case "pending_moderation":
+      return { label: "Under Review", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
+    case "submitted_to_partner":
+    case "in_production":
+    case "printing":
+      return { label: "In production", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
+    case "in_transit":
+      return { label: "Mailed", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
+    case "delivered":
+      return { label: "Delivered", color: "bg-green-100 text-green-700", dot: "bg-green-500" };
+    case "returned":
+      return { label: "Returned", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
+    case "failed":
+      return { label: "Failed", color: "bg-red-100 text-red-700", dot: "bg-red-500" };
+    case "held":
+      return { label: "Held", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
+    case "cancelled":
+      return { label: "Cancelled", color: "bg-gray-100 text-gray-600", dot: "bg-gray-400" };
+    case "results_ready":
+      return { label: "Results Ready", color: "bg-green-100 text-green-700", dot: "bg-green-500" };
+    case "completed":
+      return { label: "Completed", color: "bg-gray-100 text-gray-600", dot: "bg-gray-400" };
+    case "paused":
+      return { label: "Paused", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
+    case "draft":
+      return { label: "Draft", color: "bg-gray-100 text-gray-500", dot: "bg-gray-400" };
+    default:
+      return { label: "Unknown", color: "bg-gray-100 text-gray-500", dot: "bg-gray-400" };
+  }
+}
+
+export function formatOrderAmount(
+  cents: number | null | undefined,
+  currency: string | null | undefined,
+): string {
+  if (typeof cents !== "number") return "—";
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency?.toUpperCase() || "USD",
+    }).format(cents / 100);
+  } catch {
+    return `${cents.toLocaleString()} cents`;
+  }
 }
 
 export function campaignDesignPreviewUrl(campaign: MailCampaign): string | null {

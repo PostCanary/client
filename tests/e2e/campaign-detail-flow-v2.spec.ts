@@ -18,6 +18,47 @@ function json(route: Route, body: unknown, status = 200) {
   });
 }
 
+function durableOrder(overrides: Record<string, unknown> = {}) {
+  const counts = {
+    approved: 240,
+    requested: 240,
+    purchased: 238,
+    printable: 236,
+    billed: 238,
+    submitted: null,
+    accepted: null,
+    mailed: null,
+    delivered: null,
+    returned: null,
+    failed: null,
+    refunded: null,
+    ...((overrides.counts as Record<string, unknown> | undefined) ?? {}),
+  };
+  const amounts = {
+    currency: "usd",
+    unit_rate_cents: 87,
+    quoted_cents: 20880,
+    authorized_cents: 20706,
+    charged_cents: 20706,
+    refunded_cents: 0,
+    net_cents: 20706,
+    ...((overrides.amounts as Record<string, unknown> | undefined) ?? {}),
+  };
+  return {
+    contract_version: 1,
+    mailing_count: 1,
+    artwork: { front_sha256: "a".repeat(64) },
+    payment_state: "charged",
+    fulfillment_state: "prepared",
+    reconciliation_state: "in_sync",
+    reconciliation_reason: null,
+    recovery_action: "none",
+    ...overrides,
+    counts,
+    amounts,
+  };
+}
+
 /** Flow v2 send-to-list + uploaded design — the shape that blanked the page. */
 function flowV2UploadedCampaign(overrides: Record<string, unknown> = {}) {
   return {
@@ -197,6 +238,56 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
     );
     await expect(page.getByText("Targeting Summary")).toBeVisible();
   });
+
+  test("durable order counts and server amounts override coarse campaign values without overstating failure", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    const order = durableOrder({
+      fulfillment_state: "retry_pending",
+      reconciliation_state: "required",
+      recovery_action: "contact_support",
+      counts: {
+        submitted: 220,
+        accepted: 215,
+        delivered: 180,
+        failed: 7,
+      },
+      amounts: {
+        unit_rate_cents: 83,
+        quoted_cents: 19920,
+        charged_cents: 19754,
+        net_cents: 19754,
+      },
+    });
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(
+        route,
+        flowV2UploadedCampaign({
+          status: "in_production",
+          household_count: 999,
+          total_cost: 999,
+          order,
+        }),
+      ),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+
+    const detail = page.getByTestId("campaign-detail");
+    await expect(detail.getByText("Needs attention")).toBeVisible();
+    await expect(detail.getByText("In production")).toHaveCount(0);
+    await expect(page.getByTestId("campaign-recovery-support")).toContainText(
+      "Contact support before retrying",
+    );
+    await expect(page.getByTestId("campaign-detail-recipients")).toHaveText("240");
+    await expect(page.getByTestId("order-count-submitted")).toHaveText("220");
+    await expect(page.getByTestId("order-count-delivered")).toHaveText("180");
+    await expect(page.getByTestId("order-count-failed")).toHaveText("7");
+    await expect(page.getByTestId("order-quoted-amount")).toHaveText("$199.20");
+    await expect(page.getByTestId("order-charged-amount")).toHaveText("$197.54");
+  });
 });
 
 test.describe("operator fulfillment recovery contract", () => {
@@ -208,24 +299,30 @@ test.describe("operator fulfillment recovery contract", () => {
 
     let purchaseCalls = 0;
     let rawPrintSubmitCalls = 0;
-    let purchaseBody: unknown;
+    let purchaseBody: string | null = null;
     let campaignStatus = "records_purchased";
+    let campaignOrder = durableOrder({
+      fulfillment_state: "retry_pending",
+      reconciliation_state: "in_sync",
+      recovery_action: "retry_purchase",
+    });
 
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
-      json(route, flowV2UploadedCampaign({ status: campaignStatus })),
+      json(route, flowV2UploadedCampaign({ status: campaignStatus, order: campaignOrder })),
     );
     await page.route(
       "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
       (route) => {
         purchaseCalls += 1;
-        purchaseBody = route.request().postDataJSON();
+        purchaseBody = route.request().postData();
         campaignStatus = "submitted_to_partner";
+        campaignOrder = durableOrder({
+          fulfillment_state: "submitted",
+          counts: { submitted: 236 },
+        });
         return json(route, {
           order_id: "EXISTING-ORDER-99",
-          sample: [],
-          source: "idempotent_cache_by_campaign",
-          record_count: 1,
-          print_submit_status: "submitted",
+          order: campaignOrder,
         });
       },
     );
@@ -245,7 +342,7 @@ test.describe("operator fulfillment recovery contract", () => {
     await expect
       .poll(() => purchaseCalls, { timeout: 5000 })
       .toBe(1);
-    expect(purchaseBody).toEqual({ qty: 1 });
+    expect(purchaseBody).toBeNull();
     expect(rawPrintSubmitCalls).toBe(0);
     // Refetch after success shows the advanced status and hides the button.
     await expect(page.getByTestId("campaign-detail").getByText("In production")).toBeVisible();
@@ -259,26 +356,36 @@ test.describe("operator fulfillment recovery contract", () => {
     await installMockApi(page, state);
 
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
-      json(route, flowV2UploadedCampaign({ status: "records_purchased" })),
+      json(route, flowV2UploadedCampaign({
+        status: "in_production",
+        order: durableOrder({
+          fulfillment_state: "retry_pending",
+          reconciliation_state: "required",
+          recovery_action: "retry_purchase",
+        }),
+      })),
     );
     await page.route(
       "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
       (route) =>
         json(route, {
           order_id: "EXISTING-ORDER-99",
-          sample: [],
-          source: "idempotent_cache_by_campaign",
-          record_count: 1,
-          print_submit_status: "retry_pending",
+          order: durableOrder({
+            fulfillment_state: "retry_pending",
+            reconciliation_state: "required",
+            recovery_action: "retry_purchase",
+          }),
         }),
     );
 
     await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await expect(page.getByText("In production")).toHaveCount(0);
+    await expect(page.getByText("Retry available")).toBeVisible();
     await page.getByTestId("retry-print-submission").click();
 
     await expect(page.getByTestId("retry-print-error")).toBeVisible();
     await expect(page.getByTestId("retry-print-error")).toContainText(
-      "still queued for recovery",
+      "still safe to retry",
     );
     await expect(page.getByTestId("retry-print-submission")).toBeVisible();
   });
@@ -291,21 +398,23 @@ test.describe("operator fulfillment recovery contract", () => {
 
     let purchaseCalls = 0;
     let campaignStatus = "records_purchased";
+    let campaignOrder = durableOrder({
+      fulfillment_state: "retry_pending",
+      recovery_action: "retry_purchase",
+    });
     await page.route("**/api/mail-campaigns/campaign-legacy-1", (route) =>
-      json(route, legacyTemplateCampaign({ status: campaignStatus })),
+      json(route, legacyTemplateCampaign({ status: campaignStatus, order: campaignOrder })),
     );
     await page.route(
       "**/api/mail-campaigns/campaign-legacy-1/purchase-records",
       (route) => {
         purchaseCalls += 1;
-        expect(route.request().postDataJSON()).toEqual({ qty: 1 });
+        expect(route.request().postData()).toBeNull();
         campaignStatus = "submitted_to_partner";
+        campaignOrder = durableOrder({ fulfillment_state: "submitted" });
         return json(route, {
           order_id: "EXISTING-ORDER-99",
-          sample: [],
-          source: "idempotent_cache_by_campaign",
-          record_count: 2,
-          print_submit_status: "submitted",
+          order: campaignOrder,
         });
       },
     );
@@ -322,7 +431,13 @@ test.describe("operator fulfillment recovery contract", () => {
     state.authMe.org_role = "member";
     await installMockApi(page, state);
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
-      json(route, flowV2UploadedCampaign({ status: "records_purchased" })),
+      json(route, flowV2UploadedCampaign({
+        status: "records_purchased",
+        order: durableOrder({
+          fulfillment_state: "retry_pending",
+          recovery_action: "retry_purchase",
+        }),
+      })),
     );
 
     await page.goto("/app/campaigns/campaign-flow-v2-1");
@@ -334,7 +449,10 @@ test.describe("operator fulfillment recovery contract", () => {
     const state = createMockAppState();
     await installMockApi(page, state);
     await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
-      json(route, flowV2UploadedCampaign({ status: "submitted_to_partner" })),
+      json(route, flowV2UploadedCampaign({
+        status: "submitted_to_partner",
+        order: durableOrder({ fulfillment_state: "submitted" }),
+      })),
     );
     await page.goto("/app/campaigns/campaign-flow-v2-1");
     await expect(page.getByTestId("campaign-detail")).toBeVisible();

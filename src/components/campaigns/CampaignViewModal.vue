@@ -10,6 +10,7 @@ import {
   campaignAreas,
   campaignDesignPreviewUrl,
   campaignPiecesSent,
+  campaignRecipientCount,
 } from "@/utils/campaignDisplay";
 import CampaignStatusBadge from "./CampaignStatusBadge.vue";
 import CampaignAreaMapPreview from "./CampaignAreaMapPreview.vue";
@@ -87,12 +88,16 @@ function downloadSummaryCsv(c: MailCampaign) {
     ["Campaign Date", formatDate(c.createdAt)],
     [
       "Households",
-      typeof c.householdCount === "number" ? String(c.householdCount) : "",
+      campaignRecipientCount(c) !== null ? String(campaignRecipientCount(c)) : "",
     ],
     ["Pieces Sent", String(piecesSent.value ?? 0)],
     [
       "Total Cost",
-      typeof c.totalCost === "number" ? c.totalCost.toFixed(2) : "",
+      c.order?.amounts.net_cents != null
+        ? (c.order.amounts.net_cents / 100).toFixed(2)
+        : typeof c.totalCost === "number"
+          ? c.totalCost.toFixed(2)
+          : "",
     ],
   ];
   const csv = rows
@@ -177,7 +182,7 @@ async function downloadAudience() {
 
         <div class="flex items-center justify-between mt-4 mb-2">
           <h4 class="campaign-name">{{ campaign.name }}</h4>
-          <CampaignStatusBadge :status="campaign.status" />
+          <CampaignStatusBadge :status="campaign.status" :order="campaign.order" />
         </div>
 
         <dl class="detail-grid">
