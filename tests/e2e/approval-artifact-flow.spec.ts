@@ -230,6 +230,37 @@ function approvedCampaignResponse() {
   };
 }
 
+async function installApprovedCampaignPurchasePrerequisites(
+  page: Page,
+  artifactId: string,
+) {
+  await page.route("**/api/mail-campaigns", (route) =>
+    route.request().method() === "POST"
+      ? json(route, approvedCampaignResponse())
+      : route.fallback(),
+  );
+  await page.route(
+    `**/api/mail-campaigns/${CAMPAIGN_ID}/approval-artifact`,
+    (route) =>
+      json(route, {
+        ok: true,
+        id: artifactId,
+        org_id: ORG_ID,
+        mail_campaign_id: CAMPAIGN_ID,
+        created_by: "user-owner",
+        source_draft_id: DRAFT_ID,
+        artifact_type: "approval_proof",
+        storage_backend: "railway_volume",
+        storage_key: `orgs/${ORG_ID}/mail-campaigns/${CAMPAIGN_ID}/proof`,
+        manifest: {},
+        manifest_sha256: "a".repeat(64),
+        terms_version: "accuracy-rights-v1",
+        acknowledged_at: "2026-07-31T00:00:00Z",
+        created_at: "2026-07-31T00:00:00Z",
+      }),
+  );
+}
+
 async function attachScreenshot(
   page: Page,
   testInfo: TestInfo,
@@ -743,7 +774,13 @@ test.describe("StepReview approval artifact flow", () => {
       await page.getByLabel(/I confirm all information/i).check();
       await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
 
-      await expect(page.getByRole("alert")).toContainText(/did not return a confirmed order state/i);
+      await expect(page.getByRole("alert")).toContainText(
+        /did not return a confirmed order state/i,
+      );
+      await expect(page.getByRole("alert")).toContainText(/do not approve or retry/i);
+      await expect(
+        page.getByRole("button", { name: /Approve & Send Mailing/i }),
+      ).toBeDisabled();
       await expect(page.getByText(/campaign is live/i)).toHaveCount(0);
       await expect(page.getByText(/in production/i)).toHaveCount(0);
       await expect(page.getByRole("heading", { name: /Mailing submitted/i })).toHaveCount(0);
@@ -842,6 +879,76 @@ test.describe("StepReview approval artifact flow", () => {
     await expect(page.getByRole("button", { name: /Approve & Send Mailing/i })).toBeDisabled();
     await expect(page.getByText(/in production/i)).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /Campaign needs attention/i })).toHaveCount(0);
+  });
+
+  test("fails closed on an unknown purchase 5xx without inviting retry", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+    await installApprovedCampaignPurchasePrerequisites(page, "artifact-unknown-5xx");
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+      (route) => json(route, { error: "internal_error" }, 500),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("alert")).toContainText(
+      /could not be safely confirmed/i,
+    );
+    await expect(page.getByRole("alert")).toContainText(/contact support/i);
+    await expect(page.getByRole("alert")).toContainText(/do not approve or retry/i);
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
+    ).toBeDisabled();
+    await expect(page.getByText(/tap approve again/i)).toHaveCount(0);
+  });
+
+  test("fails closed on an incomplete nominally pre-provider error", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+    await installApprovedCampaignPurchasePrerequisites(page, "artifact-incomplete-error");
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+      (route) =>
+        json(route, {
+          error: "payment_method_required",
+          message: "Card required",
+        }, 402),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("alert")).toContainText(
+      /could not be safely confirmed/i,
+    );
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
+    ).toBeDisabled();
+    await expect(page.getByText(/add a card, then tap approve again/i)).toHaveCount(0);
+  });
+
+  test("fails closed on a purchase timeout without inviting retry", async ({ page }) => {
+    await installApprovalFlowMocks(page);
+    await installApprovedCampaignPurchasePrerequisites(page, "artifact-timeout");
+    await page.route(
+      `**/api/mail-campaigns/${CAMPAIGN_ID}/purchase-records`,
+      (route) => route.abort("timedout"),
+    );
+
+    await page.goto("/dev/step-review-approval-flow");
+    await page.getByLabel(/I confirm all information/i).check();
+    await page.getByRole("button", { name: /Approve & Send Mailing/i }).click();
+
+    await expect(page.getByRole("alert")).toContainText(
+      /could not be safely confirmed/i,
+    );
+    await expect(page.getByRole("alert")).toContainText(/contact support/i);
+    await expect(
+      page.getByRole("button", { name: /Approve & Send Mailing/i }),
+    ).toBeDisabled();
+    await expect(page.getByText(/tap approve again/i)).toHaveCount(0);
   });
 
   test("retries artifact failure without approving the deleted draft again", async ({

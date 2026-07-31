@@ -5,6 +5,7 @@ import {
   createApprovalArtifact,
   getMailCampaign,
   getMailScheduleAvailability,
+  isKnownPreProviderPurchaseError,
   normalizeOrderProjection,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
@@ -133,6 +134,85 @@ describe("mail campaign approval artifacts", () => {
     expect(result.order?.counts.approved).toBe(250);
     expect(result.order?.amounts.unit_rate_cents).toBe(87);
     expect(result.order?.counts.failed).toBeNull();
+  });
+
+  it.each([
+    [
+      402,
+      {
+        error: "payment_method_required",
+        message: "Card required",
+        estimated_cost_cents: 9900,
+        per_postcard_rate_cents: 99,
+      },
+    ],
+    [
+      402,
+      {
+        error: "budget_exceeded",
+        message: "Budget exceeded",
+        cap_cents: 10000,
+        remaining_cents: 100,
+        estimated_cost_cents: 9900,
+      },
+    ],
+    [
+      402,
+      {
+        error: "card_declined",
+        message: "Card declined",
+        reason: "declined",
+      },
+    ],
+    [
+      503,
+      {
+        error: "budget_unavailable",
+        message: "Budget authorization is unavailable; no records were purchased.",
+      },
+    ],
+  ])(
+    "permits retry only for the explicit pre-provider contract at %s",
+    (status, data) => {
+      expect(isKnownPreProviderPurchaseError({ status, data })).toBe(true);
+    },
+  );
+
+  it.each([
+    [500, "internal_error"],
+    [503, "provider_unavailable"],
+    [409, "reconciliation_required"],
+    [402, "budget_unavailable"],
+    [undefined, undefined],
+  ])(
+    "fails closed for unknown or mismatched purchase outcome %s/%s",
+    (status, error) => {
+      expect(
+        isKnownPreProviderPurchaseError({ status, data: { error } }),
+      ).toBe(false);
+    },
+  );
+
+  it("fails closed for a timeout without an HTTP response", () => {
+    expect(
+      isKnownPreProviderPurchaseError({
+        code: "ECONNABORTED",
+        message: "timeout",
+      }),
+    ).toBe(false);
+  });
+
+  it("fails closed when a nominally safe error includes an order projection", () => {
+    expect(
+      isKnownPreProviderPurchaseError({
+        status: 503,
+        data: {
+          error: "budget_unavailable",
+          message: "Budget authorization is unavailable",
+          order: validOrder(),
+        },
+      }),
+    ).toBe(false);
   });
 
   it.each([
