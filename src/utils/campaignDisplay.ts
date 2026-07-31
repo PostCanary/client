@@ -71,10 +71,11 @@ export function campaignRecipientCount(campaign: MailCampaign): number | null {
   const counts = campaign.order?.counts;
   if (counts) {
     for (const value of [
-      counts.approved,
-      counts.requested,
+      counts.submitted,
       counts.printable,
       counts.purchased,
+      counts.approved,
+      counts.requested,
     ]) {
       if (typeof value === "number") return value;
     }

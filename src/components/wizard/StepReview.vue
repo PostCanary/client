@@ -18,6 +18,7 @@ import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
 import {
   createApprovalArtifact,
+  isKnownPreProviderPurchaseError,
   normalizeOrderProjection,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
@@ -550,8 +551,10 @@ async function approve() {
     try {
       const purchase = await purchaseCampaignRecords(campaign.id);
       if (!purchase.order) {
+        reconciliationBlocked.value = true;
         draftStore.error =
-          "Campaign approved, but the server did not return a confirmed order state. Contact support before trying again.";
+          "Campaign approved, but the server did not return a confirmed order state. " +
+          "Contact support and do not approve or retry this campaign again.";
         approving.value = false;
         return;
       }
@@ -577,7 +580,10 @@ async function approve() {
         approving.value = false;
         return;
       }
+      const knownPreProviderFailure =
+        isKnownPreProviderPurchaseError(purchaseErr);
       if (
+        knownPreProviderFailure &&
         purchaseErr?.status === 402 &&
         purchaseErr?.data?.error === "payment_method_required"
       ) {
@@ -595,10 +601,15 @@ async function approve() {
         }
         draftStore.error =
           "Your campaign is approved, but it hasn't been sent because a valid payment method is required. Add a card, then tap Approve again.";
-      } else {
+      } else if (knownPreProviderFailure) {
         draftStore.error =
-          "Campaign approved and proof saved, but we couldn't purchase the mailing list. " +
-          "Tap Approve again to retry, or check your data filters.";
+          "Campaign approved and proof saved. The server confirmed no provider purchase started. " +
+          "Resolve the reported payment or budget issue, then tap Approve again.";
+      } else {
+        reconciliationBlocked.value = true;
+        draftStore.error =
+          "Campaign approved and proof saved, but the purchase outcome could not be safely confirmed. " +
+          "Contact support and do not approve or retry this campaign again.";
       }
       approving.value = false;
       return;

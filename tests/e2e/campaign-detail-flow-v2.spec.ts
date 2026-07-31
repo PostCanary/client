@@ -303,9 +303,9 @@ test.describe("Campaign detail — Flow v2 + legacy (POS-162)", () => {
     await expect(detail.getByText("Needs attention")).toBeVisible();
     await expect(detail.getByText("In production")).toHaveCount(0);
     await expect(page.getByTestId("campaign-recovery-support")).toContainText(
-      "Contact support before retrying",
+      "Contact support and do not retry",
     );
-    await expect(page.getByTestId("campaign-detail-recipients")).toHaveText("240");
+    await expect(page.getByTestId("campaign-detail-recipients")).toHaveText("220");
     await expect(page.getByTestId("order-count-submitted")).toHaveText("220");
     await expect(page.getByTestId("order-count-delivered")).toHaveText("180");
     await expect(page.getByTestId("order-count-failed")).toHaveText("7");
@@ -412,6 +412,134 @@ test.describe("operator fulfillment recovery contract", () => {
       "still safe to retry",
     );
     await expect(page.getByTestId("retry-print-submission")).toBeVisible();
+  });
+
+  test("409 reconciliation replaces stale retry state with durable support-only state", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    const staleOrder = durableOrder({
+      fulfillment_state: "pre_vendor_failed",
+      recovery_action: "retry_purchase",
+    });
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ order: staleOrder })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) =>
+        json(route, {
+          error: "reconciliation_required",
+          order: durableOrder({
+            fulfillment_state: "reconciliation_required",
+            reconciliation_state: "required",
+            reconciliation_reason: "print_operation_ambiguous",
+            recovery_action: "contact_support",
+          }),
+        }, 409),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+    await expect(page.getByTestId("campaign-recovery-support")).toContainText(
+      /do not retry/i,
+    );
+    await expect(page.getByTestId("retry-print-error")).toContainText(
+      /do not retry/i,
+    );
+    await expect(page.getByText("Needs attention")).toBeVisible();
+  });
+
+  test("malformed 409 blocks retry and removes stale retry status", async ({ page }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({
+        order: durableOrder({
+          fulfillment_state: "pre_vendor_failed",
+          recovery_action: "retry_purchase",
+        }),
+      })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) => json(route, { error: "reconciliation_required", order: {} }, 409),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+    await expect(page.getByTestId("campaign-recovery-support")).toContainText(
+      /do not retry/i,
+    );
+    await expect(page.getByText("Retry available")).toHaveCount(0);
+    await expect(page.getByText("Status unavailable")).toBeVisible();
+  });
+
+  test("409 with an incoherent retry order still removes stale retry status", async ({
+    page,
+  }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    const retryOrder = durableOrder({
+      fulfillment_state: "pre_vendor_failed",
+      recovery_action: "retry_purchase",
+    });
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({ order: retryOrder })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) =>
+        json(route, {
+          error: "reconciliation_required",
+          order: retryOrder,
+        }, 409),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+    await expect(page.getByTestId("campaign-recovery-support")).toContainText(
+      /do not retry/i,
+    );
+    await expect(page.getByText("Retry available")).toHaveCount(0);
+    await expect(page.getByText("Status unavailable")).toBeVisible();
+  });
+
+  test("unknown retry 5xx blocks retry and removes stale retry status", async ({ page }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+    await page.route("**/api/mail-campaigns/campaign-flow-v2-1", (route) =>
+      json(route, flowV2UploadedCampaign({
+        order: durableOrder({
+          fulfillment_state: "pre_vendor_failed",
+          recovery_action: "retry_purchase",
+        }),
+      })),
+    );
+    await page.route(
+      "**/api/mail-campaigns/campaign-flow-v2-1/purchase-records",
+      (route) => json(route, { error: "internal_error" }, 500),
+    );
+
+    await page.goto("/app/campaigns/campaign-flow-v2-1");
+    await page.getByTestId("retry-print-submission").click();
+
+    await expect(page.getByTestId("retry-print-submission")).toHaveCount(0);
+    await expect(page.getByTestId("campaign-recovery-support")).toContainText(
+      /do not retry/i,
+    );
+    await expect(page.getByTestId("retry-print-error")).toContainText(
+      /could not be safely confirmed/i,
+    );
+    await expect(page.getByText("Retry available")).toHaveCount(0);
+    await expect(page.getByText("Status unavailable")).toBeVisible();
   });
 
   test("legacy card campaign uses the same server-owned recovery contract", async ({

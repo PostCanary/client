@@ -387,6 +387,49 @@ export interface PurchaseRecordsResponse {
   print_submit_status?: string | null;
 }
 
+/**
+ * The server emits these exact status/error pairs only after confirming that
+ * no Melissa or print-provider operation started. Everything else—including
+ * an unstructured 5xx or a network timeout—must be treated as ambiguous.
+ */
+export function isKnownPreProviderPurchaseError(value: unknown): boolean {
+  if (
+    !isObject(value) ||
+    typeof value.status !== "number" ||
+    !isObject(value.data)
+  ) {
+    return false;
+  }
+  const data = value.data;
+  if (
+    "order" in data ||
+    typeof data.error !== "string" ||
+    typeof data.message !== "string" ||
+    !data.message.trim()
+  ) {
+    return false;
+  }
+  const nonNegativeInteger = (field: unknown) =>
+    typeof field === "number" && Number.isSafeInteger(field) && field >= 0;
+  if (value.status === 402 && data.error === "payment_method_required") {
+    return (
+      nonNegativeInteger(data.estimated_cost_cents) &&
+      nonNegativeInteger(data.per_postcard_rate_cents)
+    );
+  }
+  if (value.status === 402 && data.error === "budget_exceeded") {
+    return (
+      nonNegativeInteger(data.cap_cents) &&
+      nonNegativeInteger(data.remaining_cents) &&
+      nonNegativeInteger(data.estimated_cost_cents)
+    );
+  }
+  if (value.status === 402 && data.error === "card_declined") {
+    return typeof data.reason === "string" && data.reason.trim().length > 0;
+  }
+  return value.status === 503 && data.error === "budget_unavailable";
+}
+
 // Buy-on-Approve wiring (S132 2026-05-05): triggers synchronous data-partner
 // list purchase for an approved campaign. Idempotent — repeat calls after
 // a successful purchase return the existing records without burning credits.

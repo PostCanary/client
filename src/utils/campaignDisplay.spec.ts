@@ -79,6 +79,29 @@ describe("durable campaign display boundaries", () => {
     expect(campaignRecipientCount(campaign(null))).toBe(999);
   });
 
+  it("prefers the most downstream durable recipient count", () => {
+    const value = order({
+      counts: {
+        ...order().counts,
+        approved: 100,
+        requested: 100,
+        purchased: 98,
+        printable: 95,
+        submitted: 90,
+      },
+    });
+
+    expect(campaignRecipientCount(campaign(value))).toBe(90);
+    value.counts.submitted = null;
+    expect(campaignRecipientCount(campaign(value))).toBe(95);
+    value.counts.printable = null;
+    expect(campaignRecipientCount(campaign(value))).toBe(98);
+    value.counts.purchased = null;
+    expect(campaignRecipientCount(campaign(value))).toBe(100);
+    value.counts.approved = null;
+    expect(campaignRecipientCount(campaign(value))).toBe(100);
+  });
+
   it("does not fall back when a malformed order envelope was present", () => {
     const value = campaign(null);
     value.orderContractPresent = true;

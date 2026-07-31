@@ -7,7 +7,10 @@ import CampaignStatusBadge from "@/components/campaigns/CampaignStatusBadge.vue"
 import CampaignKPICards from "@/components/campaigns/CampaignKPICards.vue";
 import SequenceTimeline from "@/components/campaigns/SequenceTimeline.vue";
 import CampaignActions from "@/components/campaigns/CampaignActions.vue";
-import { purchaseCampaignRecords } from "@/api/mailCampaigns";
+import {
+  normalizeOrderProjection,
+  purchaseCampaignRecords,
+} from "@/api/mailCampaigns";
 import { useAuthStore } from "@/stores/auth";
 import {
   campaignDesignPreviewUrl,
@@ -63,17 +66,35 @@ const isUploadedDesign = computed(
 // partner, return address, and postcard size on the server.
 const showRetryPrintSubmission = computed(
   () =>
+    !retryRecoveryBlocked.value &&
     (auth.orgRole === "owner" || auth.orgRole === "admin") &&
     campaign.value?.order?.recovery_action === "retry_purchase" &&
     hasDesign.value,
 );
 const showContactSupport = computed(
   () =>
+    retryRecoveryBlocked.value ||
     campaign.value?.order?.recovery_action === "contact_support" ||
     (!!campaign.value?.order && campaignOrderNeedsAttention(campaign.value.order)),
 );
 const retryingPrint = ref(false);
 const retryPrintError = ref<string | null>(null);
+const retryRecoveryBlocked = ref(false);
+
+function replaceRetryOrder(order: ReturnType<typeof normalizeOrderProjection>) {
+  if (!campaign.value) return;
+  campaign.value = {
+    ...campaign.value,
+    order,
+    orderContractPresent: true,
+  };
+}
+
+function blockRetryForSupport(message: string, order: unknown = null) {
+  retryRecoveryBlocked.value = true;
+  replaceRetryOrder(normalizeOrderProjection(order));
+  retryPrintError.value = message;
+}
 
 async function retryPrintSubmission() {
   if (!campaign.value || retryingPrint.value) return;
@@ -82,22 +103,41 @@ async function retryPrintSubmission() {
   try {
     const result = await purchaseCampaignRecords(campaign.value.id);
     if (!result.order) {
-      throw new Error(
-        "The server did not return a confirmed order state. Contact support before trying again.",
+      blockRetryForSupport(
+        "The server did not return a confirmed order state. Contact support and do not retry it.",
       );
+      return;
     }
     if (campaignOrderNeedsAttention(result.order)) {
-      throw new Error(
-        result.order.recovery_action === "retry_purchase"
-          ? "The mailing is still safe to retry, but fulfillment has not started."
-          : "The order needs reconciliation. Contact support before trying again.",
-      );
+      if (result.order.recovery_action === "retry_purchase") {
+        retryPrintError.value =
+          "The mailing is still safe to retry, but fulfillment has not started.";
+      } else {
+        blockRetryForSupport(
+          "The order needs reconciliation. Contact support and do not retry it.",
+          result.order,
+        );
+      }
+      return;
     }
     await fetch();
   } catch (e: any) {
-    retryPrintError.value =
-      e?.message ??
-      "Fulfillment retry failed — the campaign is unchanged. Try again.";
+    if (
+      e?.status === 409 &&
+      e?.data?.error === "reconciliation_required"
+    ) {
+      const reconciliationOrder = normalizeOrderProjection(e?.data?.order);
+      blockRetryForSupport(
+        "The order needs reconciliation. Contact support and do not retry it.",
+        reconciliationOrder?.recovery_action === "contact_support"
+          ? reconciliationOrder
+          : null,
+      );
+    } else {
+      blockRetryForSupport(
+        "The fulfillment outcome could not be safely confirmed. Contact support and do not retry this order.",
+      );
+    }
   } finally {
     retryingPrint.value = false;
   }
@@ -221,8 +261,8 @@ onMounted(() => {
       class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
       data-testid="campaign-recovery-support"
     >
-      This order needs reconciliation. Contact support before retrying so a
-      duplicate charge or mailing is not created.
+      This order needs reconciliation. Contact support and do not retry it; a
+      duplicate charge or mailing could be created.
     </div>
 
     <!-- Core meta: created date + recipients when available -->
