@@ -1,35 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { MailCampaignStatus } from "@/types/campaign";
+import type { MailCampaignOrder, MailCampaignStatus } from "@/types/campaign";
+import { campaignStatusPresentation } from "@/utils/campaignDisplay";
 
 const props = defineProps<{
   status: MailCampaignStatus;
+  order?: MailCampaignOrder | null;
+  orderContractPresent?: boolean;
 }>();
 
-const config = computed(() => {
-  switch (props.status) {
-    case "approved":
-      return { label: "Approved", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500" };
-    case "pending_moderation":
-      return { label: "Under Review", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
-    case "printing":
-      return { label: "Printing", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
-    case "in_transit":
-      return { label: "In Mail", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500" };
-    case "delivered":
-      return { label: "Delivered", color: "bg-green-100 text-green-700", dot: "bg-green-500" };
-    case "results_ready":
-      return { label: "Results Ready", color: "bg-green-100 text-green-700", dot: "bg-green-500" };
-    case "completed":
-      return { label: "Completed", color: "bg-gray-100 text-gray-600", dot: "bg-gray-400" };
-    case "paused":
-      return { label: "Paused", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" };
-    case "draft":
-      return { label: "Draft", color: "bg-gray-100 text-gray-500", dot: "bg-gray-400" };
-    default:
-      return { label: props.status, color: "bg-gray-100 text-gray-500", dot: "bg-gray-400" };
-  }
-});
+// Prefer POS-197's durable order lifecycle; fall back to the legacy campaign
+// status only when no order exists.
+const config = computed(() =>
+  campaignStatusPresentation({
+    status: props.status,
+    order: props.order ?? null,
+    orderContractPresent: props.orderContractPresent,
+  }),
+);
 </script>
 
 <template>

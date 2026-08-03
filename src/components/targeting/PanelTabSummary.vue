@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, inject } from "vue";
 import { usePricing } from "@/composables/usePricing";
-import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { formatCurrency, formatNumber } from "@/utils/format";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 
@@ -14,8 +13,7 @@ const props = defineProps<{
 
 const hc = inject(HOUSEHOLD_COUNT_KEY)!;
 
-const draftStore = useCampaignDraftStore();
-const seqLen = computed(() => draftStore.draft?.goal?.sequenceLength ?? 3);
+const seqLen = computed(() => 1);
 const pricing = usePricing();
 
 const perCardCost = computed(

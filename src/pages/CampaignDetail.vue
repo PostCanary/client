@@ -7,55 +7,181 @@ import CampaignStatusBadge from "@/components/campaigns/CampaignStatusBadge.vue"
 import CampaignKPICards from "@/components/campaigns/CampaignKPICards.vue";
 import SequenceTimeline from "@/components/campaigns/SequenceTimeline.vue";
 import CampaignActions from "@/components/campaigns/CampaignActions.vue";
-import SubmitPrintJobButton from "@/components/campaigns/SubmitPrintJobButton.vue";
-import PrintJobConfirmModal, {
-  type PrintJobConfirmPayload,
-} from "@/components/campaigns/PrintJobConfirmModal.vue";
-import { usePrintJob } from "@/composables/usePrintJob";
-import type { PrintJobSubmitInputs } from "@/api/printJobs";
+import {
+  normalizeOrderProjection,
+  purchaseCampaignRecords,
+} from "@/api/mailCampaigns";
+import { useAuthStore } from "@/stores/auth";
+import {
+  campaignDesignPreviewUrl,
+  campaignOrderNeedsAttention,
+  campaignRecipientCount,
+  formatOrderAmount,
+} from "@/utils/campaignDisplay";
 
 const route = useRoute();
 const router = useRouter();
+const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 const campaignId = route.params.id as string;
 const { campaign, loading, error, fetch, pause, resume } =
   useCampaignDetail(campaignId);
 
-const printJob = usePrintJob();
-const showPrintModal = ref(false);
-const printJobError = ref<string | null>(null);
-
-const hasDesign = computed(
-  () => campaign.value?.cards.every((c) => !!c.previewImageUrl) ?? false,
+// Legacy sequence cards with previews (template/AI path). Empty for Flow
+// v2 designSource='uploaded' — never call .every on a missing array.
+const hasLegacyCards = computed(() => {
+  const cards = campaign.value?.cards;
+  return Array.isArray(cards) && cards.length > 0;
+});
+const hasDesign = computed(() => {
+  const cards = campaign.value?.cards;
+  if (!Array.isArray(cards) || cards.length === 0) {
+    // Uploaded artwork counts as a design for print-job readiness.
+    if (campaign.value?.designSource === "uploaded") {
+      return !!campaign.value.uploadedAsset?.frontUrl;
+    }
+    return false;
+  }
+  return cards.every((c) => !!c.previewImageUrl);
+});
+const recipientCount = computed(() => {
+  return campaign.value ? campaignRecipientCount(campaign.value) ?? 0 : 0;
+});
+const hasRecipientCount = computed(
+  () => !!campaign.value && campaignRecipientCount(campaign.value) !== null,
 );
-const recipientCount = computed(() => campaign.value?.householdCount ?? 0);
 
-async function onPrintJobSubmit(payload: PrintJobConfirmPayload) {
+// Preview: uploaded front via design snapshot, else first card preview.
+const designPreviewUrl = computed(() => {
+  if (!campaign.value) return null;
+  return campaignDesignPreviewUrl(campaign.value);
+});
+const isUploadedDesign = computed(
+  () => campaign.value?.designSource === "uploaded",
+);
+
+// Recovery is intentionally limited to org operators. Replaying
+// purchase-records is the canonical idempotent recovery contract: after
+// billing settles it reuses the existing records and derives the design,
+// partner, return address, and postcard size on the server.
+const showRetryPrintSubmission = computed(
+  () =>
+    !retryRecoveryBlocked.value &&
+    (auth.orgRole === "owner" || auth.orgRole === "admin") &&
+    campaign.value?.order?.recovery_action === "retry_purchase" &&
+    hasDesign.value,
+);
+const showContactSupport = computed(
+  () =>
+    retryRecoveryBlocked.value ||
+    campaign.value?.order?.recovery_action === "contact_support" ||
+    (!!campaign.value?.order && campaignOrderNeedsAttention(campaign.value.order)),
+);
+const retryingPrint = ref(false);
+const retryPrintError = ref<string | null>(null);
+const retryRecoveryBlocked = ref(false);
+
+function replaceRetryOrder(order: ReturnType<typeof normalizeOrderProjection>) {
   if (!campaign.value) return;
-  printJobError.value = null;
-  const inputs: PrintJobSubmitInputs = {
-    campaign_id: campaign.value.id,
-    design_template_id:
-      campaign.value.cards[payload.cardNumber - 1]?.previewImageUrl ?? "",
-    partner_id: "mock",
-    return_address: payload.returnAddress,
-    front_request_body: {},
-    back_request_body: {},
-    has_merge_fields: false,
+  campaign.value = {
+    ...campaign.value,
+    order,
+    orderContractPresent: true,
   };
-  const resultPhase = await printJob.submit(inputs);
-  if (resultPhase === "failed") {
-    if (printJob.existingJobId.value) {
-      showPrintModal.value = false;
-      router.push(`/app/print-jobs/${printJob.existingJobId.value}`);
+}
+
+function blockRetryForSupport(message: string, order: unknown = null) {
+  retryRecoveryBlocked.value = true;
+  replaceRetryOrder(normalizeOrderProjection(order));
+  retryPrintError.value = message;
+}
+
+async function retryPrintSubmission() {
+  if (!campaign.value || retryingPrint.value) return;
+  retryingPrint.value = true;
+  retryPrintError.value = null;
+  try {
+    const result = await purchaseCampaignRecords(campaign.value.id);
+    if (!result.order) {
+      blockRetryForSupport(
+        "The server did not return a confirmed order state. Contact support and do not retry it.",
+      );
       return;
     }
-    printJobError.value =
-      printJob.error.value?.message ?? "Submission failed. Please try again.";
-    return;
+    // The POST response is the newest durable order fact. Install it before
+    // the best-effort detail refresh so a failed GET cannot leave the old
+    // pre_vendor_failed/retry_purchase projection clickable.
+    replaceRetryOrder(result.order);
+    if (campaignOrderNeedsAttention(result.order)) {
+      if (result.order.recovery_action === "retry_purchase") {
+        retryPrintError.value =
+          "The mailing is still safe to retry, but fulfillment has not started.";
+      } else {
+        blockRetryForSupport(
+          "The order needs reconciliation. Contact support and do not retry it.",
+          result.order,
+        );
+      }
+      return;
+    }
+    await fetch();
+    if (error.value) {
+      // useCampaignDetail deliberately preserves the existing campaign on a
+      // failed fetch. Keep rendering the authoritative POST projection and
+      // surface only the refresh problem instead of restoring stale recovery.
+      error.value = null;
+      retryPrintError.value =
+        "Fulfillment was updated, but the latest campaign details could not be refreshed.";
+    }
+  } catch (e: any) {
+    if (
+      e?.status === 409 &&
+      e?.data?.error === "reconciliation_required"
+    ) {
+      const reconciliationOrder = normalizeOrderProjection(e?.data?.order);
+      blockRetryForSupport(
+        "The order needs reconciliation. Contact support and do not retry it.",
+        reconciliationOrder?.recovery_action === "contact_support"
+          ? reconciliationOrder
+          : null,
+      );
+    } else {
+      blockRetryForSupport(
+        "The fulfillment outcome could not be safely confirmed. Contact support and do not retry this order.",
+      );
+    }
+  } finally {
+    retryingPrint.value = false;
   }
-  showPrintModal.value = false;
-  router.push(`/app/print-jobs/${printJob.jobId.value}`);
+}
+
+// Targeting / map block is only meaningful for area campaigns with data.
+const showTargetingSummary = computed(() => {
+  const c = campaign.value;
+  if (!c) return false;
+  if (c.targetingData && Object.keys(c.targetingData).length > 0) return true;
+  // Keep a compact summary for campaigns that still have sequence/cost stats.
+  return (
+    typeof c.sequenceLength === "number" ||
+    typeof c.totalCost === "number" ||
+    typeof c.householdCount === "number"
+  );
+});
+
+function formatCreatedAt(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatGoal(goalType: string | null | undefined): string {
+  if (!goalType) return "—";
+  return String(goalType).replace(/_/g, " ");
 }
 
 onMounted(() => {
@@ -86,8 +212,8 @@ onMounted(() => {
     </button>
   </div>
 
-  <!-- Campaign detail -->
-  <div v-else class="max-w-5xl mx-auto py-8 px-4">
+  <!-- Campaign detail — safe for every campaign shape (legacy + Flow v2) -->
+  <div v-else class="max-w-5xl mx-auto py-8 px-4" data-testid="campaign-detail">
     <!-- Back link -->
     <button
       class="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
@@ -99,22 +225,25 @@ onMounted(() => {
       All Campaigns
     </button>
 
-    <!-- Header -->
+    <!-- Header: name + status always present -->
     <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-bold text-[#0b2d50]">
+      <div class="flex items-center gap-3 flex-wrap">
+        <h1 class="text-2xl font-bold text-[#0b2d50]" data-testid="campaign-detail-name">
           {{ campaign.name }}
         </h1>
-        <CampaignStatusBadge :status="campaign.status" />
+        <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
       </div>
       <div class="flex items-center gap-3">
-        <SubmitPrintJobButton
-          :campaign="campaign"
-          :recipient-count="recipientCount"
-          :has-design="hasDesign"
-          :active-print-job-status="null"
-          @open-modal="showPrintModal = true"
-        />
+        <button
+          v-if="showRetryPrintSubmission"
+          type="button"
+          class="bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#3aa893] transition-colors disabled:opacity-50"
+          :disabled="retryingPrint"
+          data-testid="retry-print-submission"
+          @click="retryPrintSubmission"
+        >
+          {{ retryingPrint ? "Retrying…" : "Retry fulfillment" }}
+        </button>
         <CampaignActions
           :campaign="campaign"
           @pause="pause"
@@ -123,83 +252,179 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Print job submission error banner -->
-    <div
-      v-if="printJobError"
-      class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between"
-      role="alert"
+    <p
+      v-if="retryPrintError"
+      class="mb-4 text-sm text-red-600"
+      data-testid="retry-print-error"
     >
-      <span>{{ printJobError }}</span>
-      <button
-        class="ml-3 text-red-500 hover:text-red-700 font-medium shrink-0"
-        @click="printJobError = null"
-      >
-        Dismiss
-      </button>
+      {{ retryPrintError }}
+    </p>
+
+    <div
+      v-if="showRetryPrintSubmission"
+      class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+      data-testid="campaign-recovery-retry"
+    >
+      Fulfillment did not start. An organization owner or admin can safely
+      retry this same order; the server will reuse its existing authority.
+    </div>
+    <div
+      v-else-if="showContactSupport"
+      class="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      data-testid="campaign-recovery-support"
+    >
+      This order needs reconciliation. Contact support and do not retry it; a
+      duplicate charge or mailing could be created.
     </div>
 
-    <!-- KPI cards -->
+    <!-- Core meta: created date + recipients when available -->
+    <div
+      class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600 mb-6"
+      data-testid="campaign-detail-meta"
+    >
+      <div>
+        <span class="text-gray-500">Created:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium">
+          {{ formatCreatedAt(campaign.createdAt) }}
+        </span>
+      </div>
+      <div v-if="hasRecipientCount">
+        <span class="text-gray-500">Recipients:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium" data-testid="campaign-detail-recipients">
+          {{ recipientCount.toLocaleString() }}
+        </span>
+      </div>
+      <div v-if="campaign.goalType">
+        <span class="text-gray-500">Goal:</span>
+        <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+          {{ formatGoal(campaign.goalType) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Design preview: uploaded front artwork or first card thumbnail -->
+    <div
+      v-if="designPreviewUrl || isUploadedDesign"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      data-testid="campaign-detail-design"
+    >
+      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Design</h3>
+      <div
+        class="w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+        style="aspect-ratio: 3 / 2;"
+      >
+        <img
+          v-if="designPreviewUrl"
+          :src="designPreviewUrl"
+          :alt="isUploadedDesign ? 'Uploaded design preview' : 'Campaign design preview'"
+          class="h-full w-full object-cover"
+          draggable="false"
+          data-testid="campaign-detail-design-preview"
+        />
+        <div
+          v-else
+          class="flex h-full w-full items-center justify-center"
+          data-testid="campaign-detail-design-placeholder"
+        >
+          <span class="text-xs font-medium text-gray-400">Preview pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI cards (defensive inside component for null counts) -->
     <CampaignKPICards :campaign="campaign" class="mb-8" />
 
-    <!-- Sequence timeline -->
+    <div
+      v-if="campaign.order"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      data-testid="campaign-order-reconciliation"
+    >
+      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Order reconciliation</h3>
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
+        <div v-for="key in ['approved', 'requested', 'purchased', 'printable', 'billed', 'submitted', 'accepted', 'mailed', 'delivered', 'returned', 'failed', 'refunded']" :key="key">
+          <dt class="text-gray-500 capitalize">{{ key }}</dt>
+          <dd class="font-semibold text-[#0b2d50]" :data-testid="`order-count-${key}`">
+            {{ campaign.order.counts[key as keyof typeof campaign.order.counts] ?? "—" }}
+          </dd>
+        </div>
+      </dl>
+      <dl class="mt-5 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
+        <div>
+          <dt class="text-gray-500">Server quote</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-quoted-amount">
+            {{ formatOrderAmount(campaign.order.amounts.quoted_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Charged</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-charged-amount">
+            {{ formatOrderAmount(campaign.order.amounts.charged_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Net after refunds</dt>
+          <dd class="font-semibold text-[#0b2d50]" data-testid="order-net-amount">
+            {{ formatOrderAmount(campaign.order.amounts.net_cents, campaign.order.amounts.currency) }}
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Sequence timeline — legacy card list only when cards exist -->
     <SequenceTimeline
+      v-if="hasLegacyCards"
       :cards="campaign.cards"
       :brand-colors="brandKitStore.brandKit?.brandColors"
       :campaign-status="campaign.status"
       class="mb-8"
     />
 
-    <!-- Targeting summary -->
-    <div class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+    <!-- Targeting / stats summary — only when at least one field is present -->
+    <div
+      v-if="showTargetingSummary"
+      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+    >
       <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">
-        Targeting Summary
+        {{ campaign.targetingData ? "Targeting Summary" : "Campaign Summary" }}
       </h3>
       <div class="flex items-start gap-4">
-        <!-- Placeholder map rectangle -->
+        <!-- Map placeholder only when targeting geometry exists -->
         <div
+          v-if="campaign.targetingData"
           class="w-48 h-32 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center shrink-0"
         >
           <span class="text-xs text-gray-400">Map preview</span>
         </div>
         <div class="space-y-2 text-sm">
-          <div>
+          <div v-if="campaign.goalType">
             <span class="text-gray-500">Goal:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium">
-              {{ campaign.goalType.replace(/_/g, " ") }}
+            <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+              {{ formatGoal(campaign.goalType) }}
             </span>
           </div>
-          <div>
-            <span class="text-gray-500">Households:</span>
+          <div v-if="hasRecipientCount">
+            <span class="text-gray-500">Recipients:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
-              {{ campaign.householdCount.toLocaleString() }}
+              {{ recipientCount.toLocaleString() }}
             </span>
           </div>
-          <div>
+          <div v-if="typeof campaign.sequenceLength === 'number'">
             <span class="text-gray-500">Sequence:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
               {{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}
             </span>
           </div>
-          <div>
+          <div v-if="campaign.order || campaign.orderContractPresent || typeof campaign.totalCost === 'number'">
             <span class="text-gray-500">Total cost:</span>
             <span class="ml-2 text-[#0b2d50] font-medium">
-              ${{ campaign.totalCost.toFixed(2) }}
+              {{ campaign.order || campaign.orderContractPresent
+                ? formatOrderAmount(campaign.order?.amounts.quoted_cents, campaign.order?.amounts.currency)
+                : `$${campaign.totalCost!.toFixed(2)}` }}
             </span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Print job confirm modal -->
-    <PrintJobConfirmModal
-      :open="showPrintModal"
-      :org-id="campaign.orgId"
-      :recipient-count="recipientCount"
-      :card-count="campaign.cards.length"
-      :front-preview-url="campaign.cards[0]?.previewImageUrl ?? null"
-      :submitting="printJob.phase.value === 'submitting'"
-      @submit="onPrintJobSubmit"
-      @close="showPrintModal = false; printJobError = null"
-    />
   </div>
 </template>

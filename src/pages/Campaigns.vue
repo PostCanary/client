@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useCampaignList, type CampaignTab } from "@/composables/useCampaignList";
 import CampaignListCard from "@/components/campaigns/CampaignListCard.vue";
 import CampaignFilters from "@/components/campaigns/CampaignFilters.vue";
-import { pauseMailCampaign, resumeMailCampaign } from "@/api/mailCampaigns";
+import CampaignViewModal from "@/components/campaigns/CampaignViewModal.vue";
+import { pauseMailCampaign, resumeMailCampaign, getMailCampaign } from "@/api/mailCampaigns";
 import { deleteDraft } from "@/api/campaignDrafts";
+import type { MailCampaign } from "@/types/campaign";
 
 const router = useRouter();
+const route = useRoute();
 const {
   drafts,
   loading,
@@ -19,13 +22,47 @@ const {
   fetch,
 } = useCampaignList();
 
-onMounted(fetch);
+// "Your Campaign" modal state — clicking a card opens this overlay rather
+// than navigating away (Dashboard Flow, Flow 3). Deep links to
+// /app/campaigns/:id still resolve via CampaignDetail.vue's full-page route.
+const selectedCampaign = ref<MailCampaign | null>(null);
+const modalOpen = ref(false);
+const modalLoading = ref(false);
+
+async function openCampaign(id: string) {
+  modalOpen.value = true;
+  modalLoading.value = true;
+  selectedCampaign.value = null;
+  try {
+    selectedCampaign.value = await getMailCampaign(id);
+  } catch (err) {
+    // Stale deep link (?open=<deleted id>) or fetch failure — without this
+    // the modal spun forever on `!campaign` (cross-phase review finding).
+    console.warn(`[Campaigns] failed to load campaign ${id}`, err);
+    modalOpen.value = false;
+  } finally {
+    modalLoading.value = false;
+  }
+}
+
+function closeModal() {
+  modalOpen.value = false;
+  selectedCampaign.value = null;
+}
+
+onMounted(async () => {
+  await fetch();
+  // Support deep-linking straight into the modal, e.g. from a notification
+  // that points at /app/campaigns?open=<id>.
+  const openId = route.query.open;
+  if (typeof openId === "string" && openId) {
+    openCampaign(openId);
+  }
+});
 
 const tabs: { key: CampaignTab; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "drafts", label: "Drafts" },
-  { key: "completed", label: "Completed" },
-  { key: "paused", label: "Paused" },
+  { key: "draft", label: "Draft" },
+  { key: "sent", label: "Sent" },
 ];
 
 async function handlePause(id: string) {
@@ -48,15 +85,13 @@ function resumeDraft(draftId: string) {
 }
 
 const emptyMessages: Record<CampaignTab, string> = {
-  active: "No active campaigns yet. Send your first postcards →",
-  drafts: "No drafts. Start a new campaign to see it here.",
-  completed: "No completed campaigns yet.",
-  paused: "No paused campaigns.",
+  draft: "No drafts. Start a new campaign to see it here.",
+  sent: "No sent campaigns yet.",
 };
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-8 px-4">
+  <div class="w-full max-w-6xl mx-auto py-8 px-4">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-[#0b2d50]">Campaigns</h1>
@@ -83,17 +118,29 @@ const emptyMessages: Record<CampaignTab, string> = {
       >
         {{ tab.label }}
         <span
-          v-if="tabCounts[tab.key] > 0"
-          class="ml-1 text-xs"
-          :class="activeTab === tab.key ? 'text-gray-400' : 'text-gray-400'"
+          v-if="
+            tab.key === 'draft' &&
+            tabCounts.draft !== null &&
+            tabCounts.draft > 0
+          "
+          class="ml-1 inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white"
+          data-testid="campaigns-draft-count"
+          :aria-label="`${tabCounts.draft} campaign ${tabCounts.draft === 1 ? 'draft' : 'drafts'}`"
         >
-          ({{ tabCounts[tab.key] }})
+          {{ tabCounts.draft }}
+        </span>
+        <span
+          v-else-if="tab.key === 'sent' && tabCounts.sent > 0"
+          class="ml-1 text-xs text-gray-400"
+        >
+          ({{ tabCounts.sent }})
         </span>
       </button>
     </div>
 
     <!-- Filters -->
     <CampaignFilters
+      v-if="activeTab === 'sent'"
       v-model:search-query="searchQuery"
       v-model:sort-by="sortBy"
       class="mb-4"
@@ -106,33 +153,29 @@ const emptyMessages: Record<CampaignTab, string> = {
       />
     </div>
 
-    <!-- Campaign list (active/completed/paused tabs) -->
-    <template v-else-if="activeTab !== 'drafts'">
+    <!-- Sent campaign list; internal lifecycle statuses stay on the cards. -->
+    <template v-else-if="activeTab === 'sent'">
       <div v-if="filtered.length === 0" class="text-center py-12">
         <p class="text-gray-400">{{ emptyMessages[activeTab] }}</p>
-        <button
-          v-if="activeTab === 'active'"
-          class="mt-3 text-sm text-[#47bfa9] font-medium hover:underline"
-          @click="router.push('/app/send')"
-        >
-          Send your first postcards
-        </button>
       </div>
-      <div v-else class="space-y-3">
+      <!-- Wireframe Flow 3: preview-forward tiles in a responsive grid,
+           not a compact list — the design IS the card. -->
+      <div v-else class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <CampaignListCard
           v-for="campaign in filtered"
           :key="campaign.id"
           :campaign="campaign"
+          @open="openCampaign"
           @pause="handlePause"
           @resume="handleResume"
         />
       </div>
     </template>
 
-    <!-- Drafts tab -->
+    <!-- Draft tab -->
     <template v-else>
       <div v-if="drafts.length === 0" class="text-center py-12">
-        <p class="text-gray-400">{{ emptyMessages.drafts }}</p>
+        <p class="text-gray-400">{{ emptyMessages.draft }}</p>
       </div>
       <div v-else class="space-y-3">
         <div
@@ -179,5 +222,12 @@ const emptyMessages: Record<CampaignTab, string> = {
         </div>
       </div>
     </template>
+
+    <CampaignViewModal
+      :open="modalOpen"
+      :campaign="selectedCampaign"
+      :loading="modalLoading"
+      @close="closeModal"
+    />
   </div>
 </template>

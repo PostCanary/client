@@ -290,17 +290,17 @@ describe("StepDesign — single-owner card state (POS-121/123/119.2 clobber clas
 
     // Simulate the AI path: the STORE is rewritten with fresh cards while
     // the component is mounted (useAiGenerate → generateCardsForDraft).
+    const regenerated = makeCard(1, "offer");
     const fresh = [
-      makeCard(1, "offer"),
-      makeCard(2, "proof"),
-      makeCard(3, "last_chance"),
-    ].map((c, i) => ({
-      ...c,
-      resolvedContent: {
-        ...c.resolvedContent,
-        headline: `AI FRESH ${i + 1}`,
+      {
+        ...regenerated,
+        resolvedContent: {
+          ...regenerated.resolvedContent,
+          headline: "AI FRESH 1",
+          offerText: "AI FRESH OFFER",
+        },
       },
-    }));
+    ];
     draftStore.setSequenceCards(fresh, { source: "system" });
     await flushPromises();
 
@@ -316,12 +316,12 @@ describe("StepDesign — single-owner card state (POS-121/123/119.2 clobber clas
     await flushPromises();
 
     const stored = draftStore.draft!.design!.sequenceCards!;
-    // Card 1 carries the user's edit...
+    // The card carries the user's edit...
     expect(stored[0]!.resolvedContent.headline).toContain("USER EDIT 1");
-    // ...and cards 2/3 keep the AI-fresh content instead of reverting to
-    // the pre-regeneration cards (the POS-121 data-loss signature).
-    expect(stored[1]!.resolvedContent.headline).toBe("AI FRESH 2");
-    expect(stored[2]!.resolvedContent.headline).toBe("AI FRESH 3");
+    // ...and an adjacent AI-fresh field survives instead of reverting to
+    // the pre-regeneration card (the POS-121 data-loss signature). POS-174
+    // intentionally limits the sequence to one card.
+    expect(stored[0]!.resolvedContent.offerText).toBe("AI FRESH OFFER");
   });
 
   it("a template switch writes cards and layout to the store in one write", async () => {

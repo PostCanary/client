@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { onBeforeRouteLeave } from "vue-router";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useAuthStore } from "@/stores/auth";
 import { useScrapeRegenWatcher } from "@/composables/useScrapeRegenWatcher";
-import WizardProgress from "./WizardProgress.vue";
 import StepGoal from "./StepGoal.vue";
 import StepTargeting from "./StepTargeting.vue";
-import StepDesign from "./StepDesign.vue";
+import StepUploadDesign from "./StepUploadDesign.vue";
 import StepReview from "./StepReview.vue";
 import type { WizardStep } from "@/types/campaign";
 
 const draftStore = useCampaignDraftStore();
+const route = useRoute();
+const router = useRouter();
 const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 
@@ -66,21 +67,59 @@ function retryScrape() {
 const step = computed(() => draftStore.currentStep);
 const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
 
-// POS-138: step 3 no longer flips `isStepComplete` on its own (that now
-// requires the explicit review signal in goNext), but auto-generated cards
-// always exist by the time the user reaches this step, so Next should still
-// be clickable — clicking it IS the review. Every other step still gates
-// on its real completion flag.
+// POS-190: Send-to-a-List owns a dedicated Step 2 route. Persisted list
+// drafts used to fall through to the area-targeting component whenever the
+// customer returned from Step 3/4, which both hid the approved list and
+// exposed controls whose counts were not included at checkout.
+watch(
+  [
+    step,
+    () => draftStore.draft?.goal?.goalType,
+    () => draftStore.draft?.audience?.audienceId,
+  ],
+  ([nextStep, goalType, audienceId]) => {
+    if (
+      nextStep !== 2 ||
+      goalType !== "send_to_list" ||
+      route.path.includes("/sttl-step-2")
+    ) {
+      return;
+    }
+    const draftId = draftStore.draft?.id;
+    if (!draftId) return;
+    void router.replace({
+      // Navigate by concrete path rather than the parent's route name. The
+      // named parent resolves only WizardLayout and omits its empty-path child,
+      // which renders a blank <main> until a hard reload matches the URL.
+      path: `/app/send/${draftId}/sttl-step-2`,
+      query: {
+        ...route.query,
+        ...(audienceId ? { audienceId } : {}),
+      },
+    });
+  },
+  { immediate: true },
+);
+
+// POS-147/148 (Flow v2): step 3 is now Upload Your Design — advance once
+// the customer has either uploaded artwork or requested a paid design.
+// The legacy "cards exist" fallback applies ONLY to drafts that already
+// completed step 3 in the pre-Flow-v2 studio: background generation
+// populates sequenceCards on every new draft, so cards alone must not
+// open the gate (cross-phase review finding). Every other step still
+// gates on its real completion flag.
 const canAdvance = computed(() => {
   if (step.value === 3) {
-    return (draftStore.draft?.design?.sequenceCards?.length ?? 0) > 0;
+    const design = draftStore.draft?.design;
+    const source = design?.designSource;
+    if (source === "uploaded" || source === "requested") return true;
+    return (
+      completedSteps.value.includes(3) &&
+      (design?.sequenceCards?.length ?? 0) > 0
+    );
   }
   return draftStore.isStepComplete(step.value as WizardStep);
 });
-
-function goToStep(s: WizardStep) {
-  draftStore.goToStep(s);
-}
 
 function goBack() {
   if (step.value > 1) {
@@ -88,8 +127,18 @@ function goBack() {
   }
 }
 
-function goNext() {
+async function goNext() {
   if (step.value < 4 && canAdvance.value) {
+    if (step.value === 2) {
+      const draftId = await draftStore.enterStepThree();
+      if (route.params.draftId !== draftId) {
+        await router.replace({
+          path: `/app/send/${draftId}`,
+          query: route.query,
+        });
+      }
+      return;
+    }
     // POS-138: leaving step 3 forward is the explicit "reviewed" signal —
     // auto-generated cards never complete the step on their own (see
     // setDesign in useCampaignDraftStore), so this is what checks it off
@@ -103,7 +152,11 @@ function goNext() {
 
 // Force-save on browser close/refresh using keepalive fetch (survives tab close)
 function handleBeforeUnload(e: BeforeUnloadEvent) {
-  if (draftStore.draft && draftStore.draft.completedSteps.length > 0) {
+  if (
+    draftStore.isPersisted &&
+    draftStore.draft &&
+    draftStore.draft.completedSteps.length > 0
+  ) {
     e.preventDefault();
   }
   // Use beaconSave (fetch+keepalive) instead of async saveNow — browsers don't
@@ -113,6 +166,7 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 
 // Intercept browser back — go to previous wizard step instead of leaving
 function handlePopstate() {
+  if (!draftStore.isPersisted) return;
   if (step.value > 1) {
     // Push state back so we stay in the wizard
     window.history.pushState(null, "", window.location.href);
@@ -122,32 +176,34 @@ function handlePopstate() {
 
 window.addEventListener("beforeunload", handleBeforeUnload);
 window.addEventListener("popstate", handlePopstate);
-// Push initial state so first back press triggers popstate instead of leaving
-window.history.pushState(null, "", window.location.href);
+let historyGuardArmed = false;
+const stopPersistedWatch = watch(
+  () => draftStore.isPersisted,
+  (isPersisted) => {
+    if (isPersisted && !historyGuardArmed) {
+      // Persisted drafts keep the existing in-wizard browser-back behavior.
+      window.history.pushState(null, "", window.location.href);
+      historyGuardArmed = true;
+    }
+  },
+  { immediate: true },
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("popstate", handlePopstate);
+  stopPersistedWatch();
 });
 
 // Save on route leave
 onBeforeRouteLeave(async () => {
-  await draftStore.saveNow();
+  if (draftStore.isPersisted) await draftStore.saveNow();
   return true;
 });
 </script>
 
 <template>
   <div class="flex flex-col h-full">
-    <!-- Progress bar (teleported into WizardLayout header) -->
-    <Teleport to="#wizard-progress-slot">
-      <WizardProgress
-        :current-step="step as WizardStep"
-        :completed-steps="completedSteps as WizardStep[]"
-        @goto="goToStep"
-      />
-    </Teleport>
-
     <!-- Always-mounted at fixed height so save/error state doesn't cause layout shift. -->
     <div
       class="h-7 shrink-0 text-xs flex items-center justify-center px-4 transition-colors"
@@ -261,7 +317,7 @@ onBeforeRouteLeave(async () => {
     <div class="flex-1 overflow-y-auto">
       <StepGoal v-if="step === 1" />
       <StepTargeting v-else-if="step === 2" />
-      <StepDesign v-else-if="step === 3" />
+      <StepUploadDesign v-else-if="step === 3" />
       <StepReview v-else-if="step === 4" />
     </div>
 

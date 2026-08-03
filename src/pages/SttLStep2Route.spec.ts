@@ -132,4 +132,46 @@ describe('SttLStep2Route — post-approval navigation', () => {
     expect(wrapper.find('[data-testid="sttl-approved-banner"]').exists()).toBe(true)
     expect(pushMock).not.toHaveBeenCalled()
   })
+
+  it('accepts a CSV dropped on the upload zone instead of letting the browser open it', async () => {
+    routeState.params = {}
+    routeState.query = {}
+    loadDraftMock.mockResolvedValue(makeDraft())
+    const wrapper = mountRoute()
+    await flushPromises()
+
+    const csv = new File(
+      ['first_name,last_name,address,city,state,zip\nAda,Lovelace,1 Main St,Buffalo,NY,14201'],
+      'audience.csv',
+      { type: 'text/csv' },
+    )
+    await wrapper.find('[data-testid="sttl-upload-dropzone"]').trigger('drop', {
+      dataTransfer: { files: [csv] },
+    })
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'SttLStep2' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'SttLStep2' }).props('file')).toMatchObject({
+      name: 'audience.csv',
+      type: 'text/csv',
+    })
+    expect(wrapper.find('[data-testid="sttl-file-error"]').exists()).toBe(false)
+  })
+
+  it('rejects a non-CSV dropped on the upload zone', async () => {
+    routeState.params = {}
+    routeState.query = {}
+    loadDraftMock.mockResolvedValue(makeDraft())
+    const wrapper = mountRoute()
+    await flushPromises()
+
+    const image = new File(['not a csv'], 'artwork.png', { type: 'image/png' })
+    await wrapper.find('[data-testid="sttl-upload-dropzone"]').trigger('drop', {
+      dataTransfer: { files: [image] },
+    })
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'SttLStep2' }).exists()).toBe(false)
+    expect(wrapper.get('[data-testid="sttl-file-error"]').text()).toBe('Choose a CSV file.')
+  })
 })

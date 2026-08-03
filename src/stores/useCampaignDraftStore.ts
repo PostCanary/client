@@ -8,8 +8,11 @@ import type {
   GoalSelection,
   TargetingSelection,
   DesignSelection,
+  DesignReturnAddress,
   ReviewSelection,
   AudienceWizardState,
+  UploadedDesignAsset,
+  DesignRequestBrief,
 } from "@/types/campaign";
 import type {
   AudienceCostPreview,
@@ -30,6 +33,7 @@ import {
 } from "@/data/templates";
 import type { CampaignGoalType } from "@/types/campaign";
 import { disarmScrapeRegenWatcher } from "@/composables/scrapeRegenState";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,9 +47,67 @@ let _generatingCards = false;
 // made during the generation window (S73 live-observed race).
 let _designRevision = 0;
 let _saveChain: Promise<void> | null = null;
+let _persistForStepThreeChain: Promise<string> | null = null;
 let _saveRevision = 0;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
+const SINGLE_MAILING_COUNT = 1;
+
+/**
+ * New campaigns have one mailing. Keep this migration at the draft boundary so
+ * historical approved campaigns remain untouched on their read-only paths.
+ */
+function normalizeDraftForSingleMailing(draft: CampaignDraft): boolean {
+  let normalized = false;
+  let generatedCardsTrimmed = false;
+
+  if (draft.goal && draft.goal.sequenceLength !== SINGLE_MAILING_COUNT) {
+    draft.goal = { ...draft.goal, sequenceLength: SINGLE_MAILING_COUNT };
+    normalized = true;
+  }
+
+  if (
+    draft.targeting &&
+    (draft.targeting.sequenceLength !== SINGLE_MAILING_COUNT ||
+      draft.targeting.estimatedCostSequence !==
+        draft.targeting.estimatedCostSingle)
+  ) {
+    draft.targeting = {
+      ...draft.targeting,
+      sequenceLength: SINGLE_MAILING_COUNT,
+      estimatedCostSequence: draft.targeting.estimatedCostSingle,
+    };
+    normalized = true;
+  }
+
+  const design = draft.design;
+  const isCustomerSupplied =
+    design?.designSource === "uploaded" || design?.designSource === "requested";
+  if (!isCustomerSupplied && (design?.sequenceCards.length ?? 0) > 1) {
+    draft.design = {
+      ...design!,
+      sequenceCards: design!.sequenceCards.slice(0, SINGLE_MAILING_COUNT),
+    };
+    generatedCardsTrimmed = true;
+    normalized = true;
+  }
+
+  if (normalized) {
+    // A persisted three-card review may carry three schedules and a triple
+    // charge. Clear it so Step 4 rebuilds a single schedule and cost line.
+    draft.review = null;
+    draft.completedSteps = draft.completedSteps.filter((step) => step !== 4);
+    if (generatedCardsTrimmed) {
+      draft.completedSteps = draft.completedSteps.filter((step) => step !== 3);
+    }
+    const reviewSteps: WizardStep[] = generatedCardsTrimmed ? [3, 4] : [4];
+    draft.needsReviewSteps = Array.from(
+      new Set([...draft.needsReviewSteps, ...reviewSteps]),
+    ).sort() as WizardStep[];
+  }
+
+  return normalized;
+}
 
 export const useCampaignDraftStore = defineStore("campaignDraft", {
   state: () => ({
@@ -58,6 +120,10 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     audienceSource: null as "csv" | "existing" | null,
     suppressionResult: null as AudienceSuppressionResult | null,
     costPreview: null as AudienceCostPreview | null,
+    // Runtime-only notice for a resumed legacy draft. The persisted
+    // needsReviewSteps are the durable gate; this gives the customer an
+    // explicit explanation during the same session.
+    singleMailingReviewRequired: false,
   }),
 
   getters: {
@@ -81,6 +147,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       return (state.draft.completedSteps.length / 4) * 100;
     },
     isDirty: (): boolean => _dirty,
+    isPersisted: (state): boolean => Boolean(state.draft?.id),
   },
 
   actions: {
@@ -100,25 +167,48 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     // --- Lifecycle ---
-    async startNew() {
-      this.loading = true;
+    async startNew(orgId: string) {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = null;
+      _pendingSave = false;
+      _retryCount = 0;
+      _dirty = false;
+      _saveChain = null;
+      _persistForStepThreeChain = null;
       this.error = null;
-      try {
-        const draft = await createDraft();
-        this.draft = draft;
-      } catch (e: any) {
-        this.error = "Failed to start campaign. Please try again.";
-        throw e;
-      } finally {
-        this.loading = false;
-      }
+      const now = new Date().toISOString();
+      this.draft = {
+        id: "",
+        orgId,
+        currentStep: 1,
+        completedSteps: [],
+        needsReviewSteps: [],
+        campaignType: "targeted",
+        goal: null,
+        targeting: null,
+        audience: null,
+        design: null,
+        review: null,
+        createdAt: now,
+        updatedAt: now,
+        schemaVersion: 1,
+      };
+      this.singleMailingReviewRequired = false;
+      this.loading = false;
     },
 
     async resume(draftId: string) {
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = null;
+      _persistForStepThreeChain = null;
       this.loading = true;
       this.error = null;
       try {
         this.draft = await loadDraft(draftId);
+        this.singleMailingReviewRequired = normalizeDraftForSingleMailing(
+          this.draft,
+        );
+        if (this.singleMailingReviewRequired) this._debounceSave();
       } catch (e: any) {
         this.error = "Failed to load draft. Please try again.";
         throw e;
@@ -129,8 +219,81 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     async discard() {
       if (this.draft) {
-        await deleteDraft(this.draft.id);
+        if (this.draft.id) {
+          await deleteDraft(this.draft.id);
+          void useCampaignDraftListStore().refresh(this.draft.orgId);
+        }
         this.draft = null;
+      }
+    },
+
+    /**
+     * Step 3 is the persistence boundary for new campaigns. The create call
+     * uses the existing draft endpoint, then the first save copies the
+     * in-memory Step 1/2 selections into that server draft before Step 3
+     * renders. A shared promise prevents double-clicks/retries from creating
+     * duplicate drafts.
+     */
+    async enterStepThree(): Promise<string> {
+      if (!this.draft) throw new Error("Campaign draft is not initialized");
+
+      if (this.draft.id) {
+        this.goToStep(3);
+        await this.saveNow();
+        return this.draft.id;
+      }
+
+      if (_persistForStepThreeChain) return _persistForStepThreeChain;
+
+      const localDraft = this.draft;
+      _persistForStepThreeChain = (async () => {
+        this.saving = true;
+        this.error = null;
+        let createdId: string | null = null;
+        try {
+          const created = await createDraft();
+          createdId = created.id;
+          // The user may have changed Step 2 state while the POST was in
+          // flight. Merge the latest in-memory selections, not a stale copy.
+          const latest = this.draft === localDraft ? this.draft : localDraft;
+          this.draft = {
+            ...created,
+            ...latest,
+            id: created.id,
+            orgId: created.orgId,
+            currentStep: 3,
+            createdAt: created.createdAt,
+            updatedAt: created.updatedAt,
+            schemaVersion: created.schemaVersion,
+          };
+          _dirty = true;
+          _saveRevision++;
+          this.saving = false;
+          await this.saveNow(true);
+          void useCampaignDraftListStore().refresh(this.draft.orgId);
+          return this.draft.id;
+        } catch (error) {
+          // POST succeeded but the initial PUT did not: roll the empty server
+          // row back so a retry cannot leave or multiply phantom drafts.
+          if (createdId) {
+            try {
+              await deleteDraft(createdId);
+            } catch {
+              // Preserve the original persistence error for the UI.
+            }
+          }
+          this.draft = localDraft;
+          this.error = "Failed to save campaign. Please try again.";
+          throw error;
+        } finally {
+          this.saving = false;
+        }
+      })();
+
+      try {
+        return await _persistForStepThreeChain;
+      } finally {
+        _persistForStepThreeChain = null;
       }
     },
 
@@ -144,7 +307,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     setGoal(goal: GoalSelection) {
       if (!this.draft) return;
       const goalChanged = this.draft.goal?.goalType !== goal.goalType;
-      this.draft.goal = goal;
+      this.draft.goal = { ...goal, sequenceLength: SINGLE_MAILING_COUNT };
       this._markComplete(1);
 
       if (goalChanged && this.draft.completedSteps.length > 1) {
@@ -154,13 +317,18 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           this.draft!.completedSteps.includes(s as WizardStep),
         ) as WizardStep[];
       }
+      this.normalizeSingleMailingDraft();
       this._debounceSave();
       this.generateCardsForDraft();
     },
 
     setTargeting(targeting: TargetingSelection) {
       if (!this.draft) return;
-      this.draft.targeting = targeting;
+      this.draft.targeting = {
+        ...targeting,
+        sequenceLength: SINGLE_MAILING_COUNT,
+        estimatedCostSequence: targeting.estimatedCostSingle,
+      };
       this._markComplete(2);
       this._clearReview(2);
       // Flag steps 3 and 4 for review — cost/schedule data depends on targeting
@@ -223,7 +391,13 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     setDesign(design: DesignSelection, opts?: { source?: "user" | "system" }) {
       if (!this.draft) return;
       _designRevision++;
-      this.draft.design = design;
+      this.draft.design = {
+        ...design,
+        sequenceCards:
+          design.designSource === "uploaded" || design.designSource === "requested"
+            ? design.sequenceCards
+            : design.sequenceCards.slice(0, SINGLE_MAILING_COUNT),
+      };
       if ((opts?.source ?? "user") === "user") {
         this.draft.designUserEdited = true;
         this._markComplete(3);
@@ -249,19 +423,58 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       opts?: { source?: "user" | "system"; layout?: TemplateLayoutType },
     ) {
       if (!this.draft) return;
+      const prev = this.draft.design;
       this.setDesign(
         {
           templateId: cards[0]?.templateId ?? "",
           templateLayoutType:
             opts?.layout ??
-            this.draft.design?.templateLayoutType ??
+            prev?.templateLayoutType ??
             "full-bleed",
           isCustomUpload: false,
           customUploadUrl: null,
-          sequenceCards: cards,
+          sequenceCards: cards.slice(0, SINGLE_MAILING_COUNT),
+          // Preserve fields that live alongside the card sequence so a
+          // card edit cannot wipe a campaign return-address override.
+          ...(prev?.designSource !== undefined
+            ? { designSource: prev.designSource }
+            : {}),
+          ...(prev?.uploadedAsset !== undefined
+            ? { uploadedAsset: prev.uploadedAsset }
+            : {}),
+          ...(prev?.designRequest !== undefined
+            ? { designRequest: prev.designRequest }
+            : {}),
+          ...(prev?.returnAddress
+            ? { returnAddress: prev.returnAddress }
+            : {}),
         },
         opts,
       );
+    },
+
+    /**
+     * POS-161: per-campaign return-address override. Patches design without
+     * flipping designUserEdited (not a creative edit) and without completing
+     * step 3. Seeds a minimal DesignSelection when design is still null so
+     * Review can set the override before cards exist.
+     */
+    setReturnAddress(returnAddress: DesignReturnAddress | null) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      if (returnAddress) {
+        this.draft.design = { ...base, returnAddress };
+      } else {
+        const { returnAddress: _drop, ...rest } = base;
+        this.draft.design = rest;
+      }
+      this._debounceSave();
     },
 
     /** Explicit "I reviewed step 3" signal for the case where the user
@@ -275,9 +488,79 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this._debounceSave();
     },
 
+    /** Flow v2 (POS-147/POS-156): customer uploaded their own front/back
+     * artwork (server-stored URLs on the asset, never base64).
+     * `this.draft.design` may still be null for a fresh draft, so this
+     * seeds a minimal DesignSelection rather than assuming
+     * setDesign/setSequenceCards already ran. */
+    setUploadedDesign(asset: UploadedDesignAsset) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "uploaded",
+        uploadedAsset: asset,
+        designRequest: null,
+        sequenceCards: [],
+      };
+      // Count as a design edit so an in-flight generateCardsForDraft's
+      // mid-generation guard sees it (cross-phase review finding: without
+      // this, a late generation result clobbered the upload).
+      _designRevision++;
+      this.draft.designUserEdited = true;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /** Flow v2 (POS-148): customer requested a $199 professional design
+     * instead of uploading or using the studio. Network delivery of the
+     * brief to the server (POST /api/design-requests) is handled by the
+     * caller (StepUploadDesign) as fire-and-forget — this action's job is
+     * only to record the choice on the draft so step 3 completes. */
+    setDesignRequest(brief: DesignRequestBrief) {
+      if (!this.draft) return;
+      const base: DesignSelection = this.draft.design ?? {
+        templateId: "",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      this.draft.design = {
+        ...base,
+        designSource: "requested",
+        designRequest: brief,
+        uploadedAsset: null,
+        sequenceCards: [],
+      };
+      _designRevision++;
+      this.draft.designUserEdited = true;
+      this._markComplete(3);
+      this._clearReview(3);
+      this._debounceSave();
+    },
+
     setReview(review: ReviewSelection) {
       if (!this.draft) return;
-      this.draft.review = review;
+      this.draft.review = {
+        ...review,
+        schedules: review.schedules.slice(0, SINGLE_MAILING_COUNT).map((schedule) => ({
+          ...schedule,
+          cardNumber: 1,
+        })),
+        ...(review.perCardCosts
+          ? {
+              perCardCosts: review.perCardCosts.slice(0, SINGLE_MAILING_COUNT),
+            }
+          : {}),
+      };
       this._markComplete(4);
       this._debounceSave();
     },
@@ -303,6 +586,13 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.audienceSource = null;
       this.suppressionResult = null;
       this.costPreview = null;
+    },
+
+    normalizeSingleMailingDraft(): boolean {
+      if (!this.draft) return false;
+      const normalized = normalizeDraftForSingleMailing(this.draft);
+      if (normalized) this.singleMailingReviewRequired = true;
+      return normalized;
     },
 
     goToStep(step: WizardStep) {
@@ -344,13 +634,8 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       _saveTimer = setTimeout(() => this._save(), 500);
     },
 
-    async _save() {
-      if (!this.draft) return;
-      // MOCK MODE: skip API save
-      if (import.meta.env.VITE_SKIP_AUTH === "true") {
-        this.lastSavedAt = new Date().toISOString();
-        return;
-      }
+    async _save(throwOnFailure = false) {
+      if (!this.draft || !this.draft.id) return;
       if (this.saving) {
         _pendingSave = true;
         if (_saveChain) await _saveChain;
@@ -370,7 +655,12 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         } else {
           _pendingSave = true;
         }
-      } catch {
+      } catch (error) {
+        if (throwOnFailure) {
+          this.error = "Unable to save. Please try again.";
+          _pendingSave = false;
+          throw error;
+        }
         if (_retryCount < MAX_RETRIES) {
           _retryCount++;
           this.error = "Save failed — retrying...";
@@ -398,13 +688,17 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       }
     },
 
-    async saveNow() {
+    async saveNow(throwOnFailure = false) {
       if (_saveTimer) clearTimeout(_saveTimer);
-      await this._save();
+      await this._save(throwOnFailure);
     },
 
     async generateCardsForDraft() {
       if (!this.draft || _generatingCards) return;
+      // Flow v2: an explicit customer choice (own artwork / $199 request)
+      // must never be overwritten by background generation.
+      const src = this.draft.design?.designSource;
+      if (src === "uploaded" || src === "requested") return;
       // Captured before ANY await so every design edit after this call
       // starts counts as a mid-generation modification.
       const revisionAtStart = _designRevision;
@@ -430,7 +724,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         }
 
         const goalType = (this.draft.goal?.goalType ?? "neighbor_marketing") as CampaignGoalType;
-        const seqLen = this.draft.goal?.sequenceLength ?? 3;
+        const seqLen = SINGLE_MAILING_COUNT;
         const breakdown = this.draft.targeting?.recipientBreakdown ?? {
           newProspects: 400,
           pastCustomers: 30,
@@ -443,6 +737,11 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
           seqLen,
           breakdown,
         );
+
+        // Flow v2 re-check after the awaits: the customer may have uploaded
+        // or requested a design while generation was in flight.
+        const srcNow = this.draft.design?.designSource;
+        if (srcNow === "uploaded" || srcNow === "requested") return;
 
         // S73 race fix: the user edited the design while the AI calls were
         // in flight. Their cards are what's on screen — never replace them
@@ -487,6 +786,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             }));
           }
         }
+        const prevReturn = this.draft.design?.returnAddress;
         this.setDesign(
           {
             templateId: outCards[0]?.templateId ?? "",
@@ -494,6 +794,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             isCustomUpload: false,
             customUploadUrl: null,
             sequenceCards: outCards,
+            ...(prevReturn ? { returnAddress: prevReturn } : {}),
           },
           { source: "system" },
         );
@@ -515,13 +816,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     /** Best-effort save that survives tab close via fetch keepalive. */
     beaconSave() {
-      if (!this.draft || !_dirty) return;
-      // Mirror _save() guards
-      if (import.meta.env.VITE_SKIP_AUTH === "true") {
-        this.lastSavedAt = new Date().toISOString();
-        _dirty = false;
-        return;
-      }
+      if (!this.draft?.id || !_dirty) return;
       const payload = {
         current_step: this.draft.currentStep,
         completed_steps: this.draft.completedSteps,

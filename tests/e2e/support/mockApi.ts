@@ -13,10 +13,20 @@ type RequestLog = {
   resumeCalls: number;
   cancelCalls: number;
   changePlanCalls: string[];
+  draftCreates: number;
+  draftSaves: Array<{ draftId: string; payload: JsonMap }>;
   draftLoads: string[];
+  draftCreates: number;
   audienceApprovals: string[];
   audienceSuppressions: string[];
   scrapeRequests: Array<{ website_url?: string }>;
+  designRequests: Array<JsonMap>;
+  // POS-156: multipart design asset uploads (POST /api/design-uploads).
+  designUploads: Array<{ fileName: string | null; mimeType: string | null; size: number | null }>;
+  designCreates: JsonMap[];
+  designDeletes: string[];
+  // POS-161: PUT /api/organizations/return-address payloads.
+  returnAddressUpdates: JsonMap[];
 };
 
 export type MockAppState = {
@@ -49,6 +59,17 @@ export type MockAppState = {
   normalizeByBatchId: Record<string, { status: number; body: JsonMap }>;
   billingPortalUrl: string;
   requestLog: RequestLog;
+  // Flow v2 (POS-147): overrides the hardcoded GET /api/campaign-drafts/:id
+  // response below (current_step/completed_steps/data). Tests that need to
+  // land directly on a specific wizard step (e.g. step 3, Upload Your
+  // Design) set this before navigating instead of driving the whole wizard
+  // by hand. `null` (default) preserves the original hardcoded response so
+  // every pre-existing spec is unaffected.
+  draftOverride: JsonMap | null;
+  // POS-161: org-level business return address for GET/PUT
+  // /api/organizations/return-address. null = not configured.
+  returnAddress: JsonMap | null;
+  designs: JsonMap[];
 };
 
 const ORG_ALPHA = {
@@ -763,11 +784,23 @@ export function createMockAppState(): MockAppState {
       resumeCalls: 0,
       cancelCalls: 0,
       changePlanCalls: [],
+      draftCreates: 0,
+      draftSaves: [],
       draftLoads: [],
+      draftCreates: 0,
       audienceApprovals: [],
       audienceSuppressions: [],
       scrapeRequests: [],
+      designRequests: [],
+      designUploads: [],
+      designCreates: [],
+      designDeletes: [],
+      returnAddressUpdates: [],
     },
+    draftOverride: null,
+    // POS-161: default null so existing specs see "not configured".
+    returnAddress: null,
+    designs: [],
   };
 
   syncSession(state);
@@ -995,6 +1028,43 @@ export async function installMockApi(page: Page, state: MockAppState) {
       return json(route, { orgs: state.orgs });
     }
 
+    // POS-161 — org-level business return address (account default for print).
+    if (pathname === "/api/organizations/return-address" && method === "GET") {
+      return json(route, { return_address: state.returnAddress });
+    }
+    if (pathname === "/api/organizations/return-address" && method === "PUT") {
+      const payload = parseJson(route);
+      const next = payload.return_address ?? null;
+      // Minimal server-side shape validation mirror for client tests.
+      if (
+        !next ||
+        typeof next.address !== "string" ||
+        !next.address.trim() ||
+        typeof next.city !== "string" ||
+        !next.city.trim() ||
+        typeof next.state !== "string" ||
+        !/^[A-Za-z]{2}$/.test(String(next.state).trim()) ||
+        typeof next.zip !== "string" ||
+        !/^\d{5}(-\d{4})?$/.test(String(next.zip).trim())
+      ) {
+        return json(route, { error: "invalid_return_address" }, 400);
+      }
+      const saved = {
+        name: next.name == null || next.name === "" ? null : String(next.name),
+        address: String(next.address).trim(),
+        address2:
+          next.address2 == null || next.address2 === ""
+            ? null
+            : String(next.address2),
+        city: String(next.city).trim(),
+        state: String(next.state).trim().toUpperCase(),
+        zip: String(next.zip).trim(),
+      };
+      state.returnAddress = saved;
+      state.requestLog.returnAddressUpdates.push(saved);
+      return json(route, { return_address: saved });
+    }
+
     const orgMembersMatch = pathname.match(/^\/api\/orgs\/([^/]+)\/members\/?$/);
     if (orgMembersMatch && method === "GET") {
       const orgId = decodeURIComponent(orgMembersMatch[1]);
@@ -1121,6 +1191,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
     }
 
     if (pathname === "/api/campaign-drafts" && method === "POST") {
+      state.requestLog.draftCreates += 1;
       return json(
         route,
         {
@@ -1151,7 +1222,7 @@ export async function installMockApi(page: Page, state: MockAppState) {
     if (draftMatch && method === "GET") {
       const draftId = decodeURIComponent(draftMatch[1]);
       state.requestLog.draftLoads.push(draftId);
-      return json(route, {
+      const base = {
         ok: true,
         id: draftId,
         org_id: activeOrgId(state),
@@ -1170,12 +1241,101 @@ export async function installMockApi(page: Page, state: MockAppState) {
         schema_version: 1,
         created_at: "2026-03-23T00:00:00Z",
         updated_at: "2026-03-23T00:00:00Z",
+      };
+      if (state.draftOverride) {
+        return json(route, {
+          ...base,
+          ...state.draftOverride,
+          data: { ...base.data, ...(state.draftOverride.data ?? {}) },
+        });
+      }
+      return json(route, base);
+    }
+
+    if (pathname === "/api/design-requests" && method === "POST") {
+      const payload = parseJson(route);
+      state.requestLog.designRequests.push(payload);
+      return json(
+        route,
+        { id: `mock-design-request-${state.requestLog.designRequests.length}`, status: "received" },
+        201,
+      );
+    }
+
+    if (pathname === "/api/designs" && method === "GET") {
+      return json(route, { ok: true, designs: state.designs });
+    }
+
+    if (pathname === "/api/designs" && method === "POST") {
+      const payload = parseJson(route);
+      state.requestLog.designCreates.push(payload);
+      const created = {
+        id: `saved-design-${state.requestLog.designCreates.length}`,
+        ...payload,
+        uploaded_asset: {
+          fileName: payload.front_asset.file_name,
+          mimeType: payload.front_asset.mime_type,
+          fileSizeBytes: payload.front_asset.file_size_bytes,
+          widthPx: payload.front_asset.width_px,
+          heightPx: payload.front_asset.height_px,
+          frontUrl: payload.front_asset.url,
+          backUrl: payload.back_asset?.url ?? null,
+        },
+        created_at: "2026-07-23T12:00:00Z",
+        updated_at: "2026-07-23T12:00:00Z",
+      };
+      state.designs.unshift(created);
+      return json(route, { ok: true, design: created }, 201);
+    }
+
+    const designMatch = pathname.match(/^\/api\/designs\/([^/]+)$/);
+    if (designMatch && method === "GET") {
+      const id = decodeURIComponent(designMatch[1]);
+      const found = state.designs.find((design) => design.id === id);
+      return found
+        ? json(route, { ok: true, design: found })
+        : json(route, { error: { message: "Design not found" } }, 404);
+    }
+    if (designMatch && method === "DELETE") {
+      const id = decodeURIComponent(designMatch[1]);
+      state.requestLog.designDeletes.push(id);
+      state.designs = state.designs.filter((design) => design.id !== id);
+      return json(route, { ok: true });
+    }
+
+    // POS-156: server-stored design uploads (multipart field `file`).
+    // Returns a durable /media/design-uploads/... URL — never echoes base64.
+    if (pathname === "/api/design-uploads" && method === "POST") {
+      const contentType = route.request().headers()["content-type"] ?? "";
+      // Playwright multipart posts still expose postDataBuffer; we only need
+      // to log that an upload happened and return a stable contract body.
+      const buffer = route.request().postDataBuffer();
+      const multipartBody = buffer?.toString("utf8") ?? "";
+      const isPdf = multipartBody.includes('filename="front.pdf"');
+      state.requestLog.designUploads.push({
+        fileName: contentType.includes("multipart") ? "uploaded-file" : null,
+        mimeType: contentType || null,
+        size: buffer?.length ?? null,
       });
+      const n = state.requestLog.designUploads.length;
+      return json(
+        route,
+        {
+          asset_id: `mock-design-asset-${n}`,
+          url: `/media/design-uploads/mock-org/asset-${n}.${isPdf ? "pdf" : "png"}`,
+          mime_type: isPdf ? "application/pdf" : "image/png",
+          file_size_bytes: buffer?.length ?? 0,
+          width_px: isPdf ? null : 1875,
+          height_px: isPdf ? null : 2775,
+        },
+        201,
+      );
     }
 
     if (draftMatch && method === "PUT") {
       const draftId = decodeURIComponent(draftMatch[1]);
       const payload = parseJson(route);
+      state.requestLog.draftSaves.push({ draftId, payload });
       return json(route, {
         ok: true,
         id: draftId,

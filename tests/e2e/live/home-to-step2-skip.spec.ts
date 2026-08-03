@@ -31,7 +31,7 @@ const DRAFT_URL_RE = /\/app\/send\/([0-9a-f-]{36})/;
 // /app/home has no such bypass.
 //
 // Reuse the session cookies captured by auth.setup.ts at .auth/live.json
-// (one-time login for dev user drake@postcanary.com). If this file is
+// (one-time login for the staging QA user). If this file is
 // missing, run: `npx playwright test tests/e2e/live/auth.setup.ts` first.
 test.use({
   baseURL: "http://localhost:8080",

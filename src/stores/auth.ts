@@ -16,8 +16,23 @@ import {
   authLogout,
 } from "@/api/auth";
 import { identifyUser, resetUser, captureEvent } from "@/composables/usePostHog";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { useRunStore } from "@/stores/useRunStore";
 
 type LoginMode = "login" | "signup";
+
+function tenantIdentity(me: AuthMeResponse | null): string | null {
+  if (me?.authenticated !== true) return null;
+  const userKey =
+    String(me.user_id ?? "").trim() ||
+    String(me.email ?? "").trim().toLowerCase();
+  if (!userKey) return null;
+  return `${userKey}::${String(me.org_id ?? "")}`;
+}
+
+function clearTenantRunState(): void {
+  useRunStore().clear();
+}
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
@@ -326,8 +341,16 @@ export const useAuthStore = defineStore("auth", {
 
       this._fetchMePromise = (async () => {
         try {
+          const previousIdentity = tenantIdentity(this.me);
           const me = await authMe();
+          const nextIdentity = tenantIdentity(me);
+          if (!nextIdentity || previousIdentity !== nextIdentity) {
+            clearTenantRunState();
+          }
           this.me = me;
+          useCampaignDraftListStore().setActiveOrg(
+            me.authenticated ? me.org_id ?? null : null,
+          );
 
           if (me.authenticated) {
             if (me.email) {
@@ -350,8 +373,10 @@ export const useAuthStore = defineStore("auth", {
           return me;
         } catch (err) {
           console.error("[auth] fetchMe failed", err);
+          clearTenantRunState();
           const fallback: AuthMeResponse = { authenticated: false };
           this.me = fallback;
+          useCampaignDraftListStore().setActiveOrg(null);
           this.profile = null;
           this.onboardingOpen = false;
           return fallback;
@@ -366,14 +391,18 @@ export const useAuthStore = defineStore("auth", {
     },
 
     async logout(): Promise<void> {
+      // Clear tenant-scoped UI state before the logout request can yield.
+      useCampaignDraftListStore().setActiveOrg(null);
       try {
         await authLogout();
       } catch (err) {
         console.error("[auth] logout failed", err);
       }
 
+      clearTenantRunState();
       resetUser();
       this.me = { authenticated: false };
+      useCampaignDraftListStore().setActiveOrg(null);
       this.profile = null;
       this.onboardingOpen = false;
       this.loginModalOpen = false;

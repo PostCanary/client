@@ -1,7 +1,7 @@
 <!-- src/pages/Settings.vue -->
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
 
 import { useUserProfile } from "@/composables/useUserProfile";
@@ -10,9 +10,12 @@ import {
   changeSubscriptionPlan,
   createBillingPortalSession,
   createCheckoutSession,
+  createSetupSession,
+  fetchPaymentMethodSummary,
   pauseSubscription,
   resumeSubscription,
   type BillingState,
+  type PaymentMethodSummary,
   type PlanCode,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
@@ -21,7 +24,12 @@ import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
 import { PLAN_DISPLAY_DETAILS, PLAN_DISPLAY_ORDER } from "@/config/plans";
-import { updateOrg } from "@/api/orgs";
+import {
+  updateOrg,
+  getReturnAddress,
+  updateReturnAddress,
+  type OrgReturnAddress,
+} from "@/api/orgs";
 
 const {
   profile,
@@ -41,8 +49,11 @@ const planModalOpen = ref(false);
 const pauseModalOpen = ref(false);
 const cancelModalOpen = ref(false);
 const selectedPlan = ref<PlanCode | null>(null);
+const paymentMethod = ref<PaymentMethodSummary | null>(null);
+const paymentMethodLoading = ref(false);
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
 const orgStore = useOrgStore();
 const brandKitStore = useBrandKitStore();
@@ -65,6 +76,110 @@ function syncBizNameFromKit() {
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
 const isOrgAdmin = computed(() => orgStore.isAdmin);
+
+// POS-161 — Business mailing (return) address. Required for postcard print
+// submit; account-level default that campaigns can override in Review.
+const returnAddressForm = ref({
+  name: "",
+  address: "",
+  address2: "",
+  city: "",
+  state: "",
+  zip: "",
+});
+const returnAddressLoading = ref(false);
+const returnAddressSaving = ref(false);
+const returnAddressError = ref<string | null>(null);
+
+const ZIP_RE = /^\d{5}(-\d{4})?$/;
+const STATE_RE = /^[A-Za-z]{2}$/;
+
+function validateReturnAddressForm(): string | null {
+  const f = returnAddressForm.value;
+  if (!f.address.trim()) return "Street address is required.";
+  if (!f.city.trim()) return "City is required.";
+  if (!STATE_RE.test(f.state.trim())) return "State must be a 2-letter code.";
+  if (!ZIP_RE.test(f.zip.trim())) {
+    return "ZIP must be 5 digits or ZIP+4 (12345 or 12345-6789).";
+  }
+  return null;
+}
+
+function applyReturnAddress(addr: OrgReturnAddress | null) {
+  if (!addr) {
+    returnAddressForm.value = {
+      name: "",
+      address: "",
+      address2: "",
+      city: "",
+      state: "",
+      zip: "",
+    };
+    return;
+  }
+  returnAddressForm.value = {
+    name: addr.name ?? "",
+    address: addr.address ?? "",
+    address2: addr.address2 ?? "",
+    city: addr.city ?? "",
+    state: addr.state ?? "",
+    zip: addr.zip ?? "",
+  };
+}
+
+async function loadReturnAddress() {
+  if (!auth.orgId) return;
+  returnAddressLoading.value = true;
+  returnAddressError.value = null;
+  try {
+    const addr = await getReturnAddress();
+    applyReturnAddress(addr);
+  } catch (err: any) {
+    // Server route may not exist yet (parallel server lane). Surface quietly
+    // so Settings still loads; empty form is fine.
+    console.warn("[Settings] getReturnAddress failed", err);
+    returnAddressError.value = null;
+  } finally {
+    returnAddressLoading.value = false;
+  }
+}
+
+async function onSaveReturnAddress() {
+  if (!auth.orgId || returnAddressSaving.value) return;
+  const validationError = validateReturnAddressForm();
+  if (validationError) {
+    message.error(validationError);
+    return;
+  }
+
+  const f = returnAddressForm.value;
+  const payload: OrgReturnAddress = {
+    name: f.name.trim() || null,
+    address: f.address.trim(),
+    address2: f.address2.trim() || null,
+    city: f.city.trim(),
+    state: f.state.trim().toUpperCase(),
+    zip: f.zip.trim(),
+  };
+
+  returnAddressSaving.value = true;
+  returnAddressError.value = null;
+  try {
+    const saved = await updateReturnAddress(payload);
+    applyReturnAddress(saved ?? payload);
+    message.success("Business mailing address saved.");
+  } catch (err: any) {
+    console.error("[Settings] updateReturnAddress failed", err);
+    const code = err?.data?.error ?? err?.message;
+    message.error(
+      typeof code === "string" && code
+        ? code
+        : "Failed to save business mailing address.",
+    );
+  } finally {
+    returnAddressSaving.value = false;
+  }
+}
 const billing = computed<BillingState | null>(() => (auth.billing as BillingState | null) ?? null);
 const billingStatus = computed(() =>
   String(billing.value?.subscription_status || "none").toLowerCase()
@@ -84,6 +199,13 @@ const currentPlanLabel = computed(() => {
 });
 const hasManagedSubscription = computed(
   () => billingStatus.value === "active" || billingStatus.value === "paused" || !!currentPlanCode.value
+);
+const paymentMethodActionLabel = computed(() =>
+  hasManagedSubscription.value
+    ? "Payment methods & invoices"
+    : paymentMethod.value?.has_payment_method
+      ? "Change payment method"
+      : "Add payment method"
 );
 const canResumeSubscription = computed(
   () => billingStatus.value === "paused" || cancelAtPeriodEnd.value || pauseAtPeriodEnd.value
@@ -162,7 +284,26 @@ onMounted(async () => {
   loadProfile();
   if (!brandKitStore.hydrated) await brandKitStore.fetch();
   syncBizNameFromKit();
+  void loadReturnAddress();
+  void loadPaymentMethod();
+  if (route.query.billing === "card_saved") {
+    message.success("Payment method saved.");
+  } else if (route.query.billing === "card_setup_cancelled") {
+    message.info("Payment method setup was canceled.");
+  }
 });
+
+async function loadPaymentMethod() {
+  paymentMethodLoading.value = true;
+  try {
+    paymentMethod.value = await fetchPaymentMethodSummary();
+  } catch (err) {
+    console.error("[Settings] Failed to load payment method:", err);
+    paymentMethod.value = null;
+  } finally {
+    paymentMethodLoading.value = false;
+  }
+}
 
 async function onSubmit() {
   const prevWebsiteUrl = (profile.value?.website_url ?? "").trim();
@@ -215,16 +356,32 @@ async function onManageBilling() {
   billingBusy.value = true;
 
   try {
-    const { url } = await createBillingPortalSession();
+    const { url } = hasManagedSubscription.value
+      ? await createBillingPortalSession()
+      : await createSetupSession("/app/settings");
     if (url) {
       window.location.href = url;
       return;
     }
-    console.error("[Settings] No billing portal URL returned from backend");
-    message.error("Unable to open the billing portal right now.");
-  } catch (err) {
+    console.error("[Settings] No billing URL returned from backend");
+    message.error("Unable to open billing right now.");
+  } catch (err: any) {
+    if (
+      hasManagedSubscription.value &&
+      err?.data?.error === "no_stripe_customer"
+    ) {
+      try {
+        const { url } = await createSetupSession("/app/settings");
+        if (url) {
+          window.location.href = url;
+          return;
+        }
+      } catch (setupErr) {
+        console.error("[Settings] Failed to open card setup:", setupErr);
+      }
+    }
     console.error("[Settings] Failed to open billing portal:", err);
-    message.error("Unable to open the billing portal right now.");
+    message.error("Unable to open billing right now.");
   } finally {
     billingBusy.value = false;
   }
@@ -579,6 +736,169 @@ function onReplayTour() {
       </section>
 
       <section
+        v-if="auth.orgId"
+        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        data-testid="settings-return-address"
+      >
+        <div class="space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900">
+              Business mailing address
+            </h2>
+            <p class="mt-1 text-xs text-slate-500">
+              Required return address printed on every postcard. Campaigns can
+              override this at review time.
+            </p>
+          </div>
+
+          <fieldset
+            :disabled="returnAddressLoading || returnAddressSaving || !isOrgAdmin"
+            class="space-y-3"
+          >
+            <div>
+              <label
+                for="settings-return-name"
+                class="block text-sm font-medium text-slate-700"
+              >
+                Name
+                <span class="font-normal text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="settings-return-name"
+                v-model="returnAddressForm.name"
+                type="text"
+                autocomplete="organization"
+                data-testid="settings-return-name"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="settings-return-address"
+                class="block text-sm font-medium text-slate-700"
+              >
+                Street address
+              </label>
+              <input
+                id="settings-return-address"
+                v-model="returnAddressForm.address"
+                type="text"
+                autocomplete="address-line1"
+                data-testid="settings-return-address"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label
+                for="settings-return-address2"
+                class="block text-sm font-medium text-slate-700"
+              >
+                Apt/Suite
+                <span class="font-normal text-slate-400">(optional)</span>
+              </label>
+              <input
+                id="settings-return-address2"
+                v-model="returnAddressForm.address2"
+                type="text"
+                autocomplete="address-line2"
+                data-testid="settings-return-address2"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+              />
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div class="sm:col-span-1">
+                <label
+                  for="settings-return-city"
+                  class="block text-sm font-medium text-slate-700"
+                >
+                  City
+                </label>
+                <input
+                  id="settings-return-city"
+                  v-model="returnAddressForm.city"
+                  type="text"
+                  autocomplete="address-level2"
+                  data-testid="settings-return-city"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
+              <div>
+                <label
+                  for="settings-return-state"
+                  class="block text-sm font-medium text-slate-700"
+                >
+                  State
+                </label>
+                <input
+                  id="settings-return-state"
+                  v-model="returnAddressForm.state"
+                  type="text"
+                  maxlength="2"
+                  autocomplete="address-level1"
+                  data-testid="settings-return-state"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
+              <div>
+                <label
+                  for="settings-return-zip"
+                  class="block text-sm font-medium text-slate-700"
+                >
+                  ZIP
+                </label>
+                <input
+                  id="settings-return-zip"
+                  v-model="returnAddressForm.zip"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  data-testid="settings-return-zip"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <p
+            v-if="!isOrgAdmin"
+            class="text-xs text-slate-500"
+            data-testid="settings-return-address-role-note"
+          >
+            Only organization owners and admins can update the business mailing
+            address.
+          </p>
+
+          <div class="flex items-center justify-end gap-3">
+            <span
+              v-if="returnAddressLoading"
+              class="text-xs text-slate-500"
+            >
+              Loading…
+            </span>
+            <span
+              v-else-if="returnAddressSaving"
+              class="text-xs text-slate-500"
+            >
+              Saving…
+            </span>
+            <button
+              v-if="isOrgAdmin"
+              type="button"
+              class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="returnAddressLoading || returnAddressSaving"
+              data-testid="settings-return-address-save"
+              @click="onSaveReturnAddress"
+            >
+              {{ returnAddressSaving ? "Saving..." : "Save address" }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
         class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
       >
         <div class="space-y-4">
@@ -687,14 +1007,13 @@ function onReplayTour() {
             </button>
 
             <button
-              v-if="hasManagedSubscription"
               type="button"
               class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="billingBusy"
+              :disabled="billingBusy || paymentMethodLoading"
               data-testid="settings-manage-billing"
               @click="onManageBilling"
             >
-              Payment methods &amp; invoices
+              {{ paymentMethodActionLabel }}
             </button>
 
             <button

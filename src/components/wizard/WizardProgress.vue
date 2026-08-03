@@ -12,7 +12,7 @@ const emit = defineEmits<{
 
 const steps = [
   { num: 1 as WizardStep, label: "Choose Your Goal", time: "30 sec" },
-  { num: 2 as WizardStep, label: "Pick Your Neighborhood", time: "1 min" },
+  { num: 2 as WizardStep, label: "Pick Your Area", time: "1 min" },
   { num: 3 as WizardStep, label: "Your Postcard", time: "2 min" },
   { num: 4 as WizardStep, label: "Review & Send", time: "1 min" },
 ];

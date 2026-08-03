@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config as loadEnvironmentFile } from "dotenv";
+
+loadEnvironmentFile({ path: ".env.test.local", quiet: true });
 
 /**
  * Live config variant for the local HTTPS smoke proxy

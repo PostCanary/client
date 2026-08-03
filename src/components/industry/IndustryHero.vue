@@ -23,10 +23,10 @@ const steps = computed(
 
 const onHeroGetStarted = () => {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/dashboard", "signup");
+    auth.openLoginModal("/app/home", "signup");
     return;
   }
-  window.location.href = "/dashboard";
+  window.location.href = "/app/home";
 };
 </script>
 

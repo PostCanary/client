@@ -28,7 +28,7 @@ test("greeting shows user's first name + time-appropriate salutation", async ({ 
 
   // Name should NOT be "Drake" anymore (was the hardcoded mock). It
   // should be whatever the dev auth user's first name is — for
-  // drake@postcanary.com the full_name is "Joe Shmoe" → "Joe".
+  // The seeded QA profile has full_name "Joe Shmoe" → "Joe".
   expect(
     text,
     `greeting should NOT use the hardcoded mock name "Drake": ${text}`,

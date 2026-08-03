@@ -250,6 +250,18 @@ export const postForm = <T = any>(
   cfg?: AxiosRequestConfig
 ) => api<T>(path, { method: "POST", data: form, ...cfg });
 
+/**
+ * POST multipart/form-data. Same error-handling path as postJson/postForm
+ * (401/402 gate events, CSRF retry, normalized Error with status/data).
+ * Do not set Content-Type manually — axios/browser attach the boundary.
+ * Pass `onUploadProgress` via cfg for upload progress UI.
+ */
+export const postMultipart = <T = any>(
+  path: string,
+  form: FormData,
+  cfg?: AxiosRequestConfig
+) => api<T>(path, { method: "POST", data: form, ...cfg });
+
 export const putJson = <T = any>(
   path: string,
   body?: any,

@@ -35,13 +35,21 @@ vi.mock("@/stores/useBrandKitStore", () => ({
 }));
 vi.mock("@/api/campaignDrafts", () => ({
   saveDraft: vi.fn().mockResolvedValue(undefined),
-  getDraft: vi.fn(),
+  loadDraft: vi.fn(),
   createDraft: vi.fn(),
   deleteDraft: vi.fn(),
-  listDrafts: vi.fn(),
+  listDrafts: vi.fn().mockResolvedValue([]),
 }));
 
 import { useCampaignDraftStore } from "./useCampaignDraftStore";
+import {
+  createDraft,
+  deleteDraft,
+  listDrafts,
+  loadDraft,
+  saveDraft,
+} from "@/api/campaignDrafts";
+import { GOAL_DEFAULTS } from "@/types/campaign";
 
 function makeCard(n: number, purpose: string) {
   return {
@@ -75,6 +83,167 @@ function seedDraft(store: ReturnType<typeof useCampaignDraftStore>) {
   } as any;
 }
 
+describe("POS-166 — Step 3 persistence boundary", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(createDraft).mockReset();
+    vi.mocked(loadDraft).mockReset();
+    vi.mocked(deleteDraft).mockReset();
+    vi.mocked(listDrafts).mockReset().mockResolvedValue([]);
+    vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
+  });
+
+  it("keeps a new target-area campaign local until Step 3, then creates and saves it once", async () => {
+    const store = useCampaignDraftStore();
+    await store.startNew("org-1");
+    store.setGoal({
+      goalType: "target_area",
+      goalLabel: "Target an Area",
+      serviceType: null,
+      sequenceLength: 1,
+      sequenceSpacingDays: 14,
+      otherGoalText: null,
+    } as any);
+    store.goToStep(2);
+    store.setTargeting({
+      sequenceLength: 1,
+      estimatedCostSingle: 79,
+      estimatedCostSequence: 79,
+    } as any);
+
+    expect(store.draft?.id).toBe("");
+    expect(store.isPersisted).toBe(false);
+    expect(createDraft).not.toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+
+    vi.mocked(createDraft).mockResolvedValue({
+      ...store.draft!,
+      id: "persisted-target-area",
+      currentStep: 1,
+      completedSteps: [],
+      goal: null,
+      targeting: null,
+    });
+
+    await expect(store.enterStepThree()).resolves.toBe("persisted-target-area");
+
+    expect(createDraft).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "persisted-target-area",
+        currentStep: 3,
+        goal: expect.objectContaining({ goalType: "target_area" }),
+        targeting: expect.objectContaining({ estimatedCostSingle: 79 }),
+      }),
+    );
+    await vi.waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1));
+  });
+
+  it("deduplicates concurrent Step 3 entry for a send-to-list campaign", async () => {
+    const store = useCampaignDraftStore();
+    await store.startNew("org-1");
+    store.setAudienceState({
+      audienceId: "audience-1",
+      audienceSource: "existing",
+    });
+    store.approveAudienceState({ audienceId: "audience-1" });
+
+    let resolveCreate!: (draft: any) => void;
+    vi.mocked(createDraft).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve;
+      }),
+    );
+
+    const first = store.enterStepThree();
+    const second = store.enterStepThree();
+    expect(createDraft).toHaveBeenCalledTimes(1);
+
+    resolveCreate({
+      ...store.draft!,
+      id: "persisted-list",
+      currentStep: 1,
+      completedSteps: [],
+      audience: null,
+    });
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      "persisted-list",
+      "persisted-list",
+    ]);
+    expect(createDraft).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "persisted-list",
+        currentStep: 3,
+        audience: expect.objectContaining({ audienceId: "audience-1" }),
+      }),
+    );
+  });
+
+  it("resumes a legacy draft and advances it without creating a replacement", async () => {
+    const store = useCampaignDraftStore();
+    vi.mocked(loadDraft).mockResolvedValue({
+      id: "legacy-draft",
+      orgId: "org-1",
+      currentStep: 2,
+      completedSteps: [1, 2],
+      needsReviewSteps: [],
+      campaignType: "targeted",
+      goal: null,
+      targeting: null,
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      schemaVersion: 1,
+    });
+
+    await store.resume("legacy-draft");
+    await expect(store.enterStepThree()).resolves.toBe("legacy-draft");
+
+    expect(createDraft).not.toHaveBeenCalled();
+    expect(saveDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "legacy-draft", currentStep: 3 }),
+    );
+  });
+
+  it("rolls back an empty server row when the first Step 3 save fails", async () => {
+    const store = useCampaignDraftStore();
+    await store.startNew("org-1");
+    const localDraft = store.draft;
+    vi.mocked(createDraft).mockResolvedValue({
+      ...localDraft!,
+      id: "empty-server-row",
+    });
+    vi.mocked(saveDraft).mockRejectedValueOnce(new Error("PUT failed"));
+    vi.mocked(deleteDraft).mockResolvedValue(undefined);
+
+    await expect(store.enterStepThree()).rejects.toThrow("PUT failed");
+
+    expect(deleteDraft).toHaveBeenCalledWith("empty-server-row");
+    expect(store.draft).toBe(localDraft);
+    expect(store.isPersisted).toBe(false);
+    expect(store.currentStep).toBe(1);
+  });
+
+  it("refreshes the deleted draft's org without requiring the sidebar", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.draft!.orgId = "org-1";
+    vi.mocked(deleteDraft).mockResolvedValue(undefined);
+
+    await store.discard();
+
+    expect(deleteDraft).toHaveBeenCalledWith("draft-1");
+    await vi.waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1));
+    expect(store.draft).toBeNull();
+  });
+});
+
 describe("generateCardsForDraft — overwrite race", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -95,7 +264,13 @@ describe("generateCardsForDraft — overwrite race", () => {
 
     await store.generateCardsForDraft();
 
-    expect(store.draft!.design?.sequenceCards).toHaveLength(3);
+    expect(generateCardsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      "neighbor_marketing",
+      1,
+      expect.anything(),
+    );
+    expect(store.draft!.design?.sequenceCards).toHaveLength(1);
     expect(store.draft!.design?.sequenceCards?.[0]?.resolvedContent.headline).toBe(
       "Generated 1",
     );
@@ -168,7 +343,7 @@ describe("generateCardsForDraft — overwrite race", () => {
 
     const design = store.draft!.design!;
     // Generated cards still arrive (the user had nothing on screen)...
-    expect(design.sequenceCards).toHaveLength(3);
+    expect(design.sequenceCards).toHaveLength(1);
     // ...but remapped onto the layout the user picked.
     expect(design.templateLayoutType).toBe("photo-top");
     expect(design.sequenceCards[0]!.renderTemplateId).toBe("photo-top-front-v1");
@@ -369,7 +544,7 @@ describe("setDesign / markDesignReviewed — POS-138: step 3 checkmark requires 
 
     await store.generateCardsForDraft();
 
-    expect(store.draft!.design?.sequenceCards).toHaveLength(3);
+    expect(store.draft!.design?.sequenceCards).toHaveLength(1);
     expect(store.draft!.completedSteps).not.toContain(3);
   });
 
@@ -424,5 +599,98 @@ describe("setSequenceCards — single-owner card writes (2026-07-07 refactor)", 
     store.setSequenceCards([card("a")], { source: "system" });
     expect(store.draft!.designUserEdited).toBeFalsy();
     expect(store.draft!.completedSteps).not.toContain(3);
+  });
+});
+
+describe("POS-174 single-mailing draft normalization", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(loadDraft).mockReset();
+  });
+
+  it("normalizes a resumed generated three-card draft before it can be reviewed", async () => {
+    const legacyDraft = {
+      id: "legacy-draft",
+      campaignType: "targeted",
+      currentStep: 4,
+      completedSteps: [1, 2, 3, 4],
+      needsReviewSteps: [],
+      goal: { goalType: "neighbor_marketing", sequenceLength: 3 },
+      targeting: {
+        sequenceLength: 3,
+        estimatedCostSingle: 9.9,
+        estimatedCostSequence: 29.7,
+      },
+      audience: null,
+      design: {
+        templateId: "offer",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [makeCard(1, "offer"), makeCard(2, "proof"), makeCard(3, "last_chance")],
+      },
+      review: {
+        campaignName: "Legacy campaign",
+        schedules: [
+          { cardNumber: 1, scheduledDate: "2026-07-30", estimatedDeliveryDate: "2026-08-04" },
+          { cardNumber: 2, scheduledDate: "2026-08-13", estimatedDeliveryDate: "2026-08-18" },
+          { cardNumber: 3, scheduledDate: "2026-08-27", estimatedDeliveryDate: "2026-09-01" },
+        ],
+        perCardCosts: [9.9, 9.9, 9.9],
+      },
+    } as any;
+    vi.mocked(loadDraft).mockResolvedValue(legacyDraft);
+
+    const store = useCampaignDraftStore();
+    await store.resume("legacy-draft");
+
+    expect(store.draft!.goal!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.estimatedCostSequence).toBe(9.9);
+    expect(store.draft!.design!.sequenceCards).toHaveLength(1);
+    expect(store.draft!.review).toBeNull();
+    expect(store.draft!.completedSteps).not.toContain(3);
+    expect(store.draft!.completedSteps).not.toContain(4);
+    expect(store.draft!.needsReviewSteps).toEqual([3, 4]);
+    expect(store.singleMailingReviewRequired).toBe(true);
+  });
+
+  it("keeps uploaded and requested designs card-less while enforcing one mailing", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+
+    store.setUploadedDesign({ frontUrl: "/media/front.png" } as any);
+    expect(store.draft!.design!.sequenceCards).toEqual([]);
+
+    store.setDesignRequest({ fullName: "Alex" } as any);
+    expect(store.draft!.design!.sequenceCards).toEqual([]);
+  });
+
+  it("stores a one-mailing targeting estimate and one review cost line", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+
+    store.setTargeting({
+      sequenceLength: 3,
+      estimatedCostSingle: 12.5,
+      estimatedCostSequence: 37.5,
+    } as any);
+    store.setReview({
+      schedules: [
+        { cardNumber: 1, scheduledDate: "2026-07-30", estimatedDeliveryDate: "2026-08-04" },
+        { cardNumber: 2, scheduledDate: "2026-08-13", estimatedDeliveryDate: "2026-08-18" },
+      ],
+      perCardCosts: [12.5, 12.5],
+    } as any);
+
+    expect(store.draft!.targeting!.sequenceLength).toBe(1);
+    expect(store.draft!.targeting!.estimatedCostSequence).toBe(12.5);
+    expect(store.draft!.review!.schedules).toHaveLength(1);
+    expect(store.draft!.review!.perCardCosts).toEqual([12.5]);
+  });
+
+  it("uses one-mailing defaults for both target-area and send-to-list starts", () => {
+    expect(GOAL_DEFAULTS.target_area.defaultPostcards).toBe(1);
+    expect(GOAL_DEFAULTS.send_to_list.defaultPostcards).toBe(1);
   });
 });

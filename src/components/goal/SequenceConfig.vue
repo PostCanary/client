@@ -25,7 +25,9 @@ const emit = defineEmits<{
 const brandKitStore = useBrandKitStore();
 
 // Prefer draft values over goal defaults (prevents reset on Step 1 revisit)
-const sequenceLength = ref(props.initialSequenceLength ?? props.defaults.defaultPostcards);
+// Campaign creation is now one mailing. Keep the config value for the
+// legacy component contract, but do not resurrect the retired sequence UI.
+const sequenceLength = ref(1);
 const spacingWeeks = ref(props.initialSpacingWeeks ?? props.defaults.spacingWeeks);
 const serviceType = ref<string | null>(props.initialServiceType ?? null);
 const otherGoalText = ref(props.initialOtherGoalText ?? "");
@@ -43,7 +45,7 @@ const serviceOptions = computed(() => {
 watch(
   () => props.defaults,
   (d) => {
-    sequenceLength.value = d.defaultPostcards;
+    sequenceLength.value = 1;
     spacingWeeks.value = d.spacingWeeks;
   },
 );
@@ -65,30 +67,9 @@ watch(
 
 <template>
   <div class="space-y-5 pt-4 border-t border-gray-100">
-    <!-- Sequence length -->
-    <div>
-      <label class="block text-sm font-medium text-[#0b2d50] mb-2">
-        How many postcards in this sequence?
-      </label>
-      <div class="flex gap-2">
-        <button
-          v-for="n in 3"
-          :key="n"
-          class="w-10 h-10 rounded-lg text-sm font-semibold transition-all"
-          :class="
-            sequenceLength === n
-              ? 'bg-[#47bfa9] text-white shadow-sm'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          "
-          @click="sequenceLength = n"
-        >
-          {{ n }}
-        </button>
-      </div>
-      <p class="text-xs text-gray-400 mt-1.5">
-        Most businesses see best results with 3
-      </p>
-    </div>
+    <p class="text-sm text-gray-500">
+      Your campaign includes one postcard mailing.
+    </p>
 
     <!-- Spacing -->
     <div>

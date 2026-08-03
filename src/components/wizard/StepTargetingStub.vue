@@ -12,7 +12,7 @@ const householdCount = ref(
 
 function apply() {
   const perCard = PRICING.payPerSend;
-  const seqLen = draftStore.draft?.goal?.sequenceLength ?? 3;
+  const seqLen = 1;
   const targeting: TargetingSelection = {
     campaignGoal: draftStore.draft?.goal?.goalType ?? "neighbor_marketing",
     serviceType: draftStore.draft?.goal?.serviceType ?? null,

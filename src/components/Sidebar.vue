@@ -32,7 +32,7 @@ const items = [
   { to: "/", label: "Match Performance", icon: MatchIcon },
   { to: "/", label: "Campaign Insights", icon: CampaignIcon },*/
   { to: "/map", label: "Address Heatmap", icon: HeatmapIcon },
-  { to: "/history", label: "History", icon: HistoryIcon },
+  { to: "/history", label: "Upload History", icon: HistoryIcon },
   /*{ to: "/", label: "Uploads & Mapping", icon: UploadsIcon },
   { to: "/", label: "Reports & Exports", icon: ReportsIcon },*/
 ];
@@ -47,9 +47,9 @@ function go(path: string) {
   emit("navigate", path); // lets the drawer know to close
 }
 
-// Tooltip helper: allow Overview + Heatmap + History, keep roadmap items "Coming Soon"
+// Tooltip helper: allow existing analytics destinations, keep roadmap items "Coming Soon"
 function getTooltip(label: string) {
-  return label === "Overview" || label === "Address Heatmap" || label === "History"
+  return label === "Overview" || label === "Address Heatmap" || label === "Upload History"
     ? ""
     : "Coming Soon";
 }

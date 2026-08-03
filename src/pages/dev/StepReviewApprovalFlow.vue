@@ -6,12 +6,116 @@
 import StepReview from "@/components/wizard/StepReview.vue";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
-import type { CampaignDraft } from "@/types/campaign";
+import type { CampaignDraft, CardDesign, DesignSelection } from "@/types/campaign";
 
 const now = new Date().toISOString();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
-const emptyDraft = new URLSearchParams(window.location.search).get("emptyDraft") === "1";
+const params = new URLSearchParams(window.location.search);
+const emptyDraft = params.get("emptyDraft") === "1";
+const requestedHouseholdCount = Number(params.get("households") ?? "10");
+const householdCount = Number.isSafeInteger(requestedHouseholdCount) && requestedHouseholdCount > 0
+  ? requestedHouseholdCount
+  : 10;
+const staleMultiMailing = params.get("multiMailing") === "1";
+
+// POS-149: drives ReviewSummary/CostBreakdown through the Flow v2
+// designSource states from a plain URL param, so Playwright can seed
+// requested/uploaded/absent without a real Step 3 build.
+const designSourceParam = params.get("designSource");
+const uploadedPreviewParam = params.get("uploadedPreview");
+// POS-161: seed a campaign-level return-address override without going
+// through Step 3. When absent, Review falls back to the org default
+// (mocked via GET /api/organizations/return-address).
+const draftReturnAddressParam = params.get("draftReturnAddress");
+// POS-156: uploaded designs store server media URLs, not base64 data URLs.
+const SAMPLE_UPLOADED_FRONT =
+  uploadedPreviewParam === "missing"
+    ? ""
+    : "/media/design-uploads/mock-org/sample-front.png";
+
+const designSourceExtras: Partial<DesignSelection> =
+  designSourceParam === "requested"
+    ? {
+        designSource: "requested",
+        designRequest: {
+          fullName: "Alex Owner",
+          email: "alex@example.test",
+          phone: "(612) 887-2109",
+          websiteAddress: "totalcomfort.example",
+          template: 1,
+          notes: "Keep it teal, match our van wrap.",
+          submittedAt: now,
+        },
+      }
+    : designSourceParam === "uploaded"
+      ? {
+          designSource: "uploaded",
+          uploadedAsset: {
+            fileName: "front.png",
+            mimeType: "image/png",
+            fileSizeBytes: 2048,
+            widthPx: 1875,
+            heightPx: 1275,
+            frontUrl: SAMPLE_UPLOADED_FRONT,
+            backUrl: null,
+          },
+        }
+      : {};
+
+const draftReturnExtras: Partial<DesignSelection> =
+  draftReturnAddressParam === "1"
+    ? {
+        returnAddress: {
+          name: "Draft Override HVAC",
+          address: "999 Override Lane",
+          city: "Minneapolis",
+          state: "MN",
+          zip: "55401",
+        },
+      }
+    : {};
+
+const designExtras: Partial<DesignSelection> = {
+  ...designSourceExtras,
+  ...draftReturnExtras,
+};
+const generatedCards: CardDesign[] = designSourceParam
+  ? []
+  : [
+      {
+        cardNumber: 1,
+        cardPurpose: "offer",
+        templateId: "HAC-1000",
+        renderTemplateId: "hac-1000-front-v1",
+        previewImageUrl: "",
+        overrides: {},
+        resolvedContent: { headline: "Keep your home comfortable" },
+        backContent: {},
+        headlineCandidates: [],
+        offerReason: "Test harness",
+        reviewReason: "Test harness",
+        templateReason: "Test harness",
+      } as unknown as CardDesign,
+      ...(staleMultiMailing
+        ? [
+            {
+              cardNumber: 2,
+              cardPurpose: "proof",
+              templateId: "HAC-1000",
+              renderTemplateId: "hac-1000-front-v1",
+              previewImageUrl: "",
+              overrides: {},
+              resolvedContent: { headline: "Second stale mailing" },
+              backContent: {},
+              headlineCandidates: [],
+              offerReason: "Test harness",
+              reviewReason: "Test harness",
+              templateReason: "Test harness",
+            } as unknown as CardDesign,
+          ]
+        : []),
+    ];
 
 brandKitStore.brandKit = {
   industry: "hvac",
@@ -40,14 +144,14 @@ draftStore.draft = emptyDraft
         goalType: "neighbor_marketing",
         goalLabel: "Neighbor Marketing",
         serviceType: "HVAC Tune-Up",
-        sequenceLength: 1,
+        sequenceLength: staleMultiMailing ? 2 : 1,
         sequenceSpacingDays: 14,
         otherGoalText: null,
       },
       targeting: {
         campaignGoal: "neighbor_marketing",
         serviceType: "HVAC Tune-Up",
-        sequenceLength: 1,
+        sequenceLength: staleMultiMailing ? 2 : 1,
         sequenceSpacingDays: 14,
         areas: [{ type: "zip", coordinates: [], zipCode: "55422" }],
         method: "zip",
@@ -69,19 +173,19 @@ draftStore.draft = emptyDraft
         excludePastCustomers: false,
         excludeMailedWithinDays: 30,
         doNotMailCount: 0,
-        totalHouseholds: 10,
+        totalHouseholds: householdCount,
         excludedPastCustomers: 0,
         excludedRecentlyMailed: 0,
         excludedDoNotMail: 0,
-        finalHouseholdCount: 10,
+        finalHouseholdCount: householdCount,
         pastCustomersInArea: 0,
         recipientBreakdown: {
-          newProspects: 10,
+          newProspects: householdCount,
           pastCustomers: 0,
           pastCustomersIncluded: false,
         },
-        estimatedCostSingle: 7.9,
-        estimatedCostSequence: 7.9,
+        estimatedCostSingle: householdCount * 0.79,
+        estimatedCostSequence: householdCount * 0.79,
         countSource: "mock",
         savedAudienceName: null,
         eddmSelection: null,
@@ -92,7 +196,8 @@ draftStore.draft = emptyDraft
         templateLayoutType: "full-bleed",
         isCustomUpload: false,
         customUploadUrl: null,
-        sequenceCards: [],
+        sequenceCards: generatedCards,
+        ...designExtras,
       },
       review: null,
       createdAt: now,

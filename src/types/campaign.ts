@@ -100,15 +100,15 @@ export interface CampaignGoalDefaults {
 
 // Maps goal type to its defaults (auto-applied in Step 2)
 export const GOAL_DEFAULTS: Record<CampaignGoalType, CampaignGoalDefaults> = {
-  neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  neighbor_marketing:  { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
   send_to_list:        { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
-  seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 2, spacingWeeks: 1 },
-  win_back:            { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 3 },
-  cross_service_promo: { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 2, spacingWeeks: 2 },
-  new_mover:           { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
-  other:               { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 3, spacingWeeks: 2 },
+  seasonal_tuneup:     { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  target_area:         { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  storm_response:      { includePastCustomers: true,  frequencyExclusionDays: null, defaultPostcards: 1, spacingWeeks: 1 },
+  win_back:            { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 3 },
+  cross_service_promo: { includePastCustomers: true,  frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  new_mover:           { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
+  other:               { includePastCustomers: false, frequencyExclusionDays: 30, defaultPostcards: 1, spacingWeeks: 2 },
 }
 
 // ============================================================
@@ -119,7 +119,7 @@ export interface GoalSelection {
   goalType: CampaignGoalType
   goalLabel: string                    // display name
   serviceType: string | null           // which service (for seasonal, cross-service)
-  sequenceLength: number               // 1-3 cards
+  sequenceLength: number               // exactly one mailing
   sequenceSpacingDays: number          // days between cards
   otherGoalText: string | null         // free text for "other"
 }
@@ -412,12 +412,59 @@ export interface CardDesign {
   templateReason: string               // why this layout was recommended for this card position
 }
 
+// Flow v2 (POS-147/148/149 shared contract): where the campaign's design
+// comes from. 'generated' = studio/AI cards (sequenceCards), 'uploaded' =
+// customer-supplied artwork, 'requested' = $199 professional design brief
+// (checkout shows a "your custom design" placeholder + the design fee).
+export type DesignSource = 'generated' | 'uploaded' | 'requested'
+
+export interface UploadedDesignAsset {
+  fileName: string
+  mimeType: string
+  fileSizeBytes: number
+  widthPx: number | null
+  heightPx: number | null
+  // Server-stored media URLs from POST /api/design-uploads (POS-156).
+  // Front is required for a valid upload; back may be null (blank back).
+  // Never store base64 data URLs here — they bloat draft JSONB past the
+  // beaconSave 60KB keepalive cap.
+  frontUrl: string | null
+  backUrl: string | null
+}
+
+export interface DesignRequestBrief {
+  fullName: string
+  email: string
+  phone: string
+  websiteAddress: string
+  template: 1 | 2 | 3 | 4
+  notes: string
+  submittedAt: string                  // ISO datetime
+}
+
+/** Business return address stamped on postcards (design_snapshot.returnAddress). */
+export interface DesignReturnAddress {
+  name?: string
+  address: string
+  address2?: string
+  city: string
+  state: string
+  zip: string
+}
+
 export interface DesignSelection {
   templateId: string
   templateLayoutType: TemplateLayoutType
   isCustomUpload: boolean
   customUploadUrl: string | null
   sequenceCards: CardDesign[]
+  // Optional for back-compat with pre-Flow-v2 drafts; absent means 'generated'.
+  designSource?: DesignSource
+  uploadedAsset?: UploadedDesignAsset | null
+  designRequest?: DesignRequestBrief | null
+  // POS-161: per-campaign override of the org default return address.
+  // Server print path reads design_snapshot.returnAddress with these keys.
+  returnAddress?: DesignReturnAddress
 }
 
 // ============================================================
@@ -430,6 +477,29 @@ export interface CardSchedule {
   estimatedDeliveryDate: string        // ISO date
 }
 
+export interface MailScheduleAvailability {
+  ok: true
+  earliest_mailing_date: string
+  timezone: 'America/Los_Angeles'
+  approval_cutoff_local: string
+  cutoff_inclusive: boolean
+  processing_business_days: number
+  holiday_calendar: 'us_federal_observed_nationwide'
+}
+
+export type MailScheduleInvalidReason =
+  | 'missing_scheduled_date'
+  | 'malformed_scheduled_date'
+  | 'ineligible_scheduled_date'
+  | 'scheduled_date_before_earliest'
+
+export interface MailScheduleInvalidDetails
+  extends Omit<MailScheduleAvailability, 'ok'> {
+  code: 'mail_schedule_invalid'
+  reason: MailScheduleInvalidReason
+  selected_mailing_date?: string
+}
+
 export interface ReviewSelection {
   campaignName: string                 // auto-generated, editable
   schedules: CardSchedule[]
@@ -438,8 +508,10 @@ export interface ReviewSelection {
   additionalSeeds: string[]            // charged at per-card rate
   paymentMethodId: string | null       // Stripe PM
   paymentMethodLabel: string | null    // "Visa ending 4242"
-  totalCost: number
-  perCardCosts: number[]
+  // Legacy display-only estimates. New approval flows omit these because the
+  // durable order quote and charge are server-owned.
+  totalCost?: number
+  perCardCosts?: number[]
   agreedToTerms: boolean
 }
 
@@ -612,16 +684,82 @@ export interface TemplateDefinition {
 // UI labels still say "Campaign" — customers don't see type names.
 // The existing Campaign/useCampaignStore stays UNTOUCHED.
 
+// Server CHECK (models.py) + legacy UI statuses. Flow v2 send path uses
+// records_purchased / submitted_to_partner / in_production / returned /
+// failed / cancelled; older clients also emit printing / paused / etc.
 export type MailCampaignStatus =
   | 'draft'
   | 'approved'
   | 'pending_moderation'
+  | 'purchasing_records'
+  | 'records_purchased'
+  | 'submitted_to_partner'
+  | 'in_production'
   | 'printing'
   | 'in_transit'
   | 'delivered'
+  | 'returned'
+  | 'failed'
+  | 'held'
+  | 'cancelled'
   | 'results_ready'
   | 'completed'
   | 'paused'
+
+export interface MailCampaignOrderCounts {
+  approved: number | null
+  requested: number | null
+  purchased: number | null
+  printable: number | null
+  billed: number | null
+  submitted: number | null
+  accepted: number | null
+  mailed: number | null
+  delivered: number | null
+  returned: number | null
+  failed: number | null
+  refunded: number | null
+}
+
+export interface MailCampaignOrderAmounts {
+  currency: string | null
+  unit_rate_cents: number | null
+  quoted_cents: number | null
+  authorized_cents: number | null
+  charged_cents: number | null
+  refunded_cents: number | null
+  net_cents: number | null
+}
+
+export type MailCampaignRecoveryAction =
+  | 'none'
+  | 'retry_purchase'
+  | 'contact_support'
+
+export interface MailCampaignOrderArtwork {
+  front_sha256: string | null
+  back_sha256: string | null
+}
+
+/**
+ * Durable server-owned order reconciliation projection (POS-197).
+ *
+ * Every field remains nullable because historical campaigns pre-date the
+ * durable contract and partially completed orders legitimately have gaps.
+ * Artwork hash keys are server-owned and intentionally not inferred here.
+ */
+export interface MailCampaignOrder {
+  contract_version: number | null
+  mailing_count: number | null
+  counts: MailCampaignOrderCounts
+  amounts: MailCampaignOrderAmounts
+  artwork: MailCampaignOrderArtwork | null
+  payment_state: string | null
+  fulfillment_state: string | null
+  reconciliation_state: string | null
+  reconciliation_reason: string | null
+  recovery_action: MailCampaignRecoveryAction | null
+}
 
 export interface MailCampaign {
   id: string
@@ -630,13 +768,38 @@ export interface MailCampaign {
   status: MailCampaignStatus
   goalType: CampaignGoalType
   serviceType: string | null
-  sequenceLength: number
-  householdCount: number
-  totalCost: number
+  // Nullable: send_to_list Flow v2 drafts often leave sequenceLength /
+  // householdCount / totalCost unset at approve time (no targeting slice).
+  sequenceLength: number | null
+  householdCount: number | null
+  totalCost: number | null
   totalSpent: number
+  // Empty for designSource='uploaded' (sequenceCards snapshot is []).
   cards: MailCampaignCard[]
   createdAt: string
   updatedAt: string
+  // POS-151: raw server targeting snapshot. Populated for area-goal
+  // campaigns (shape: TargetingSelection, see areas: TargetingArea[]);
+  // null for send_to_list campaigns.
+  targetingData: Record<string, any> | null
+  // POS-154 (server PR #132): the linked Audience UUID for send_to_list
+  // campaigns, now persisted server-side and serialized back on GET. Null
+  // for area campaigns and for pre-migration list campaigns approved
+  // before #132 shipped — callers must degrade to the summary CSV in
+  // both of those cases, not just when the server 404s.
+  audienceId: string | null
+  // POS-162: design snapshot fields (from design_data). Needed so detail
+  // can show uploaded artwork when cards_data is empty.
+  designSource?: DesignSource
+  uploadedAsset?: UploadedDesignAsset | null
+  // POS-197: authoritative recipient, money, artwork, payment, fulfillment,
+  // and reconciliation state. Null for campaigns created before the durable
+  // order contract; callers may then render legacy values as explicitly
+  // unavailable/fallback data, but must never infer vendor progress.
+  order: MailCampaignOrder | null
+  // Distinguishes a historical campaign with no durable order from a server
+  // response that attempted to provide one but failed contract validation.
+  orderContractPresent?: boolean
 }
 
 export interface MailCampaignCard {
@@ -664,6 +827,9 @@ export const PRICING = {
   PERFORMANCE: 0.79,
   PRECISION: 0.79,
   ELITE: 0.79,
+  // Flow v2: one-time professional design fee ("buy a design from our team,
+  // $199"). Server-confirmable via custom_design_fee_cents once it ships.
+  customDesignFee: 199,
 } as const
 
 export type PricingTier = keyof typeof PRICING

@@ -81,5 +81,19 @@ test.describe("SttLStep2 production route", () => {
     expect((await approveRequest).postDataJSON()).toEqual({
       campaign_id: "campaign-route",
     });
+    await expect(page).toHaveURL(/\/app\/send\/mock-draft-001$/);
+    expect(state.requestLog.draftCreates).toBe(1);
+    expect(state.requestLog.draftSaves.at(-1)?.payload.current_step).toBe(3);
+  });
+
+  test("resumes an existing draft without creating a replacement", async ({ page }) => {
+    const state = createMockAppState();
+    await installMockApi(page, state);
+
+    await page.goto("/app/send/legacy-draft-42/sttl-step-2");
+
+    await expect(page.getByRole("heading", { name: "Upload your audience CSV" })).toBeVisible();
+    expect(state.requestLog.draftLoads).toEqual(["legacy-draft-42"]);
+    expect(state.requestLog.draftCreates).toBe(0);
   });
 });

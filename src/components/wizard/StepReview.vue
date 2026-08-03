@@ -1,22 +1,52 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import { usePricing } from "@/composables/usePricing";
-import type { CardSchedule, MailCampaign, ReviewSelection } from "@/types/campaign";
+import { approveCampaignDraft } from "@/composables/approveCampaignDraft";
+import type {
+  CardSchedule,
+  DesignReturnAddress,
+  DesignSource,
+  MailCampaign,
+  MailCampaignOrder,
+  MailScheduleInvalidDetails,
+  ReviewSelection,
+} from "@/types/campaign";
 import ReviewSummary from "@/components/review/ReviewSummary.vue";
 import ScheduleEditor from "@/components/review/ScheduleEditor.vue";
 import CostBreakdown from "@/components/review/CostBreakdown.vue";
 import {
-  approveMailCampaign,
   createApprovalArtifact,
+  isKnownPreProviderPurchaseError,
+  normalizeOrderProjection,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
+import {
+  createSetupSession,
+  fetchPaymentMethodSummary,
+  type PaymentMethodSummary,
+} from "@/api/billing";
+import {
+  isSelectedMailingDateValid,
+  isValidIsoDate,
+  isWeekendIsoDate,
+  scheduleForDate,
+  useMailScheduleAvailability,
+} from "@/composables/useMailScheduleAvailability";
+import {
+  getReturnAddress,
+  type OrgReturnAddress,
+} from "@/api/orgs";
 import { useRenderJob } from "@/composables/useRenderJob";
 import { mediaSrc } from "@/utils/mediaSrc";
+import {
+  campaignOrderNeedsAttention,
+  formatOrderAmount,
+} from "@/utils/campaignDisplay";
 
 const router = useRouter();
+const route = useRoute();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
 
@@ -39,7 +69,52 @@ async function handleGenerateProof() {
 const approving = ref(false);
 const approved = ref(false);
 const approvedCampaign = ref<MailCampaign | null>(null);
+const approvedOrder = ref<MailCampaignOrder | null>(null);
 const APPROVAL_TERMS_VERSION = "accuracy-rights-v1";
+const paymentMethod = ref<PaymentMethodSummary | null>(null);
+const paymentMethodLoading = ref(true);
+const paymentMethodError = ref<string | null>(null);
+const paymentMethodBusy = ref(false);
+const paymentStatusMessage = ref<string | null>(null);
+const reconciliationBlocked = ref(false);
+
+const paymentReady = computed(
+  () =>
+    paymentMethod.value !== null &&
+    (!paymentMethod.value.required || paymentMethod.value.has_payment_method),
+);
+
+async function loadPaymentMethod() {
+  paymentMethodLoading.value = true;
+  paymentMethodError.value = null;
+  try {
+    paymentMethod.value = await fetchPaymentMethodSummary();
+  } catch (err) {
+    console.error("[StepReview] Failed to load payment method:", err);
+    paymentMethod.value = null;
+    paymentMethodError.value =
+      "We couldn't verify your payment method. Retry before approving.";
+  } finally {
+    paymentMethodLoading.value = false;
+  }
+}
+
+async function managePaymentMethod() {
+  if (paymentMethodBusy.value) return;
+  paymentMethodBusy.value = true;
+  paymentMethodError.value = null;
+  try {
+    const { url } = await createSetupSession(route.fullPath);
+    if (!url) throw new Error("No card setup URL returned");
+    window.location.href = url;
+  } catch (err) {
+    console.error("[StepReview] Failed to open card setup:", err);
+    paymentMethodError.value =
+      "We couldn't open secure card setup. Please try again.";
+  } finally {
+    paymentMethodBusy.value = false;
+  }
+}
 
 // Brief #6 P0 #4: Consolidated accuracy + rights confirmation before
 // Approve is enabled. V1 spec line 989: "Mandatory confirmation checkboxes
@@ -66,8 +141,33 @@ const acknowledgedAccuracy = ref(false);
 const goal = computed(() => draftStore.draft?.goal);
 const targeting = computed(() => draftStore.draft?.targeting);
 const designCards = computed(() => draftStore.draft?.design?.sequenceCards ?? []);
-const householdCount = computed(() => targeting.value?.finalHouseholdCount ?? 0);
-const seqLen = computed(() => goal.value?.sequenceLength ?? 3);
+// POS-149: Flow v2 checkout deltas. Absent designSource (pre-Flow-v2 drafts,
+// or a draft that never touched the new design-request/upload paths) keeps
+// today's generated-cards behavior exactly — see DesignSelection.designSource.
+const designSource = computed<DesignSource | undefined>(
+  () => draftStore.draft?.design?.designSource,
+);
+const uploadedFrontUrl = computed(() => {
+  const url = draftStore.draft?.design?.uploadedAsset?.frontUrl ?? null;
+  // Server returns root-relative /media/... paths — resolve against API_BASE.
+  return url ? mediaSrc(url) : null;
+});
+const uploadedFrontMimeType = computed(
+  () => draftStore.draft?.design?.uploadedAsset?.mimeType ?? null,
+);
+const isCustomDesignRequest = computed(() => designSource.value === "requested");
+// Send-to-a-list campaigns have no targeting slice — their recipient count
+// is the uploaded audience's post-suppression deliverable count (dry-run
+// find 2026-07-18: review showed "0 households" and blocked approval).
+const householdCount = computed(() => {
+  if (goal.value?.goalType === "send_to_list") {
+    return (
+      draftStore.draft?.audience?.suppressionResult?.deliverable_count ?? 0
+    );
+  }
+  return targeting.value?.finalHouseholdCount ?? 0;
+});
+const seqLen = computed(() => 1);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
 onMounted(() => {
@@ -86,6 +186,13 @@ onMounted(() => {
     const areaStr = area ? ` — ${area}` : "";
     campaignName.value = `${goalLabel}${areaStr} — ${date}`;
   }
+  void loadOrgReturnAddress();
+  void loadPaymentMethod();
+  if (route.query.billing === "card_saved") {
+    paymentStatusMessage.value = "Payment method saved.";
+  } else if (route.query.billing === "card_setup_cancelled") {
+    paymentStatusMessage.value = "Payment method setup was canceled.";
+  }
 });
 
 // Targeting method label
@@ -99,42 +206,252 @@ const targetingMethodLabel = computed(() => {
 
 // Schedule — pre-fill from Step 1 spacing
 const schedules = ref<CardSchedule[]>([]);
+const scheduleAvailability = useMailScheduleAvailability();
+const scheduleActionMessage = ref<string | null>(null);
+
+async function loadScheduleAvailability() {
+  scheduleActionMessage.value = null;
+  const result = await scheduleAvailability.load();
+  if (!result) {
+    schedules.value = [];
+    return;
+  }
+
+  const saved = draftStore.draft?.review?.schedules?.[0]?.scheduledDate ?? "";
+  const initialDate = isSelectedMailingDateValid(saved, result)
+    ? saved
+    : result.earliest_mailing_date;
+  schedules.value = [scheduleForDate(initialDate)];
+}
+
 onMounted(() => {
-  if (draftStore.draft?.review?.schedules?.length) {
-    schedules.value = draftStore.draft.review.schedules;
-  } else {
-    const today = new Date();
-    const spacing = goal.value?.sequenceSpacingDays ?? 14;
-    schedules.value = Array.from({ length: seqLen.value }, (_, i) => {
-      const send = new Date(today);
-      send.setDate(send.getDate() + 5 + i * spacing);
-      const deliver = new Date(send);
-      deliver.setDate(deliver.getDate() + 5);
-      return {
-        cardNumber: i + 1,
-        scheduledDate: send.toISOString().split("T")[0] ?? "",
-        estimatedDeliveryDate: deliver.toISOString().split("T")[0] ?? "",
-      };
-    });
+  // Requested professional design is not schedule-ready until a future final
+  // customer proof approval exists. Do not show or calculate a guaranteed date.
+  if (!isCustomDesignRequest.value) {
+    void loadScheduleAvailability();
   }
 });
 
 function updateSchedule(updated: CardSchedule[]) {
-  schedules.value = updated;
+  schedules.value = updated.slice(0, 1);
+  scheduleActionMessage.value = null;
 }
 
-// Cost
-const pricing = usePricing();
-const perCardRate = computed(() => pricing.payPerSend); // Round 1: flat rate
-const totalCost = computed(
-  () => householdCount.value * perCardRate.value * seqLen.value,
+const selectedMailingDate = computed(
+  () => schedules.value[0]?.scheduledDate ?? "",
 );
+const selectedMailingDateValid = computed(() =>
+  isSelectedMailingDateValid(
+    selectedMailingDate.value,
+    scheduleAvailability.availability.value,
+  ),
+);
+const scheduleValidityMessage = computed(() => {
+  const selected = selectedMailingDate.value;
+  const availability = scheduleAvailability.availability.value;
+  if (!availability || !selected) return null;
+  if (!isValidIsoDate(selected)) return "Choose a valid mailing date.";
+  if (selected < availability.earliest_mailing_date) {
+    return `Choose ${availability.earliest_mailing_date} or a later eligible date.`;
+  }
+  if (isWeekendIsoDate(selected)) {
+    return "Mailing dates must fall on a weekday. Holidays are confirmed by the server when you approve.";
+  }
+  return null;
+});
+
+const approvalOutcomeTitle = computed(() => {
+  const order = approvedOrder.value;
+  if (!order) return "Campaign approved";
+  if (campaignOrderNeedsAttention(order)) return "Campaign needs attention";
+  const fulfillment = order.fulfillment_state?.toLowerCase() ?? "";
+  if (["submitted", "accepted", "in_production", "printing", "printed"].includes(fulfillment)) {
+    return "Mailing submitted";
+  }
+  if (["mailed", "in_transit", "delivered", "completed"].includes(fulfillment)) {
+    return "Mailing underway";
+  }
+  return "Campaign approved";
+});
+
+const approvalOutcomeCopy = computed(() => {
+  const order = approvedOrder.value;
+  if (!order) return "Your order status could not be confirmed yet.";
+  if (order.recovery_action === "retry_purchase") {
+    return "Your campaign is approved, but fulfillment did not start. Open the campaign to safely retry.";
+  }
+  if (order.recovery_action === "contact_support" || campaignOrderNeedsAttention(order)) {
+    return "Your campaign is approved, but the order needs reconciliation. Contact support and do not retry this order.";
+  }
+  const fulfillment = order.fulfillment_state?.toLowerCase() ?? "";
+  if (["submitted", "accepted", "in_production", "printing", "printed"].includes(fulfillment)) {
+    return "The server confirmed your mailing was submitted for fulfillment.";
+  }
+  if (["mailed", "in_transit", "delivered", "completed"].includes(fulfillment)) {
+    return "The server confirmed your mailing has progressed through fulfillment.";
+  }
+  return "Your campaign is approved. We’ll show fulfillment progress as it is confirmed.";
+});
+
+const approvalAmount = computed(() => {
+  const amounts = approvedOrder.value?.amounts;
+  if (!amounts) return null;
+  const cents = amounts.charged_cents ?? amounts.authorized_cents ?? amounts.quoted_cents;
+  return typeof cents === "number"
+    ? formatOrderAmount(cents, amounts.currency)
+    : null;
+});
 
 // Seeding
 const sendSeedCopy = ref(draftStore.draft?.review?.sendSeedCopy ?? true);
 const seedAddress = computed(
   () => brandKitStore.brandKit?.address ?? "Your address on file",
 );
+
+// POS-161 — effective return address: draft override, else org default.
+// Approval fails closed client-side as well as server-side when neither exists.
+const orgReturnAddress = ref<OrgReturnAddress | null>(null);
+const orgReturnAddressLoaded = ref(false);
+const editingReturnAddress = ref(false);
+const returnAddressForm = ref({
+  name: "",
+  address: "",
+  address2: "",
+  city: "",
+  state: "",
+  zip: "",
+});
+const returnAddressFormError = ref<string | null>(null);
+
+const ZIP_RE = /^\d{5}(-\d{4})?$/;
+const STATE_RE = /^[A-Za-z]{2}$/;
+
+function orgToDesignAddress(
+  addr: OrgReturnAddress | null,
+): DesignReturnAddress | null {
+  if (!addr?.address || !addr.city || !addr.state || !addr.zip) return null;
+  return {
+    ...(addr.name ? { name: addr.name } : {}),
+    address: addr.address,
+    ...(addr.address2 ? { address2: addr.address2 } : {}),
+    city: addr.city,
+    state: addr.state,
+    zip: addr.zip,
+  };
+}
+
+const draftReturnAddress = computed(
+  () => draftStore.draft?.design?.returnAddress ?? null,
+);
+
+function validReturnAddress(
+  addr: DesignReturnAddress | null,
+): DesignReturnAddress | null {
+  if (!addr) return null;
+  if (
+    !addr.address?.trim() ||
+    !addr.city?.trim() ||
+    !STATE_RE.test(addr.state?.trim() ?? "") ||
+    !ZIP_RE.test(addr.zip?.trim() ?? "")
+  ) {
+    return null;
+  }
+  return {
+    ...(addr.name?.trim() ? { name: addr.name.trim() } : {}),
+    address: addr.address.trim(),
+    ...(addr.address2?.trim() ? { address2: addr.address2.trim() } : {}),
+    city: addr.city.trim(),
+    state: addr.state.trim().toUpperCase(),
+    zip: addr.zip.trim(),
+  };
+}
+
+const effectiveReturnAddress = computed<DesignReturnAddress | null>(() => {
+  return (
+    validReturnAddress(draftReturnAddress.value) ??
+    validReturnAddress(orgToDesignAddress(orgReturnAddress.value))
+  );
+});
+
+const returnAddressIsOverride = computed(
+  () => validReturnAddress(draftReturnAddress.value) !== null,
+);
+
+const returnAddressLines = computed(() => {
+  const a = effectiveReturnAddress.value;
+  if (!a) return null;
+  const lines: string[] = [];
+  if (a.name) lines.push(a.name);
+  lines.push(a.address);
+  if (a.address2) lines.push(a.address2);
+  lines.push(`${a.city}, ${a.state} ${a.zip}`);
+  return lines;
+});
+
+function fillReturnAddressForm(addr: DesignReturnAddress | null) {
+  returnAddressForm.value = {
+    name: addr?.name ?? "",
+    address: addr?.address ?? "",
+    address2: addr?.address2 ?? "",
+    city: addr?.city ?? "",
+    state: addr?.state ?? "",
+    zip: addr?.zip ?? "",
+  };
+  returnAddressFormError.value = null;
+}
+
+function startEditReturnAddress() {
+  fillReturnAddressForm(effectiveReturnAddress.value);
+  editingReturnAddress.value = true;
+}
+
+function cancelEditReturnAddress() {
+  editingReturnAddress.value = false;
+  returnAddressFormError.value = null;
+}
+
+function validateReturnAddressForm(): string | null {
+  const f = returnAddressForm.value;
+  if (!f.address.trim()) return "Street address is required.";
+  if (!f.city.trim()) return "City is required.";
+  if (!STATE_RE.test(f.state.trim())) return "State must be a 2-letter code.";
+  if (!ZIP_RE.test(f.zip.trim())) {
+    return "ZIP must be 5 digits or ZIP+4 (12345 or 12345-6789).";
+  }
+  return null;
+}
+
+function saveReturnAddressOverride() {
+  const err = validateReturnAddressForm();
+  if (err) {
+    returnAddressFormError.value = err;
+    return;
+  }
+  const f = returnAddressForm.value;
+  const next: DesignReturnAddress = {
+    address: f.address.trim(),
+    city: f.city.trim(),
+    state: f.state.trim().toUpperCase(),
+    zip: f.zip.trim(),
+  };
+  if (f.name.trim()) next.name = f.name.trim();
+  if (f.address2.trim()) next.address2 = f.address2.trim();
+  draftStore.setReturnAddress(next);
+  editingReturnAddress.value = false;
+  returnAddressFormError.value = null;
+}
+
+async function loadOrgReturnAddress() {
+  try {
+    orgReturnAddress.value = await getReturnAddress();
+  } catch (e) {
+    // Route may not exist yet (parallel server work) — treat as missing.
+    console.warn("[StepReview] getReturnAddress failed", e);
+    orgReturnAddress.value = null;
+  } finally {
+    orgReturnAddressLoaded.value = true;
+  }
+}
 
 // Approve — gated on P0 #4 consolidated confirmation, AND on a non-empty
 // audience: an empty custom-area draw used to sail through to an active
@@ -146,10 +463,47 @@ const canApprove = computed(
     !approving.value &&
     Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
-    schedules.value.length > 0 &&
+    hasSingleMailingIntent.value &&
+    !legacyDraftNeedsDesignReview.value &&
+    !staleMultiMailingDraft.value &&
+    !reconciliationBlocked.value &&
     householdCount.value > 0 &&
-    acknowledgedAccuracy.value,
+    effectiveReturnAddress.value !== null &&
+    acknowledgedAccuracy.value &&
+    paymentReady.value &&
+    !isCustomDesignRequest.value &&
+    !scheduleAvailability.loading.value &&
+    !scheduleAvailability.error.value &&
+    selectedMailingDateValid.value,
 );
+
+const isCustomerSuppliedDesign = computed(
+  () => designSource.value === "uploaded" || designSource.value === "requested",
+);
+const hasSingleMailingIntent = computed(() => {
+  const draft = draftStore.draft;
+  if (!draft || draft.goal?.sequenceLength !== 1 || schedules.value.length !== 1) {
+    return false;
+  }
+  if (draft.targeting && draft.targeting.sequenceLength !== 1) return false;
+  return isCustomerSuppliedDesign.value
+    ? designCards.value.length === 0
+    : designCards.value.length === 1;
+});
+const legacyDraftNeedsDesignReview = computed(
+  () =>
+    draftStore.singleMailingReviewRequired && draftStore.needsReview(3),
+);
+const staleMultiMailingDraft = computed(() => {
+  const draft = draftStore.draft;
+  if (!draft) return false;
+  return (
+    (draft.design?.sequenceCards.length ?? 0) > 1 ||
+    (draft.review?.schedules.length ?? 0) > 1 ||
+    (draft.goal?.sequenceLength ?? 1) > 1 ||
+    (draft.targeting?.sequenceLength ?? 1) > 1
+  );
+});
 
 async function approve() {
   if (!canApprove.value || approving.value) return;
@@ -163,11 +517,7 @@ async function approve() {
     seedAddress: seedAddress.value,
     additionalSeeds: [],
     paymentMethodId: null,
-    paymentMethodLabel: "Visa ending in 4242",
-    totalCost: totalCost.value,
-    perCardCosts: Array(seqLen.value).fill(
-      householdCount.value * perCardRate.value,
-    ),
+    paymentMethodLabel: paymentMethod.value?.label ?? null,
     agreedToTerms: acknowledgedAccuracy.value,
   };
 
@@ -181,7 +531,7 @@ async function approve() {
       // has already consumed and deleted.
       draftStore.setReview(review);
       await draftStore.saveNow();
-      campaign = await approveMailCampaign(draftStore.draft!.id);
+      campaign = await approveCampaignDraft(draftStore.draft!.id);
     }
     approvedCampaign.value = campaign;
 
@@ -198,26 +548,104 @@ async function approve() {
       return;
     }
 
-    // Buy-on-Approve (Drake decision 2026-05-05, mem 984): trigger data-partner
-    // list purchase synchronously. Trial-era qty cap = 100; clamp household
-    // count at 100 until paid contract lands and the cap is raised.
-    const qty = Math.max(1, Math.min(householdCount.value, 100));
     try {
-      await purchaseCampaignRecords(campaign.id, qty);
+      const purchase = await purchaseCampaignRecords(campaign.id);
+      if (!purchase.order) {
+        reconciliationBlocked.value = true;
+        draftStore.error =
+          "Campaign approved, but the server did not return a confirmed order state. " +
+          "Contact support and do not approve or retry this campaign again.";
+        approving.value = false;
+        return;
+      }
+      approvedOrder.value = purchase.order;
     } catch (purchaseErr: any) {
-      // Campaign exists at status='approved' (server rolled back from
-      // 'purchasing_records' on failure). Show actionable error so customer
-      // can retry. The endpoint is idempotent — re-clicking Approve is safe.
-      draftStore.error =
-        "Campaign approved and proof saved, but we couldn't purchase the mailing list. " +
-        "Tap Approve again to retry, or check your data filters.";
+      // Retry only known pre-provider failures. Reconciliation responses are
+      // terminal in this screen even when their projection is malformed.
+      const reconciliationOrder = normalizeOrderProjection(
+        purchaseErr?.data?.order,
+      );
+      if (
+        purchaseErr?.status === 409 &&
+        purchaseErr?.data?.error === "reconciliation_required"
+      ) {
+        reconciliationBlocked.value = true;
+        if (reconciliationOrder?.recovery_action === "contact_support") {
+          approvedOrder.value = reconciliationOrder;
+          approved.value = true;
+        } else {
+          draftStore.error =
+            "This campaign requires reconciliation, but its order details could not be confirmed. Contact support and do not approve or retry it again.";
+        }
+        approving.value = false;
+        return;
+      }
+      const knownPreProviderFailure =
+        isKnownPreProviderPurchaseError(purchaseErr);
+      if (
+        knownPreProviderFailure &&
+        purchaseErr?.status === 402 &&
+        purchaseErr?.data?.error === "payment_method_required"
+      ) {
+        if (paymentMethod.value) {
+          paymentMethod.value = {
+            ...paymentMethod.value,
+            required: true,
+            has_payment_method: false,
+            brand: null,
+            last4: null,
+            exp_month: null,
+            exp_year: null,
+            label: null,
+          };
+        }
+        draftStore.error =
+          "Your campaign is approved, but it hasn't been sent because a valid payment method is required. Add a card, then tap Approve again.";
+      } else if (knownPreProviderFailure) {
+        draftStore.error =
+          "Campaign approved and proof saved. The server confirmed no provider purchase started. " +
+          "Resolve the reported payment or budget issue, then tap Approve again.";
+      } else {
+        reconciliationBlocked.value = true;
+        draftStore.error =
+          "Campaign approved and proof saved, but the purchase outcome could not be safely confirmed. " +
+          "Contact support and do not approve or retry this campaign again.";
+      }
       approving.value = false;
       return;
     }
 
     approved.value = true;
   } catch (e: any) {
-    draftStore.error = "Failed to approve campaign. Please try again.";
+    const details = e?.data?.error?.details;
+    if (e?.status === 400 && details?.code === "mail_schedule_invalid") {
+      const invalidDetails = details as MailScheduleInvalidDetails;
+      scheduleAvailability.applyInvalidDetails(invalidDetails);
+      const refreshedSchedules = [
+        scheduleForDate(invalidDetails.earliest_mailing_date),
+      ];
+      schedules.value = refreshedSchedules;
+      // Keep the refreshed date with the otherwise unchanged draft so leaving
+      // and returning to Review cannot resurrect the rejected selection.
+      draftStore.setReview({ ...review, schedules: refreshedSchedules });
+      scheduleActionMessage.value =
+        `Mailing availability changed. We updated your mailing date to ` +
+        `${invalidDetails.earliest_mailing_date}. Review it and approve again; ` +
+        `the rest of your draft is unchanged.`;
+      draftStore.error = null;
+    } else if (
+      e?.status === 400 &&
+      details?.code === "proof_approval_required"
+    ) {
+      draftStore.error =
+        "Final customer proof approval is required before a guaranteed mailing date can be calculated.";
+    } else if (e?.status === 400 && details?.code === "single_mailing_required") {
+      draftStore.error =
+        "This draft needs a one-mailing review before it can be approved. " +
+        "Review the design and schedule, then try again.";
+    } else {
+      draftStore.error = "Failed to approve campaign. Please try again.";
+    }
   } finally {
     approving.value = false;
   }
@@ -231,17 +659,13 @@ async function approve() {
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
         <h2 class="text-2xl font-bold text-[#0b2d50] mb-2">
-      Your campaign is live!
+      {{ approvalOutcomeTitle }}
     </h2>
     <p class="text-gray-500 mb-6 max-w-md">
-      Card 1 is in production and will mail in about 5 business days.
-      <template v-if="seqLen > 1">
-        Cards 2{{ seqLen > 2 ? `-${seqLen}` : "" }} will follow on
-        schedule unless you pause.
-      </template>
+      {{ approvalOutcomeCopy }}
     </p>
-    <p class="text-xs text-gray-400 mb-6">
-      You can cancel within 1 hour if you change your mind.
+    <p v-if="approvalAmount" class="text-xs text-gray-500 mb-6" data-testid="approved-order-amount">
+      Server-confirmed amount: {{ approvalAmount }}
     </p>
     <div class="flex gap-3">
       <button
@@ -267,12 +691,19 @@ async function approve() {
         <ReviewSummary
           :draft-id="draftStore.draft?.id"
           :cards="designCards"
+          :design-source="designSource"
+          :uploaded-front-url="uploadedFrontUrl"
+          :uploaded-front-mime-type="uploadedFrontMimeType"
         />
       </div>
 
       <!-- Print proof bar — Phase 4D task 29. Same flow as StepDesign's
-           Generate Proof but framed as final pre-approval verification. -->
+           Generate Proof but framed as final pre-approval verification.
+           Hidden for uploaded/requested designs: the render pipeline only
+           knows sequenceCards, so a proof here would show AI cards that
+           contradict the preview above (cross-phase review finding). -->
       <div
+        v-if="designSource !== 'uploaded' && designSource !== 'requested'"
         class="border-t border-gray-200 bg-white px-6 py-3 flex items-center justify-between"
       >
         <div class="text-sm text-gray-500">
@@ -384,29 +815,91 @@ async function approve() {
           data-testid="zero-households-warning"
           class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
         >
-          Your target area has no households, so this campaign can't be
-          approved yet.
-          <button
-            class="font-semibold underline"
-            @click="draftStore.goToStep(2)"
-          >
-            Go back to Pick Your Neighborhood
-          </button>
-          and choose an area with at least one household.
+          <template v-if="goal?.goalType === 'send_to_list'">
+            Your list has no deliverable addresses, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to your list
+            </button>
+            and upload at least one deliverable address.
+          </template>
+          <template v-else>
+            Your target area has no households, so this campaign can't be
+            approved yet.
+            <button
+              class="font-semibold underline"
+              @click="draftStore.goToStep(2)"
+            >
+              Go back to Pick Your Neighborhood
+            </button>
+            and choose an area with at least one household.
+          </template>
         </div>
       </div>
 
       <!-- Schedule -->
+      <div
+        v-if="isCustomDesignRequest"
+        class="rounded-lg border border-amber-200 bg-amber-50 p-3"
+        data-testid="professional-design-schedule-block"
+      >
+        <h4 class="text-sm font-semibold text-[#0b2d50]">
+          Final proof approval required
+        </h4>
+        <p class="mt-1 text-xs leading-relaxed text-amber-800">
+          Your professional design request is not ready to schedule yet. Your
+          guaranteed mailing date will be calculated after you approve the
+          final customer proof.
+        </p>
+      </div>
       <ScheduleEditor
+        v-else
         :schedules="schedules"
-        :sequence-spacing-days="goal?.sequenceSpacingDays ?? 14"
+        :availability="scheduleAvailability.availability.value"
+        :loading="scheduleAvailability.loading.value"
+        :error="scheduleAvailability.error.value"
+        :validity-message="scheduleValidityMessage"
+        :action-message="scheduleActionMessage"
         @update="updateSchedule"
+        @retry="loadScheduleAvailability"
       />
+
+      <div
+        v-if="
+          !isCustomDesignRequest &&
+          (legacyDraftNeedsDesignReview || staleMultiMailingDraft || !hasSingleMailingIntent)
+        "
+        data-testid="single-mailing-warning"
+        class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+      >
+        <template v-if="staleMultiMailingDraft">
+          This stale draft still contains multiple mailing instructions and
+          cannot be approved. Return to the design step and review it as one
+          mailing.
+        </template>
+        <template v-else>
+          This draft was previously configured for multiple mailings. It has
+          been updated to one mailing; review the design and schedule before
+          approving it.
+        </template>
+        <button
+          v-if="legacyDraftNeedsDesignReview || staleMultiMailingDraft"
+          class="ml-1 font-semibold underline"
+          @click="draftStore.goToStep(3)"
+        >
+          Review design
+        </button>
+      </div>
 
       <!-- Cost -->
       <CostBreakdown
         :household-count="householdCount"
         :sequence-length="seqLen"
+        :billing-summary="paymentMethod"
+        :include-custom-design-fee="isCustomDesignRequest"
         class="mt-5"
       />
 
@@ -426,11 +919,271 @@ async function approve() {
         Mailing to: {{ seedAddress }}
       </p>
 
-      <!-- Payment method (mock) -->
-      <div class="mt-5 p-3 bg-white rounded-lg border border-gray-200">
+      <!-- POS-161: business return address (org default or campaign override) -->
+      <div
+        class="mt-5 p-3 bg-white rounded-lg border border-gray-200"
+        data-testid="return-address-summary"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="text-xs text-gray-400 uppercase tracking-wider">
+            Return address
+          </div>
+          <button
+            v-if="!editingReturnAddress"
+            type="button"
+            class="text-xs text-[#47bfa9] hover:text-[#3aa893]"
+            data-testid="return-address-edit"
+            @click="startEditReturnAddress"
+          >
+            Edit
+          </button>
+        </div>
+
+        <div
+          v-if="!orgReturnAddressLoaded && !effectiveReturnAddress"
+          class="mt-1 text-sm text-gray-400"
+        >
+          Loading…
+        </div>
+
+        <div
+          v-else-if="!editingReturnAddress && returnAddressLines"
+          class="mt-1"
+          data-testid="return-address-display"
+        >
+          <p
+            v-for="(line, i) in returnAddressLines"
+            :key="i"
+            class="text-sm text-[#0b2d50] leading-snug"
+          >
+            {{ line }}
+          </p>
+          <p
+            v-if="returnAddressIsOverride"
+            class="mt-1 text-xs text-gray-400"
+            data-testid="return-address-override-badge"
+          >
+            Campaign override
+          </p>
+          <p
+            v-else
+            class="mt-1 text-xs text-gray-400"
+            data-testid="return-address-org-default-badge"
+          >
+            Account default
+          </p>
+        </div>
+
+        <div
+          v-else-if="!editingReturnAddress && orgReturnAddressLoaded"
+          class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+          data-testid="return-address-missing-warning"
+        >
+          <router-link
+            to="/app/settings"
+            class="font-semibold underline"
+            data-testid="return-address-settings-link"
+          >
+            Add your business mailing address — approval is blocked until it is complete
+          </router-link>
+        </div>
+
+        <div
+          v-if="editingReturnAddress"
+          class="mt-3 space-y-2"
+          data-testid="return-address-edit-form"
+        >
+          <div>
+            <label
+              for="review-return-name"
+              class="block text-xs text-gray-500"
+            >
+              Name (optional)
+            </label>
+            <input
+              id="review-return-name"
+              v-model="returnAddressForm.name"
+              type="text"
+              data-testid="review-return-name"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div>
+            <label
+              for="review-return-address"
+              class="block text-xs text-gray-500"
+            >
+              Street address
+            </label>
+            <input
+              id="review-return-address"
+              v-model="returnAddressForm.address"
+              type="text"
+              data-testid="review-return-address"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div>
+            <label
+              for="review-return-address2"
+              class="block text-xs text-gray-500"
+            >
+              Apt/Suite (optional)
+            </label>
+            <input
+              id="review-return-address2"
+              v-model="returnAddressForm.address2"
+              type="text"
+              data-testid="review-return-address2"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+            />
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label
+                for="review-return-city"
+                class="block text-xs text-gray-500"
+              >
+                City
+              </label>
+              <input
+                id="review-return-city"
+                v-model="returnAddressForm.city"
+                type="text"
+                data-testid="review-return-city"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="review-return-state"
+                class="block text-xs text-gray-500"
+              >
+                State
+              </label>
+              <input
+                id="review-return-state"
+                v-model="returnAddressForm.state"
+                type="text"
+                maxlength="2"
+                data-testid="review-return-state"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm uppercase text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="review-return-zip"
+                class="block text-xs text-gray-500"
+              >
+                ZIP
+              </label>
+              <input
+                id="review-return-zip"
+                v-model="returnAddressForm.zip"
+                type="text"
+                data-testid="review-return-zip"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              />
+            </div>
+          </div>
+          <p
+            v-if="returnAddressFormError"
+            class="text-xs text-red-600"
+            data-testid="return-address-form-error"
+          >
+            {{ returnAddressFormError }}
+          </p>
+          <div class="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+              data-testid="return-address-cancel"
+              @click="cancelEditReturnAddress"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="text-xs font-semibold text-white bg-[#47bfa9] hover:bg-[#3aa893] rounded-md px-3 py-1.5"
+              data-testid="return-address-save"
+              @click="saveReturnAddressOverride"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Stripe payment readiness. Approval fails closed until checked. -->
+      <div
+        class="mt-5 p-3 bg-white rounded-lg border border-gray-200"
+        data-testid="payment-method-summary"
+      >
         <div class="text-xs text-gray-400">Payment method</div>
-        <div class="text-sm text-[#0b2d50]">Visa ending in 4242</div>
-        <button class="text-xs text-[#47bfa9] mt-1">Change</button>
+        <div
+          v-if="paymentMethodLoading"
+          class="text-sm text-gray-500"
+        >
+          Checking payment method…
+        </div>
+        <div
+          v-else-if="paymentMethod?.has_payment_method"
+          class="text-sm text-[#0b2d50]"
+          data-testid="payment-method-label"
+        >
+          {{ paymentMethod.label || "Card on file" }}
+        </div>
+        <div
+          v-else-if="paymentMethod && !paymentMethod.required"
+          class="text-sm text-[#0b2d50]"
+          data-testid="payment-method-covered"
+        >
+          Included with your {{ paymentMethod.plan_code || "account" }} plan
+        </div>
+        <div
+          v-else
+          class="text-sm text-amber-700"
+          data-testid="payment-method-missing"
+        >
+          No payment method on file
+        </div>
+        <button
+          type="button"
+          class="text-xs text-[#47bfa9] mt-1 disabled:opacity-50"
+          data-testid="payment-method-change"
+          :disabled="paymentMethodBusy"
+          @click="managePaymentMethod"
+        >
+          {{
+            paymentMethod?.has_payment_method
+              ? "Change"
+              : paymentMethodBusy
+                ? "Opening secure setup…"
+                : "Add payment method"
+          }}
+        </button>
+        <button
+          v-if="paymentMethodError"
+          type="button"
+          class="ml-3 text-xs font-medium text-red-600 underline"
+          data-testid="payment-method-retry"
+          @click="loadPaymentMethod"
+        >
+          Retry
+        </button>
+        <p
+          v-if="paymentMethodError"
+          class="mt-1 text-xs text-red-600"
+          role="alert"
+        >
+          {{ paymentMethodError }}
+        </p>
+        <p
+          v-if="paymentStatusMessage"
+          class="mt-1 text-xs text-emerald-700"
+        >
+          {{ paymentStatusMessage }}
+        </p>
       </div>
 
       <!-- P0 #4: consolidated accuracy + rights acknowledgement.
@@ -456,6 +1209,14 @@ async function approve() {
         </label>
       </div>
 
+      <p
+        v-if="draftStore.error"
+        class="mt-3 text-sm text-red-600"
+        role="alert"
+      >
+        {{ draftStore.error }}
+      </p>
+
       <!-- Approve button -->
       <button
         class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
@@ -468,13 +1229,12 @@ async function approve() {
           />
           Approving...
         </template>
-        <template v-else> Approve & Send Card 1 </template>
+        <template v-else-if="isCustomDesignRequest">
+          Awaiting Final Proof Approval
+        </template>
+        <template v-else> Approve & Send Mailing </template>
       </button>
-      <p v-if="seqLen > 1" class="text-xs text-gray-400 text-center mt-2">
-        Cards {{ seqLen > 2 ? `2-${seqLen}` : "2" }} send on schedule
-        unless you pause. You can cancel within 1 hour.
-      </p>
-      <p v-else class="text-xs text-gray-400 text-center mt-2">
+      <p class="text-xs text-gray-400 text-center mt-2">
         You can cancel within 1 hour.
       </p>
     </div>

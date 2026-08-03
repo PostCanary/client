@@ -1,29 +1,38 @@
 // src/composables/useCampaignList.ts
 import { ref, computed } from "vue";
-import type { MailCampaign, CampaignDraft } from "@/types/campaign";
+import { storeToRefs } from "pinia";
+import type { MailCampaign } from "@/types/campaign";
 import { listMailCampaigns } from "@/api/mailCampaigns";
-import { listDrafts } from "@/api/campaignDrafts";
+import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { useAuthStore } from "@/stores/auth";
 
-export type CampaignTab = "active" | "drafts" | "completed" | "paused";
-
-const ACTIVE_STATUSES = ["approved", "printing", "in_transit", "delivered"];
+// Customer-facing campaign tabs are separate from the internal mail-campaign
+// lifecycle: drafts come from campaign_drafts, while every persisted
+// post-approval mail campaign belongs in Sent.
+export type CampaignTab = "draft" | "sent";
 
 export function useCampaignList() {
   const campaigns = ref<MailCampaign[]>([]);
-  const drafts = ref<CampaignDraft[]>([]);
+  const auth = useAuthStore();
+  const draftListStore = useCampaignDraftListStore();
+  const { drafts, count: draftCount } = storeToRefs(draftListStore);
   const loading = ref(false);
-  const activeTab = ref<CampaignTab>("active");
+  const activeTab = ref<CampaignTab>("draft");
   const searchQuery = ref("");
   const sortBy = ref<"newest" | "oldest">("newest");
 
   async function fetch() {
     loading.value = true;
+    const orgId = auth.orgId;
+    draftListStore.setActiveOrg(orgId);
     try {
-      const [c, d] = await Promise.all([listMailCampaigns(), listDrafts()]);
-      campaigns.value = c;
-      drafts.value = d;
-    } catch {
-      // Fail silently — empty lists shown
+      const [campaignResult] = await Promise.allSettled([
+        listMailCampaigns(),
+        orgId ? draftListStore.refresh(orgId) : Promise.resolve(false),
+      ]);
+      if (campaignResult.status === "fulfilled") {
+        campaigns.value = campaignResult.value;
+      }
     } finally {
       loading.value = false;
     }
@@ -33,14 +42,11 @@ export function useCampaignList() {
     let list = campaigns.value;
 
     // Filter by tab
-    if (activeTab.value === "active") {
-      list = list.filter((c) => ACTIVE_STATUSES.includes(c.status));
-    } else if (activeTab.value === "completed") {
-      list = list.filter(
-        (c) => c.status === "completed" || c.status === "results_ready",
-      );
-    } else if (activeTab.value === "paused") {
-      list = list.filter((c) => c.status === "paused");
+    if (activeTab.value === "sent") {
+      // Keep the server lifecycle opaque to customers. This intentionally
+      // includes approved, paused, printing, in_transit, delivered, results,
+      // completed, and any future post-approval status.
+      list = list.filter((c) => c.status !== "draft");
     }
 
     // Search
@@ -60,14 +66,8 @@ export function useCampaignList() {
   });
 
   const tabCounts = computed(() => ({
-    active: campaigns.value.filter((c) =>
-      ACTIVE_STATUSES.includes(c.status),
-    ).length,
-    drafts: drafts.value.length,
-    completed: campaigns.value.filter(
-      (c) => c.status === "completed" || c.status === "results_ready",
-    ).length,
-    paused: campaigns.value.filter((c) => c.status === "paused").length,
+    draft: draftCount.value,
+    sent: campaigns.value.filter((c) => c.status !== "draft").length,
   }));
 
   return {

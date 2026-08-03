@@ -39,7 +39,7 @@ const navItems = [
   { label: "AI Insights", path: "/analytics" },
   { label: "Demographics", path: "/demographics" },
   { label: "Heatmap", path: "/map" },
-  { label: "History", path: "/history" },
+  { label: "Upload History", path: "/history" },
 ];
 
 function isActive(path: string) {

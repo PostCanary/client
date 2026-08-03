@@ -1,19 +1,20 @@
 import { test as setup, expect } from "@playwright/test";
 
+import { readLiveAuthConfig } from "../../support/liveAuthConfig";
+
 /**
  * One-time login for live-stack tests. Writes cookies to .auth/live.json so
  * the wizard spec can reuse an authenticated session without hitting login
  * every test.
  *
- * Credentials default to drake@postcanary.com / Djmax123 (documented in the
- * session handoff — dev-user, not a secret). Override via POSTCANARY_TEST_EMAIL
- * / POSTCANARY_TEST_PASSWORD env vars.
+ * Credentials are required through POSTCANARY_TEST_EMAIL and
+ * POSTCANARY_TEST_PASSWORD. There is deliberately no repository fallback.
  *
  * 3 failed attempts = Auth0 lockout, so do NOT retry on 401 inside this setup.
  */
 const AUTH_FILE = ".auth/live.json";
-const EMAIL = process.env.POSTCANARY_TEST_EMAIL ?? "drake@postcanary.com";
-const PASSWORD = process.env.POSTCANARY_TEST_PASSWORD ?? "Djmax123";
+const { email: EMAIL, password: PASSWORD, seedDemoData: SEED_DEMO_DATA } =
+  readLiveAuthConfig();
 
 setup("authenticate against live dev stack", async ({ request, baseURL }) => {
   const origin = (baseURL ?? "http://localhost:8080").replace(/\/+$/, "");
@@ -44,6 +45,11 @@ setup("authenticate against live dev stack", async ({ request, baseURL }) => {
     me.authenticated,
     `auth setup failed: /auth/me unauthenticated after login-json — cookie not established`,
   ).toBe(true);
+
+  if (!SEED_DEMO_DATA) {
+    await request.storageState({ path: AUTH_FILE });
+    return;
+  }
 
   const authedCsrfRes = await request.get("/auth/csrf-token", {
     headers: { Origin: origin, Referer: `${origin}/app/send` },

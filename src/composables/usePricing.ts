@@ -20,6 +20,9 @@ function load(): void {
   inflight = fetchPricing()
     .then((p) => {
       rates.payPerSend = p.pay_per_send_cents / 100;
+      if (typeof p.custom_design_fee_cents === "number") {
+        rates.customDesignFee = p.custom_design_fee_cents / 100;
+      }
       rates.INSIGHT = p.subscription_rates_cents.INSIGHT / 100;
       rates.PERFORMANCE = p.subscription_rates_cents.PERFORMANCE / 100;
       rates.PRECISION = p.subscription_rates_cents.PRECISION / 100;

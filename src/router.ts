@@ -156,7 +156,7 @@ const routes: RouteRecordRaw[] = [
         name: "History",
         alias: "/history", // ✅ clean URL
         component: () => import("@/pages/History.vue"),
-        meta: { title: `History • ${BRAND.name}`, navbarTitle: "History" },
+        meta: { title: `Upload History • ${BRAND.name}`, navbarTitle: "Upload History" },
       },
       {
         path: "team",
@@ -178,6 +178,16 @@ const routes: RouteRecordRaw[] = [
         name: "CampaignDetail",
         component: () => import("@/pages/CampaignDetail.vue"),
         meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign", requiresFeature: "postcards" },
+      },
+      {
+        path: "dev/step-review-approval-flow",
+        name: "DevAppStepReviewApprovalFlow",
+        component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
+        meta: {
+          title: "Step Review Approval Flow (dev)",
+          navbarTitle: "Review",
+          requiresFeature: "postcards",
+        },
       },
       {
         path: "print-jobs/:id",
@@ -209,19 +219,37 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/app/send-to-a-list/:audienceId",
     name: "SttLStep2ExistingAudience",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
   {
     path: "/app/send/:draftId/sttl-step-2",
     name: "SttLStep2",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
   {
     path: "/app/send/sttl-step-2",
     name: "SttLStep2NewDraft",
-    component: () => import("@/pages/SttLStep2Route.vue"),
+    component: () => import("@/layouts/WizardLayout.vue"),
+    children: [
+      {
+        path: "",
+        component: () => import("@/pages/SttLStep2Route.vue"),
+      },
+    ],
     meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
   },
 
