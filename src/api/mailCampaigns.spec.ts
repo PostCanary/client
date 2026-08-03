@@ -225,6 +225,13 @@ describe("mail campaign approval artifacts", () => {
     ["missing payment state", validOrder({ payment_state: null })],
     ["unknown fulfillment state", validOrder({ fulfillment_state: "maybe_sent" })],
     ["missing reconciliation state", validOrder({ reconciliation_state: null })],
+    ["missing requested count", (() => {
+      const value = validOrder();
+      const { requested: _requested, ...counts } = value.counts;
+      return { ...value, counts };
+    })()],
+    ["zero requested count", validOrder({ counts: { requested: 0 } })],
+    ["requested count above approval", validOrder({ counts: { requested: 251 } })],
     ["missing nullable actual key", (() => {
       const value = validOrder();
       const { failed: _failed, ...counts } = value.counts;
@@ -276,6 +283,43 @@ describe("mail campaign approval artifacts", () => {
 
     expect(order?.payment_state).toBe("authorization_ambiguous");
     expect(order?.recovery_action).toBe("contact_support");
+  });
+
+  it.each([
+    "authorization_cancelled",
+    "authorization_release_pending",
+  ])("accepts the server %s reconciliation state", (paymentState) => {
+    const order = normalizeOrderProjection(validOrder({
+      payment_state: paymentState,
+      fulfillment_state: "reconciliation_required",
+      reconciliation_state: "required",
+      reconciliation_reason: "payment_release_ambiguous",
+      recovery_action: "contact_support",
+    }));
+
+    expect(order?.payment_state).toBe(paymentState);
+    expect(order?.recovery_action).toBe("contact_support");
+  });
+
+  it("accepts an approved audience reduced by a later DNM suppression", () => {
+    const order = normalizeOrderProjection(validOrder({
+      counts: {
+        approved: 250,
+        requested: 249,
+        purchased: 249,
+        printable: 249,
+        billed: 249,
+        submitted: 249,
+      },
+      amounts: {
+        authorized_cents: 21663,
+        charged_cents: 21663,
+        net_cents: 21663,
+      },
+    }));
+
+    expect(order?.counts.approved).toBe(250);
+    expect(order?.counts.requested).toBe(249);
   });
 
   it("preserves overdelivery as durable reconciliation evidence", () => {

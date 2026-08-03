@@ -74,6 +74,8 @@ const ORDER_PAYMENT_STATES = new Set([
   "covered",
   "authorized",
   "authorization_ambiguous",
+  "authorization_cancelled",
+  "authorization_release_pending",
   "captured",
   "subscription_applied",
   "refunded",
@@ -196,7 +198,9 @@ function isValidOrderFacts(
   if (
     counts.approved === null ||
     counts.approved < 1 ||
-    counts.requested !== counts.approved ||
+    counts.requested === null ||
+    counts.requested < 1 ||
+    counts.requested > counts.approved ||
     amounts.currency === null ||
     amounts.currency !== "usd" ||
     amounts.unit_rate_cents === null ||
