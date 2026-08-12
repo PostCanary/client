@@ -77,7 +77,9 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
-      sourcemap: true,
+      // Production source maps stay private. Enable hidden maps only after a
+      // Sentry upload step removes them from the public deployment artifact.
+      sourcemap: false,
     },
   };
 });

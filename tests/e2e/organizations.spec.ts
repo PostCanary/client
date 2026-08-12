@@ -9,6 +9,19 @@ async function setup(page: Page, mutate?: (state: MockAppState) => void) {
   return state;
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 640;
+}
+
+async function visibleOrgSwitcher(page: Page) {
+  if (!isMobileViewport(page)) return page.getByTestId("org-switcher-trigger");
+
+  await page.getByRole("button", { name: "Toggle sidebar" }).click();
+  return page
+    .getByRole("dialog", { name: "Navigation menu" })
+    .getByTestId("org-switcher-trigger");
+}
+
 test("team management covers invites, role updates, and member removal", async ({ page }) => {
   const state = await setup(page);
 
@@ -41,19 +54,29 @@ test("org switcher reloads the app in the selected organization context", async 
 
   await page.goto("/dashboard");
 
-  await expect(page.getByTestId("org-switcher-trigger")).toContainText("Alpha Roofing");
+  const orgSwitcher = await visibleOrgSwitcher(page);
+  await expect(orgSwitcher).toContainText("Alpha Roofing");
 
-  await page.getByTestId("org-switcher-trigger").click();
+  await orgSwitcher.click();
+  const orgOptions = isMobileViewport(page)
+    ? page.getByRole("dialog", { name: "Navigation menu" })
+    : page;
   await Promise.all([
     page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-    page.getByTestId("org-switcher-item-org-beta").click(),
+    orgOptions.getByTestId("org-switcher-item-org-beta").click(),
   ]);
 
   await expect.poll(() => state.requestLog.switches.at(-1)).toBe("org-beta");
-  await expect(page.getByTestId("org-switcher-trigger")).toContainText("Beta Plumbing");
+  const switchedOrg = await visibleOrgSwitcher(page);
+  await expect(switchedOrg).toContainText("Beta Plumbing");
 
-  await expect(page.getByTestId("campaign-select")).toContainText("West Region Launch");
-  await expect(page.getByTestId("campaign-select")).not.toContainText("Spring Reactivation");
+  if (isMobileViewport(page)) {
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("18");
+  } else {
+    await expect(page.getByTestId("campaign-select")).toContainText("West Region Launch");
+    await expect(page.getByTestId("campaign-select")).not.toContainText("Spring Reactivation");
+  }
 });
 
 test("invite accept page prompts unauthenticated users to sign in or sign up", async ({ page }) => {
