@@ -18,6 +18,55 @@ function seoMeta(path: string) {
   };
 }
 
+// QA routes are part of local development by default. A protected preview
+// build must opt in with VITE_ENABLE_QA_ROUTES=1. Production builds do not
+// include these route records or their lazy-loaded page modules.
+const qaRoutesEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_QA_ROUTES === "1";
+
+const appQaRoutes: RouteRecordRaw[] = qaRoutesEnabled
+  ? [
+      {
+        path: "dev/step-review-approval-flow",
+        name: "DevAppStepReviewApprovalFlow",
+        component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
+        meta: {
+          title: "Step Review Approval Flow (dev)",
+          navbarTitle: "Review",
+          requiresFeature: "postcards",
+        },
+      },
+    ]
+  : [];
+
+const qaRoutes: RouteRecordRaw[] = qaRoutesEnabled
+  ? [
+      {
+        path: "/dev/sttl-step2-preview",
+        name: "DevSttLStep2Preview",
+        component: () => import("@/pages/dev/SttLStep2Preview.vue"),
+        meta: { title: "SttL Step 2 Preview (dev)", marketing: false },
+      },
+      {
+        path: "/dev/step-review-approval-flow",
+        name: "DevStepReviewApprovalFlow",
+        component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
+        meta: { title: "Step Review Approval Flow (dev)", marketing: false },
+      },
+      {
+        path: "/dev/step-design-fold",
+        name: "DevStepDesignFold",
+        component: () => import("@/pages/dev/StepDesignFold.vue"),
+        meta: { title: "Step Design Fold (dev)", marketing: false },
+      },
+      {
+        path: "/dev/wizard-shell-strips",
+        name: "DevWizardShellStrips",
+        component: () => import("@/pages/dev/WizardShellStrips.vue"),
+        meta: { title: "Wizard Shell Strips (dev)", marketing: false },
+      },
+    ]
+  : [];
+
 const routes: RouteRecordRaw[] = [
   // ── Marketing pages (wrapped in MarketingLayout) ───────
   {
@@ -179,16 +228,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/CampaignDetail.vue"),
         meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign", requiresFeature: "postcards" },
       },
-      {
-        path: "dev/step-review-approval-flow",
-        name: "DevAppStepReviewApprovalFlow",
-        component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
-        meta: {
-          title: "Step Review Approval Flow (dev)",
-          navbarTitle: "Review",
-          requiresFeature: "postcards",
-        },
-      },
+      ...appQaRoutes,
       {
         path: "print-jobs/:id",
         name: "PrintJobStatus",
@@ -276,33 +316,9 @@ const routes: RouteRecordRaw[] = [
     meta: { title: `Accept Invitation • ${BRAND.name}`, marketing: true },
   },
 
-  // ── Dev-only preview routes ───────
-  // Not linked from navigation. Used for visual verification of postcard
-  // templates without running the full wizard or hitting the backend.
-  {
-    path: "/dev/sttl-step2-preview",
-    name: "DevSttLStep2Preview",
-    component: () => import("@/pages/dev/SttLStep2Preview.vue"),
-    meta: { title: "SttL Step 2 Preview (dev)", marketing: false },
-  },
-  {
-    path: "/dev/step-review-approval-flow",
-    name: "DevStepReviewApprovalFlow",
-    component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
-    meta: { title: "Step Review Approval Flow (dev)", marketing: false },
-  },
-  {
-    path: "/dev/step-design-fold",
-    name: "DevStepDesignFold",
-    component: () => import("@/pages/dev/StepDesignFold.vue"),
-    meta: { title: "Step Design Fold (dev)", marketing: false },
-  },
-  {
-    path: "/dev/wizard-shell-strips",
-    name: "DevWizardShellStrips",
-    component: () => import("@/pages/dev/WizardShellStrips.vue"),
-    meta: { title: "Wizard Shell Strips (dev)", marketing: false },
-  },
+  // Not linked from navigation. Used for visual verification in local or
+  // explicitly protected QA builds only.
+  ...qaRoutes,
 
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];

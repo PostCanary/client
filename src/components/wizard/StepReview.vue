@@ -684,10 +684,10 @@ async function approve() {
   </div>
 
   <!-- Review screen -->
-  <div v-else class="flex h-full">
+  <div v-else class="flex min-w-0 flex-col lg:h-full lg:min-h-0 lg:flex-row">
     <!-- Left: Postcard previews + print-proof panel -->
-    <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
-      <div class="flex-1 flex items-center justify-center p-8">
+    <div class="min-w-0 flex-1 flex flex-col bg-gray-50 lg:overflow-y-auto">
+      <div class="flex-1 flex items-center justify-center p-4 sm:p-8">
         <ReviewSummary
           :draft-id="draftStore.draft?.id"
           :cards="designCards"
@@ -786,7 +786,7 @@ async function approve() {
     </div>
 
     <!-- Right: Details panel -->
-    <div class="w-96 border-l border-gray-200 p-6 overflow-y-auto">
+    <div class="w-full shrink-0 border-t border-gray-200 p-4 sm:p-6 lg:w-96 lg:border-l lg:border-t-0 lg:overflow-y-auto">
       <!-- Campaign name -->
       <div class="mb-5">
         <label class="text-xs text-gray-400 uppercase tracking-wider">

@@ -139,7 +139,7 @@ onMounted(() => {
 .home-tagline {
   margin: 0;
   font-size: 1rem;
-  color: var(--app-text-muted, #5b7186);
+  color: #52677b;
 }
 
 .home-grid {
@@ -188,15 +188,15 @@ onMounted(() => {
  * button and slightly growing in size" */
 .home-card:hover,
 .home-card:focus-visible {
-  background: var(--app-teal, #47bfa9);
-  border-color: var(--app-teal, #47bfa9);
+  background: #0f766e;
+  border-color: #0f766e;
   color: #fff;
   transform: scale(1.02);
   box-shadow: 0 10px 28px rgba(71, 191, 169, 0.35);
 }
 
 .home-card:focus-visible {
-  outline: 2px solid var(--app-teal-hover, #3aa893);
+  outline: 2px solid #115e59;
   outline-offset: 2px;
 }
 
@@ -230,13 +230,13 @@ onMounted(() => {
 
 .home-card-subtitle {
   font-size: 0.92rem;
-  color: var(--app-text-muted, #5b7186);
+  color: #52677b;
   transition: color 0.15s ease-out;
 }
 
 .home-card:hover .home-card-subtitle,
 .home-card:focus-visible .home-card-subtitle {
-  color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
 }
 
 @media (prefers-reduced-motion: reduce) {

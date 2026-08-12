@@ -38,7 +38,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const draftListStore = useCampaignDraftListStore()
 const { count: draftCount } = storeToRefs(draftListStore)
-const { isCollapsed } = useSidebar()
+const { isCollapsed, isMobile, closeMobile } = useSidebar()
 
 watch(
   () => auth.orgId,
@@ -107,16 +107,19 @@ function itemAccessibleLabel(item: SidebarItem): string {
 function navigate(path: string, label?: string, section?: string) {
   if (label) captureEvent('sidebar_item_clicked', { item: label, section: section || '', collapsed: isCollapsed.value })
   router.push(path)
+  if (isMobile.value) closeMobile('navigation')
 }
 
 function onSendPostcardsClick() {
   captureEvent('sidebar_send_postcards_clicked', { collapsed: isCollapsed.value })
   router.push('/app/send')
+  if (isMobile.value) closeMobile('navigation')
 }
 
 function onAnalyticsClick() {
   captureEvent('sidebar_item_clicked', { item: 'Analytics', section: 'analytics', collapsed: isCollapsed.value })
   router.push('/app/dashboard')
+  if (isMobile.value) closeMobile('navigation')
 }
 
 /* ── Sign out (same as existing Sidebar.vue) ────────────── */
@@ -352,7 +355,7 @@ async function onSignOut() {
   justify-content: center;
   gap: 8px;
   height: 40px;
-  background: var(--app-teal, #47bfa9);
+  background: #0f766e;
   color: #ffffff;
   font-weight: 600;
   font-size: 14px;
@@ -363,7 +366,7 @@ async function onSignOut() {
 }
 
 .cta-expanded:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: #115e59;
 }
 
 .cta-collapsed {
@@ -373,7 +376,7 @@ async function onSignOut() {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  background: var(--app-teal, #47bfa9);
+  background: #0f766e;
   color: #ffffff;
   border: none;
   border-radius: 50%;
@@ -382,7 +385,7 @@ async function onSignOut() {
 }
 
 .cta-collapsed:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: #115e59;
 }
 
 .cta-icon {
@@ -486,7 +489,7 @@ async function onSignOut() {
 /* Active state */
 .sidebar-item.active {
   background: var(--sidebar-item-active-bg, rgba(71, 191, 169, 0.08));
-  color: var(--sidebar-item-active-text, var(--app-teal, #47bfa9));
+  color: #0f766e;
   font-weight: 600;
 }
 
@@ -520,7 +523,7 @@ async function onSignOut() {
 }
 
 .sidebar-item.active .item-icon--component {
-  color: var(--sidebar-item-active-text, var(--app-teal, #47bfa9));
+  color: #0f766e;
 }
 
 /* ── Labels (hidden when collapsed) ───────────────────── */
