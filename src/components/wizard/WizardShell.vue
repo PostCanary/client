@@ -66,6 +66,15 @@ function retryScrape() {
 
 const step = computed(() => draftStore.currentStep);
 const completedSteps = computed(() => draftStore.draft?.completedSteps ?? []);
+const targetingReady = ref(false);
+
+watch(
+  step,
+  (nextStep) => {
+    if (nextStep === 2) targetingReady.value = false;
+  },
+  { immediate: true },
+);
 
 // POS-190: Send-to-a-List owns a dedicated Step 2 route. Persisted list
 // drafts used to fall through to the area-targeting component whenever the
@@ -109,6 +118,7 @@ watch(
 // open the gate (cross-phase review finding). Every other step still
 // gates on its real completion flag.
 const canAdvance = computed(() => {
+  if (step.value === 2 && !targetingReady.value) return false;
   if (step.value === 3) {
     const design = draftStore.draft?.design;
     const source = design?.designSource;
@@ -316,7 +326,10 @@ onBeforeRouteLeave(async () => {
     <!-- Step content -->
     <div class="flex-1 overflow-y-auto">
       <StepGoal v-if="step === 1" />
-      <StepTargeting v-else-if="step === 2" />
+      <StepTargeting
+        v-else-if="step === 2"
+        @targeting-ready="targetingReady = true"
+      />
       <StepUploadDesign v-else-if="step === 3" />
       <StepReview v-else-if="step === 4" />
     </div>
