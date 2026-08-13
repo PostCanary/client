@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TargetingFilters } from "@/types/campaign";
+import type { TargetingFilterKey, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
+import { unsupportedTargetingFilterLabels } from "@/utils/targetingCapabilities";
 import ExclusionToggles from "./ExclusionToggles.vue";
 
 const filters = defineModel<TargetingFilters>("filters", {
@@ -15,6 +17,8 @@ const frequencyDays = defineModel<number | null>("excludeMailedWithinDays", {
 const props = defineProps<{
   doNotMailCount: number;
   hasNonZipAreas?: boolean;
+  filterCapabilities: TargetingFilterSupport | null;
+  targetingProvider: TargetingProvider | null;
 }>();
 
 const PROPERTY_TYPES = [
@@ -25,17 +29,44 @@ const PROPERTY_TYPES = [
   "Mobile Home",
 ];
 
+function supportsFilter(key: TargetingFilterKey): boolean {
+  return props.filterCapabilities?.[key] ?? true;
+}
+
+const unavailableFilters = computed(() =>
+  props.filterCapabilities
+    ? unsupportedTargetingFilterLabels(props.filterCapabilities)
+    : [],
+);
+const providerLabel = computed(() =>
+  props.targetingProvider === "data_retriever"
+    ? "Data Retriever"
+    : "The current audience provider",
+);
+
 const activeFilterCount = computed(() => {
   let count = 0;
-  if (filters.value.homeowner !== null) count++;
-  if (filters.value.homeValueMin !== null || filters.value.homeValueMax !== null)
+  if (supportsFilter("homeowner") && filters.value.homeowner !== null) count++;
+  if (
+    (supportsFilter("homeValueMin") && filters.value.homeValueMin !== null) ||
+    (supportsFilter("homeValueMax") && filters.value.homeValueMax !== null)
+  )
     count++;
-  if (filters.value.yearBuiltMin !== null || filters.value.yearBuiltMax !== null)
+  if (
+    (supportsFilter("yearBuiltMin") && filters.value.yearBuiltMin !== null) ||
+    (supportsFilter("yearBuiltMax") && filters.value.yearBuiltMax !== null)
+  )
     count++;
-  if (filters.value.propertyTypes.length > 0) count++;
-  if (filters.value.hhageMin !== null || filters.value.hhageMax !== null) count++;
-  if (filters.value.incomeMin !== null) count++;
-  if (filters.value.loresMin !== null || filters.value.loresMax !== null) count++;
+  if (supportsFilter("propertyTypes") && filters.value.propertyTypes.length > 0) count++;
+  if (
+    (supportsFilter("hhageMin") && filters.value.hhageMin !== null) ||
+    (supportsFilter("hhageMax") && filters.value.hhageMax !== null)
+  ) count++;
+  if (supportsFilter("incomeMin") && filters.value.incomeMin !== null) count++;
+  if (
+    (supportsFilter("loresMin") && filters.value.loresMin !== null) ||
+    (supportsFilter("loresMax") && filters.value.loresMax !== null)
+  ) count++;
   return count;
 });
 
@@ -75,11 +106,23 @@ defineExpose({ activeFilterCount });
       </span>
     </div>
 
+    <div
+      v-if="unavailableFilters.length > 0"
+      class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+      role="status"
+      data-testid="targeting-capability-notice"
+    >
+      {{ providerLabel }} does not support {{ unavailableFilters.join(", ") }} targeting.
+      These controls are disabled and existing selections are cleared before counting.
+    </div>
+
     <!-- Homeowner -->
-    <div>
+    <div data-testid="filter-homeowner" :class="{ 'opacity-60': !supportsFilter('homeowner') }">
       <label class="text-xs text-gray-500">Homeowner status</label>
       <select
+        data-testid="filter-control-homeowner"
         :value="filters.homeowner ?? ''"
+        :disabled="!supportsFilter('homeowner')"
         class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
         @change="filters.homeowner = (($event.target as HTMLSelectElement).value || null) as TargetingFilters['homeowner']"
       >
@@ -91,11 +134,13 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Homeowner age (provider hhage, brackets 1-7) -->
-    <div>
+    <div data-testid="filter-household-age" :class="{ 'opacity-60': !supportsFilter('hhageMin') || !supportsFilter('hhageMax') }">
       <label class="text-xs text-gray-500">Homeowner age</label>
       <div class="flex gap-2 mt-1">
         <select
+          data-testid="filter-control-hhage-min"
           :value="filters.hhageMin ?? ''"
+          :disabled="!supportsFilter('hhageMin')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.hhageMin = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >
@@ -109,7 +154,9 @@ defineExpose({ activeFilterCount });
           <option value="7">75+</option>
         </select>
         <select
+          data-testid="filter-control-hhage-max"
           :value="filters.hhageMax ?? ''"
+          :disabled="!supportsFilter('hhageMax')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.hhageMax = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >
@@ -126,11 +173,13 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Length of residence (provider lores, brackets 0-15) -->
-    <div>
+    <div data-testid="filter-length-of-residence" :class="{ 'opacity-60': !supportsFilter('loresMin') || !supportsFilter('loresMax') }">
       <label class="text-xs text-gray-500">Length of residence</label>
       <div class="flex gap-2 mt-1">
         <select
+          data-testid="filter-control-lores-min"
           :value="filters.loresMin !== null ? filters.loresMin : ''"
+          :disabled="!supportsFilter('loresMin')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.loresMin = (($event.target as HTMLSelectElement).value !== '' ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >
@@ -153,7 +202,9 @@ defineExpose({ activeFilterCount });
           <option value="15">&gt; 14 years</option>
         </select>
         <select
+          data-testid="filter-control-lores-max"
           :value="filters.loresMax !== null ? filters.loresMax : ''"
+          :disabled="!supportsFilter('loresMax')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.loresMax = (($event.target as HTMLSelectElement).value !== '' ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >
@@ -179,10 +230,12 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Household income (minimum bracket) -->
-    <div>
+    <div data-testid="filter-income" :class="{ 'opacity-60': !supportsFilter('incomeMin') }">
       <label class="text-xs text-gray-500">Household income (min)</label>
       <select
+        data-testid="filter-control-income"
         :value="filters.incomeMin ?? ''"
+        :disabled="!supportsFilter('incomeMin')"
         class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
         @change="filters.incomeMin = (($event.target as HTMLSelectElement).value || null)"
       >
@@ -201,13 +254,15 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Home value range -->
-    <div>
+    <div data-testid="filter-home-value" :class="{ 'opacity-60': !supportsFilter('homeValueMin') || !supportsFilter('homeValueMax') }">
       <label class="text-xs text-gray-500">Home value range</label>
       <div class="flex gap-2 mt-1">
         <div class="relative w-1/2">
           <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
           <input
+            data-testid="filter-control-home-value-min"
             :value="formatDollar(filters.homeValueMin)"
+            :disabled="!supportsFilter('homeValueMin')"
             type="text"
             inputmode="numeric"
             placeholder="Min"
@@ -218,7 +273,9 @@ defineExpose({ activeFilterCount });
         <div class="relative w-1/2">
           <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">$</span>
           <input
+            data-testid="filter-control-home-value-max"
             :value="formatDollar(filters.homeValueMax)"
+            :disabled="!supportsFilter('homeValueMax')"
             type="text"
             inputmode="numeric"
             placeholder="Max"
@@ -230,18 +287,22 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Year built range -->
-    <div>
+    <div data-testid="filter-year-built" :class="{ 'opacity-60': !supportsFilter('yearBuiltMin') || !supportsFilter('yearBuiltMax') }">
       <label class="text-xs text-gray-500">Year built</label>
       <div class="flex gap-2 mt-1">
         <input
+          data-testid="filter-control-year-built-min"
           :value="filters.yearBuiltMin ?? ''"
+          :disabled="!supportsFilter('yearBuiltMin')"
           type="number"
           placeholder="From"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @input="filters.yearBuiltMin = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
         />
         <input
+          data-testid="filter-control-year-built-max"
           :value="filters.yearBuiltMax ?? ''"
+          :disabled="!supportsFilter('yearBuiltMax')"
           type="number"
           placeholder="To"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
@@ -251,7 +312,7 @@ defineExpose({ activeFilterCount });
     </div>
 
     <!-- Property type -->
-    <div>
+    <div data-testid="filter-property-types" :class="{ 'opacity-60': !supportsFilter('propertyTypes') }">
       <label class="text-xs text-gray-500">Property type</label>
       <div class="space-y-1.5 mt-1">
         <label
@@ -261,6 +322,7 @@ defineExpose({ activeFilterCount });
         >
           <input
             type="checkbox"
+            :disabled="!supportsFilter('propertyTypes')"
             :checked="filters.propertyTypes.includes(pt)"
             class="accent-[#47bfa9]"
             @change="togglePropertyType(pt)"

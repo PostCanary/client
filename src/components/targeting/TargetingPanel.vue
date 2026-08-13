@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { JobReference, TargetingFilters } from "@/types/campaign";
+import type { TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import PanelTabTarget from "./PanelTabTarget.vue";
 import PanelTabFilters from "./PanelTabFilters.vue";
 import PanelTabSummary from "./PanelTabSummary.vue";
@@ -12,6 +13,8 @@ defineProps<{
   radiusMiles: number;
   zips: string[];
   filters: TargetingFilters;
+  filterCapabilities: TargetingFilterSupport | null;
+  targetingProvider: TargetingProvider | null;
   excludePastCustomers: boolean;
   excludeMailedWithinDays: number | null;
   doNotMailCount: number;
@@ -106,6 +109,8 @@ const tabs = [
       <PanelTabFilters
         v-if="activeTab === 'filters'"
         :filters="filters"
+        :filter-capabilities="filterCapabilities"
+        :targeting-provider="targetingProvider"
         :exclude-past-customers="excludePastCustomers"
         :exclude-mailed-within-days="excludeMailedWithinDays"
         :do-not-mail-count="doNotMailCount"

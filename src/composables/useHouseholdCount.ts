@@ -13,6 +13,7 @@ import { ref, onBeforeUnmount } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { getHouseholdCount } from '@/api/targeting'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
+import type { TargetingCountSource } from '@/types/targeting'
 
 // POS-133: mirrors the server's circle-radius validation (app/utils/geo.py
 // validate_area — applies to "circle" and "job_radius" area types only; we
@@ -57,7 +58,7 @@ export function useHouseholdCount() {
   const error = ref<string | null>(null)
   // Neutral until the server actually reports a source (POS-135: no client
   // estimate exists to badge as 'mock' by default anymore).
-  const source = ref<'melissa' | 'mock'>('melissa')
+  const source = ref<TargetingCountSource>('melissa')
   const invalid = ref(false)
   // POS-135: true once `count` reflects an authoritative answer (a real
   // server response, or the genuine "no areas selected" zero) rather than
@@ -132,7 +133,7 @@ export function useHouseholdCount() {
       // Mid-session live→mock flip = server lost provider permission (dev-mode
       // fallback only — prod returns 503 via the catch branch below). Warn
       // so testers know the count is now estimated, not live.
-      if (result.source === 'mock' && prevSource === 'melissa') {
+      if (result.source === 'mock' && prevSource !== 'mock') {
         error.value = 'Live data temporarily unavailable — showing estimates'
       } else {
         error.value = null
