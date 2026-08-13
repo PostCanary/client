@@ -6,6 +6,7 @@ import type {
   AudienceCostPreview,
   AudienceSuppressionResult,
 } from "@/types/audiences";
+import type { TargetingCountSource } from "@/types/targeting";
 // API CONVENTION: The codebase uses snake_case directly in TypeScript
 // (no camelCase transformation). New API files should follow this same
 // pattern — use snake_case field names to match the server response.
@@ -221,7 +222,7 @@ export interface TargetingSelection {
   estimatedCostSequence: number        // cost for full sequence
 
   // Data source
-  countSource: 'melissa' | 'mock'
+  countSource: TargetingCountSource
 
   // Save
   savedAudienceName: string | null

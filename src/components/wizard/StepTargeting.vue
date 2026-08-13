@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, provide, onMounted, nextTick } from "vue";
+import { ref, computed, watch, provide, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { GOAL_DEFAULTS } from "@/types/campaign";
@@ -9,7 +9,17 @@ import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
 import EddmTargetingPanel from "@/components/targeting/EddmTargetingPanel.vue";
 import { useHouseholdCount } from "@/composables/useHouseholdCount";
+import { loadTargetingCapabilities } from "@/composables/useTargetingCapabilities";
+import {
+  normalizeTargetingFilters,
+  targetingFiltersAreSupported,
+} from "@/utils/targetingCapabilities";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
+import type { TargetingCapabilities } from "@/types/targeting";
+
+const emit = defineEmits<{
+  (e: "targeting-ready"): void;
+}>();
 
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
@@ -84,7 +94,7 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
     f.homeValueMax === null &&
     f.yearBuiltMin === null &&
     f.yearBuiltMax === null &&
-    f.propertyTypes.length === 0 &&
+    (Array.isArray(f.propertyTypes) ? f.propertyTypes.length : 0) === 0 &&
     (f.hhageMin ?? null) === null &&
     (f.hhageMax ?? null) === null &&
     (f.incomeMin ?? null) === null &&
@@ -98,6 +108,47 @@ const filters = ref<TargetingFilters>(
     ? { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] }
     : draftStore.draft!.targeting!.filters!,
 );
+
+const targetingCapabilities = ref<TargetingCapabilities | null>(null);
+const capabilitiesResolved = ref(false);
+const targetingReadyEmitted = ref(false);
+const capabilitiesAbortController = new AbortController();
+
+const filterCapabilities = computed(
+  () => targetingCapabilities.value?.filters ?? null,
+);
+const targetingProvider = computed(
+  () => targetingCapabilities.value?.provider ?? null,
+);
+
+function signalTargetingReady() {
+  if (targetingReadyEmitted.value) return;
+  targetingReadyEmitted.value = true;
+  emit("targeting-ready");
+}
+
+async function resolveTargetingCapabilities() {
+  const result = await loadTargetingCapabilities(capabilitiesAbortController.signal);
+  if (capabilitiesAbortController.signal.aborted) return;
+
+  if (result.capabilities) {
+    // Normalize before exposing the support map and before releasing the
+    // count watcher. This prevents the HVAC preset or a resumed draft from
+    // producing a transient unsupported count or draft snapshot.
+    filters.value = normalizeTargetingFilters(
+      filters.value,
+      result.capabilities.filters,
+    );
+    targetingCapabilities.value = result.capabilities;
+  } else {
+    // Legacy/prod servers may not expose this endpoint. Keep the existing
+    // filters and controls in that case; capability discovery is advisory.
+    signalTargetingReady();
+  }
+  capabilitiesResolved.value = true;
+}
+
+void resolveTargetingCapabilities();
 const excludePastCustomers = ref(
   draftStore.draft?.targeting?.excludePastCustomers ?? goalDefaults.value.includePastCustomers === false,
 );
@@ -165,8 +216,9 @@ const estimatedCostSequence = computed(
 
 // Watch areas + filters and trigger API fetch
 watch(
-  [allAreas, filters],
+  [allAreas, filters, capabilitiesResolved],
   () => {
+    if (!capabilitiesResolved.value) return;
     fetchCount(allAreas.value, filters.value);
   },
   { deep: true },
@@ -226,6 +278,7 @@ function commitEddmTargeting() {
     eddmSelection: sel,
   };
   draftStore.setTargeting(targeting);
+  signalTargetingReady();
 }
 
 // Debounced commit to draft store
@@ -234,6 +287,16 @@ let commitTimer: ReturnType<typeof setTimeout> | null = null;
 function commitTargeting() {
   if (commitTimer) clearTimeout(commitTimer);
   commitTimer = setTimeout(() => {
+    if (!capabilitiesResolved.value) return;
+    if (
+      targetingCapabilities.value &&
+      !targetingFiltersAreSupported(
+        filters.value,
+        targetingCapabilities.value.filters,
+      )
+    ) {
+      return;
+    }
     // POS-135: without a client-side estimate, apiCount starts at 0 until
     // the household-count API responds. Skip the commit entirely until it
     // reports an authoritative result (real count, real zero, or a
@@ -277,6 +340,7 @@ function commitTargeting() {
       eddmSelection: null,
     };
     draftStore.setTargeting(targeting);
+    signalTargetingReady();
   }, 1000);
 }
 
@@ -390,6 +454,11 @@ onMounted(() => {
     commitTargeting();
   }
 });
+
+onBeforeUnmount(() => {
+  capabilitiesAbortController.abort();
+  if (commitTimer) clearTimeout(commitTimer);
+});
 </script>
 
 <template>
@@ -423,6 +492,8 @@ onMounted(() => {
       :radius-miles="radiusMiles"
       :zips="zips"
       :filters="filters"
+      :filter-capabilities="filterCapabilities"
+      :targeting-provider="targetingProvider"
       :exclude-past-customers="excludePastCustomers"
       :exclude-mailed-within-days="excludeMailedWithinDays"
       :do-not-mail-count="doNotMailCount"
