@@ -37,6 +37,7 @@ const {
   error: countError,
   source: countSource,
   ready: countReady,
+  queryPlan: apiQueryPlan,
   fetchCount,
   fetchTotalIfNeeded,
 } = useHouseholdCount();
@@ -84,6 +85,9 @@ const HVAC_PRESET_FILTERS: TargetingFilters = {
   incomeMin: null,
   loresMin: null,
   loresMax: null,
+  squareFootageMin: null,
+  squareFootageMax: null,
+  hasEmail: null,
 };
 
 function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
@@ -100,6 +104,9 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
     (f.incomeMin ?? null) === null &&
     (f.loresMin ?? null) === null &&
     (f.loresMax ?? null) === null
+    && (f.squareFootageMin ?? null) === null
+    && (f.squareFootageMax ?? null) === null
+    && (f.hasEmail ?? null) === null
   );
 }
 
@@ -188,25 +195,14 @@ const allAreas = computed(() => {
 
 const hasNonZipAreas = computed(() => allAreas.value.some((a) => a.type !== 'zip'));
 
-// Use API count as the final household count.
-// S131: exclusion numbers come from the server response (apiExclusions) so
-// the breakdown line items match the math. The "Past customers" toggle
-// gates whether the server-supplied past-customer count is subtracted from
-// the displayed final (composable's `count` already nets all three out;
-// when the toggle is OFF we add `pastCustomers` back to surface a higher
-// final count). Until the toggle wires through to the API request itself
-// (Sprint 1.5 follow-up — see postcanary-todo.md), this is a client-side
-// approximation but uses real server numbers, not made-up percentages.
+// The server applies the selected suppression policy and attests the result.
+// The approved quantity must be the exact server final count.
 const totalHouseholds = computed(() => apiTotalCount.value || apiFilteredCount.value || apiCount.value);
 const excludedPast = computed(() =>
   excludePastCustomers.value ? apiExclusions.value.pastCustomers : 0
 );
 const excludedRecent = computed(() => apiExclusions.value.recentlyMailed);
-const finalHouseholdCount = computed(() =>
-  excludePastCustomers.value
-    ? apiCount.value
-    : apiCount.value + apiExclusions.value.pastCustomers
-);
+const finalHouseholdCount = computed(() => apiCount.value);
 const pastInArea = computed(() => apiExclusions.value.pastCustomers);
 const sequenceLength = computed(() => 1);
 const pricing = usePricing();
@@ -216,10 +212,13 @@ const estimatedCostSequence = computed(
 
 // Watch areas + filters and trigger API fetch
 watch(
-  [allAreas, filters, capabilitiesResolved],
+  [allAreas, filters, capabilitiesResolved, excludePastCustomers, excludeMailedWithinDays],
   () => {
     if (!capabilitiesResolved.value) return;
-    fetchCount(allAreas.value, filters.value);
+    fetchCount(allAreas.value, filters.value, {
+      excludePastCustomers: excludePastCustomers.value,
+      excludeMailedWithinDays: excludeMailedWithinDays.value,
+    });
   },
   { deep: true },
 );
@@ -258,7 +257,7 @@ function commitEddmTargeting() {
     sequenceSpacingDays: 0,
     areas: [],
     method: 'draw',
-    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null },
+    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null },
     jobsUsed: null,
     jobRadiusMiles: null,
     excludePastCustomers: false,
@@ -274,6 +273,7 @@ function commitEddmTargeting() {
     estimatedCostSingle: sel.totalHouseholds * pricing.payPerSend,
     estimatedCostSequence: sel.totalHouseholds * pricing.payPerSend * (draftStore.draft?.goal?.sequenceLength ?? 1),
     countSource: 'mock',
+    queryPlan: null,
     savedAudienceName: null,
     eddmSelection: sel,
   };
@@ -336,6 +336,7 @@ function commitTargeting() {
       estimatedCostSingle: finalHouseholdCount.value * perCard,
       estimatedCostSequence: finalHouseholdCount.value * perCard * seqLen,
       countSource: countSource.value,
+      queryPlan: apiQueryPlan.value,
       savedAudienceName: null,
       eddmSelection: null,
     };

@@ -16,6 +16,9 @@ const FILTERS: TargetingFilters = {
   incomeMin: 'C',
   loresMin: 2,
   loresMax: 10,
+  squareFootageMin: 1500,
+  squareFootageMax: 3000,
+  hasEmail: true,
 }
 
 const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
@@ -30,6 +33,9 @@ const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
   incomeMin: false,
   loresMin: false,
   loresMax: false,
+  squareFootageMin: false,
+  squareFootageMax: false,
+  hasEmail: false,
 }
 
 const LEADGEN_FILTERS: TargetingFilterSupport = {
@@ -44,11 +50,14 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  squareFootageMin: true,
+  squareFootageMax: true,
+  hasEmail: true,
 }
 
 function mountFilters(
   filterCapabilities: TargetingFilterSupport,
-  targetingProvider: 'leadgen' | 'data_retriever',
+  targetingProvider: 'leadgen' | 'data_retriever' | 'planner',
 ) {
   return mount(PanelTabFilters, {
     props: {
@@ -78,6 +87,8 @@ describe('PanelTabFilters provider capabilities', () => {
     expect(wrapper.get('[data-testid="filter-control-lores-max"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="filter-control-hhage-min"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('[data-testid="filter-control-hhage-max"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="filter-control-square-footage-min"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="filter-control-email-availability"]').attributes('disabled')).toBeDefined()
   })
 
   it('keeps all filter controls enabled for LeadGen', () => {
@@ -85,5 +96,14 @@ describe('PanelTabFilters provider capabilities', () => {
 
     expect(wrapper.find('[data-testid="targeting-capability-notice"]').exists()).toBe(false)
     expect(wrapper.findAll('select, input').every((control) => !control.attributes('disabled'))).toBe(true)
+  })
+
+  it('exposes planner property filters without exposing email values', () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner')
+
+    expect(wrapper.find('[data-testid="targeting-capability-notice"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="filter-control-square-footage-min"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="filter-control-email-availability"]').text()).toContain('Has email')
+    expect(wrapper.text()).toContain('Email addresses are not sent to the print partner')
   })
 })
