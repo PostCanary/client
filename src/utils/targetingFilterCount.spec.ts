@@ -120,3 +120,11 @@ describe('applyHomeServicesPreset', () => {
     expect(a.propertyTypes).not.toBe(HOME_SERVICES_PRESET.propertyTypes)
   })
 })
+
+describe('applyHomeServicesPreset preserves user values (Grok review P3)', () => {
+  it('does not clear a user-set year-built minimum', () => {
+    const result = applyHomeServicesPreset({ ...EMPTY, yearBuiltMin: 1980 })
+    expect(result.yearBuiltMin).toBe(1980)
+    expect(result.yearBuiltMax).toBe(2010)
+  })
+})
