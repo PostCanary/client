@@ -28,10 +28,27 @@ export interface TargetingFilterSupport {
 
 export type TargetingFilterKey = keyof TargetingFilterSupport
 
+export interface BusinessTargetingFilterSupport {
+  businessSicCodes: boolean
+  businessNaicsCodes: boolean
+  businessJobTitles: boolean
+  businessManagementLevels: boolean
+  businessEmployeeMin: boolean
+  businessEmployeeMax: boolean
+  businessSalesMin: boolean
+  businessSalesMax: boolean
+  businessHasEmail: boolean
+  businessWorkAtHome: boolean
+}
+
 export interface TargetingCapabilities {
   provider: TargetingProvider
   geographyTypes: TargetingGeographyType[]
   filters: TargetingFilterSupport
+  audienceFilters?: {
+    consumer: TargetingFilterSupport
+    business: BusinessTargetingFilterSupport
+  }
   strategy?: 'per_campaign'
   schemaVersion?: number
   products?: Array<{

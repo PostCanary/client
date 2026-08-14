@@ -7,6 +7,7 @@ import type {
   AudienceQueryPlan,
   TargetingCountSource,
   TargetingGeographyType,
+  BusinessTargetingFilterSupport,
 } from '@/types/targeting'
 
 export interface HouseholdCountResponse {
@@ -58,6 +59,23 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     response.provider === 'planner' &&
     !plannerKeys.every((key) => typeof filters[key] === 'boolean')
   ) return null
+  const audienceFilters = response.audienceFilters as Record<string, unknown> | undefined
+  if (response.provider === 'planner' && audienceFilters !== undefined) {
+    const business = audienceFilters.business as Record<string, unknown> | undefined
+    const businessKeys: Array<keyof BusinessTargetingFilterSupport> = [
+      'businessSicCodes',
+      'businessNaicsCodes',
+      'businessJobTitles',
+      'businessManagementLevels',
+      'businessEmployeeMin',
+      'businessEmployeeMax',
+      'businessSalesMin',
+      'businessSalesMax',
+      'businessHasEmail',
+      'businessWorkAtHome',
+    ]
+    if (!business || !businessKeys.every((key) => typeof business[key] === 'boolean')) return null
+  }
 
   return {
     ...(response as unknown as TargetingCapabilities),
@@ -90,12 +108,14 @@ export async function getHouseholdCount(
   signal?: AbortSignal,
   includeTotal?: boolean,
   suppressionPolicy?: AudienceSuppressionPolicy,
+  audienceType: 'consumer' | 'business' = 'consumer',
 ): Promise<HouseholdCountResponse> {
   return postJson<HouseholdCountResponse>('/api/targeting/count', {
     areas,
     filters,
     includeTotal: includeTotal ?? false,
     suppressionPolicy,
+    audienceType,
   }, signal ? { signal } : undefined)
 }
 

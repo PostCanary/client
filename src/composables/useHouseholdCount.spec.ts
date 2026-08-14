@@ -204,8 +204,34 @@ describe('useHouseholdCount', () => {
       expect.any(AbortSignal),
       false,
       policy,
+      'consumer',
     )
     expect(hc.count.value).toBe(1500)
+  })
+
+  it('sends the selected business audience type with the count request', async () => {
+    vi.mocked(getHouseholdCount).mockResolvedValueOnce({
+      ok: true,
+      finalCount: 8,
+      filteredCount: 8,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa_data_retriever',
+    })
+    const hc = useHouseholdCount()
+    const area = circle(1)
+
+    hc.fetchCount([area], NO_FILTERS, undefined, 'business')
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(getHouseholdCount).toHaveBeenCalledWith(
+      [area],
+      NO_FILTERS,
+      expect.any(AbortSignal),
+      false,
+      expect.any(Object),
+      'business',
+    )
   })
 })
 
