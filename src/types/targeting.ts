@@ -1,4 +1,4 @@
-export type TargetingProvider = 'leadgen' | 'data_retriever'
+export type TargetingProvider = 'leadgen' | 'data_retriever' | 'planner'
 
 export type TargetingCountSource = 'melissa' | 'melissa_data_retriever' | 'mock'
 
@@ -21,6 +21,9 @@ export interface TargetingFilterSupport {
   incomeMin: boolean
   loresMin: boolean
   loresMax: boolean
+  squareFootageMin?: boolean
+  squareFootageMax?: boolean
+  hasEmail?: boolean
 }
 
 export type TargetingFilterKey = keyof TargetingFilterSupport
@@ -29,4 +32,45 @@ export interface TargetingCapabilities {
   provider: TargetingProvider
   geographyTypes: TargetingGeographyType[]
   filters: TargetingFilterSupport
+  strategy?: 'per_campaign'
+  schemaVersion?: number
+  products?: Array<{
+    id: string
+    audienceType: 'consumer' | 'business'
+    enabled: boolean
+    implemented: boolean
+  }>
+  filterCapabilities?: Record<string, {
+    mode: 'target' | 'output_only' | 'unavailable'
+    products: string[]
+  }>
+}
+
+export interface AudienceQueryPlan {
+  schemaVersion: number
+  audienceType: 'consumer' | 'business'
+  provider: 'melissa'
+  product: string
+  areas: import('@/types/campaign').TargetingArea[]
+  filters: Partial<import('@/types/campaign').TargetingFilters>
+  suppressionPolicy: AudienceSuppressionPolicy
+  requests: Array<Record<string, unknown>>
+  outputColumns: string[]
+  fingerprint: string
+  countProof: {
+    filteredCount: number
+    finalCount: number
+    exclusions: {
+      pastCustomers: number
+      recentlyMailed: number
+      doNotMail: number
+    }
+    source: TargetingCountSource
+  }
+  attestation: string
+}
+
+export interface AudienceSuppressionPolicy {
+  excludePastCustomers: boolean
+  excludeMailedWithinDays: number | null
 }

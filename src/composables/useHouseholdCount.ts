@@ -13,7 +13,11 @@ import { ref, onBeforeUnmount } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { getHouseholdCount } from '@/api/targeting'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
-import type { TargetingCountSource } from '@/types/targeting'
+import type {
+  AudienceQueryPlan,
+  AudienceSuppressionPolicy,
+  TargetingCountSource,
+} from '@/types/targeting'
 
 // POS-133: mirrors the server's circle-radius validation (app/utils/geo.py
 // validate_area — applies to "circle" and "job_radius" area types only; we
@@ -66,15 +70,24 @@ export function useHouseholdCount() {
   // gate on this instead of relying on a seeded client-side estimate, so a
   // draft never gets persisted with a fabricated or premature 0.
   const ready = ref(false)
+  const queryPlan = ref<AudienceQueryPlan | null>(null)
 
   let abortController: AbortController | null = null
   let retryCount = 0
   let lastAreas: TargetingArea[] = []
+  let lastSuppressionPolicy: AudienceSuppressionPolicy = {
+    excludePastCustomers: true,
+    excludeMailedWithinDays: 60,
+  }
   let totalFetchedForAreas = ''  // cache key to avoid re-fetching total
 
   const fetchCount = useDebounceFn(async (
     areas: TargetingArea[],
     filters: TargetingFilters,
+    suppressionPolicy: AudienceSuppressionPolicy = {
+      excludePastCustomers: true,
+      excludeMailedWithinDays: 60,
+    },
   ) => {
     // Cancel previous in-flight request
     if (abortController) abortController.abort()
@@ -88,6 +101,7 @@ export function useHouseholdCount() {
       error.value = null
       invalid.value = false
       ready.value = true  // genuinely 0 households — no area selected, not an estimate
+      queryPlan.value = null
       return
     }
 
@@ -102,12 +116,16 @@ export function useHouseholdCount() {
       filteredCount.value = 0
       exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
       ready.value = true  // definitive (rejected) state, not a fabricated number
+      queryPlan.value = null
       return
     }
 
     loading.value = true
+    ready.value = false
+    queryPlan.value = null
     error.value = null
     lastAreas = areas
+    lastSuppressionPolicy = suppressionPolicy
 
     // Invalidate total cache when areas change
     const areasKey = JSON.stringify(areas)
@@ -120,7 +138,13 @@ export function useHouseholdCount() {
       // Capture prior source BEFORE overwriting so we can detect live→mock flip
       // (server signals mock when the provider API key is unset on dev boxes).
       const prevSource = source.value
-      const result = await getHouseholdCount(areas, filters, currentSignal)
+      const result = await getHouseholdCount(
+        areas,
+        filters,
+        currentSignal,
+        false,
+        suppressionPolicy,
+      )
       count.value = result.finalCount
       filteredCount.value = result.filteredCount
       exclusions.value = {
@@ -129,6 +153,7 @@ export function useHouseholdCount() {
         doNotMail: result.exclusions.doNotMail,
       }
       source.value = result.source
+      queryPlan.value = result.queryPlan ?? null
 
       // Mid-session live→mock flip = server lost provider permission (dev-mode
       // fallback only — prod returns 503 via the catch branch below). Warn
@@ -149,7 +174,7 @@ export function useHouseholdCount() {
       if (e.message?.includes('busy') && retryCount < 1) {
         retryCount++
         const jitter = 1000 + Math.random() * 2000  // 1-3s random delay
-        setTimeout(() => fetchCount(areas, filters), jitter)
+        setTimeout(() => fetchCount(areas, filters, suppressionPolicy), jitter)
         return
       }
       retryCount = 0
@@ -166,6 +191,7 @@ export function useHouseholdCount() {
         exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
         error.value = extractServerMessage(e) || AREA_TOO_LARGE_MESSAGE
         ready.value = true  // definitive (rejected) state, not a fabricated number
+        queryPlan.value = null
       } else if (e.status === 503 || e.message?.includes('temporarily unavailable')) {
         // Drake priority #1 (S71 mem 574 / POS-135): NO silent mock fallback,
         // client or server. Surface the real error message to the user. Do
@@ -200,7 +226,7 @@ export function useHouseholdCount() {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
-      }, undefined, true)
+      }, undefined, true, lastSuppressionPolicy)
       totalCount.value = result.totalCount ?? result.filteredCount
       totalFetchedForAreas = areasKey
     } catch {
@@ -223,6 +249,7 @@ export function useHouseholdCount() {
     source,
     invalid,
     ready,
+    queryPlan,
     fetchCount,
     fetchTotalIfNeeded,
   }

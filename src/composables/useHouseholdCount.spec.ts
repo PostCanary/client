@@ -178,6 +178,35 @@ describe('useHouseholdCount', () => {
     expect(hc.error.value).toBeNull()
     expect(hc.count.value).toBe(1500)
   })
+
+  it('sends the selected suppression policy with the count request', async () => {
+    vi.mocked(getHouseholdCount).mockResolvedValueOnce({
+      ok: true,
+      finalCount: 1500,
+      filteredCount: 1530,
+      exclusions: { pastCustomers: 20, recentlyMailed: 10, doNotMail: 0 },
+      source: 'melissa',
+    })
+    const hc = useHouseholdCount()
+    const area = circle(10)
+    const policy = {
+      excludePastCustomers: false,
+      excludeMailedWithinDays: 90,
+    }
+
+    hc.fetchCount([area], NO_FILTERS, policy)
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(getHouseholdCount).toHaveBeenCalledWith(
+      [area],
+      NO_FILTERS,
+      expect.any(AbortSignal),
+      false,
+      policy,
+    )
+    expect(hc.count.value).toBe(1500)
+  })
 })
 
 // POS-135 (Drake): numbers shown to customers must be real Melissa data or a
@@ -269,7 +298,7 @@ describe('useHouseholdCount — POS-135 (no client-side estimate)', () => {
     expect(hc.error.value).toBe('temporarily unavailable')
   })
 
-  it('keeps ready true and the last-good count after a 503 that follows a successful fetch', async () => {
+  it('invalidates approval readiness after a changed query fails with 503', async () => {
     vi.mocked(getHouseholdCount).mockResolvedValueOnce({
       ok: true,
       finalCount: 1200,
@@ -291,8 +320,9 @@ describe('useHouseholdCount — POS-135 (no client-side estimate)', () => {
     await flushDebounce()
     await vi.waitFor(() => expect(hc.loading.value).toBe(false))
 
-    expect(hc.ready.value).toBe(true)
+    expect(hc.ready.value).toBe(false)
     expect(hc.count.value).toBe(1200) // last-good real value, not corrupted
+    expect(hc.queryPlan.value).toBeNull()
     expect(hc.error.value).toBe('temporarily unavailable')
   })
 })
