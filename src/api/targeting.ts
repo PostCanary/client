@@ -2,7 +2,9 @@
 import { get, postJson } from '@/api/http'
 import type { TargetingArea, TargetingFilters } from '@/types/campaign'
 import type {
+  AudienceSuppressionPolicy,
   TargetingCapabilities,
+  AudienceQueryPlan,
   TargetingCountSource,
   TargetingGeographyType,
 } from '@/types/targeting'
@@ -18,13 +20,14 @@ export interface HouseholdCountResponse {
   }
   finalCount: number
   source: TargetingCountSource
+  queryPlan?: AudienceQueryPlan
 }
 
-function isTargetingCapabilities(value: unknown): value is TargetingCapabilities {
-  if (!value || typeof value !== 'object') return false
+function parseTargetingCapabilities(value: unknown): TargetingCapabilities | null {
+  if (!value || typeof value !== 'object') return null
   const response = value as Record<string, unknown>
-  if (response.provider !== 'leadgen' && response.provider !== 'data_retriever') return false
-  if (!Array.isArray(response.geographyTypes)) return false
+  if (!['leadgen', 'data_retriever', 'planner'].includes(String(response.provider))) return null
+  if (!Array.isArray(response.geographyTypes)) return null
   const geographyTypes: TargetingGeographyType[] = [
     'zip',
     'circle',
@@ -32,11 +35,11 @@ function isTargetingCapabilities(value: unknown): value is TargetingCapabilities
     'polygon',
     'rectangle',
   ]
-  if (!response.geographyTypes.every((value) => geographyTypes.includes(value as TargetingGeographyType))) return false
-  if (!response.filters || typeof response.filters !== 'object') return false
+  if (!response.geographyTypes.every((value) => geographyTypes.includes(value as TargetingGeographyType))) return null
+  if (!response.filters || typeof response.filters !== 'object') return null
 
   const filters = response.filters as Record<string, unknown>
-  return [
+  const legacyKeys = [
     'homeowner',
     'homeValueMin',
     'homeValueMax',
@@ -48,7 +51,23 @@ function isTargetingCapabilities(value: unknown): value is TargetingCapabilities
     'incomeMin',
     'loresMin',
     'loresMax',
-  ].every((key) => typeof filters[key] === 'boolean')
+  ]
+  if (!legacyKeys.every((key) => typeof filters[key] === 'boolean')) return null
+  const plannerKeys = ['squareFootageMin', 'squareFootageMax', 'hasEmail']
+  if (
+    response.provider === 'planner' &&
+    !plannerKeys.every((key) => typeof filters[key] === 'boolean')
+  ) return null
+
+  return {
+    ...(response as unknown as TargetingCapabilities),
+    filters: {
+      ...(filters as unknown as TargetingCapabilities['filters']),
+      squareFootageMin: filters.squareFootageMin === true,
+      squareFootageMax: filters.squareFootageMax === true,
+      hasEmail: filters.hasEmail === true,
+    },
+  }
 }
 
 export async function getTargetingCapabilities(
@@ -58,10 +77,11 @@ export async function getTargetingCapabilities(
     '/api/targeting/capabilities',
     signal ? { signal } : undefined,
   )
-  if (!isTargetingCapabilities(response)) {
+  const parsed = parseTargetingCapabilities(response)
+  if (!parsed) {
     throw new Error('Invalid targeting capabilities response')
   }
-  return response
+  return parsed
 }
 
 export async function getHouseholdCount(
@@ -69,11 +89,13 @@ export async function getHouseholdCount(
   filters: TargetingFilters,
   signal?: AbortSignal,
   includeTotal?: boolean,
+  suppressionPolicy?: AudienceSuppressionPolicy,
 ): Promise<HouseholdCountResponse> {
   return postJson<HouseholdCountResponse>('/api/targeting/count', {
     areas,
     filters,
     includeTotal: includeTotal ?? false,
+    suppressionPolicy,
   }, signal ? { signal } : undefined)
 }
 
