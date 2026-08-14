@@ -167,6 +167,9 @@ const householdCount = computed(() => {
   }
   return targeting.value?.finalHouseholdCount ?? 0;
 });
+const audienceNoun = computed(() =>
+  targeting.value?.audienceType === 'business' ? 'businesses' : 'households',
+);
 const seqLen = computed(() => 1);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
@@ -802,7 +805,7 @@ async function approve() {
       <div class="mb-5 p-3 bg-white rounded-lg border border-gray-200">
         <div class="text-sm text-gray-500">Sending to</div>
         <div class="text-lg font-semibold text-[#0b2d50]">
-          {{ householdCount.toLocaleString() }} households
+          {{ householdCount.toLocaleString() }} {{ audienceNoun }}
         </div>
         <div class="text-xs text-gray-400">
           {{ targetingMethodLabel }}
@@ -827,7 +830,7 @@ async function approve() {
             and upload at least one deliverable address.
           </template>
           <template v-else>
-            Your target area has no households, so this campaign can't be
+            Your target area has no {{ audienceNoun }}, so this campaign can't be
             approved yet.
             <button
               class="font-semibold underline"
@@ -835,7 +838,7 @@ async function approve() {
             >
               Go back to Pick Your Neighborhood
             </button>
-            and choose an area with at least one household.
+            and choose an area with at least one {{ audienceNoun === 'businesses' ? 'business' : 'household' }}.
           </template>
         </div>
       </div>

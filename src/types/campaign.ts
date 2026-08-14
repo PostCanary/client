@@ -162,6 +162,16 @@ export interface TargetingFilters {
   squareFootageMin?: number | null
   squareFootageMax?: number | null
   hasEmail?: boolean | null
+  businessSicCodes?: string[]
+  businessNaicsCodes?: string[]
+  businessJobTitles?: string[]
+  businessManagementLevels?: string[]
+  businessEmployeeMin?: number | null
+  businessEmployeeMax?: number | null
+  businessSalesMin?: number | null
+  businessSalesMax?: number | null
+  businessHasEmail?: boolean | null
+  businessWorkAtHome?: boolean | null
 }
 
 export interface RecipientBreakdown {
@@ -200,6 +210,7 @@ export interface TargetingSelection {
   sequenceSpacingDays: number
 
   // Targeting
+  audienceType?: 'consumer' | 'business'
   areas: TargetingArea[]
   method: 'draw' | 'zip' | 'around_jobs' | 'combined'
   filters: TargetingFilters

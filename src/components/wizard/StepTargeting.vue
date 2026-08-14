@@ -15,7 +15,7 @@ import {
   targetingFiltersAreSupported,
 } from "@/utils/targetingCapabilities";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
-import type { TargetingCapabilities } from "@/types/targeting";
+import type { BusinessTargetingFilterSupport, TargetingCapabilities } from "@/types/targeting";
 
 const emit = defineEmits<{
   (e: "targeting-ready"): void;
@@ -26,6 +26,9 @@ const brandKitStore = useBrandKitStore();
 const mapRef = ref<InstanceType<typeof TargetingMap> | null>(null);
 
 const isEddmMode = computed(() => draftStore.draft?.campaignType === 'eddm');
+const audienceType = ref<'consumer' | 'business'>(
+  draftStore.draft?.targeting?.audienceType ?? 'consumer',
+);
 
 // Household count composable — replaces mock area-based estimation
 const {
@@ -88,6 +91,43 @@ const HVAC_PRESET_FILTERS: TargetingFilters = {
   squareFootageMin: null,
   squareFootageMax: null,
   hasEmail: null,
+  businessSicCodes: [],
+  businessNaicsCodes: [],
+  businessJobTitles: [],
+  businessManagementLevels: [],
+  businessEmployeeMin: null,
+  businessEmployeeMax: null,
+  businessSalesMin: null,
+  businessSalesMax: null,
+  businessHasEmail: null,
+  businessWorkAtHome: null,
+};
+
+const EMPTY_BUSINESS_FILTERS: TargetingFilters = {
+  homeowner: null,
+  homeValueMin: null,
+  homeValueMax: null,
+  yearBuiltMin: null,
+  yearBuiltMax: null,
+  propertyTypes: [],
+  hhageMin: null,
+  hhageMax: null,
+  incomeMin: null,
+  loresMin: null,
+  loresMax: null,
+  squareFootageMin: null,
+  squareFootageMax: null,
+  hasEmail: null,
+  businessSicCodes: [],
+  businessNaicsCodes: [],
+  businessJobTitles: [],
+  businessManagementLevels: [],
+  businessEmployeeMin: null,
+  businessEmployeeMax: null,
+  businessSalesMin: null,
+  businessSalesMax: null,
+  businessHasEmail: null,
+  businessWorkAtHome: null,
 };
 
 function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
@@ -111,7 +151,9 @@ function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
 }
 
 const filters = ref<TargetingFilters>(
-  filtersAreUntouched(draftStore.draft?.targeting?.filters)
+  audienceType.value === 'business'
+    ? { ...EMPTY_BUSINESS_FILTERS, ...(draftStore.draft?.targeting?.filters ?? {}) }
+    : filtersAreUntouched(draftStore.draft?.targeting?.filters)
     ? { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] }
     : draftStore.draft!.targeting!.filters!,
 );
@@ -122,7 +164,15 @@ const targetingReadyEmitted = ref(false);
 const capabilitiesAbortController = new AbortController();
 
 const filterCapabilities = computed(
-  () => targetingCapabilities.value?.filters ?? null,
+  () => targetingCapabilities.value?.audienceFilters?.consumer ?? targetingCapabilities.value?.filters ?? null,
+);
+const businessFilterCapabilities = computed<BusinessTargetingFilterSupport | null>(
+  () => targetingCapabilities.value?.audienceFilters?.business ?? null,
+);
+const businessEnabled = computed(() =>
+  targetingCapabilities.value?.products?.some(
+    (product) => product.id === 'data_retriever_business' && product.enabled && product.implemented,
+  ) ?? false,
 );
 const targetingProvider = computed(
   () => targetingCapabilities.value?.provider ?? null,
@@ -142,10 +192,17 @@ async function resolveTargetingCapabilities() {
     // Normalize before exposing the support map and before releasing the
     // count watcher. This prevents the HVAC preset or a resumed draft from
     // producing a transient unsupported count or draft snapshot.
-    filters.value = normalizeTargetingFilters(
-      filters.value,
-      result.capabilities.filters,
-    );
+    if (audienceType.value === 'consumer') {
+      filters.value = normalizeTargetingFilters(
+        filters.value,
+        result.capabilities.audienceFilters?.consumer ?? result.capabilities.filters,
+      );
+    } else if (!result.capabilities.products?.some(
+      (product) => product.id === 'data_retriever_business' && product.enabled && product.implemented,
+    )) {
+      audienceType.value = 'consumer';
+      filters.value = { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] };
+    }
     targetingCapabilities.value = result.capabilities;
   } else {
     // Legacy/prod servers may not expose this endpoint. Keep the existing
@@ -212,13 +269,13 @@ const estimatedCostSequence = computed(
 
 // Watch areas + filters and trigger API fetch
 watch(
-  [allAreas, filters, capabilitiesResolved, excludePastCustomers, excludeMailedWithinDays],
+  [allAreas, filters, audienceType, capabilitiesResolved, excludePastCustomers, excludeMailedWithinDays],
   () => {
     if (!capabilitiesResolved.value) return;
     fetchCount(allAreas.value, filters.value, {
       excludePastCustomers: excludePastCustomers.value,
       excludeMailedWithinDays: excludeMailedWithinDays.value,
-    });
+    }, audienceType.value);
   },
   { deep: true },
 );
@@ -257,6 +314,7 @@ function commitEddmTargeting() {
     sequenceSpacingDays: 0,
     areas: [],
     method: 'draw',
+    audienceType: 'consumer',
     filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null },
     jobsUsed: null,
     jobRadiusMiles: null,
@@ -289,7 +347,7 @@ function commitTargeting() {
   commitTimer = setTimeout(() => {
     if (!capabilitiesResolved.value) return;
     if (
-      targetingCapabilities.value &&
+      audienceType.value === 'consumer' && targetingCapabilities.value &&
       !targetingFiltersAreSupported(
         filters.value,
         targetingCapabilities.value.filters,
@@ -313,6 +371,7 @@ function commitTargeting() {
       sequenceLength: seqLen,
       sequenceSpacingDays: draftStore.draft?.goal?.sequenceSpacingDays ?? 14,
       areas: allAreas.value,
+      audienceType: audienceType.value,
       method: determineMethod(),
       filters: { ...filters.value },
       jobsUsed: selectedJobs.value.length > 0 ? selectedJobs.value : null,
@@ -364,7 +423,7 @@ function determineMethod(): "draw" | "zip" | "around_jobs" | "combined" {
 // flip true without finalHouseholdCount's value changing (e.g. a genuine
 // zero-area count), which wouldn't otherwise re-trigger this watcher.
 watch(
-  [selectedJobs, radiusMiles, zips, filters, excludePastCustomers, excludeMailedWithinDays, finalHouseholdCount, countReady],
+  [selectedJobs, radiusMiles, zips, filters, audienceType, excludePastCustomers, excludeMailedWithinDays, finalHouseholdCount, countReady],
   commitTargeting,
   { deep: true },
 );
@@ -425,6 +484,15 @@ function handleMethodChosen(method: "draw" | "zip" | "around_jobs") {
   }
   // "around_jobs" — panel already shows jobs tab by default
   // "zip" — panel shows target tab with ZIP input visible
+}
+
+function setAudienceType(value: 'consumer' | 'business') {
+  if (value === audienceType.value || (value === 'business' && !businessEnabled.value)) return;
+  audienceType.value = value;
+  filters.value = value === 'business'
+    ? { ...EMPTY_BUSINESS_FILTERS }
+    : { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] };
+  apiQueryPlan.value = null;
 }
 
 onMounted(() => {
@@ -493,7 +561,10 @@ onBeforeUnmount(() => {
       :radius-miles="radiusMiles"
       :zips="zips"
       :filters="filters"
+      :audience-type="audienceType"
+      :business-enabled="businessEnabled"
       :filter-capabilities="filterCapabilities"
+      :business-filter-capabilities="businessFilterCapabilities"
       :targeting-provider="targetingProvider"
       :exclude-past-customers="excludePastCustomers"
       :exclude-mailed-within-days="excludeMailedWithinDays"
@@ -512,6 +583,7 @@ onBeforeUnmount(() => {
       @add-zips="addZips"
       @remove-zip="removeZip"
       @update:filters="filters = $event"
+      @update:audience-type="setAudienceType"
       @update:exclude-past-customers="excludePastCustomers = $event"
       @update:exclude-mailed-within-days="excludeMailedWithinDays = $event"
     />

@@ -70,6 +70,40 @@ describe('targeting API contracts', () => {
     expect(get).toHaveBeenCalledWith('/api/targeting/capabilities', undefined)
   })
 
+  it('accepts product-specific Business planner capabilities', async () => {
+    const businessFilters = {
+      businessSicCodes: true,
+      businessNaicsCodes: true,
+      businessJobTitles: true,
+      businessManagementLevels: true,
+      businessEmployeeMin: true,
+      businessEmployeeMax: true,
+      businessSalesMin: true,
+      businessSalesMax: true,
+      businessHasEmail: true,
+      businessWorkAtHome: true,
+    }
+    const response = {
+      ...LEADGEN_CAPABILITIES,
+      provider: 'planner',
+      audienceFilters: {
+        consumer: LEADGEN_CAPABILITIES.filters,
+        business: businessFilters,
+      },
+      products: [{
+        id: 'data_retriever_business',
+        audienceType: 'business',
+        enabled: true,
+        implemented: true,
+      }],
+    }
+    vi.mocked(get).mockResolvedValue(response)
+
+    await expect(getTargetingCapabilities()).resolves.toMatchObject({
+      audienceFilters: { business: businessFilters },
+    })
+  })
+
   it('rejects a response that does not include every individual filter flag', async () => {
     vi.mocked(get).mockResolvedValue({
       ...LEADGEN_CAPABILITIES,
@@ -107,5 +141,44 @@ describe('targeting API contracts', () => {
         loresMax: null,
       }),
     ).resolves.toMatchObject({ source: 'melissa_data_retriever' })
+  })
+
+  it('sends business audience type to the count endpoint', async () => {
+    vi.mocked(postJson).mockResolvedValue({
+      ok: true,
+      filteredCount: 3,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      finalCount: 3,
+      source: 'melissa_data_retriever',
+    })
+    const filters = {
+      homeowner: null,
+      homeValueMin: null,
+      homeValueMax: null,
+      yearBuiltMin: null,
+      yearBuiltMax: null,
+      propertyTypes: [],
+      hhageMin: null,
+      hhageMax: null,
+      incomeMin: null,
+      loresMin: null,
+      loresMax: null,
+      businessSicCodes: ['171102'],
+    }
+
+    await getHouseholdCount(
+      [{ type: 'zip', coordinates: [], zipCode: '92688' }],
+      filters,
+      undefined,
+      false,
+      undefined,
+      'business',
+    )
+
+    expect(postJson).toHaveBeenCalledWith(
+      '/api/targeting/count',
+      expect.objectContaining({ audienceType: 'business', filters }),
+      undefined,
+    )
   })
 })

@@ -79,6 +79,7 @@ export function useHouseholdCount() {
     excludePastCustomers: true,
     excludeMailedWithinDays: 60,
   }
+  let lastAudienceType: 'consumer' | 'business' = 'consumer'
   let totalFetchedForAreas = ''  // cache key to avoid re-fetching total
 
   const fetchCount = useDebounceFn(async (
@@ -88,6 +89,7 @@ export function useHouseholdCount() {
       excludePastCustomers: true,
       excludeMailedWithinDays: 60,
     },
+    audienceType: 'consumer' | 'business' = 'consumer',
   ) => {
     // Cancel previous in-flight request
     if (abortController) abortController.abort()
@@ -126,6 +128,7 @@ export function useHouseholdCount() {
     error.value = null
     lastAreas = areas
     lastSuppressionPolicy = suppressionPolicy
+    lastAudienceType = audienceType
 
     // Invalidate total cache when areas change
     const areasKey = JSON.stringify(areas)
@@ -144,6 +147,7 @@ export function useHouseholdCount() {
         currentSignal,
         false,
         suppressionPolicy,
+        audienceType,
       )
       count.value = result.finalCount
       filteredCount.value = result.filteredCount
@@ -174,7 +178,7 @@ export function useHouseholdCount() {
       if (e.message?.includes('busy') && retryCount < 1) {
         retryCount++
         const jitter = 1000 + Math.random() * 2000  // 1-3s random delay
-        setTimeout(() => fetchCount(areas, filters, suppressionPolicy), jitter)
+        setTimeout(() => fetchCount(areas, filters, suppressionPolicy, audienceType), jitter)
         return
       }
       retryCount = 0
@@ -226,7 +230,7 @@ export function useHouseholdCount() {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
-      }, undefined, true, lastSuppressionPolicy)
+      }, undefined, true, lastSuppressionPolicy, lastAudienceType)
       totalCount.value = result.totalCount ?? result.filteredCount
       totalFetchedForAreas = areasKey
     } catch {
