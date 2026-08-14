@@ -188,13 +188,9 @@ describe('StepTargeting capability gate', () => {
       provider: 'melissa',
       product: 'leadgen_property',
       areas: [area],
-      filters: {
-        homeowner: 'homeowner',
-        homeValueMin: 150000,
-        homeValueMax: 800000,
-        yearBuiltMax: 2010,
-        propertyTypes: ['Single Family'],
-      },
+      // POS-213: fresh drafts carry no filters, so the attested plan's
+      // active-filter snapshot is empty.
+      filters: {},
       suppressionPolicy: { excludePastCustomers: true, excludeMailedWithinDays: 30 },
       requests: [],
       outputColumns: [],

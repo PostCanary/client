@@ -119,3 +119,31 @@ describe('PanelTabFilters provider capabilities', () => {
     expect(wrapper.text()).toContain('Email addresses are not sent to the print partner')
   })
 })
+
+describe('PanelTabFilters home-services preset (POS-213)', () => {
+  it('offers the preset chip when property filters are supported and applies it on click', async () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner')
+
+    const chip = wrapper.get('[data-testid="home-services-preset"]')
+    await chip.trigger('click')
+
+    const emitted = wrapper.emitted('update:filters') ?? []
+    expect(emitted.length).toBeGreaterThan(0)
+    const applied = (emitted[emitted.length - 1] ?? [])[0] as TargetingFilters
+    expect(applied.homeowner).toBe('homeowner')
+    expect(applied.homeValueMin).toBe(150000)
+    expect(applied.homeValueMax).toBe(800000)
+    expect(applied.yearBuiltMax).toBe(2010)
+    expect(applied.propertyTypes).toEqual(['Single Family'])
+  })
+
+  it('hides the preset chip when the provider cannot take property filters', () => {
+    const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
+    expect(wrapper.find('[data-testid="home-services-preset"]').exists()).toBe(false)
+  })
+
+  it('hides the preset chip while capabilities are unresolved (fail closed)', () => {
+    const wrapper = mountFilters(null, 'planner')
+    expect(wrapper.find('[data-testid="home-services-preset"]').exists()).toBe(false)
+  })
+})
