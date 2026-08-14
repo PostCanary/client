@@ -27,6 +27,7 @@ playwright-report/
 blob-report/
 test-results-live/
 playwright-report-live/
+playwright-report-release/
 .auth/
 
 

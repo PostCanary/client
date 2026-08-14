@@ -271,6 +271,25 @@ async function attachScreenshot(
   await testInfo.attach(name, { path, contentType: "image/png" });
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 640;
+}
+
+async function visibleSidebarNavigation(page: Page) {
+  if (!isMobileViewport(page)) {
+    return page.getByRole("navigation", { name: "Main navigation" });
+  }
+
+  await page.getByRole("button", { name: "Toggle sidebar" }).click();
+  return page
+    .getByRole("dialog", { name: "Navigation menu" })
+    .getByRole("navigation", { name: "Main navigation" });
+}
+
+async function closeMobileNavigation(page: Page) {
+  if (isMobileViewport(page)) await page.keyboard.press("Escape");
+}
+
 test.describe("StepReview approval artifact flow", () => {
   test("keeps POS-170 draft badges synchronized through POS-175 approval in one SPA runtime", async ({
     page,
@@ -409,11 +428,14 @@ test.describe("StepReview approval artifact flow", () => {
     const initialDocument = await page.evaluate(
       () => performance.getEntriesByType("navigation").length,
     );
-    await expect(page.getByTestId("sidebar-draft-count")).toHaveText("1");
+    const initialNavigation = await visibleSidebarNavigation(page);
+    await expect(initialNavigation.getByTestId("sidebar-draft-count")).toHaveText("1");
 
-    await page.getByRole("button", { name: "Campaigns, 1 campaign draft" }).click();
+    await initialNavigation.getByRole("button", { name: "Campaigns, 1 campaign draft" }).click();
     await expect(page).toHaveURL(/\/app\/campaigns$/);
-    await expect(page.getByTestId("sidebar-draft-count")).toHaveText("1");
+    const campaignsNavigation = await visibleSidebarNavigation(page);
+    await expect(campaignsNavigation.getByTestId("sidebar-draft-count")).toHaveText("1");
+    await closeMobileNavigation(page);
     await expect(page.getByTestId("campaigns-draft-count")).toHaveText("1");
     await attachScreenshot(
       page,
@@ -429,20 +451,34 @@ test.describe("StepReview approval artifact flow", () => {
     const approveButton = page.getByRole("button", {
       name: /Approve & Send Mailing/i,
     });
-    await page.getByLabel(/I confirm all information/i).check();
+    const accuracyAcknowledgement = page.getByLabel(/I confirm all information/i);
+    if (isMobileViewport(page)) {
+      await accuracyAcknowledgement.focus();
+      await page.keyboard.press("Space");
+      await expect(accuracyAcknowledgement).toBeChecked();
+    } else {
+      await accuracyAcknowledgement.check();
+    }
     await expect(approveButton).toBeEnabled();
     await page.getByTestId("mailing-date-input").fill("2026-07-30");
     await expect(approveButton).toBeEnabled();
 
-    await approveButton.click();
+    if (isMobileViewport(page)) {
+      await approveButton.focus();
+      await page.keyboard.press("Enter");
+    } else {
+      await approveButton.click();
+    }
     await approvalBoundary;
     await expect.poll(() => draftListSizes.at(-1)).toBe(0);
     // The artifact request is deliberately held: this proves the shared
     // sidebar badge clears immediately after approval consumes the draft.
-    await expect(page.getByTestId("sidebar-draft-count")).toHaveCount(0);
+    const approvedNavigation = await visibleSidebarNavigation(page);
+    await expect(approvedNavigation.getByTestId("sidebar-draft-count")).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: "Campaigns", exact: true }),
+      approvedNavigation.getByRole("button", { name: "Campaigns", exact: true }),
     ).toBeVisible();
+    await closeMobileNavigation(page);
 
     releaseArtifact();
     await expect(page.getByRole("heading", { name: "Mailing submitted" })).toBeVisible();
@@ -450,7 +486,9 @@ test.describe("StepReview approval artifact flow", () => {
     await expect(page).toHaveURL(/\/app\/campaigns$/);
     await expect(page.getByText("No drafts. Start a new campaign")).toBeVisible();
     await expect(page.getByTestId("campaigns-draft-count")).toHaveCount(0);
-    await expect(page.getByTestId("sidebar-draft-count")).toHaveCount(0);
+    const finalNavigation = await visibleSidebarNavigation(page);
+    await expect(finalNavigation.getByTestId("sidebar-draft-count")).toHaveCount(0);
+    await closeMobileNavigation(page);
     await attachScreenshot(
       page,
       testInfo,

@@ -2,9 +2,12 @@
 <script setup lang="ts">
 import { watch, onUnmounted } from 'vue'
 import { useSidebar } from '@/composables/useSidebar'
+import { useAuthStore } from '@/stores/auth'
 import AppSidebar from './AppSidebar.vue'
+import OrgSwitcher from '@/components/OrgSwitcher.vue'
 
 const { isMobileOpen, closeMobile } = useSidebar()
+const auth = useAuthStore()
 
 // Escape key closes drawer
 function onKeydown(e: KeyboardEvent) {
@@ -40,6 +43,9 @@ onUnmounted(() => {
         @click.self="() => closeMobile('overlay')"
       >
         <aside class="drawer-panel">
+          <div v-if="auth.hasMultipleOrgs" class="drawer-org-switcher">
+            <OrgSwitcher />
+          </div>
           <AppSidebar />
         </aside>
       </div>
@@ -64,6 +70,15 @@ onUnmounted(() => {
   background: var(--app-card-bg, #ffffff);
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
+}
+
+.drawer-org-switcher {
+  padding: 12px 12px 0;
+}
+
+.drawer-org-switcher :deep(.org-switcher-btn) {
+  width: 100%;
+  justify-content: space-between;
 }
 
 /* Drawer renders AppSidebar in expanded state always */
