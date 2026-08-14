@@ -3,6 +3,8 @@ import { computed } from "vue";
 import type { TargetingFilters } from "@/types/campaign";
 import type { TargetingFilterKey, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import { unsupportedTargetingFilterLabels } from "@/utils/targetingCapabilities";
+import { countActiveConsumerFilters } from "@/utils/targetingFilterCount";
+import { applyHomeServicesPreset } from "@/utils/targetingPresets";
 import ExclusionToggles from "./ExclusionToggles.vue";
 
 const filters = defineModel<TargetingFilters>("filters", {
@@ -46,36 +48,20 @@ const providerLabel = computed(() =>
       : "The current audience provider",
 );
 
-const activeFilterCount = computed(() => {
-  let count = 0;
-  if (supportsFilter("homeowner") && filters.value.homeowner !== null) count++;
-  if (
-    (supportsFilter("homeValueMin") && filters.value.homeValueMin !== null) ||
-    (supportsFilter("homeValueMax") && filters.value.homeValueMax !== null)
-  )
-    count++;
-  if (
-    (supportsFilter("yearBuiltMin") && filters.value.yearBuiltMin !== null) ||
-    (supportsFilter("yearBuiltMax") && filters.value.yearBuiltMax !== null)
-  )
-    count++;
-  if (supportsFilter("propertyTypes") && filters.value.propertyTypes.length > 0) count++;
-  if (
-    (supportsFilter("hhageMin") && filters.value.hhageMin !== null) ||
-    (supportsFilter("hhageMax") && filters.value.hhageMax !== null)
-  ) count++;
-  if (supportsFilter("incomeMin") && filters.value.incomeMin !== null) count++;
-  if (
-    (supportsFilter("loresMin") && filters.value.loresMin !== null) ||
-    (supportsFilter("loresMax") && filters.value.loresMax !== null)
-  ) count++;
-  if (
-    (supportsFilter("squareFootageMin") && (filters.value.squareFootageMin ?? null) !== null) ||
-    (supportsFilter("squareFootageMax") && (filters.value.squareFootageMax ?? null) !== null)
-  ) count++;
-  if (supportsFilter("hasEmail") && (filters.value.hasEmail ?? null) !== null) count++;
-  return count;
-});
+const activeFilterCount = computed(() =>
+  countActiveConsumerFilters(filters.value, props.filterCapabilities),
+);
+
+// POS-213: the old always-on HVAC demo defaults, now applied only on click.
+// Only offered when the provider supports property filters — applying them
+// on a Data Retriever-only capability set would strip every field anyway.
+const presetAvailable = computed(
+  () => supportsFilter("homeValueMin") && supportsFilter("propertyTypes"),
+);
+
+function applyPreset() {
+  filters.value = applyHomeServicesPreset(filters.value);
+}
 
 function togglePropertyType(pt: string) {
   const idx = filters.value.propertyTypes.indexOf(pt);
@@ -112,6 +98,17 @@ defineExpose({ activeFilterCount });
         {{ activeFilterCount }} applied
       </span>
     </div>
+
+    <button
+      v-if="presetAvailable"
+      type="button"
+      data-testid="home-services-preset"
+      class="inline-flex items-center gap-1.5 rounded-full border border-[#47bfa9]/40 bg-[#47bfa9]/5 px-3 py-1.5 text-xs font-medium text-[#2b8d7c] hover:bg-[#47bfa9]/10 transition-colors"
+      @click="applyPreset"
+    >
+      <span aria-hidden="true">+</span>
+      Suggested filters for home services
+    </button>
 
     <div
       v-if="unavailableFilters.length > 0"

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { TargetingFilters } from '@/types/campaign'
 import type { BusinessTargetingFilterSupport } from '@/types/targeting'
+import { countActiveBusinessFilters } from '@/utils/targetingFilterCount'
 import ExclusionToggles from './ExclusionToggles.vue'
 
 const filters = defineModel<TargetingFilters>('filters', { required: true })
@@ -33,16 +34,7 @@ function setNumber(
   else filters.value.businessSalesMax = normalized
 }
 
-const activeFilterCount = computed(() => [
-  filters.value.businessSicCodes?.length,
-  filters.value.businessNaicsCodes?.length,
-  filters.value.businessJobTitles?.length,
-  filters.value.businessManagementLevels?.length,
-  filters.value.businessEmployeeMin ?? filters.value.businessEmployeeMax,
-  filters.value.businessSalesMin ?? filters.value.businessSalesMax,
-  filters.value.businessHasEmail === true ? 1 : 0,
-  filters.value.businessWorkAtHome === null || filters.value.businessWorkAtHome === undefined ? 0 : 1,
-].filter(Boolean).length)
+const activeFilterCount = computed(() => countActiveBusinessFilters(filters.value))
 </script>
 
 <template>
