@@ -86,10 +86,18 @@ describe('targeting API contracts', () => {
     const response = {
       ...LEADGEN_CAPABILITIES,
       provider: 'planner',
+      strategy: 'per_campaign',
+      schemaVersion: 1,
       audienceFilters: {
         consumer: LEADGEN_CAPABILITIES.filters,
         business: businessFilters,
       },
+      filterCapabilities: Object.fromEntries(
+        Object.keys(LEADGEN_CAPABILITIES.filters).map((key) => [
+          key,
+          { mode: 'target', products: ['leadgen_property'] },
+        ]),
+      ),
       products: [{
         id: 'data_retriever_business',
         audienceType: 'business',
@@ -102,6 +110,24 @@ describe('targeting API contracts', () => {
     await expect(getTargetingCapabilities()).resolves.toMatchObject({
       audienceFilters: { business: businessFilters },
     })
+  })
+
+  it('fails closed when a planner response omits its product registry', async () => {
+    vi.mocked(get).mockResolvedValue({
+      ...LEADGEN_CAPABILITIES,
+      provider: 'planner',
+      strategy: 'per_campaign',
+      schemaVersion: 1,
+      audienceFilters: {
+        consumer: LEADGEN_CAPABILITIES.filters,
+        business: {},
+      },
+      filterCapabilities: {},
+    })
+
+    await expect(getTargetingCapabilities()).rejects.toThrow(
+      'Invalid targeting capabilities response',
+    )
   })
 
   it('rejects a response that does not include every individual filter flag', async () => {

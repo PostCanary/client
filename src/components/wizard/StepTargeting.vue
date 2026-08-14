@@ -11,14 +11,17 @@ import EddmTargetingPanel from "@/components/targeting/EddmTargetingPanel.vue";
 import { useHouseholdCount } from "@/composables/useHouseholdCount";
 import { loadTargetingCapabilities } from "@/composables/useTargetingCapabilities";
 import {
+  businessTargetingFiltersAreSupported,
+  normalizeBusinessTargetingFilters,
   normalizeTargetingFilters,
+  queryPlanMatchesTargetingState,
   targetingFiltersAreSupported,
 } from "@/utils/targetingCapabilities";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 import type { BusinessTargetingFilterSupport, TargetingCapabilities } from "@/types/targeting";
 
 const emit = defineEmits<{
-  (e: "targeting-ready"): void;
+  (e: "targeting-validity", valid: boolean): void;
 }>();
 
 const draftStore = useCampaignDraftStore();
@@ -41,6 +44,7 @@ const {
   source: countSource,
   ready: countReady,
   queryPlan: apiQueryPlan,
+  invalidate: invalidateCount,
   fetchCount,
   fetchTotalIfNeeded,
 } = useHouseholdCount();
@@ -160,7 +164,9 @@ const filters = ref<TargetingFilters>(
 
 const targetingCapabilities = ref<TargetingCapabilities | null>(null);
 const capabilitiesResolved = ref(false);
-const targetingReadyEmitted = ref(false);
+const capabilitiesLoading = ref(false);
+const capabilitiesError = ref<string | null>(null);
+const lastTargetingValidity = ref<boolean | null>(null);
 const capabilitiesAbortController = new AbortController();
 
 const filterCapabilities = computed(
@@ -178,13 +184,20 @@ const targetingProvider = computed(
   () => targetingCapabilities.value?.provider ?? null,
 );
 
-function signalTargetingReady() {
-  if (targetingReadyEmitted.value) return;
-  targetingReadyEmitted.value = true;
-  emit("targeting-ready");
+function setTargetingValidity(valid: boolean) {
+  if (lastTargetingValidity.value === valid) return;
+  lastTargetingValidity.value = valid;
+  emit("targeting-validity", valid);
 }
 
 async function resolveTargetingCapabilities() {
+  if (capabilitiesLoading.value) return;
+  capabilitiesLoading.value = true;
+  capabilitiesError.value = null;
+  capabilitiesResolved.value = false;
+  targetingCapabilities.value = null;
+  invalidateCount();
+  setTargetingValidity(false);
   const result = await loadTargetingCapabilities(capabilitiesAbortController.signal);
   if (capabilitiesAbortController.signal.aborted) return;
 
@@ -197,19 +210,28 @@ async function resolveTargetingCapabilities() {
         filters.value,
         result.capabilities.audienceFilters?.consumer ?? result.capabilities.filters,
       );
-    } else if (!result.capabilities.products?.some(
-      (product) => product.id === 'data_retriever_business' && product.enabled && product.implemented,
-    )) {
-      audienceType.value = 'consumer';
-      filters.value = { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] };
+    } else {
+      const businessProductEnabled = result.capabilities.products?.some(
+        (product) => product.id === 'data_retriever_business' && product.enabled && product.implemented,
+      ) ?? false;
+      const support = result.capabilities.audienceFilters?.business;
+      if (!businessProductEnabled || !support) {
+        audienceType.value = 'consumer';
+        filters.value = normalizeTargetingFilters(
+          { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] },
+          result.capabilities.audienceFilters?.consumer ?? result.capabilities.filters,
+        );
+      } else {
+        filters.value = normalizeBusinessTargetingFilters(filters.value, support);
+      }
     }
     targetingCapabilities.value = result.capabilities;
+    capabilitiesResolved.value = true;
   } else {
-    // Legacy/prod servers may not expose this endpoint. Keep the existing
-    // filters and controls in that case; capability discovery is advisory.
-    signalTargetingReady();
+    capabilitiesError.value =
+      "Audience targeting is unavailable because provider capabilities could not be verified.";
   }
-  capabilitiesResolved.value = true;
+  capabilitiesLoading.value = false;
 }
 
 void resolveTargetingCapabilities();
@@ -272,12 +294,14 @@ watch(
   [allAreas, filters, audienceType, capabilitiesResolved, excludePastCustomers, excludeMailedWithinDays],
   () => {
     if (!capabilitiesResolved.value) return;
+    invalidateCount();
+    setTargetingValidity(false);
     fetchCount(allAreas.value, filters.value, {
       excludePastCustomers: excludePastCustomers.value,
       excludeMailedWithinDays: excludeMailedWithinDays.value,
     }, audienceType.value);
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
 
 // EDDM route actions
@@ -336,7 +360,7 @@ function commitEddmTargeting() {
     eddmSelection: sel,
   };
   draftStore.setTargeting(targeting);
-  signalTargetingReady();
+  setTargetingValidity(true);
 }
 
 // Debounced commit to draft store
@@ -350,18 +374,34 @@ function commitTargeting() {
       audienceType.value === 'consumer' && targetingCapabilities.value &&
       !targetingFiltersAreSupported(
         filters.value,
-        targetingCapabilities.value.filters,
+        filterCapabilities.value ?? targetingCapabilities.value.filters,
       )
     ) {
       return;
     }
-    // POS-135: without a client-side estimate, apiCount starts at 0 until
-    // the household-count API responds. Skip the commit entirely until it
-    // reports an authoritative result (real count, real zero, or a
-    // definitive rejection) so a draft is never persisted with a
-    // premature/fabricated finalHouseholdCount: 0. The finalHouseholdCount
-    // watcher below re-triggers this once countReady flips true.
-    if (!countReady.value) return;
+    if (
+      audienceType.value === 'business' &&
+      (!businessFilterCapabilities.value ||
+        !businessTargetingFiltersAreSupported(filters.value, businessFilterCapabilities.value))
+    ) {
+      return;
+    }
+    // Persist only a positive live result. Rejected, zero, stale, or
+    // unattested results must keep this step invalid.
+    if (!countReady.value || countLoading.value || countError.value || apiCount.value < 1) return;
+    const suppressionPolicy = {
+      excludePastCustomers: excludePastCustomers.value,
+      excludeMailedWithinDays: excludeMailedWithinDays.value,
+    };
+    if (!queryPlanMatchesTargetingState(apiQueryPlan.value, {
+      audienceType: audienceType.value,
+      areas: allAreas.value,
+      filters: filters.value,
+      suppressionPolicy,
+      finalCount: apiCount.value,
+      exclusions: apiExclusions.value,
+      source: countSource.value,
+    })) return;
     const seqLen = 1;
     const perCard = pricing.payPerSend;
 
@@ -400,7 +440,7 @@ function commitTargeting() {
       eddmSelection: null,
     };
     draftStore.setTargeting(targeting);
-    signalTargetingReady();
+    setTargetingValidity(true);
   }, 1000);
 }
 
@@ -488,11 +528,22 @@ function handleMethodChosen(method: "draw" | "zip" | "around_jobs") {
 
 function setAudienceType(value: 'consumer' | 'business') {
   if (value === audienceType.value || (value === 'business' && !businessEnabled.value)) return;
+  invalidateCount();
+  setTargetingValidity(false);
   audienceType.value = value;
-  filters.value = value === 'business'
-    ? { ...EMPTY_BUSINESS_FILTERS }
-    : { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] };
-  apiQueryPlan.value = null;
+  if (value === 'business') {
+    filters.value = businessFilterCapabilities.value
+      ? normalizeBusinessTargetingFilters(EMPTY_BUSINESS_FILTERS, businessFilterCapabilities.value)
+      : { ...EMPTY_BUSINESS_FILTERS };
+  } else {
+    const consumerDefaults = {
+      ...HVAC_PRESET_FILTERS,
+      propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes],
+    };
+    filters.value = filterCapabilities.value
+      ? normalizeTargetingFilters(consumerDefaults, filterCapabilities.value)
+      : consumerDefaults;
+  }
 }
 
 onMounted(() => {
@@ -552,6 +603,33 @@ onBeforeUnmount(() => {
       @toggle-route="onToggleEddmRoute"
       @clear="onClearEddmRoutes"
     />
+
+    <aside
+      v-else-if="capabilitiesLoading"
+      class="flex w-[360px] shrink-0 items-center justify-center border-l border-gray-200 bg-white p-6"
+      role="status"
+      data-testid="targeting-capabilities-loading"
+    >
+      <p class="text-sm text-gray-500">Checking available audience filters...</p>
+    </aside>
+
+    <aside
+      v-else-if="capabilitiesError"
+      class="flex w-[360px] shrink-0 flex-col items-start justify-center border-l border-gray-200 bg-white p-6"
+      role="alert"
+      data-testid="targeting-capabilities-error"
+    >
+      <h3 class="text-sm font-semibold text-[#0b2d50]">Audience filters could not be verified</h3>
+      <p class="mt-2 text-sm text-gray-600">{{ capabilitiesError }}</p>
+      <button
+        type="button"
+        class="mt-4 rounded-lg bg-[#47bfa9] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3aa893]"
+        data-testid="retry-targeting-capabilities"
+        @click="resolveTargetingCapabilities"
+      >
+        Try again
+      </button>
+    </aside>
 
     <!-- Targeted panel -->
     <TargetingPanel

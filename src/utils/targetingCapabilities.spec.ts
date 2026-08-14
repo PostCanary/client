@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { TargetingFilters } from '@/types/campaign'
-import type { TargetingFilterSupport } from '@/types/targeting'
+import type { TargetingArea, TargetingFilters } from '@/types/campaign'
+import type {
+  AudienceQueryPlan,
+  BusinessTargetingFilterSupport,
+  TargetingFilterSupport,
+} from '@/types/targeting'
 import {
+  businessTargetingFiltersAreSupported,
+  normalizeBusinessTargetingFilters,
   normalizeTargetingFilters,
+  queryPlanMatchesTargetingState,
   targetingFiltersAreSupported,
   unsupportedTargetingFilterLabels,
 } from './targetingCapabilities'
@@ -99,5 +106,127 @@ describe('targeting capability filter normalization', () => {
     expect(normalized.propertyTypes).not.toBe(HVAC_FILTERS.propertyTypes)
     expect(targetingFiltersAreSupported(normalized, LEADGEN_FILTERS)).toBe(true)
     expect(unsupportedTargetingFilterLabels(LEADGEN_FILTERS)).toEqual([])
+  })
+})
+
+const BUSINESS_SUPPORT: BusinessTargetingFilterSupport = {
+  businessSicCodes: true,
+  businessNaicsCodes: true,
+  businessJobTitles: true,
+  businessManagementLevels: true,
+  businessEmployeeMin: true,
+  businessEmployeeMax: true,
+  businessSalesMin: true,
+  businessSalesMax: true,
+  businessHasEmail: true,
+  businessWorkAtHome: true,
+}
+
+describe('Business targeting capability normalization', () => {
+  it('clears every unsupported value from a resumed Business draft', () => {
+    const filters: TargetingFilters = {
+      ...HVAC_FILTERS,
+      businessSicCodes: ['171102'],
+      businessNaicsCodes: ['238220'],
+      businessJobTitles: ['Owner'],
+      businessManagementLevels: ['C-Level'],
+      businessEmployeeMin: 5,
+      businessEmployeeMax: 50,
+      businessSalesMin: 100000,
+      businessSalesMax: 500000,
+      businessHasEmail: true,
+      businessWorkAtHome: false,
+    }
+    const support = Object.fromEntries(
+      Object.keys(BUSINESS_SUPPORT).map((key) => [key, false]),
+    ) as unknown as BusinessTargetingFilterSupport
+
+    const normalized = normalizeBusinessTargetingFilters(filters, support)
+
+    expect(normalized).toMatchObject({
+      businessSicCodes: [],
+      businessNaicsCodes: [],
+      businessJobTitles: [],
+      businessManagementLevels: [],
+      businessEmployeeMin: null,
+      businessEmployeeMax: null,
+      businessSalesMin: null,
+      businessSalesMax: null,
+      businessHasEmail: null,
+      businessWorkAtHome: null,
+    })
+    expect(businessTargetingFiltersAreSupported(normalized, support)).toBe(true)
+    expect(businessTargetingFiltersAreSupported(filters, support)).toBe(false)
+  })
+})
+
+describe('attested targeting plan matching', () => {
+  const area: TargetingArea = { type: 'zip', coordinates: [], zipCode: '10001' }
+  const filters: TargetingFilters = {
+    ...HVAC_FILTERS,
+    propertyTypes: [...HVAC_FILTERS.propertyTypes],
+  }
+  const exclusions = { pastCustomers: 1, recentlyMailed: 2, doNotMail: 3 }
+  const plan: AudienceQueryPlan = {
+    schemaVersion: 1,
+    audienceType: 'consumer',
+    provider: 'melissa',
+    product: 'leadgen_property',
+    areas: [area],
+    filters: {
+      homeowner: 'homeowner',
+      homeValueMin: 150000,
+      homeValueMax: 800000,
+      yearBuiltMax: 2010,
+      propertyTypes: ['Single Family'],
+      hhageMin: 3,
+      hhageMax: 6,
+      incomeMin: 'C',
+      loresMin: 2,
+      loresMax: 10,
+    },
+    suppressionPolicy: {
+      excludePastCustomers: true,
+      excludeMailedWithinDays: 60,
+    },
+    requests: [],
+    outputColumns: [],
+    fingerprint: 'a'.repeat(64),
+    countProof: {
+      filteredCount: 15,
+      finalCount: 9,
+      exclusions,
+      source: 'melissa',
+    },
+    attestation: 'b'.repeat(64),
+  }
+  const state = {
+    audienceType: 'consumer' as const,
+    areas: [area],
+    filters,
+    suppressionPolicy: {
+      excludePastCustomers: true,
+      excludeMailedWithinDays: null,
+    },
+    finalCount: 9,
+    exclusions,
+    source: 'melissa' as const,
+  }
+
+  it('accepts only the live attested plan for the exact visible state', () => {
+    expect(queryPlanMatchesTargetingState(plan, state)).toBe(true)
+    expect(queryPlanMatchesTargetingState(null, state)).toBe(false)
+    expect(queryPlanMatchesTargetingState(plan, { ...state, source: 'mock' })).toBe(false)
+  })
+
+  it('invalidates a prior plan after a filter or audience-type change', () => {
+    expect(queryPlanMatchesTargetingState(plan, {
+      ...state,
+      filters: { ...filters, homeValueMin: 200000 },
+    })).toBe(false)
+    expect(queryPlanMatchesTargetingState(plan, {
+      ...state,
+      audienceType: 'business',
+    })).toBe(false)
   })
 })
