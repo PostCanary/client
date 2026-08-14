@@ -56,7 +56,7 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
 }
 
 function mountFilters(
-  filterCapabilities: TargetingFilterSupport,
+  filterCapabilities: TargetingFilterSupport | null,
   targetingProvider: 'leadgen' | 'data_retriever' | 'planner',
 ) {
   return mount(PanelTabFilters, {
@@ -72,6 +72,18 @@ function mountFilters(
 }
 
 describe('PanelTabFilters provider capabilities', () => {
+  it('fails closed while provider capabilities are unavailable', () => {
+    const wrapper = mountFilters(null, 'planner')
+
+    const filterControls = wrapper.findAll(
+      '[data-testid^="filter-control-"], [data-testid="filter-property-types"] input',
+    )
+    expect(filterControls.length).toBeGreaterThan(0)
+    expect(filterControls.every((control) =>
+      control.attributes('disabled') !== undefined,
+    )).toBe(true)
+  })
+
   it('disables unsupported Data Retriever controls and leaves household age enabled', () => {
     const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
 

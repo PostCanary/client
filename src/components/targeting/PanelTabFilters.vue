@@ -30,7 +30,7 @@ const PROPERTY_TYPES = [
 ];
 
 function supportsFilter(key: TargetingFilterKey): boolean {
-  return props.filterCapabilities?.[key] ?? true;
+  return props.filterCapabilities?.[key] ?? false;
 }
 
 const unavailableFilters = computed(() =>

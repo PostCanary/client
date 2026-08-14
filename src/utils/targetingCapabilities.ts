@@ -1,5 +1,12 @@
-import type { TargetingFilters } from '@/types/campaign'
-import type { TargetingFilterKey, TargetingFilterSupport } from '@/types/targeting'
+import type { TargetingArea, TargetingFilters } from '@/types/campaign'
+import type {
+  AudienceQueryPlan,
+  AudienceSuppressionPolicy,
+  BusinessTargetingFilterSupport,
+  TargetingCountSource,
+  TargetingFilterKey,
+  TargetingFilterSupport,
+} from '@/types/targeting'
 
 export const TARGETING_FILTER_LABELS: Record<TargetingFilterKey, string> = {
   homeowner: 'homeowner status',
@@ -41,6 +48,154 @@ export function normalizeTargetingFilters(
     squareFootageMax: support.squareFootageMax ? (filters.squareFootageMax ?? null) : null,
     hasEmail: support.hasEmail ? (filters.hasEmail ?? null) : null,
   }
+}
+
+export function normalizeBusinessTargetingFilters(
+  filters: TargetingFilters,
+  support: BusinessTargetingFilterSupport,
+): TargetingFilters {
+  return {
+    ...filters,
+    businessSicCodes: support.businessSicCodes ? [...(filters.businessSicCodes ?? [])] : [],
+    businessNaicsCodes: support.businessNaicsCodes ? [...(filters.businessNaicsCodes ?? [])] : [],
+    businessJobTitles: support.businessJobTitles ? [...(filters.businessJobTitles ?? [])] : [],
+    businessManagementLevels: support.businessManagementLevels
+      ? [...(filters.businessManagementLevels ?? [])]
+      : [],
+    businessEmployeeMin: support.businessEmployeeMin
+      ? (filters.businessEmployeeMin ?? null)
+      : null,
+    businessEmployeeMax: support.businessEmployeeMax
+      ? (filters.businessEmployeeMax ?? null)
+      : null,
+    businessSalesMin: support.businessSalesMin ? (filters.businessSalesMin ?? null) : null,
+    businessSalesMax: support.businessSalesMax ? (filters.businessSalesMax ?? null) : null,
+    businessHasEmail: support.businessHasEmail ? (filters.businessHasEmail ?? null) : null,
+    businessWorkAtHome: support.businessWorkAtHome ? (filters.businessWorkAtHome ?? null) : null,
+  }
+}
+
+export function businessTargetingFiltersAreSupported(
+  filters: TargetingFilters,
+  support: BusinessTargetingFilterSupport,
+): boolean {
+  return (
+    (support.businessSicCodes || (filters.businessSicCodes ?? []).length === 0) &&
+    (support.businessNaicsCodes || (filters.businessNaicsCodes ?? []).length === 0) &&
+    (support.businessJobTitles || (filters.businessJobTitles ?? []).length === 0) &&
+    (support.businessManagementLevels || (filters.businessManagementLevels ?? []).length === 0) &&
+    (support.businessEmployeeMin || (filters.businessEmployeeMin ?? null) === null) &&
+    (support.businessEmployeeMax || (filters.businessEmployeeMax ?? null) === null) &&
+    (support.businessSalesMin || (filters.businessSalesMin ?? null) === null) &&
+    (support.businessSalesMax || (filters.businessSalesMax ?? null) === null) &&
+    (support.businessHasEmail || (filters.businessHasEmail ?? null) === null) &&
+    (support.businessWorkAtHome || (filters.businessWorkAtHome ?? null) === null)
+  )
+}
+
+const CONSUMER_FILTER_KEYS: Array<keyof TargetingFilters> = [
+  'homeowner',
+  'homeValueMin',
+  'homeValueMax',
+  'yearBuiltMin',
+  'yearBuiltMax',
+  'propertyTypes',
+  'squareFootageMin',
+  'squareFootageMax',
+  'hhageMin',
+  'hhageMax',
+  'incomeMin',
+  'loresMin',
+  'loresMax',
+  'hasEmail',
+]
+
+const BUSINESS_FILTER_KEYS: Array<keyof TargetingFilters> = [
+  'businessSicCodes',
+  'businessNaicsCodes',
+  'businessJobTitles',
+  'businessManagementLevels',
+  'businessEmployeeMin',
+  'businessEmployeeMax',
+  'businessSalesMin',
+  'businessSalesMax',
+  'businessHasEmail',
+  'businessWorkAtHome',
+]
+
+function isActivePlanValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== '' && value !== 'all' &&
+    (!Array.isArray(value) || value.length > 0)
+}
+
+function activeFilterSnapshot(
+  filters: TargetingFilters,
+  audienceType: 'consumer' | 'business',
+): Record<string, unknown> {
+  const keys = audienceType === 'business' ? BUSINESS_FILTER_KEYS : CONSUMER_FILTER_KEYS
+  return Object.fromEntries(
+    keys
+      .filter((key) => isActivePlanValue(filters[key]))
+      .map((key) => [key, filters[key]]),
+  )
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, canonicalize(item)]),
+  )
+}
+
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(canonicalize(value))
+}
+
+const SHA256_HEX = /^[a-f0-9]{64}$/
+
+export interface TargetingPlanState {
+  audienceType: 'consumer' | 'business'
+  areas: TargetingArea[]
+  filters: TargetingFilters
+  suppressionPolicy: AudienceSuppressionPolicy
+  finalCount: number
+  exclusions: {
+    pastCustomers: number
+    recentlyMailed: number
+    doNotMail: number
+  }
+  source: TargetingCountSource
+}
+
+/**
+ * Confirm that the server-attested plan belongs to the exact targeting state
+ * that is currently visible. The server remains the cryptographic verifier;
+ * this client check prevents a prior valid plan from reopening Step 2 after an
+ * area, filter, suppression, or audience-type change.
+ */
+export function queryPlanMatchesTargetingState(
+  plan: AudienceQueryPlan | null,
+  state: TargetingPlanState,
+): boolean {
+  if (!plan || !SHA256_HEX.test(plan.fingerprint) || !SHA256_HEX.test(plan.attestation)) return false
+  if (plan.provider !== 'melissa' || plan.audienceType !== state.audienceType) return false
+  if (!['melissa', 'melissa_data_retriever'].includes(state.source)) return false
+  if (plan.countProof.source !== state.source || plan.countProof.finalCount !== state.finalCount) return false
+  if (canonicalJson(plan.countProof.exclusions) !== canonicalJson(state.exclusions)) return false
+  if (canonicalJson(plan.areas) !== canonicalJson(state.areas)) return false
+  if (
+    canonicalJson(plan.filters) !==
+    canonicalJson(activeFilterSnapshot(state.filters, state.audienceType))
+  ) return false
+
+  const expectedPolicy = {
+    excludePastCustomers: state.suppressionPolicy.excludePastCustomers,
+    excludeMailedWithinDays: state.suppressionPolicy.excludeMailedWithinDays ?? 60,
+  }
+  return canonicalJson(plan.suppressionPolicy) === canonicalJson(expectedPolicy)
 }
 
 export function targetingFiltersAreSupported(

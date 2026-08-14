@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { shallowMount, flushPromises } from "@vue/test-utils";
+import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 
 const replaceMock = vi.fn();
@@ -98,5 +99,38 @@ describe("WizardShell Send-to-a-List Step 2 routing (POS-190)", () => {
     await flushPromises();
 
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("disables Next again as soon as the targeting query becomes stale", async () => {
+    const store = useCampaignDraftStore();
+    store.draft = {
+      id: "draft-1",
+      orgId: "org-1",
+      currentStep: 2,
+      completedSteps: [1, 2],
+      needsReviewSteps: [],
+      campaignType: "targeted",
+      goal: { goalType: "target_area", sequenceLength: 1 },
+      targeting: null,
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: "2026-07-28T00:00:00Z",
+      updatedAt: "2026-07-28T00:00:00Z",
+      schemaVersion: 1,
+    };
+    const wrapper = shallowMount(WizardShell);
+    const nextButton = () => wrapper.findAll("button").find((button) => button.text() === "Next")!;
+    const targetingStep = wrapper.findComponent({ name: "StepTargeting" });
+
+    expect(nextButton().attributes("disabled")).toBeDefined();
+
+    targetingStep.vm.$emit("targeting-validity", true);
+    await nextTick();
+    expect(nextButton().attributes("disabled")).toBeUndefined();
+
+    targetingStep.vm.$emit("targeting-validity", false);
+    await nextTick();
+    expect(nextButton().attributes("disabled")).toBeDefined();
   });
 });

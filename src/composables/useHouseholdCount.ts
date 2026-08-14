@@ -74,6 +74,8 @@ export function useHouseholdCount() {
 
   let abortController: AbortController | null = null
   let retryCount = 0
+  let requestVersion = 0
+  let retryTimer: ReturnType<typeof setTimeout> | null = null
   let lastAreas: TargetingArea[] = []
   let lastSuppressionPolicy: AudienceSuppressionPolicy = {
     excludePastCustomers: true,
@@ -91,6 +93,11 @@ export function useHouseholdCount() {
     },
     audienceType: 'consumer' | 'business' = 'consumer',
   ) => {
+    const currentVersion = ++requestVersion
+    if (retryTimer) {
+      clearTimeout(retryTimer)
+      retryTimer = null
+    }
     // Cancel previous in-flight request
     if (abortController) abortController.abort()
     abortController = new AbortController()
@@ -117,7 +124,7 @@ export function useHouseholdCount() {
       count.value = 0
       filteredCount.value = 0
       exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
-      ready.value = true  // definitive (rejected) state, not a fabricated number
+      ready.value = false
       queryPlan.value = null
       return
     }
@@ -149,6 +156,7 @@ export function useHouseholdCount() {
         suppressionPolicy,
         audienceType,
       )
+      if (currentVersion !== requestVersion) return
       count.value = result.finalCount
       filteredCount.value = result.filteredCount
       exclusions.value = {
@@ -173,12 +181,16 @@ export function useHouseholdCount() {
       retryCount = 0
       loading.value = false
     } catch (e: any) {
+      if (currentVersion !== requestVersion) return
       if (isAbortError(e)) return  // Cancelled — don't touch loading/count/error/ready
       // Retry once on semaphore timeout with jittered delay
       if (e.message?.includes('busy') && retryCount < 1) {
         retryCount++
         const jitter = 1000 + Math.random() * 2000  // 1-3s random delay
-        setTimeout(() => fetchCount(areas, filters, suppressionPolicy, audienceType), jitter)
+        retryTimer = setTimeout(() => {
+          retryTimer = null
+          fetchCount(areas, filters, suppressionPolicy, audienceType)
+        }, jitter)
         return
       }
       retryCount = 0
@@ -194,7 +206,7 @@ export function useHouseholdCount() {
         filteredCount.value = 0
         exclusions.value = { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 }
         error.value = extractServerMessage(e) || AREA_TOO_LARGE_MESSAGE
-        ready.value = true  // definitive (rejected) state, not a fabricated number
+        ready.value = false
         queryPlan.value = null
       } else if (e.status === 503 || e.message?.includes('temporarily unavailable')) {
         // Drake priority #1 (S71 mem 574 / POS-135): NO silent mock fallback,
@@ -210,6 +222,21 @@ export function useHouseholdCount() {
       }
     }
   }, 500)
+
+  function invalidate() {
+    requestVersion++
+    if (retryTimer) {
+      clearTimeout(retryTimer)
+      retryTimer = null
+    }
+    if (abortController) abortController.abort()
+    abortController = null
+    loading.value = false
+    error.value = null
+    invalid.value = false
+    ready.value = false
+    queryPlan.value = null
+  }
 
   async function fetchTotalIfNeeded() {
     // Lazy unfiltered call — only fires when Summary tab opens
@@ -241,6 +268,7 @@ export function useHouseholdCount() {
   // Cleanup: abort in-flight request when component unmounts
   onBeforeUnmount(() => {
     if (abortController) abortController.abort()
+    if (retryTimer) clearTimeout(retryTimer)
   })
 
   return {
@@ -254,6 +282,7 @@ export function useHouseholdCount() {
     invalid,
     ready,
     queryPlan,
+    invalidate,
     fetchCount,
     fetchTotalIfNeeded,
   }
