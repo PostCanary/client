@@ -75,39 +75,12 @@ const zips = ref<string[]>(
     .filter((a) => a.type === "zip" && a.zipCode)
     .map((a) => a.zipCode!),
 );
-// S69 demo prep: HVAC default presets. Applied when the draft has no
-// filters yet OR filters exist but every field is null/empty (the
-// "untouched-new-draft" signature). Once any field is customized, the
-// stored filters win. Post-demo: replace with industry->preset mapping
-// keyed off brandKit.industry (mem 562).
-const HVAC_PRESET_FILTERS: TargetingFilters = {
-  homeowner: "homeowner",
-  homeValueMin: 150000,
-  homeValueMax: 800000,
-  yearBuiltMin: null,
-  yearBuiltMax: 2010,
-  propertyTypes: ["Single Family"],
-  hhageMin: null,
-  hhageMax: null,
-  incomeMin: null,
-  loresMin: null,
-  loresMax: null,
-  squareFootageMin: null,
-  squareFootageMax: null,
-  hasEmail: null,
-  businessSicCodes: [],
-  businessNaicsCodes: [],
-  businessJobTitles: [],
-  businessManagementLevels: [],
-  businessEmployeeMin: null,
-  businessEmployeeMax: null,
-  businessSalesMin: null,
-  businessSalesMax: null,
-  businessHasEmail: null,
-  businessWorkAtHome: null,
-};
-
-const EMPTY_BUSINESS_FILTERS: TargetingFilters = {
+// POS-213: fresh drafts start with NO filters. Geo-only targeting routes
+// to Data Retriever Consumer (real household counts); the old S69 HVAC
+// demo stack is now an explicit opt-in chip in the Filter tab (see
+// HOME_SERVICES_PRESET in @/utils/targetingPresets). Stored draft filters
+// always win — only genuinely untouched drafts see the empty default.
+const EMPTY_FILTERS: TargetingFilters = {
   homeowner: null,
   homeValueMin: null,
   homeValueMax: null,
@@ -134,33 +107,25 @@ const EMPTY_BUSINESS_FILTERS: TargetingFilters = {
   businessWorkAtHome: null,
 };
 
-function filtersAreUntouched(f: TargetingFilters | undefined): boolean {
-  if (!f) return true;
-  return (
-    f.homeowner === null &&
-    f.homeValueMin === null &&
-    f.homeValueMax === null &&
-    f.yearBuiltMin === null &&
-    f.yearBuiltMax === null &&
-    (Array.isArray(f.propertyTypes) ? f.propertyTypes.length : 0) === 0 &&
-    (f.hhageMin ?? null) === null &&
-    (f.hhageMax ?? null) === null &&
-    (f.incomeMin ?? null) === null &&
-    (f.loresMin ?? null) === null &&
-    (f.loresMax ?? null) === null
-    && (f.squareFootageMin ?? null) === null
-    && (f.squareFootageMax ?? null) === null
-    && (f.hasEmail ?? null) === null
-  );
+// Fresh copy so array fields are never shared with the module-level const
+// (togglePropertyType mutates in place).
+function emptyFilters(): TargetingFilters {
+  return {
+    ...EMPTY_FILTERS,
+    propertyTypes: [],
+    businessSicCodes: [],
+    businessNaicsCodes: [],
+    businessJobTitles: [],
+    businessManagementLevels: [],
+  };
 }
 
-const filters = ref<TargetingFilters>(
-  audienceType.value === 'business'
-    ? { ...EMPTY_BUSINESS_FILTERS, ...(draftStore.draft?.targeting?.filters ?? {}) }
-    : filtersAreUntouched(draftStore.draft?.targeting?.filters)
-    ? { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] }
-    : draftStore.draft!.targeting!.filters!,
-);
+// Spread over the empty base so partial filter objects from older drafts
+// gain the newer keys as nulls instead of undefined.
+const filters = ref<TargetingFilters>({
+  ...emptyFilters(),
+  ...(draftStore.draft?.targeting?.filters ?? {}),
+});
 
 const targetingCapabilities = ref<TargetingCapabilities | null>(null);
 const capabilitiesResolved = ref(false);
@@ -218,7 +183,7 @@ async function resolveTargetingCapabilities() {
       if (!businessProductEnabled || !support) {
         audienceType.value = 'consumer';
         filters.value = normalizeTargetingFilters(
-          { ...HVAC_PRESET_FILTERS, propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes] },
+          emptyFilters(),
           result.capabilities.audienceFilters?.consumer ?? result.capabilities.filters,
         );
       } else {
@@ -533,16 +498,12 @@ function setAudienceType(value: 'consumer' | 'business') {
   audienceType.value = value;
   if (value === 'business') {
     filters.value = businessFilterCapabilities.value
-      ? normalizeBusinessTargetingFilters(EMPTY_BUSINESS_FILTERS, businessFilterCapabilities.value)
-      : { ...EMPTY_BUSINESS_FILTERS };
+      ? normalizeBusinessTargetingFilters(emptyFilters(), businessFilterCapabilities.value)
+      : emptyFilters();
   } else {
-    const consumerDefaults = {
-      ...HVAC_PRESET_FILTERS,
-      propertyTypes: [...HVAC_PRESET_FILTERS.propertyTypes],
-    };
     filters.value = filterCapabilities.value
-      ? normalizeTargetingFilters(consumerDefaults, filterCapabilities.value)
-      : consumerDefaults;
+      ? normalizeTargetingFilters(emptyFilters(), filterCapabilities.value)
+      : emptyFilters();
   }
 }
 

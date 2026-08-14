@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { JobReference, TargetingFilters } from "@/types/campaign";
 import type { BusinessTargetingFilterSupport, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
+import {
+  countActiveBusinessFilters,
+  countActiveConsumerFilters,
+} from "@/utils/targetingFilterCount";
 import PanelTabTarget from "./PanelTabTarget.vue";
 import PanelTabFilters from "./PanelTabFilters.vue";
 import PanelTabBusinessFilters from "./PanelTabBusinessFilters.vue";
 import PanelTabSummary from "./PanelTabSummary.vue";
 import TargetingSummaryBar from "./TargetingSummaryBar.vue";
 
-defineProps<{
+const props = defineProps<{
   jobs: JobReference[];
   isNeighborGoal: boolean;
   radiusMiles: number;
@@ -43,6 +47,15 @@ const emit = defineEmits<{
   (e: "update:excludePastCustomers", val: boolean): void;
   (e: "update:excludeMailedWithinDays", val: number | null): void;
 }>();
+
+// POS-213: filters silently shape the count from any tab, so the
+// always-visible bar must disclose them. Same counting rules as the
+// Filter tab's "N applied" badge (shared util).
+const activeFilterCount = computed(() =>
+  props.audienceType === "business"
+    ? countActiveBusinessFilters(props.filters)
+    : countActiveConsumerFilters(props.filters, props.filterCapabilities),
+);
 
 const collapsed = ref(false);
 const activeTab = ref<"target" | "filters" | "summary">("target");
@@ -171,6 +184,7 @@ const tabs = [
       :final-household-count="finalHouseholdCount"
       :estimated-cost-sequence="estimatedCostSequence"
       :sequence-length="sequenceLength"
+      :active-filter-count="activeFilterCount"
     />
   </div>
 </template>

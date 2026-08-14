@@ -8,6 +8,10 @@ const props = defineProps<{
   estimatedCostSequence: number;
   sequenceLength: number;
   audienceType?: 'consumer' | 'business';
+  // POS-213: active filters constrain the count from any tab — disclose
+  // them next to the number so a filtered count never masquerades as the
+  // area total.
+  activeFilterCount?: number;
 }>();
 
 const hc = inject(HOUSEHOLD_COUNT_KEY)!;
@@ -37,6 +41,11 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
           v-if="hc.source.value === 'mock'"
           class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium"
         >(demo data)</span>
+        <span
+          v-if="(props.activeFilterCount ?? 0) > 0"
+          data-testid="summary-filter-badge"
+          class="text-[10px] bg-[#47bfa9]/10 text-[#2b8d7c] px-1.5 py-0.5 rounded font-medium"
+        >{{ props.activeFilterCount }} {{ props.activeFilterCount === 1 ? 'filter' : 'filters' }}</span>
       </div>
       <div class="text-xs text-gray-500 mt-0.5">
         Est. {{ formatCurrency(estimatedCostSequence) }} · {{ sequenceLength }} {{ sequenceLength === 1 ? 'card' : 'cards' }}
