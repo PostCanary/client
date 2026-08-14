@@ -7,8 +7,9 @@ export interface TargetingCapabilitiesLoadResult {
 }
 
 /**
- * Capability discovery is advisory for legacy/prod servers. A failed or
- * unavailable endpoint must leave the existing targeting behavior intact.
+ * Load the server capability contract. Callers must fail closed when the
+ * contract is missing or invalid so unsupported filters cannot reach count or
+ * purchase requests.
  */
 export async function loadTargetingCapabilities(
   signal?: AbortSignal,

@@ -9,6 +9,7 @@ const props = defineProps<{
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
   finalHouseholdCount: number;
+  audienceType?: 'consumer' | 'business';
 }>();
 
 const hc = inject(HOUSEHOLD_COUNT_KEY)!;
@@ -60,7 +61,7 @@ const hasExclusions = computed(() =>
          the summary bar's filtered finalHouseholdCount. Now top-line matches bar. -->
     <div v-else class="space-y-1.5 text-sm">
       <div class="flex justify-between">
-        <span class="text-gray-500">Qualifying households</span>
+        <span class="text-gray-500">Qualifying {{ audienceType === 'business' ? 'businesses' : 'households' }}</span>
         <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
       </div>
       <div v-if="excludedPastCustomers > 0" class="flex justify-between">

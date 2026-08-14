@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { JobReference, TargetingFilters } from "@/types/campaign";
-import type { TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
+import type { BusinessTargetingFilterSupport, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import PanelTabTarget from "./PanelTabTarget.vue";
 import PanelTabFilters from "./PanelTabFilters.vue";
+import PanelTabBusinessFilters from "./PanelTabBusinessFilters.vue";
 import PanelTabSummary from "./PanelTabSummary.vue";
 import TargetingSummaryBar from "./TargetingSummaryBar.vue";
 
@@ -13,7 +14,10 @@ defineProps<{
   radiusMiles: number;
   zips: string[];
   filters: TargetingFilters;
+  audienceType: 'consumer' | 'business';
+  businessEnabled: boolean;
   filterCapabilities: TargetingFilterSupport | null;
+  businessFilterCapabilities: BusinessTargetingFilterSupport | null;
   targetingProvider: TargetingProvider | null;
   excludePastCustomers: boolean;
   excludeMailedWithinDays: number | null;
@@ -35,6 +39,7 @@ const emit = defineEmits<{
   (e: "add-zips", zips: string[]): void;
   (e: "remove-zip", zip: string): void;
   (e: "update:filters", filters: TargetingFilters): void;
+  (e: "update:audienceType", value: 'consumer' | 'business'): void;
   (e: "update:excludePastCustomers", val: boolean): void;
   (e: "update:excludeMailedWithinDays", val: number | null): void;
 }>();
@@ -74,6 +79,25 @@ const tabs = [
       </svg>
     </button>
 
+    <div v-if="businessEnabled" class="grid grid-cols-2 gap-1 border-b border-gray-200 bg-gray-50 p-2">
+      <button
+        data-testid="audience-type-consumer"
+        class="rounded-md px-2 py-1.5 text-xs font-medium"
+        :class="audienceType === 'consumer' ? 'bg-white text-[#0b2d50] shadow-sm' : 'text-gray-500'"
+        @click="emit('update:audienceType', 'consumer')"
+      >
+        People & households
+      </button>
+      <button
+        data-testid="audience-type-business"
+        class="rounded-md px-2 py-1.5 text-xs font-medium"
+        :class="audienceType === 'business' ? 'bg-white text-[#0b2d50] shadow-sm' : 'text-gray-500'"
+        @click="emit('update:audienceType', 'business')"
+      >
+        Businesses
+      </button>
+    </div>
+
     <!-- Tabs -->
     <div class="flex border-b border-gray-200 shrink-0">
       <button
@@ -107,7 +131,7 @@ const tabs = [
         @remove-zip="emit('remove-zip', $event)"
       />
       <PanelTabFilters
-        v-if="activeTab === 'filters'"
+        v-if="activeTab === 'filters' && audienceType === 'consumer'"
         :filters="filters"
         :filter-capabilities="filterCapabilities"
         :targeting-provider="targetingProvider"
@@ -119,8 +143,21 @@ const tabs = [
         @update:exclude-past-customers="emit('update:excludePastCustomers', $event)"
         @update:exclude-mailed-within-days="emit('update:excludeMailedWithinDays', $event)"
       />
+      <PanelTabBusinessFilters
+        v-if="activeTab === 'filters' && audienceType === 'business'"
+        :filters="filters"
+        :filter-capabilities="businessFilterCapabilities"
+        :exclude-past-customers="excludePastCustomers"
+        :exclude-mailed-within-days="excludeMailedWithinDays"
+        :do-not-mail-count="doNotMailCount"
+        :has-non-zip-areas="hasNonZipAreas"
+        @update:filters="emit('update:filters', $event)"
+        @update:exclude-past-customers="emit('update:excludePastCustomers', $event)"
+        @update:exclude-mailed-within-days="emit('update:excludeMailedWithinDays', $event)"
+      />
       <PanelTabSummary
         v-if="activeTab === 'summary'"
+        :audience-type="audienceType"
         :excluded-past-customers="excludedPastCustomers"
         :excluded-recently-mailed="excludedRecentlyMailed"
         :excluded-do-not-mail="excludedDoNotMail"
@@ -130,6 +167,7 @@ const tabs = [
 
     <!-- Always-visible summary bar (Knaflic: data at the decision point) -->
     <TargetingSummaryBar
+      :audience-type="audienceType"
       :final-household-count="finalHouseholdCount"
       :estimated-cost-sequence="estimatedCostSequence"
       :sequence-length="sequenceLength"

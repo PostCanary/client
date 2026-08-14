@@ -118,6 +118,7 @@ describe('useHouseholdCount', () => {
     expect(hc.invalid.value).toBe(true)
     expect(hc.count.value).toBe(0)
     expect(hc.error.value).toBe('Radius must be between 0.01 and 25 miles')
+    expect(hc.ready.value).toBe(false)
   })
 
   it('falls back to the friendly message on a 400 with no server message', async () => {
@@ -204,8 +205,34 @@ describe('useHouseholdCount', () => {
       expect.any(AbortSignal),
       false,
       policy,
+      'consumer',
     )
     expect(hc.count.value).toBe(1500)
+  })
+
+  it('sends the selected business audience type with the count request', async () => {
+    vi.mocked(getHouseholdCount).mockResolvedValueOnce({
+      ok: true,
+      finalCount: 8,
+      filteredCount: 8,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa_data_retriever',
+    })
+    const hc = useHouseholdCount()
+    const area = circle(1)
+
+    hc.fetchCount([area], NO_FILTERS, undefined, 'business')
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+
+    expect(getHouseholdCount).toHaveBeenCalledWith(
+      [area],
+      NO_FILTERS,
+      expect.any(AbortSignal),
+      false,
+      expect.any(Object),
+      'business',
+    )
   })
 })
 
@@ -273,12 +300,12 @@ describe('useHouseholdCount — POS-135 (no client-side estimate)', () => {
     expect(getHouseholdCount).not.toHaveBeenCalled()
   })
 
-  it('marks ready on an oversized-radius rejection — definitive, not fabricated', async () => {
+  it('keeps approval readiness false on an oversized-radius rejection', async () => {
     const hc = useHouseholdCount()
     hc.fetchCount([circle(30)], NO_FILTERS)
     await flushDebounce()
 
-    expect(hc.ready.value).toBe(true)
+    expect(hc.ready.value).toBe(false)
     expect(hc.count.value).toBe(0)
     expect(hc.invalid.value).toBe(true)
   })
@@ -324,5 +351,56 @@ describe('useHouseholdCount — POS-135 (no client-side estimate)', () => {
     expect(hc.count.value).toBe(1200) // last-good real value, not corrupted
     expect(hc.queryPlan.value).toBeNull()
     expect(hc.error.value).toBe('temporarily unavailable')
+  })
+
+  it('invalidates a prior plan immediately when the visible query changes', async () => {
+    vi.mocked(getHouseholdCount).mockResolvedValueOnce({
+      ok: true,
+      finalCount: 1,
+      filteredCount: 1,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa',
+      queryPlan: {
+        fingerprint: 'a'.repeat(64),
+        attestation: 'b'.repeat(64),
+      },
+    } as any)
+    const hc = useHouseholdCount()
+
+    hc.fetchCount([circle(1)], NO_FILTERS)
+    await flushDebounce()
+    await vi.waitFor(() => expect(hc.loading.value).toBe(false))
+    expect(hc.ready.value).toBe(true)
+    expect(hc.queryPlan.value).not.toBeNull()
+
+    hc.invalidate()
+
+    expect(hc.ready.value).toBe(false)
+    expect(hc.queryPlan.value).toBeNull()
+  })
+
+  it('ignores a superseded response even when its transport does not honor abort', async () => {
+    let resolveFetch: (value: unknown) => void
+    vi.mocked(getHouseholdCount).mockReturnValueOnce(new Promise((resolve) => {
+      resolveFetch = resolve
+    }) as any)
+    const hc = useHouseholdCount()
+
+    hc.fetchCount([circle(1)], NO_FILTERS)
+    await flushDebounce()
+    hc.invalidate()
+    resolveFetch!({
+      ok: true,
+      finalCount: 99,
+      filteredCount: 99,
+      exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+      source: 'melissa',
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(hc.ready.value).toBe(false)
+    expect(hc.count.value).toBe(0)
+    expect(hc.queryPlan.value).toBeNull()
   })
 })

@@ -7,6 +7,7 @@ const props = defineProps<{
   finalHouseholdCount: number;
   estimatedCostSequence: number;
   sequenceLength: number;
+  audienceType?: 'consumer' | 'business';
 }>();
 
 const hc = inject(HOUSEHOLD_COUNT_KEY)!;
@@ -17,7 +18,7 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
   <div class="bg-[#f8fafb] border-t border-gray-200 px-4 py-3 shrink-0">
     <template v-if="hc.loading.value">
       <div class="text-sm font-semibold text-[#0b2d50] animate-pulse">
-        Counting households...
+        Counting {{ audienceType === 'business' ? 'businesses' : 'households' }}...
       </div>
     </template>
     <!-- POS-133: an area was selected but rejected (e.g. server's 25-mile
@@ -30,7 +31,7 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
     <template v-else-if="hasTargeting">
       <div class="flex items-center gap-1.5">
         <div class="text-sm font-semibold text-[#0b2d50]">
-          {{ formatNumber(finalHouseholdCount) }} households
+          {{ formatNumber(finalHouseholdCount) }} {{ audienceType === 'business' ? 'businesses' : 'households' }}
         </div>
         <span
           v-if="hc.source.value === 'mock'"

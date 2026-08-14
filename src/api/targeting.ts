@@ -7,6 +7,7 @@ import type {
   AudienceQueryPlan,
   TargetingCountSource,
   TargetingGeographyType,
+  BusinessTargetingFilterSupport,
 } from '@/types/targeting'
 
 export interface HouseholdCountResponse {
@@ -58,6 +59,57 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     response.provider === 'planner' &&
     !plannerKeys.every((key) => typeof filters[key] === 'boolean')
   ) return null
+  const audienceFilters = response.audienceFilters as Record<string, unknown> | undefined
+  if (response.provider === 'planner') {
+    if (
+      response.strategy !== 'per_campaign' ||
+      typeof response.schemaVersion !== 'number' ||
+      !Number.isSafeInteger(response.schemaVersion) ||
+      response.schemaVersion < 1 ||
+      !audienceFilters
+    ) return null
+    const consumer = audienceFilters.consumer as Record<string, unknown> | undefined
+    const business = audienceFilters.business as Record<string, unknown> | undefined
+    const businessKeys: Array<keyof BusinessTargetingFilterSupport> = [
+      'businessSicCodes',
+      'businessNaicsCodes',
+      'businessJobTitles',
+      'businessManagementLevels',
+      'businessEmployeeMin',
+      'businessEmployeeMax',
+      'businessSalesMin',
+      'businessSalesMax',
+      'businessHasEmail',
+      'businessWorkAtHome',
+    ]
+    if (
+      !consumer ||
+      ![...legacyKeys, ...plannerKeys].every((key) => typeof consumer[key] === 'boolean') ||
+      !business ||
+      !businessKeys.every((key) => typeof business[key] === 'boolean')
+    ) return null
+
+    if (!Array.isArray(response.products) || !response.products.every((product) => {
+      if (!product || typeof product !== 'object') return false
+      const item = product as Record<string, unknown>
+      return typeof item.id === 'string' &&
+        ['consumer', 'business'].includes(String(item.audienceType)) &&
+        typeof item.enabled === 'boolean' &&
+        typeof item.implemented === 'boolean'
+    })) return null
+
+    const capabilityDetails = response.filterCapabilities
+    if (!capabilityDetails || typeof capabilityDetails !== 'object') return null
+    const capabilityMap = capabilityDetails as Record<string, unknown>
+    if (![...legacyKeys, ...plannerKeys].every((key) => key in capabilityMap)) return null
+    if (!Object.values(capabilityMap).every((detail) => {
+      if (!detail || typeof detail !== 'object') return false
+      const item = detail as Record<string, unknown>
+      return ['target', 'output_only', 'unavailable'].includes(String(item.mode)) &&
+        Array.isArray(item.products) &&
+        item.products.every((product) => typeof product === 'string')
+    })) return null
+  }
 
   return {
     ...(response as unknown as TargetingCapabilities),
@@ -90,12 +142,14 @@ export async function getHouseholdCount(
   signal?: AbortSignal,
   includeTotal?: boolean,
   suppressionPolicy?: AudienceSuppressionPolicy,
+  audienceType: 'consumer' | 'business' = 'consumer',
 ): Promise<HouseholdCountResponse> {
   return postJson<HouseholdCountResponse>('/api/targeting/count', {
     areas,
     filters,
     includeTotal: includeTotal ?? false,
     suppressionPolicy,
+    audienceType,
   }, signal ? { signal } : undefined)
 }
 

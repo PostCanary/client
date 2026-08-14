@@ -328,7 +328,7 @@ onBeforeRouteLeave(async () => {
       <StepGoal v-if="step === 1" />
       <StepTargeting
         v-else-if="step === 2"
-        @targeting-ready="targetingReady = true"
+        @targeting-validity="targetingReady = $event"
       />
       <StepUploadDesign v-else-if="step === 3" />
       <StepReview v-else-if="step === 4" />
