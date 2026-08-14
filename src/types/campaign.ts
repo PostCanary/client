@@ -159,6 +159,9 @@ export interface TargetingFilters {
   incomeMin: string | null             // household-income bracket code A-J ($60K–$275K+); null = any
   loresMin: number | null              // residence-length bracket 0-15 (0=<1yr … 15=>14yr); null = any
   loresMax: number | null
+  squareFootageMin?: number | null
+  squareFootageMax?: number | null
+  hasEmail?: boolean | null
 }
 
 export interface RecipientBreakdown {
@@ -223,6 +226,7 @@ export interface TargetingSelection {
 
   // Data source
   countSource: TargetingCountSource
+  queryPlan?: import('@/types/targeting').AudienceQueryPlan | null
 
   // Save
   savedAudienceName: string | null

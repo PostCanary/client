@@ -39,9 +39,11 @@ const unavailableFilters = computed(() =>
     : [],
 );
 const providerLabel = computed(() =>
-  props.targetingProvider === "data_retriever"
-    ? "Data Retriever"
-    : "The current audience provider",
+  props.targetingProvider === "planner"
+    ? "The Melissa audience planner"
+    : props.targetingProvider === "data_retriever"
+      ? "Data Retriever"
+      : "The current audience provider",
 );
 
 const activeFilterCount = computed(() => {
@@ -67,6 +69,11 @@ const activeFilterCount = computed(() => {
     (supportsFilter("loresMin") && filters.value.loresMin !== null) ||
     (supportsFilter("loresMax") && filters.value.loresMax !== null)
   ) count++;
+  if (
+    (supportsFilter("squareFootageMin") && (filters.value.squareFootageMin ?? null) !== null) ||
+    (supportsFilter("squareFootageMax") && (filters.value.squareFootageMax ?? null) !== null)
+  ) count++;
+  if (supportsFilter("hasEmail") && (filters.value.hasEmail ?? null) !== null) count++;
   return count;
 });
 
@@ -309,6 +316,50 @@ defineExpose({ activeFilterCount });
           @input="filters.yearBuiltMax = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
         />
       </div>
+    </div>
+
+    <!-- Living area square footage -->
+    <div data-testid="filter-square-footage" :class="{ 'opacity-60': !supportsFilter('squareFootageMin') || !supportsFilter('squareFootageMax') }">
+      <label class="text-xs text-gray-500">Home square footage</label>
+      <div class="flex gap-2 mt-1">
+        <input
+          data-testid="filter-control-square-footage-min"
+          :value="filters.squareFootageMin ?? ''"
+          :disabled="!supportsFilter('squareFootageMin')"
+          type="number"
+          min="0"
+          placeholder="Min sq ft"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @input="filters.squareFootageMin = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
+        />
+        <input
+          data-testid="filter-control-square-footage-max"
+          :value="filters.squareFootageMax ?? ''"
+          :disabled="!supportsFilter('squareFootageMax')"
+          type="number"
+          min="0"
+          placeholder="Max sq ft"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @input="filters.squareFootageMax = ($event.target as HTMLInputElement).value ? parseInt(($event.target as HTMLInputElement).value) : null"
+        />
+      </div>
+    </div>
+
+    <!-- Email availability only. Email values are not exposed to print. -->
+    <div data-testid="filter-email-availability" :class="{ 'opacity-60': !supportsFilter('hasEmail') }">
+      <label class="text-xs text-gray-500">Email availability</label>
+      <select
+        data-testid="filter-control-email-availability"
+        :value="filters.hasEmail === null || filters.hasEmail === undefined ? '' : String(filters.hasEmail)"
+        :disabled="!supportsFilter('hasEmail')"
+        class="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        @change="filters.hasEmail = ($event.target as HTMLSelectElement).value === '' ? null : ($event.target as HTMLSelectElement).value === 'true'"
+      >
+        <option value="">Any</option>
+        <option value="true">Has email</option>
+        <option value="false">No email</option>
+      </select>
+      <p class="mt-1 text-[11px] text-gray-400">This narrows the mailing audience. Email addresses are not sent to the print partner.</p>
     </div>
 
     <!-- Property type -->

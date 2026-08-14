@@ -22,6 +22,9 @@ const DATA_RETRIEVER_CAPABILITIES = {
     incomeMin: false,
     loresMin: false,
     loresMax: false,
+    squareFootageMin: false,
+    squareFootageMax: false,
+    hasEmail: false,
   },
 } as const
 
@@ -40,6 +43,9 @@ const LEADGEN_CAPABILITIES = {
     incomeMin: true,
     loresMin: true,
     loresMax: true,
+    squareFootageMin: false,
+    squareFootageMax: false,
+    hasEmail: false,
   },
 } as const
 

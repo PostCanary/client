@@ -13,6 +13,9 @@ export const TARGETING_FILTER_LABELS: Record<TargetingFilterKey, string> = {
   incomeMin: 'household income',
   loresMin: 'length of residence',
   loresMax: 'length of residence',
+  squareFootageMin: 'home square footage',
+  squareFootageMax: 'home square footage',
+  hasEmail: 'email availability',
 }
 
 export function normalizeTargetingFilters(
@@ -34,6 +37,9 @@ export function normalizeTargetingFilters(
     incomeMin: support.incomeMin ? filters.incomeMin : null,
     loresMin: support.loresMin ? filters.loresMin : null,
     loresMax: support.loresMax ? filters.loresMax : null,
+    squareFootageMin: support.squareFootageMin ? (filters.squareFootageMin ?? null) : null,
+    squareFootageMax: support.squareFootageMax ? (filters.squareFootageMax ?? null) : null,
+    hasEmail: support.hasEmail ? (filters.hasEmail ?? null) : null,
   }
 }
 
@@ -54,6 +60,9 @@ export function targetingFiltersAreSupported(
     (support.incomeMin || filters.incomeMin === null) &&
     (support.loresMin || filters.loresMin === null) &&
     (support.loresMax || filters.loresMax === null)
+    && (support.squareFootageMin || (filters.squareFootageMin ?? null) === null)
+    && (support.squareFootageMax || (filters.squareFootageMax ?? null) === null)
+    && (support.hasEmail || (filters.hasEmail ?? null) === null)
   )
 }
 
