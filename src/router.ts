@@ -332,7 +332,18 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, _from, saved) {
-    if (to.hash) return { el: to.hash, behavior: "smooth" };
+    if (to.hash) {
+      return new Promise((resolve) => {
+        const tryScroll = (attempt = 0) => {
+          if (document.querySelector(to.hash) || attempt > 20) {
+            resolve({ el: to.hash, behavior: "smooth" });
+            return;
+          }
+          requestAnimationFrame(() => tryScroll(attempt + 1));
+        };
+        tryScroll();
+      });
+    }
     if (saved) return saved;
     return { top: 0 };
   },

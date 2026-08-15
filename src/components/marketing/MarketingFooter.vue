@@ -6,7 +6,7 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 </script>
 
 <template>
-  <footer class="bg-[var(--mkt-navy)]">
+  <footer class="bg-navy">
     <!-- Top content row -->
     <div
       class="mx-auto flex w-full max-w-[1440px] flex-col md:flex-row items-center md:items-start justify-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 pt-12 pb-10 md:pt-16 md:pb-12"

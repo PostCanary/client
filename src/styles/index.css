@@ -36,6 +36,7 @@
   --mkt-text: #0c2d50;
   --mkt-text-muted: #64748b;
   --mkt-text-soft: #94a3b8;
+  --mkt-nav-height: 4.75rem;
   --mkt-navy: #0b2d50;
   --mkt-teal: #47bfa9;
   --mkt-teal-hover: #3aa893;
@@ -87,6 +88,13 @@
 /* Give the page a little reserved space for the scrollbar */
 html {
   scrollbar-gutter: stable; /* avoids content right up against the scrollbar */
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--mkt-nav-height, 4.75rem);
+}
+
+/* Offset one-page marketing anchors for the sticky navy nav (POS-221). */
+.mkt-anchor-section {
+  scroll-margin-top: var(--mkt-nav-height, 4.75rem);
 }
 
 html,
