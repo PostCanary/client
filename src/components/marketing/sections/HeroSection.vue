@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { captureEvent } from "@/composables/usePostHog";
 
 const auth = useAuthStore();
 
@@ -58,6 +59,7 @@ const reelStyle = computed(() => ({
 }));
 
 function getStarted() {
+  captureEvent("marketing_cta_clicked", { cta: "get_started", section: "hero" });
   auth.openLoginModal("/app/home", "signup");
 }
 </script>
