@@ -8,15 +8,9 @@ module.exports = {
 
   theme: {
     extend: {
-      colors: {
-        // POS-220 brand kit. `teal` is a Tailwind default — do not overwrite it.
-        navy: "#1C2430",
-        canary: "#FACF41",
-        "teal-brand": "#26AFA3",
-      },
       fontFamily: {
-        // POS-220: Roboto is the product/UI face. Print pairings below are unchanged.
-        sans: ["Roboto", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        // App default (existing)
+        sans: ['"Instrument Sans"', "system-ui", "sans-serif"],
 
         // --- Brief #6 Phase 2: Curated print font pairings ---
         // Draplin fix — replaces font extraction. We pick the closest pair

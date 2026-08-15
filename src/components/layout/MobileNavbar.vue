@@ -3,7 +3,7 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import LogoUrl from "@/assets/brand/logo-hz-800.png";
+import LogoUrl from "@/assets/source-logo-02.png";
 import { BRAND } from "@/config/brand";
 
 const props = withDefaults(

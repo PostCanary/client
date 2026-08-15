@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BRAND, getCopyrightText, getSupportEmailLink } from "@/config/brand";
-import landingLogo from "@/assets/brand/logo-webheader-dark.png";
+import landingLogo from "@/assets/postcanary-white.png";
 import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 </script>
 

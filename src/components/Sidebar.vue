@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 
 /* Assets */
-import LogoUrl from "@/assets/brand/logo-hz-800.png";
+import LogoUrl from "@/assets/source-logo-02.png";
 import OverviewIcon from "@/assets/sidebar/overview-icon.svg?url";
 /*import RoiIcon from "@/assets/sidebar/roi-icon.svg?url";
 import MatchIcon from "@/assets/sidebar/match-performance-icon.svg?url";
