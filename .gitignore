@@ -33,6 +33,3 @@ playwright-report-release/
 
 # firecrawl scrape cache (research artifacts, not source)
 .firecrawl/
-
-# Raw brand kit (EPS/PDF/source PNGs) — web-ready copies live in src/assets/brand/
-branding-kit/

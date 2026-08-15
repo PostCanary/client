@@ -332,22 +332,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, _from, saved) {
-    if (to.hash) {
-      return new Promise((resolve) => {
-        const tryScroll = (attempt = 0) => {
-          const el = document.querySelector(to.hash);
-          if (el || attempt > 20) {
-            resolve({ el: to.hash, behavior: "smooth" });
-            // Move focus to the anchor target so keyboard/screen-reader users
-            // land where the page jumped (sections carry tabindex="-1").
-            if (el instanceof HTMLElement) el.focus({ preventScroll: true });
-            return;
-          }
-          requestAnimationFrame(() => tryScroll(attempt + 1));
-        };
-        tryScroll();
-      });
-    }
+    if (to.hash) return { el: to.hash, behavior: "smooth" };
     if (saved) return saved;
     return { top: 0 };
   },

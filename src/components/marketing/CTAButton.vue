@@ -25,11 +25,11 @@ defineEmits<{
       size === 'lg' && 'px-6 sm:px-8 py-3 sm:py-3.5 text-[16px] sm:text-[17px]',
       // Variant
       variant === 'primary' &&
-        'bg-teal-brand text-white shadow-sm hover:bg-teal-brand/90',
+        'bg-[var(--mkt-teal)] text-white shadow-sm hover:bg-[var(--mkt-teal-hover)]',
       variant === 'outline' &&
-        'border border-teal-brand text-teal-brand hover:bg-teal-brand hover:text-white',
+        'border border-[var(--mkt-teal)] text-[var(--mkt-teal)] hover:bg-[var(--mkt-teal)] hover:text-white',
       variant === 'white' &&
-        'bg-white text-navy shadow-sm hover:bg-white/90',
+        'bg-white text-[var(--mkt-navy)] shadow-sm hover:bg-white/90',
     ]"
     :disabled="disabled"
     @click="$emit('click', $event)"

@@ -10,7 +10,7 @@ import { BRAND } from '@/config/brand'
 import { captureEvent } from '@/composables/usePostHog'
 
 /* Logo — cropped version for sidebar, bird portion for collapsed */
-import LogoUrl from '@/assets/brand/logo-hz-800.png'
+import LogoUrl from '@/assets/postcanary-logo.png'
 
 /* Sidebar icons — all sourced from @vicons/ionicons5 so they share a single
  * CSS color variable (currentColor via inline SVG rendering). Mixing

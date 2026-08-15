@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
-import landingLogo from "@/assets/brand/logo-hz-800.png";
+import landingLogo from "@/assets/source-logo-02.png";
 import { AUTH_BASE } from "@/config/auth";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
