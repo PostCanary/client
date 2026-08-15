@@ -36,17 +36,11 @@ const TARGETED_TIERS = [
         Pricing
       </h2>
 
-      <div class="mt-12 grid gap-6 md:grid-cols-3">
-        <!-- EDDM -->
-        <article class="pricing-card">
-          <h3 class="pricing-card-title">EDDM</h3>
-          <div class="pricing-flat">
-            <span class="pricing-flat-label">Flat rate</span>
-            <span class="pricing-flat-price">$0.47</span>
-          </div>
-          <p class="pricing-note">Every mailbox on your chosen routes.</p>
-        </article>
-
+      <!-- EDDM has no card here on purpose (Dustin, 2026-08-15). EDDM is out
+           of launch scope (POS-164) and has no billing path in the server at
+           all (POS-231), so the mockup's flat $0.47 advertised a rate checkout
+           could not charge. Do not re-add a price before POS-231 ships. -->
+      <div class="mt-12 grid gap-6 md:grid-cols-2 md:max-w-4xl md:mx-auto">
         <!-- Targeted Mail -->
         <article class="pricing-card pricing-card-featured">
           <h3 class="pricing-card-title">Targeted Mail</h3>

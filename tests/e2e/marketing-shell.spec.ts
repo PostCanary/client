@@ -156,4 +156,9 @@ test("pricing publishes the POS-230 two-tier sheet and nothing older", async ({
   for (const dead of ["$0.99", "$0.79", "$0.69", "10,000"]) {
     await expect(pricing).not.toContainText(dead);
   }
+
+  // EDDM carries no price until it has a billing path (POS-231).
+  await expect(pricing.locator(".pricing-card")).toHaveCount(2);
+  await expect(pricing).not.toContainText("EDDM");
+  await expect(pricing).not.toContainText("$0.47");
 });
