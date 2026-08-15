@@ -14,14 +14,22 @@ export const BRAND = {
     billing: "accounting@postcanary.com",
   },
 
-  /** Logo file paths */
+  /** Logo file paths (POS-220 web-ready assets). Wordmark is pre-rendered — never recreate as text. */
   logo: {
-    primary: "/src/assets/source-logo-02.png",
+    primary: "/src/assets/brand/logo-hz-800.png",
+    horizontal: "/src/assets/brand/logo-hz-800.png",
+    horizontal2x: "/src/assets/brand/logo-hz-2000.png",
+    vertical: "/src/assets/brand/logo-vt-800.png",
+    dark: "/src/assets/brand/logo-webheader-dark.png",
+    mark: "/src/assets/brand/mark-512.png",
     svg: "/src/assets/logo.svg",
   },
 
   /** Brand colors */
   colors: {
+    navy: "#1C2430",
+    canary: "#FACF41",
+    tealBrand: "#26AFA3",
     primaryDark: "#0b2d50",
     primaryAccent: "#47bfa9",
     primaryAccentHover: "#3aa893",
@@ -41,7 +49,7 @@ export const BRAND = {
 
   /** Typography */
   typography: {
-    fontFamily: '"Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontFamily: '"Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     weights: {
       regular: 400,
       medium: 500,
