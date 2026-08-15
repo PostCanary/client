@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { RouterView, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useMessage } from "naive-ui";
-import LogoUrl from "@/assets/source-logo-02.png";
+import LogoUrl from "@/assets/brand/logo-hz-800.png";
 import WizardProgress from "@/components/wizard/WizardProgress.vue";
 import type { WizardStep } from "@/types/campaign";
 
