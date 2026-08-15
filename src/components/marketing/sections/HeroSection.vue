@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import HeroScenes from "@/components/marketing/sections/HeroScenes.vue";
 
 const auth = useAuthStore();
 
@@ -126,9 +127,12 @@ function getStarted() {
         </button>
       </div>
 
-      <!-- Right column stays empty on purpose: it is the clear area where the
-           POS-228 background loop reads through behind the headline block. -->
-      <div class="hidden lg:block" aria-hidden="true"></div>
+      <!-- Right column: reel-synced animated scenes. Each scene matches the
+           product concept the rolling headline is showing (same `index`), so
+           text and visual always tell the same story. Replaces the video slot. -->
+      <div class="hidden lg:block">
+        <HeroScenes :index="index" :paused="reduceMotion || !showVideo" />
+      </div>
     </div>
   </section>
 </template>
