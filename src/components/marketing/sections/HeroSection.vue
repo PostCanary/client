@@ -1,7 +1,7 @@
 <!-- src/components/marketing/sections/HeroSection.vue -->
-<!-- POS-222 marketing hero. The .hero-media layer is the future looping-video
-     slot (POS-228): drop a <video> there with the gradient as poster; the
-     gradient stays as the no-video / reduced-data fallback. -->
+<!-- POS-222 marketing hero. The right column is a reel-synced animated scene
+     (HeroScenes) that plays the PostCanary story in step with the rolling
+     headline; the reel is the rolling text. No video background. -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useAuthStore } from "@/stores/auth";
@@ -25,9 +25,6 @@ const audiences = PAIRS.map(([, a]) => a);
 
 const index = ref(0);
 const reduceMotion = ref(false);
-// Background loop stays off for reduced-motion and data-saver visitors; the
-// gradient + poster carry the hero on their own.
-const showVideo = ref(false);
 let timer: number | undefined;
 
 onMounted(() => {
@@ -35,13 +32,7 @@ onMounted(() => {
   reduceMotion.value = mq.matches;
   mq.addEventListener?.("change", (e) => {
     reduceMotion.value = e.matches;
-    if (e.matches) showVideo.value = false;
   });
-
-  const saveData = (
-    navigator as Navigator & { connection?: { saveData?: boolean } }
-  ).connection?.saveData;
-  showVideo.value = !reduceMotion.value && saveData !== true;
 
   if (!reduceMotion.value) {
     timer = window.setInterval(() => {
@@ -70,23 +61,8 @@ function getStarted() {
     aria-labelledby="hero-heading"
     tabindex="-1"
   >
-    <!-- POS-228 background loop; the gradient below is the load/fallback state. -->
+    <!-- Static navy gradient backdrop (the animated scenes carry the visual). -->
     <div class="hero-media" aria-hidden="true"></div>
-    <video
-      v-if="showVideo"
-      class="hero-video"
-      poster="/hero/hero-poster.jpg"
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="metadata"
-      aria-hidden="true"
-      tabindex="-1"
-    >
-      <source src="/hero/hero-loop.mp4" type="video/mp4" />
-    </video>
-    <div class="hero-scrim" aria-hidden="true"></div>
 
     <div
       class="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-12 px-4 py-28 sm:px-6 sm:py-36 md:px-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16 xl:px-16"
@@ -129,9 +105,9 @@ function getStarted() {
 
       <!-- Right column: reel-synced animated scenes. Each scene matches the
            product concept the rolling headline is showing (same `index`), so
-           text and visual always tell the same story. Replaces the video slot. -->
+           text and visual always tell the same story. This is the hero visual. -->
       <div class="hidden lg:block">
-        <HeroScenes :index="index" :paused="reduceMotion || !showVideo" />
+        <HeroScenes :index="index" :paused="reduceMotion" />
       </div>
     </div>
   </section>
@@ -151,45 +127,10 @@ function getStarted() {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(52rem 30rem at 82% 8%, rgba(38, 175, 163, 0.34), transparent 62%),
-    radial-gradient(46rem 28rem at 12% 92%, rgba(250, 207, 65, 0.26), transparent 60%),
-    radial-gradient(34rem 22rem at 55% 55%, rgba(38, 175, 163, 0.14), transparent 65%),
+    radial-gradient(52rem 30rem at 82% 8%, rgba(38, 175, 163, 0.28), transparent 62%),
+    radial-gradient(46rem 28rem at 12% 92%, rgba(250, 207, 65, 0.2), transparent 60%),
+    radial-gradient(34rem 22rem at 55% 55%, rgba(38, 175, 163, 0.12), transparent 65%),
     var(--pc-navy);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero-media {
-    animation: hero-drift 18s ease-in-out infinite alternate;
-  }
-  @keyframes hero-drift {
-    from {
-      transform: scale(1) translate3d(0, 0, 0);
-    }
-    to {
-      transform: scale(1.12) translate3d(-2%, 2%, 0);
-    }
-  }
-}
-
-.hero-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Keeps headline contrast over the footage: heaviest where the type sits. */
-.hero-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    rgba(28, 36, 48, 0.94) 0%,
-    rgba(28, 36, 48, 0.82) 34%,
-    rgba(28, 36, 48, 0.5) 68%,
-    rgba(28, 36, 48, 0.38) 100%
-  );
 }
 
 .hero-headline {
