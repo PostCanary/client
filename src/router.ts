@@ -335,8 +335,12 @@ const router = createRouter({
     if (to.hash) {
       return new Promise((resolve) => {
         const tryScroll = (attempt = 0) => {
-          if (document.querySelector(to.hash) || attempt > 20) {
+          const el = document.querySelector(to.hash);
+          if (el || attempt > 20) {
             resolve({ el: to.hash, behavior: "smooth" });
+            // Move focus to the anchor target so keyboard/screen-reader users
+            // land where the page jumped (sections carry tabindex="-1").
+            if (el instanceof HTMLElement) el.focus({ preventScroll: true });
             return;
           }
           requestAnimationFrame(() => tryScroll(attempt + 1));

@@ -18,14 +18,14 @@ const items = [
   },
   {
     title: "How does EDDM work?",
-    body: "EDDM works by selecting specific mail routes to deliver your mail to. A single zip code can have multiple mail routes. As the postal worker goes through their route they will leave a piece of mail in every resident's mailbox on that route. You don't have to do every route in a zipcode but can select specific routes within a zipcode.",
+    body: "EDDM works by selecting specific mail routes to deliver your mail to. A single zip code can have multiple mail routes. As the postal worker goes through their route they will leave a piece of mail in every resident's mailbox on that route. You don't have to do every route in a ZIP code but can select specific routes within a ZIP code.",
   },
 ];
 
 // EDDM launch-scope pending (POS-224 flag).
 function onCta() {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/app/home", "login");
+    auth.openLoginModal("/app/home", "signup");
     return;
   }
   window.location.href = "/app/home";
@@ -37,6 +37,7 @@ function onCta() {
     id="eddm"
     class="mkt-anchor-section bg-[var(--mkt-bg-alt)]"
     aria-labelledby="eddm-heading"
+    tabindex="-1"
   >
     <div
       class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 md:px-10 xl:px-16 py-16 sm:py-24"

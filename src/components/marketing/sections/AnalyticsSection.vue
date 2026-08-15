@@ -9,7 +9,7 @@ const auth = useAuthStore();
 
 const items = [
   {
-    title: "Dashboard KPI's",
+    title: "Dashboard KPIs",
     body: "The dashboard displays your match rate, revenue from mail, total customers, revenue per mailer, days to convert and much more.",
   },
   {
@@ -28,7 +28,7 @@ const items = [
 
 function onCta() {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/app/home", "login");
+    auth.openLoginModal("/app/home", "signup");
     return;
   }
   window.location.href = "/app/home";
@@ -40,6 +40,7 @@ function onCta() {
     id="analytics"
     class="mkt-anchor-section bg-[var(--mkt-bg-alt)]"
     aria-labelledby="analytics-heading"
+    tabindex="-1"
   >
     <div
       class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 md:px-10 xl:px-16 py-16 sm:py-24"
@@ -55,7 +56,7 @@ function onCta() {
           <p
             class="mt-4 sm:mt-5 text-[16px] sm:text-[18px] leading-relaxed text-[var(--mkt-text-muted)] max-w-xl"
           >
-            Our analytics can track every campaign, conversion, attribution and other important KPI's to guide and report on your direct mail performance.
+            Our analytics can track every campaign, conversion, attribution and other important KPIs to guide and report on your direct mail performance.
           </p>
           <div class="mt-8">
             <VideoPlaceholder label="Analytics video placeholder" />

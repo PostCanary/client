@@ -18,6 +18,7 @@ const TARGETED_TIERS = [
     id="pricing"
     class="mkt-anchor-section bg-[var(--mkt-bg)]"
     aria-labelledby="pricing-heading"
+    tabindex="-1"
   >
     <!-- Full-width band, per mockup -->
     <div class="pricing-band">

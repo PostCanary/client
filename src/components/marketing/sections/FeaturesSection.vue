@@ -1,6 +1,6 @@
 <!-- src/components/marketing/sections/FeaturesSection.vue -->
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 
 const cards = [
   {
@@ -23,8 +23,32 @@ const cards = [
   },
 ] as const;
 
-// Teal treatment is an interaction state (hover/click), not a static pick.
+// Teal treatment marks the card whose section is in view (plus hover/press).
 const activeId = ref<(typeof cards)[number]["id"] | null>(null);
+let observer: IntersectionObserver | null = null;
+
+onMounted(() => {
+  // Highlight follows scroll position: the section occupying the middle band
+  // of the viewport owns the active card.
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          activeId.value = entry.target.id as (typeof cards)[number]["id"];
+        }
+      }
+    },
+    { rootMargin: "-40% 0px -40% 0px", threshold: 0 },
+  );
+  for (const card of cards) {
+    const el = document.getElementById(card.id);
+    if (el) observer.observe(el);
+  }
+});
+
+onBeforeUnmount(() => {
+  observer?.disconnect();
+});
 
 function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[number]["id"]) {
   event.preventDefault();
@@ -33,6 +57,9 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
   if (!(target instanceof HTMLElement)) return;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  // Move focus to the section so keyboard/screen-reader users land where the
+  // page jumped (sections are focusable via tabindex="-1" in Home.vue).
+  target.focus({ preventScroll: true });
   history.pushState(null, "", href);
 }
 </script>
@@ -42,10 +69,11 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
     id="features"
     class="mkt-anchor-section bg-[var(--mkt-bg)]"
     aria-labelledby="features-heading"
+    tabindex="-1"
   >
     <!-- Full-width band, per mockup: sits between the hero and Features. -->
     <div class="features-band">
-      <p>No Subscription. No Minimums. No Hassle.</p>
+      <p>Every piece of mail tracked from mailbox to customer.</p>
     </div>
     <div
       class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 md:px-10 xl:px-16 py-16 sm:py-24"
@@ -75,7 +103,6 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
               ? 'is-active bg-teal-brand border-teal-brand text-white shadow-[var(--mkt-card-shadow-lg)]'
               : 'bg-[var(--mkt-card)] border-[var(--mkt-border)] text-[var(--mkt-text)] shadow-[var(--mkt-card-shadow)] hover:bg-teal-brand hover:border-teal-brand hover:text-white hover:shadow-[var(--mkt-card-shadow-lg)]'
           "
-          :aria-current="activeId === card.id ? 'true' : undefined"
           @click="scrollToSection($event, card.href, card.id)"
         >
           <h3 class="text-[18px] sm:text-[20px] font-semibold leading-snug">

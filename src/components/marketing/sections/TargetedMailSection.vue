@@ -24,7 +24,7 @@ const items = [
 
 function onCta() {
   if (!auth.isAuthenticated) {
-    auth.openLoginModal("/app/home", "login");
+    auth.openLoginModal("/app/home", "signup");
     return;
   }
   window.location.href = "/app/home";
@@ -36,6 +36,7 @@ function onCta() {
     id="targeted-mail"
     class="mkt-anchor-section bg-[var(--mkt-bg)]"
     aria-labelledby="targeted-mail-heading"
+    tabindex="-1"
   >
     <div
       class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 md:px-10 xl:px-16 py-16 sm:py-24"

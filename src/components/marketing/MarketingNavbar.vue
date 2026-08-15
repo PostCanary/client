@@ -1,6 +1,6 @@
 <!-- src/components/marketing/MarketingNavbar.vue -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
@@ -13,7 +13,19 @@ const router = useRouter();
 const scrolled = ref(false);
 const mobileMenuOpen = ref(false);
 const featuresOpen = ref(false);
+const mobileToggle = ref<HTMLElement | null>(null);
 let featuresCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+// When the mobile menu closes and focus is inside it (or lost to the body),
+// return focus to the toggle so keyboard users keep their place.
+watch(mobileMenuOpen, (open) => {
+  if (open) return;
+  const active = document.activeElement;
+  const panel = document.getElementById("mobile-marketing-menu");
+  const focusLost =
+    !active || active === document.body || panel?.contains(active);
+  if (focusLost) mobileToggle.value?.focus();
+});
 
 function onScroll() {
   scrolled.value = window.scrollY > 20;
@@ -21,8 +33,8 @@ function onScroll() {
 
 function onDocumentClick(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
-  if (target?.closest("[data-features-menu]")) return;
-  featuresOpen.value = false;
+  if (!target?.closest("[data-features-menu]")) featuresOpen.value = false;
+  if (!target?.closest("[data-mobile-menu]")) mobileMenuOpen.value = false;
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -74,7 +86,9 @@ async function goToHash(hash: string) {
   mobileMenuOpen.value = false;
 
   if (route.path === "/" && route.hash === hash) {
-    document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+    const el = document.querySelector(hash);
+    el?.scrollIntoView({ behavior: "smooth" });
+    if (el instanceof HTMLElement) el.focus({ preventScroll: true });
     return;
   }
 
@@ -172,6 +186,8 @@ async function goToHash(hash: string) {
         <!-- Mobile menu toggle -->
         <button
           type="button"
+          ref="mobileToggle"
+          data-mobile-menu
           class="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-white/80 hover:bg-white/10 transition-colors cursor-pointer"
           :aria-expanded="mobileMenuOpen"
           aria-controls="mobile-marketing-menu"
@@ -217,6 +233,7 @@ async function goToHash(hash: string) {
       <div
         v-if="mobileMenuOpen"
         id="mobile-marketing-menu"
+        data-mobile-menu
         class="md:hidden bg-navy border-t border-white/10 px-4 pb-4"
       >
         <div class="flex flex-col gap-1 pt-2">
