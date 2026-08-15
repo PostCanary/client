@@ -1,15 +1,16 @@
 <!-- src/components/marketing/sections/PricingSection.vue -->
 <!-- POS-227 pricing section. -->
 <script setup lang="ts">
-// ⚠️ LAUNCH GATE (POS-227/POS-229): these are the MOCKUP numbers. The billing
-// code today charges a flat $0.99 pay-per-send / $0.79 subscription and has no
-// EDDM or volume-tier pricing (see POS-227 reconciliation table in Linear).
-// Do not merge to production until Dustin resolves mockup-vs-code pricing.
+// Targeted Mail price sheet decided by Dustin 2026-08-15 (POS-227). The tier
+// is picked from the whole campaign and applied to every postcard in it, so
+// 1,500 postcards bill at $0.85 each — not just the ones past the break.
+// Server side is POS-230 (app/services/pricing.py).
+// ⚠️ LAUNCH GATE (POS-229): POS-230 must be in production before this page
+// goes live, or the site publishes a rate checkout will not honor. The EDDM
+// card below is still gated on the POS-224 scope call.
 const TARGETED_TIERS = [
-  { range: "1 – 1,000 postcards", price: "$0.99" },
-  { range: "1,001 – 2,500 postcards", price: "$0.89" },
-  { range: "2,501 – 5,000 postcards", price: "$0.79" },
-  { range: "5,001+ postcards", price: "$0.69" },
+  { range: "1 – 1,499 postcards", price: "$0.89" },
+  { range: "1,500+ postcards", price: "$0.85" },
 ] as const;
 </script>
 
@@ -56,7 +57,8 @@ const TARGETED_TIERS = [
             </li>
           </ul>
           <p class="pricing-note">
-            Custom rates available for quantities above 10,000
+            One rate per campaign. Reach 1,500 postcards and every postcard in
+            that campaign bills at $0.85.
           </p>
         </article>
 
