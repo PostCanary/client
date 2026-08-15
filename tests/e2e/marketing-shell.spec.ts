@@ -162,3 +162,23 @@ test("pricing publishes the POS-230 two-tier sheet and nothing older", async ({
   await expect(pricing).not.toContainText("EDDM");
   await expect(pricing).not.toContainText("$0.47");
 });
+
+test("chat widget never opens itself on marketing pages", async ({ page }) => {
+  await openMarketingHome(page);
+
+  // The old behavior opened the panel after 2s (desktop) or pushed a teaser
+  // (mobile), covering the hero. Wait past that window and assert silence.
+  await page.waitForTimeout(3500);
+  await expect(page.locator(".chat-panel")).toHaveCount(0);
+  await expect(page.locator(".chat-teaser")).toHaveCount(0);
+
+  // It still opens on click.
+  await page.locator(".chat-fab").click();
+  await expect(page.locator(".chat-panel")).toBeVisible();
+
+  // And it must not promise a trial that does not exist.
+  const panel = page.locator(".chat-panel");
+  for (const dead of ["free trial", "7 days", "no credit card"]) {
+    await expect(panel).not.toContainText(dead, { ignoreCase: true });
+  }
+});

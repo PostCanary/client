@@ -59,49 +59,17 @@ function onGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
-// Auto-open for unauthenticated visitors on marketing pages
-const autoOpenTimer = ref<ReturnType<typeof setTimeout> | null>(null);
-const mobileQuery = window.matchMedia("(max-width: 480px)");
-const isMobile = ref(mobileQuery.matches);
-
-function onMediaChange(e: MediaQueryListEvent) {
-  isMobile.value = e.matches;
-}
-mobileQuery.addEventListener("change", onMediaChange);
-
-function openFromTeaser() {
-  chat.dismissTeaser();
-  chat.toggle();
-}
-
-watch(
-  () => route.meta?.marketing,
-  (isMarketing) => {
-    if (autoOpenTimer.value) {
-      clearTimeout(autoOpenTimer.value);
-      autoOpenTimer.value = null;
-    }
-    if (isMarketing && !auth.isAuthenticated && !chat.dismissed && !chat.open) {
-      autoOpenTimer.value = setTimeout(() => {
-        if (!auth.isAuthenticated && !chat.dismissed && !chat.open) {
-          if (isMobile.value) {
-            chat.showTeaser();
-          } else {
-            chat.autoOpen();
-          }
-        }
-      }, 2000);
-    }
-  },
-  { immediate: true }
-);
+// NO AUTO-OPEN (Dustin, 2026-08-15). The widget used to open itself after 2s
+// on marketing routes — on desktop it covered the right half of the hero, and
+// on mobile it pushed a teaser. The panel now opens only when the visitor
+// clicks the floating button. `chat.autoOpen()` / `chat.showTeaser()` stay in
+// the store but nothing calls them; do not re-add a timer here.
 
 onMounted(() => {
   window.addEventListener("keydown", onGlobalKeydown);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", onGlobalKeydown);
-  mobileQuery.removeEventListener("change", onMediaChange);
 });
 
 const greeting = computed(() => {
@@ -109,14 +77,16 @@ const greeting = computed(() => {
     return `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`;
   }
   if (!auth.isAuthenticated) {
-    return `Welcome to ${BRAND.name}! Want to see how direct mail analytics can boost your ROI? Try us free for 7 days \u2014 no credit card required. Ask me anything!`;
+    return `Welcome to ${BRAND.name}! Send direct mail and track exactly what it earns \u2014 no subscription, pay per postcard. Ask me anything!`;
   }
-  return `Welcome to ${BRAND.name}! I can answer questions about our direct mail analytics platform, pricing, and features. How can I help?`;
+  return `Welcome to ${BRAND.name}! I can answer questions about sending direct mail, tracking results, pricing, and features. How can I help?`;
 });
 
 // ── Suggested starter questions ──────────────────────────────────────────────
+// No trial exists (Dustin, 2026-08-15) — signing up is free, sending costs
+// money. Never re-add a "free trial" starter.
 const salesQuestions = [
-  "Start my free trial",
+  "Get started",
   "What is PostCanary?",
   "What can PostCanary measure?",
   "Show me pricing",
@@ -133,14 +103,16 @@ const suggestedQuestions = computed(() =>
   isAppRoute.value ? serviceQuestions : salesQuestions
 );
 
+// Lead-capture entry point. Same behavior as the old "Start my free trial"
+// starter, without the trial promise.
 const trialRequested = ref(false);
 
 function sendSuggestion(question: string) {
-  if (question === "Start my free trial") {
+  if (question === "Get started") {
     // Intercept: add canned messages and show lead capture immediately
     chat.addUserMessage(question);
     chat.addAssistantMessage(
-      "Great! I\u2019d love to help you get started with PostCanary.\n\nTo begin your free trial, just enter your email in the form below."
+      "Happy to help you get started with PostCanary.\n\nThere is no subscription \u2014 you pay per postcard, and analytics are free. Leave your email below and we will set you up."
     );
     trialRequested.value = true;
     return;
@@ -318,19 +290,9 @@ function requestHuman() {
       </div>
     </Transition>
 
-    <!-- Teaser tooltip (mobile auto-open) -->
-    <Transition name="chat-teaser">
-      <div v-if="chat.teaser && !chat.open" class="chat-teaser" @click="openFromTeaser">
-        <button class="chat-teaser__close" aria-label="Dismiss" @click.stop="chat.dismissTeaser()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6L6 18" /><path d="M6 6l12 12" />
-          </svg>
-        </button>
-        <p class="chat-teaser__text">
-          Try PostCanary free for 7 days — no credit card needed!
-        </p>
-      </div>
-    </Transition>
+    <!-- Teaser tooltip removed with auto-open (Dustin, 2026-08-15). It only
+         ever appeared on the mobile auto-open path, and its copy promised a
+         7-day free trial that does not exist. -->
 
     <!-- Floating trigger button -->
     <button
@@ -714,77 +676,6 @@ function requestHuman() {
   color: var(--app-navy, #0b2d50);
 }
 
-/* ---- Teaser tooltip ---- */
-.chat-teaser {
-  position: fixed;
-  bottom: 88px;
-  right: 24px;
-  z-index: 9999;
-  max-width: 260px;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 14px 36px 14px 16px;
-  box-shadow: 0 4px 20px rgba(11, 45, 80, 0.16), 0 0 0 1px rgba(11, 45, 80, 0.06);
-  cursor: pointer;
-  font-family: var(--font-family, "Instrument Sans", system-ui, sans-serif);
-}
-
-.chat-teaser::after {
-  content: "";
-  position: absolute;
-  bottom: -8px;
-  right: 22px;
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
-  border-radius: 0 0 4px 0;
-  transform: rotate(45deg);
-  box-shadow: 4px 4px 8px rgba(11, 45, 80, 0.08);
-}
-
-.chat-teaser__close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s;
-}
-
-.chat-teaser__close:hover {
-  color: #475569;
-}
-
-.chat-teaser__text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #1e293b;
-}
-
-/* Teaser transition */
-.chat-teaser-enter-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.chat-teaser-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.chat-teaser-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.chat-teaser-leave-to {
-  opacity: 0;
-  transform: translateY(4px);
-}
-
 /* ---- Mobile responsive ---- */
 @media (max-width: 480px) {
   .chat-panel {
@@ -806,15 +697,6 @@ function requestHuman() {
     right: 16px;
     width: 52px;
     height: 52px;
-  }
-
-  .chat-teaser {
-    bottom: 76px;
-    right: 16px;
-  }
-
-  .chat-teaser::after {
-    right: 18px;
   }
 }
 </style>
