@@ -1,6 +1,7 @@
 <!-- src/components/marketing/sections/AnalyticsSection.vue -->
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
+import { captureEvent } from "@/composables/usePostHog";
 import CTAButton from "@/components/marketing/CTAButton.vue";
 import VideoPlaceholder from "@/components/marketing/VideoPlaceholder.vue";
 import SectionAccordion from "@/components/marketing/sections/SectionAccordion.vue";
@@ -27,6 +28,7 @@ const items = [
 ];
 
 function onCta() {
+  captureEvent("marketing_cta_clicked", { cta: "track_results", section: "analytics" });
   if (!auth.isAuthenticated) {
     auth.openLoginModal("/app/home", "signup");
     return;

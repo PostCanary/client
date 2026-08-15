@@ -1,6 +1,7 @@
 <!-- src/components/marketing/sections/EddmSection.vue -->
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
+import { captureEvent } from "@/composables/usePostHog";
 import CTAButton from "@/components/marketing/CTAButton.vue";
 import VideoPlaceholder from "@/components/marketing/VideoPlaceholder.vue";
 import SectionAccordion from "@/components/marketing/sections/SectionAccordion.vue";
@@ -24,6 +25,7 @@ const items = [
 
 // EDDM launch-scope pending (POS-224 flag).
 function onCta() {
+  captureEvent("marketing_cta_clicked", { cta: "send_eddm", section: "eddm" });
   if (!auth.isAuthenticated) {
     auth.openLoginModal("/app/home", "signup");
     return;

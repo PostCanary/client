@@ -138,3 +138,27 @@ test("section accordions expand one item at a time and CTAs stay visible", async
     await expect(section.locator("button[aria-expanded='true']")).toHaveCount(1);
   }
 });
+
+test("pricing publishes the POS-230 two-tier sheet and nothing older", async ({
+  page,
+}) => {
+  await openMarketingHome(page);
+
+  const pricing = page.locator("section#pricing");
+  const tiers = pricing.locator(".pricing-tiers li");
+  await expect(tiers).toHaveCount(2);
+  await expect(tiers.nth(0)).toContainText("1 – 1,499 postcards");
+  await expect(tiers.nth(0)).toContainText("$0.89");
+  await expect(tiers.nth(1)).toContainText("1,500+ postcards");
+  await expect(tiers.nth(1)).toContainText("$0.85");
+
+  // The superseded sheet must never come back — checkout cannot honor it.
+  for (const dead of ["$0.99", "$0.79", "$0.69", "10,000"]) {
+    await expect(pricing).not.toContainText(dead);
+  }
+
+  // EDDM carries no price until it has a billing path (POS-231).
+  await expect(pricing.locator(".pricing-card")).toHaveCount(2);
+  await expect(pricing).not.toContainText("EDDM");
+  await expect(pricing).not.toContainText("$0.47");
+});
