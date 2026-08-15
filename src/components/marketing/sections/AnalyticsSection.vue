@@ -48,7 +48,7 @@ function onCta() {
         <div>
           <h2
             id="analytics-heading"
-            class="font-semibold tracking-[-0.03em] text-[30px] leading-9 sm:text-[42px] sm:leading-[50px] text-[var(--mkt-text)]"
+            class="font-bold tracking-[-0.03em] text-[30px] leading-9 sm:text-[42px] sm:leading-[50px] text-[var(--mkt-text)]"
           >
             Analytics
           </h2>

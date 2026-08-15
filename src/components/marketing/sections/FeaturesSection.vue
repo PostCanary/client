@@ -53,7 +53,7 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
       <div class="max-w-3xl mx-auto text-center mb-10 sm:mb-14">
         <h2
           id="features-heading"
-          class="font-semibold tracking-[-0.03em] text-[30px] leading-9 sm:text-[42px] sm:leading-[50px] text-[var(--mkt-text)]"
+          class="font-bold tracking-[-0.03em] text-[30px] leading-9 sm:text-[42px] sm:leading-[50px] text-[var(--mkt-text)]"
         >
           Features
         </h2>
