@@ -4,7 +4,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useDemoStore } from "@/stores/demo";
 import { BRAND } from "@/config/brand";
-import landingLogo from "@/assets/postcanary-logo.png";
+import landingLogo from "@/assets/brand/logo-hz-800.png";
 
 const auth = useAuthStore();
 const demo = useDemoStore();

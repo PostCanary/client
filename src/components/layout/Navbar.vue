@@ -4,7 +4,7 @@ import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useCampaignStore } from "@/stores/useCampaignStore";
-import LogoUrl from "@/assets/source-logo-02.png";
+import LogoUrl from "@/assets/brand/logo-hz-800.png";
 import { BRAND } from "@/config/brand";
 import CampaignManageModal from "@/components/CampaignManageModal.vue";
 import OrgSwitcher from "@/components/OrgSwitcher.vue";

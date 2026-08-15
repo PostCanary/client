@@ -1,13 +1,32 @@
 /* src\styles\index.css */
 
 @import "tailwindcss";
-
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
 @import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap");
 
+@config "../../tailwind.config.cjs";
+
+/* POS-220 brand utilities (v4 @theme). Hex values match tailwind.config.cjs + --pc-* below. */
+@theme {
+  --color-navy: #1c2430;
+  --color-canary: #facf41;
+  --color-teal-brand: #26afa3;
+  --font-sans: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
 :root {
-  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+
+  /* ── Brand kit (POS-220) ────────────────────────────────── */
+  --pc-navy: #1c2430;
+  --pc-canary: #facf41;
+  --pc-teal-brand: #26afa3;
+  --pc-white: #ffffff;
 
   /* ── Marketing (light) palette ──────────────────────────── */
   --mkt-bg: #ffffff;
@@ -27,7 +46,7 @@
   --mkt-card-radius: 14px;
 
   /* ── Deprecated marketing dark palette (remove after full migration) ── */
-  --pc-navy: #1e2947;
+  /* --pc-navy is the official brand navy above (#1C2430). */
   --pc-navy-2: #243155;
   --pc-card: #222e52;
   --pc-border: #2a3560;
