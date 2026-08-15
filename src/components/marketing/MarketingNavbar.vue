@@ -272,4 +272,11 @@ async function goToHash(hash: string) {
   opacity: 0;
   transform: translate(-50%, -4px) scale(0.97);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-enter-active,
+  .dropdown-leave-active {
+    transition: none;
+  }
+}
 </style>

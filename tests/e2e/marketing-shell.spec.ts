@@ -6,6 +6,9 @@ async function openMarketingHome(page: Page) {
   const state = createMockAppState();
   state.authMe = { authenticated: false };
   await installMockApi(page, state);
+  // Freeze marketing animations (hero reel, dropdown transition) so
+  // stability checks don't race the compositor under parallel workers.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
 }
 

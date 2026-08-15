@@ -23,7 +23,8 @@ const cards = [
   },
 ] as const;
 
-const activeId = ref<(typeof cards)[number]["id"]>("eddm");
+// Teal treatment is an interaction state (hover/click), not a static pick.
+const activeId = ref<(typeof cards)[number]["id"] | null>(null);
 
 function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[number]["id"]) {
   event.preventDefault();
@@ -42,6 +43,10 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
     class="mkt-anchor-section bg-[var(--mkt-bg)]"
     aria-labelledby="features-heading"
   >
+    <!-- Full-width band, per mockup: sits between the hero and Features. -->
+    <div class="features-band">
+      <p>No Subscription. No Minimums. No Hassle.</p>
+    </div>
     <div
       class="mx-auto w-full max-w-[1440px] px-4 sm:px-6 md:px-10 xl:px-16 py-16 sm:py-24"
     >
@@ -93,6 +98,16 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
 </template>
 
 <style scoped>
+.features-band {
+  background: var(--pc-navy);
+  color: var(--pc-white);
+  text-align: center;
+  padding: 1.1rem 1rem;
+  font-weight: 700;
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+  letter-spacing: 0.01em;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .feature-card {
     transition: none;
