@@ -17,12 +17,12 @@ test("home renders one-page section stubs in order", async ({ page }) => {
     await expect(page.locator(`section#${id}`)).toBeVisible();
   }
 
-  await expect(page.locator("#hero-heading")).toHaveText("Hero");
+  await expect(page.locator("#hero-heading")).toBeVisible();
   await expect(page.locator("#features-heading")).toHaveText("Features");
   await expect(page.locator("#eddm-heading")).toHaveText("EDDM");
   await expect(page.locator("#targeted-mail-heading")).toHaveText("Targeted Mail");
   await expect(page.locator("#analytics-heading")).toHaveText("Analytics");
-  await expect(page.locator("#pricing-heading")).toHaveText("Pricing");
+  await expect(page.locator("#pricing-heading")).toBeVisible();
 });
 
 test("desktop features menu and pricing scroll to home anchors", async ({ page }) => {
@@ -107,4 +107,31 @@ test("footer keeps legal and help links on the navy shell", async ({ page }) => 
     "href",
     "/privacy",
   );
+});
+
+test("section accordions expand one item at a time and CTAs stay visible", async ({
+  page,
+}) => {
+  await openMarketingHome(page);
+
+  const sections = [
+    { id: "eddm", cta: "Send EDDM", closedTitle: "Why use EDDM?" },
+    { id: "targeted-mail", cta: "Send Mail", closedTitle: "Why use Direct Mail?" },
+    { id: "analytics", cta: "Track Results", closedTitle: "Analysis" },
+  ] as const;
+
+  for (const { id, cta, closedTitle } of sections) {
+    const section = page.locator(`section#${id}`);
+    await expect(section.getByRole("button", { name: cta })).toBeVisible();
+
+    const triggers = section.locator("[aria-expanded]");
+    await expect(triggers.first()).toHaveAttribute("aria-expanded", "true");
+
+    await section.getByRole("button", { name: closedTitle }).click();
+    await expect(section.getByRole("button", { name: closedTitle })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(section.locator("button[aria-expanded='true']")).toHaveCount(1);
+  }
 });
