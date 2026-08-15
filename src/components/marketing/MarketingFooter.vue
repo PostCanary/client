@@ -1,15 +1,15 @@
 <!-- src/components/marketing/MarketingFooter.vue -->
 <script setup lang="ts">
 import { BRAND, getCopyrightText, getSupportEmailLink } from "@/config/brand";
-import landingLogo from "@/assets/postcanary-white.png";
+import landingLogo from "@/assets/brand/logo-webheader-dark.png";
 import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 </script>
 
 <template>
-  <footer class="bg-[var(--mkt-navy)]">
+  <footer class="bg-navy">
     <!-- Top content row -->
     <div
-      class="mx-auto flex w-full max-w-[1440px] flex-col md:flex-row items-center md:items-start justify-center md:justify-between gap-10 md:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 pt-12 pb-10 md:pt-16 md:pb-12"
+      class="mx-auto flex w-full max-w-[1440px] flex-col md:flex-row items-center md:items-start justify-center md:justify-between gap-10 md:gap-8 lg:gap-16 px-4 sm:px-6 md:px-10 xl:px-16 pt-12 pb-10 md:pt-16 md:pb-12"
     >
       <!-- Logo -->
       <div
@@ -24,7 +24,7 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 
       <!-- Nav columns -->
       <div
-        class="flex flex-col md:flex-row flex-1 items-center md:items-start justify-center md:justify-start gap-8 md:gap-20 text-[15px] md:text-[16px] leading-8 text-white/70"
+        class="flex flex-col md:flex-row flex-wrap flex-1 items-center md:items-start justify-center md:justify-start gap-8 md:gap-x-12 lg:gap-x-20 md:gap-y-8 text-[15px] md:text-[16px] leading-8 text-white/70"
       >
         <!-- Tools column -->
         <div class="flex flex-col space-y-1.5 text-center md:text-left">

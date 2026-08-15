@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- Source for public/og-image.png (1200x630). Regenerate with:
+     node scripts/screenshot.mjs "file://$PWD/scripts/og-image.html" public/og-image.png --wait 800
+     using a 1200x630 viewport (see scripts/screenshot.mjs --width/--height if supported,
+     or the Playwright one-liner in POS-229). -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; }
+      body {
+        width: 1200px;
+        height: 630px;
+        background: #1c2430;
+        background-image:
+          radial-gradient(46rem 26rem at 85% 10%, rgba(38, 175, 163, 0.30), transparent 62%),
+          radial-gradient(40rem 24rem at 10% 95%, rgba(250, 207, 65, 0.22), transparent 60%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 36px;
+        font-family: "Roboto", -apple-system, "Segoe UI", sans-serif;
+      }
+      img { width: 640px; height: auto; }
+      p {
+        color: #ffffff;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+    </style>
+  </head>
+  <body>
+    <img src="../src/assets/brand/logo-webheader-dark.png" alt="" />
+    <p>Send direct mail. Track every result.</p>
+  </body>
+</html>
