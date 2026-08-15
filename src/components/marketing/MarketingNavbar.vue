@@ -76,10 +76,16 @@ const onAuthClick = () => {
 };
 
 const featureLinks = [
-  { label: "EDDM", hash: "#eddm" },
-  { label: "Targeted Mail", hash: "#targeted-mail" },
-  { label: "Analytics", hash: "#analytics" },
+  { label: "EDDM", to: "/features/eddm" },
+  { label: "Targeted Mail", to: "/features/targeted-mail" },
+  { label: "Analytics", to: "/features/analytics" },
 ];
+
+function goToPage(to: string) {
+  featuresOpen.value = false;
+  mobileMenuOpen.value = false;
+  router.push(to).catch(() => {});
+}
 
 async function goToHash(hash: string) {
   featuresOpen.value = false;
@@ -152,17 +158,24 @@ async function goToHash(hash: string) {
             >
               <a
                 v-for="link in featureLinks"
-                :key="link.hash"
-                :href="`/${link.hash}`"
+                :key="link.to"
+                :href="link.to"
                 role="menuitem"
                 class="block px-4 py-2.5 text-[14px] font-medium text-[var(--mkt-text-muted)] hover:text-[var(--mkt-text)] hover:bg-[var(--mkt-bg-alt)] transition-colors"
-                @click.prevent="goToHash(link.hash)"
+                @click.prevent="goToPage(link.to)"
               >
                 {{ link.label }}
               </a>
             </div>
           </Transition>
         </div>
+
+        <router-link
+          to="/why-postcanary"
+          class="text-[15px] font-medium text-white/80 hover:text-white transition-colors"
+        >
+          Why PostCanary
+        </router-link>
 
         <a
           href="/#pricing"
@@ -244,13 +257,21 @@ async function goToHash(hash: string) {
           </span>
           <a
             v-for="link in featureLinks"
-            :key="link.hash"
-            :href="`/${link.hash}`"
+            :key="link.to"
+            :href="link.to"
             class="px-3 py-2.5 pl-5 text-[15px] font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            @click.prevent="goToHash(link.hash)"
+            @click.prevent="goToPage(link.to)"
           >
             {{ link.label }}
           </a>
+
+          <router-link
+            to="/why-postcanary"
+            class="px-3 py-2.5 text-[15px] font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            @click="mobileMenuOpen = false"
+          >
+            Why PostCanary
+          </router-link>
 
           <a
             href="/#pricing"

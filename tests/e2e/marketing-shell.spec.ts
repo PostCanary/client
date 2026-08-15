@@ -28,7 +28,7 @@ test("home renders one-page section stubs in order", async ({ page }) => {
   await expect(page.locator("#pricing-heading")).toBeVisible();
 });
 
-test("desktop features menu and pricing scroll to home anchors", async ({ page }) => {
+test("desktop features menu links to feature pages, pricing scrolls to home anchor", async ({ page }) => {
   await openMarketingHome(page);
 
   const features = page.getByRole("button", { name: "Features" });
@@ -38,9 +38,10 @@ test("desktop features menu and pricing scroll to home anchors", async ({ page }
   await expect(page.getByRole("menuitem", { name: "Analytics" })).toBeVisible();
 
   await page.getByRole("menuitem", { name: "EDDM" }).click();
-  await expect(page).toHaveURL(/\/#eddm$/);
-  await expect(page.locator("#eddm")).toBeInViewport();
+  await expect(page).toHaveURL(/\/features\/eddm$/);
+  await expect(page.getByRole("heading", { name: "EDDM", level: 1 })).toBeVisible();
 
+  // Pricing stays on the homepage — nav returns and scrolls to the section.
   await page.getByRole("link", { name: "Pricing" }).click();
   await expect(page).toHaveURL(/\/#pricing$/);
   await expect(page.locator("#pricing")).toBeInViewport();
@@ -67,19 +68,21 @@ test("log in keeps the existing Auth0/login-modal trigger", async ({ page }) => 
   await expect(page.locator("#login-email")).toBeVisible();
 });
 
-test("mobile hamburger exposes the same feature and pricing links", async ({ page }) => {
+test("mobile hamburger exposes feature pages, why-postcanary, and pricing", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openMarketingHome(page);
 
   await page.getByRole("button", { name: "Open menu" }).click();
-  await expect(page.getByRole("link", { name: "EDDM" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Targeted Mail" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Pricing" })).toBeVisible();
+  const menu = page.locator("#mobile-marketing-menu");
+  await expect(menu.getByRole("link", { name: "EDDM" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Targeted Mail" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Analytics" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Why PostCanary" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "Pricing" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Analytics" }).click();
-  await expect(page).toHaveURL(/\/#analytics$/);
-  await expect(page.locator("#analytics")).toBeInViewport();
+  await menu.getByRole("link", { name: "Analytics" }).click();
+  await expect(page).toHaveURL(/\/features\/analytics$/);
+  await expect(page.getByRole("heading", { name: "Analytics", level: 1 })).toBeVisible();
 });
 
 test("industry marketing pages keep the shared navy nav and existing content", async ({ page }) => {
@@ -137,4 +140,82 @@ test("section accordions expand one item at a time and CTAs stay visible", async
     );
     await expect(section.locator("button[aria-expanded='true']")).toHaveCount(1);
   }
+});
+
+test("homepage keeps pricing and adds story, stats, and closing bands", async ({
+  page,
+}) => {
+  await openMarketingHome(page);
+
+  // v2 inserts story + stats after the hero and a closing CTA at the end,
+  // but pricing and all feature sections stay on the homepage.
+  await expect(page.locator("#how-it-works")).toBeVisible();
+  await expect(page.locator("#pricing")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "From mailbox to revenue" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Know exactly what your mail is worth." }),
+  ).toBeVisible();
+});
+
+test("feature pages render hero, use-cases, and shared FAQ", async ({ page }) => {
+  const state = createMockAppState();
+  state.authMe = { authenticated: false };
+  await installMockApi(page, state);
+
+  const pages = [
+    { path: "/features/eddm", title: "EDDM", faq: "What is EDDM?" },
+    { path: "/features/targeted-mail", title: "Targeted Mail", faq: "What is Direct Mail?" },
+    { path: "/features/analytics", title: "Analytics", faq: "Dashboard KPIs" },
+  ] as const;
+
+  for (const { path, title, faq } of pages) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: title, level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: new RegExp(`When to use ${title}`) }),
+    ).toBeVisible();
+    // Shared FAQ accordion renders the same copy as the homepage.
+    await expect(page.getByRole("button", { name: faq })).toBeVisible();
+  }
+});
+
+test("why-postcanary page renders gap story and calculator links", async ({
+  page,
+}) => {
+  const state = createMockAppState();
+  state.authMe = { authenticated: false };
+  await installMockApi(page, state);
+
+  await page.goto("/why-postcanary");
+  await expect(
+    page.getByRole("heading", { name: "QR codes miss most of your response.", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Run your own numbers" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Attribution Gap Calculator/ }).first(),
+  ).toHaveAttribute("href", "/attribution-gap-calculator");
+});
+
+test("footer links to the new feature pages and why-postcanary", async ({ page }) => {
+  await openMarketingHome(page);
+
+  const footer = page.locator("footer");
+  await expect(footer.getByRole("link", { name: "EDDM" })).toHaveAttribute(
+    "href",
+    "/features/eddm",
+  );
+  await expect(
+    footer.getByRole("link", { name: "Targeted Mail" }),
+  ).toHaveAttribute("href", "/features/targeted-mail");
+  await expect(footer.getByRole("link", { name: "Analytics" })).toHaveAttribute(
+    "href",
+    "/features/analytics",
+  );
+  await expect(
+    footer.getByRole("link", { name: "Why PostCanary" }),
+  ).toHaveAttribute("href", "/why-postcanary");
 });

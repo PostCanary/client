@@ -24,8 +24,35 @@ import linkedinIcon from "@/assets/home/linkedin-icon.svg?url";
 
       <!-- Nav columns -->
       <div
-        class="flex flex-col md:flex-row flex-wrap flex-1 items-center md:items-start justify-center md:justify-start gap-8 md:gap-x-12 lg:gap-x-20 md:gap-y-8 text-[15px] md:text-[16px] leading-8 text-white/70"
+        class="flex flex-col md:flex-row flex-wrap flex-1 items-center md:items-start justify-center md:justify-start gap-8 md:gap-x-12 lg:gap-x-16 md:gap-y-8 text-[15px] md:text-[16px] leading-8 text-white/70"
       >
+        <!-- Features column -->
+        <div class="flex flex-col space-y-1.5 text-center md:text-left">
+          <span
+            class="text-white/90 font-semibold text-[13px] uppercase tracking-wider mb-2"
+          >
+            Features
+          </span>
+          <router-link to="/features/eddm" class="hover:text-white transition-colors">
+            EDDM
+          </router-link>
+          <router-link
+            to="/features/targeted-mail"
+            class="hover:text-white transition-colors"
+          >
+            Targeted Mail
+          </router-link>
+          <router-link
+            to="/features/analytics"
+            class="hover:text-white transition-colors"
+          >
+            Analytics
+          </router-link>
+          <router-link to="/why-postcanary" class="hover:text-white transition-colors">
+            Why PostCanary
+          </router-link>
+        </div>
+
         <!-- Tools column -->
         <div class="flex flex-col space-y-1.5 text-center md:text-left">
           <span

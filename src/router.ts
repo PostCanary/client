@@ -98,6 +98,35 @@ const routes: RouteRecordRaw[] = [
         meta: seoMeta("/help"),
       },
 
+      // Feature pages
+      {
+        path: "features/eddm",
+        name: "FeatureEddm",
+        component: () => import("@/pages/features/FeaturePage.vue"),
+        props: { slug: "eddm" },
+        meta: seoMeta("/features/eddm"),
+      },
+      {
+        path: "features/targeted-mail",
+        name: "FeatureTargetedMail",
+        component: () => import("@/pages/features/FeaturePage.vue"),
+        props: { slug: "targeted-mail" },
+        meta: seoMeta("/features/targeted-mail"),
+      },
+      {
+        path: "features/analytics",
+        name: "FeatureAnalytics",
+        component: () => import("@/pages/features/FeaturePage.vue"),
+        props: { slug: "analytics" },
+        meta: seoMeta("/features/analytics"),
+      },
+      {
+        path: "why-postcanary",
+        name: "WhyPostCanary",
+        component: () => import("@/pages/WhyPostCanary.vue"),
+        meta: seoMeta("/why-postcanary"),
+      },
+
       // Calculators
       {
         path: "attribution-gap-calculator",

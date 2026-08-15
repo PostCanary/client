@@ -77,6 +77,30 @@ const marketingRoutes = [
     title: "Help - PostCanary",
     description: "",
   },
+  {
+    path: "/features/eddm",
+    title: "EDDM Every Door Direct Mail | PostCanary",
+    description:
+      "Send Every Door Direct Mail to entire mail routes and track every response. Lower per-piece cost, full attribution, no subscriber list required.",
+  },
+  {
+    path: "/features/targeted-mail",
+    title: "Targeted Direct Mail by Demographics | PostCanary",
+    description:
+      "Target direct mail by age, income, home value and more. Reach high-intent households, skip the rest, and track every conversion back to the piece.",
+  },
+  {
+    path: "/features/analytics",
+    title: "Direct Mail Analytics & Attribution | PostCanary",
+    description:
+      "Track match rate, revenue per mailer, and days to convert. AI analysis, audience breakdowns, and a heat map show exactly how your mail performs.",
+  },
+  {
+    path: "/why-postcanary",
+    title: "Why PostCanary | Close the Direct Mail Attribution Gap",
+    description:
+      "QR codes miss 70-90% of direct-mail response. PostCanary matches every conversion back to the exact address it came from. See your real ROI.",
+  },
 ];
 
 // ---------------------------------------------------------------------------

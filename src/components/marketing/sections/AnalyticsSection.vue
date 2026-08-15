@@ -4,27 +4,10 @@ import { useAuthStore } from "@/stores/auth";
 import CTAButton from "@/components/marketing/CTAButton.vue";
 import VideoPlaceholder from "@/components/marketing/VideoPlaceholder.vue";
 import SectionAccordion from "@/components/marketing/sections/SectionAccordion.vue";
+import { MARKETING_FEATURES } from "@/data/marketing";
 
 const auth = useAuthStore();
-
-const items = [
-  {
-    title: "Dashboard KPIs",
-    body: "The dashboard displays your match rate, revenue from mail, total customers, revenue per mailer, days to convert and much more.",
-  },
-  {
-    title: "Analysis",
-    body: "AI reviews the results of your analytics and gives you all of the best insight to set you up for success in your subsequent mail campaigns. Where to target, what deals to run, who to target, how frequently to target and more.",
-  },
-  {
-    title: "Audience",
-    body: 'AI reviews your results and breaks down who converted based on a variety of demographics. Where "Analysis" guides you in building a campaign, "Audience" will tell you who to send it to.',
-  },
-  {
-    title: "Heat Map",
-    body: "The interactive heat map will show you where exactly your customers are on a map. This can give you visual insight into areas missed, areas saturated or areas to double down in to better guide your next campaign.",
-  },
-];
+const feature = MARKETING_FEATURES.find((f) => f.slug === "analytics")!;
 
 function onCta() {
   if (!auth.isAuthenticated) {
@@ -51,12 +34,12 @@ function onCta() {
             id="analytics-heading"
             class="font-bold tracking-[-0.03em] text-[30px] leading-9 sm:text-[42px] sm:leading-[50px] text-[var(--mkt-text)]"
           >
-            Analytics
+            {{ feature.title }}
           </h2>
           <p
             class="mt-4 sm:mt-5 text-[16px] sm:text-[18px] leading-relaxed text-[var(--mkt-text-muted)] max-w-xl"
           >
-            Our analytics can track every campaign, conversion, attribution and other important KPIs to guide and report on your direct mail performance.
+            {{ feature.tagline }}
           </p>
           <div class="mt-8">
             <VideoPlaceholder label="Analytics video placeholder" />
@@ -64,9 +47,15 @@ function onCta() {
         </div>
 
         <div>
-          <SectionAccordion id-prefix="analytics" :items="items" />
-          <div class="mt-8">
-            <CTAButton size="lg" @click="onCta">Track Results</CTAButton>
+          <SectionAccordion id-prefix="analytics" :items="feature.items" />
+          <div class="mt-8 flex flex-wrap items-center gap-4">
+            <CTAButton size="lg" @click="onCta">{{ feature.ctaLabel }}</CTAButton>
+            <router-link
+              to="/features/analytics"
+              class="text-[15px] font-semibold text-[var(--pc-teal-brand)] hover:underline"
+            >
+              Learn more about Analytics →
+            </router-link>
           </div>
         </div>
       </div>
