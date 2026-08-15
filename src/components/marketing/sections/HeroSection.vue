@@ -24,6 +24,9 @@ const audiences = PAIRS.map(([, a]) => a);
 
 const index = ref(0);
 const reduceMotion = ref(false);
+// Background loop stays off for reduced-motion and data-saver visitors; the
+// gradient + poster carry the hero on their own.
+const showVideo = ref(false);
 let timer: number | undefined;
 
 onMounted(() => {
@@ -31,7 +34,14 @@ onMounted(() => {
   reduceMotion.value = mq.matches;
   mq.addEventListener?.("change", (e) => {
     reduceMotion.value = e.matches;
+    if (e.matches) showVideo.value = false;
   });
+
+  const saveData = (
+    navigator as Navigator & { connection?: { saveData?: boolean } }
+  ).connection?.saveData;
+  showVideo.value = !reduceMotion.value && saveData !== true;
+
   if (!reduceMotion.value) {
     timer = window.setInterval(() => {
       index.value = (index.value + 1) % PAIRS.length;
@@ -57,46 +67,68 @@ function getStarted() {
     id="hero"
     class="mkt-anchor-section hero"
     aria-labelledby="hero-heading"
+    tabindex="-1"
   >
-    <!-- Future looping-video slot (POS-228); gradient is the poster/fallback. -->
+    <!-- POS-228 background loop; the gradient below is the load/fallback state. -->
     <div class="hero-media" aria-hidden="true"></div>
+    <video
+      v-if="showVideo"
+      class="hero-video"
+      poster="/hero/hero-poster.jpg"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      aria-hidden="true"
+      tabindex="-1"
+    >
+      <source src="/hero/hero-loop.mp4" type="video/mp4" />
+    </video>
+    <div class="hero-scrim" aria-hidden="true"></div>
 
     <div
-      class="relative mx-auto flex w-full max-w-[1440px] flex-col items-start px-4 py-28 sm:px-6 sm:py-36 md:px-10 xl:px-16"
+      class="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 items-center gap-12 px-4 py-28 sm:px-6 sm:py-36 md:px-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16 xl:px-16"
     >
-      <h1 id="hero-heading" class="hero-headline">
-        <!-- Static accessible name; the animated reels are decorative duplicates. -->
-        <span class="sr-only">PostCanary for Everyone</span>
-        <span class="hero-reel" aria-hidden="true">
-          <span
-            class="hero-reel-track"
-            :class="{ 'hero-reel-static': reduceMotion }"
-            :style="reduceMotion ? undefined : reelStyle"
-          >
-            <span v-for="(word, i) in products" :key="i" class="hero-word">{{
-              word
-            }}</span>
-          </span>
-        </span>
-        <span class="hero-line-2" aria-hidden="true">
-          <span class="hero-for">for</span>
-          <span class="hero-reel">
+      <div class="flex flex-col items-start">
+        <h1 id="hero-heading" class="hero-headline">
+          <!-- Static accessible name; the animated reels are decorative duplicates. -->
+          <span class="sr-only">PostCanary for Everyone</span>
+          <span class="hero-reel" aria-hidden="true">
             <span
               class="hero-reel-track"
               :class="{ 'hero-reel-static': reduceMotion }"
               :style="reduceMotion ? undefined : reelStyle"
             >
-              <span v-for="(word, i) in audiences" :key="i" class="hero-word">{{
+              <span v-for="(word, i) in products" :key="i" class="hero-word">{{
                 word
               }}</span>
             </span>
           </span>
-        </span>
-      </h1>
+          <span class="hero-line-2" aria-hidden="true">
+            <span class="hero-for">for</span>
+            <span class="hero-reel">
+              <span
+                class="hero-reel-track"
+                :class="{ 'hero-reel-static': reduceMotion }"
+                :style="reduceMotion ? undefined : reelStyle"
+              >
+                <span v-for="(word, i) in audiences" :key="i" class="hero-word">{{
+                  word
+                }}</span>
+              </span>
+            </span>
+          </span>
+        </h1>
 
-      <button type="button" class="hero-cta" @click="getStarted">
-        Get Started
-      </button>
+        <button type="button" class="hero-cta" @click="getStarted">
+          Get Started
+        </button>
+      </div>
+
+      <!-- Right column stays empty on purpose: it is the clear area where the
+           POS-228 background loop reads through behind the headline block. -->
+      <div class="hidden lg:block" aria-hidden="true"></div>
     </div>
   </section>
 </template>
@@ -135,6 +167,27 @@ function getStarted() {
   }
 }
 
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Keeps headline contrast over the footage: heaviest where the type sits. */
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(28, 36, 48, 0.94) 0%,
+    rgba(28, 36, 48, 0.82) 34%,
+    rgba(28, 36, 48, 0.5) 68%,
+    rgba(28, 36, 48, 0.38) 100%
+  );
+}
+
 .hero-headline {
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -157,6 +210,7 @@ function getStarted() {
 .hero-reel {
   display: inline-block;
   height: var(--hero-line);
+  max-width: 100%;
   overflow: hidden;
   vertical-align: bottom;
 }
