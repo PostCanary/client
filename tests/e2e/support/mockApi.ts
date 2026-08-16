@@ -27,6 +27,8 @@ type RequestLog = {
   designDeletes: string[];
   // POS-161: PUT /api/organizations/return-address payloads.
   returnAddressUpdates: JsonMap[];
+  // POS-232: marketing chat widget POSTs (/api/chat, /session, /lead).
+  chatRequests: Array<{ path: string; method: string; hasCsrfToken: boolean }>;
 };
 
 export type MockAppState = {
@@ -796,6 +798,7 @@ export function createMockAppState(): MockAppState {
       designCreates: [],
       designDeletes: [],
       returnAddressUpdates: [],
+      chatRequests: [],
     },
     draftOverride: null,
     // POS-161: default null so existing specs see "not configured".
@@ -933,8 +936,58 @@ export async function installMockApi(page: Page, state: MockAppState) {
     const { pathname, searchParams } = url;
     const method = request.method();
 
+    if (pathname === "/auth/csrf-token" && method === "GET") {
+      return json(route, { csrf_token: "e2e-csrf-token" });
+    }
+
     if (pathname === "/auth/me") {
       return json(route, state.authMe);
+    }
+
+    if (pathname.startsWith("/api/chat")) {
+      const csrf = request.headers()["x-csrf-token"] ?? "";
+      state.requestLog.chatRequests.push({
+        path: pathname,
+        method,
+        hasCsrfToken: csrf.length > 0,
+      });
+      if (!csrf) {
+        return json(
+          route,
+          {
+            error: {
+              code: "csrf_token_missing",
+              message: "CSRF token required",
+            },
+          },
+          403,
+        );
+      }
+    }
+
+    if (pathname === "/api/chat" && method === "POST") {
+      const body = [
+        `data: ${JSON.stringify("Targeted Mail is $0.89 per postcard")}\n\n`,
+        `data: ${JSON.stringify(" for 1-1,499 and $0.85 at 1,500 or more.")}\n\n`,
+        "data: [DONE]\n\n",
+      ].join("");
+      return route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        headers: {
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+        body,
+      });
+    }
+
+    if (pathname === "/api/chat/session" && method === "POST") {
+      return json(route, { ok: true });
+    }
+
+    if (pathname === "/api/chat/lead" && method === "POST") {
+      return json(route, { ok: true }, 201);
     }
 
     if (pathname === "/auth/logout") {

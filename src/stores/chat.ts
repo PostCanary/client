@@ -1,7 +1,13 @@
 // src/stores/chat.ts
 import { defineStore } from "pinia";
-import { streamChat, sendChat, type ChatMessage, type ChatRole } from "@/api/chat";
-import { API_BASE } from "@/api/http";
+import {
+  streamChat,
+  sendChat,
+  saveChatSession,
+  captureChatLead,
+  type ChatMessage,
+  type ChatRole,
+} from "@/api/chat";
 
 export type DisplayMessage = {
   id: number;
@@ -120,11 +126,9 @@ export const useChatStore = defineStore("chat", {
         streaming: true,
       });
 
-      // Index into the reactive array so Vue detects mutations
-      const msgIndex = this.messages.length - 1;
-      const reactiveMsg = () => this.messages[msgIndex]!;
+      const assistantMsg = () => this.messages.find((m) => m.id === assistantId);
 
-      // Try streaming first, fall back to non-streaming
+      // Try streaming first, fall back to a second full-read of the same SSE endpoint
       const controller = new AbortController();
       this._abortController = controller;
 
@@ -132,25 +136,26 @@ export const useChatStore = defineStore("chat", {
         await streamChat(
           { messages: apiMessages, context: this.context },
           (chunk) => {
-            reactiveMsg().content += chunk;
+            const msg = assistantMsg();
+            if (msg) msg.content += chunk;
           },
           controller.signal
         );
       } catch (e: any) {
         if (e.name === "AbortError") return;
 
-        // Fallback to non-streaming if streaming isn't supported
         try {
-          reactiveMsg().content = "";
+          const msg = assistantMsg();
+          if (msg) msg.content = "";
           const res = await sendChat({ messages: apiMessages, context: this.context });
-          reactiveMsg().content = res.reply;
-        } catch (fallbackErr: any) {
+          if (msg) msg.content = res.reply;
+        } catch {
           this.error = "Sorry, I'm having trouble connecting. Please try again.";
-          // Remove the empty assistant message
           this.messages = this.messages.filter((m) => m.id !== assistantId);
         }
       } finally {
-        reactiveMsg().streaming = false;
+        const msg = assistantMsg();
+        if (msg) msg.streaming = false;
         this.loading = false;
         this._abortController = null;
         this._saveSession();
@@ -160,35 +165,23 @@ export const useChatStore = defineStore("chat", {
     /** Fire-and-forget save of the current session to the server. */
     _saveSession() {
       if (this.messages.length === 0) return;
-      fetch(`${API_BASE}/api/chat/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session_id: this.sessionId,
-          context: this.context,
-          messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
-          page_url: window.location.pathname,
-        }),
+      saveChatSession({
+        session_id: this.sessionId,
+        context: this.context,
+        messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
+        page_url: window.location.pathname,
       }).catch(() => {});
     },
 
     /** Capture a lead email after a good sales conversation. */
     async captureLeadEmail(email: string, metaEventId?: string) {
-      const payload: Record<string, unknown> = {
+      await captureChatLead({
         email,
         context: this.context,
         messages: this.messages.map((m) => ({ role: m.role, content: m.content })),
         session_id: this.sessionId,
-      };
-      if (metaEventId) payload.meta_event_id = metaEventId;
-      const res = await fetch(`${API_BASE}/api/chat/lead`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        ...(metaEventId ? { meta_event_id: metaEventId } : {}),
       });
-      if (!res.ok) {
-        throw new Error("Failed to save lead");
-      }
       this.leadCaptured = true;
     },
 
