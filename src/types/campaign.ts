@@ -832,8 +832,8 @@ export interface MailCampaignCard {
 // PER-CARD PRICING — FALLBACK ONLY.
 // The server owns these rates (GET /api/billing/pricing). POS-230 replaced
 // the flat $0.99 pay-per-send rate with two volume tiers, chosen per
-// campaign and applied to every card in it: $0.89 up to 1,499 cards and
-// $0.85 from 1,500 up. `payPerSend` is the no-count fallback and must stay
+// campaign and applied to every card in it: $0.89 up to 1,500 cards and
+// $0.85 from 1,501 up. `payPerSend` is the no-count fallback and must stay
 // the HIGHER tier so nothing is ever under-quoted.
 // Subscriptions are retired (Dustin, 2026-08-15); the plan rates below
 // remain only for orgs still carrying a plan.
@@ -843,8 +843,8 @@ export interface MailCampaignCard {
 // ============================================================
 
 export const PAY_PER_SEND_TIERS = [
-  { min_cards: 1, max_cards: 1499, rate_cents: 89 },
-  { min_cards: 1500, max_cards: null, rate_cents: 85 },
+  { min_cards: 1, max_cards: 1500, rate_cents: 89 },
+  { min_cards: 1501, max_cards: null, rate_cents: 85 },
 ] as const;
 
 export const PRICING = {
