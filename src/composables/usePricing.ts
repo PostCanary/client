@@ -55,7 +55,7 @@ export function usePayPerSendTiers(): Readonly<{ list: PayPerSendTier[] }> {
   return readonly(tiers) as Readonly<{ list: PayPerSendTier[] }>;
 }
 
-/** "1 – 1,499 postcards" / "1,500+ postcards" for a tier row. */
+/** "1 – 1,500 postcards" / "1,501+ postcards" for a tier row. */
 export function formatTierRange(tier: PayPerSendTier): string {
   const min = tier.min_cards.toLocaleString();
   if (tier.max_cards === null) return `${min}+ postcards`;

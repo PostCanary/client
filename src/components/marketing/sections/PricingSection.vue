@@ -3,14 +3,14 @@
 <script setup lang="ts">
 // Targeted Mail price sheet decided by Dustin 2026-08-15 (POS-227). The tier
 // is picked from the whole campaign and applied to every postcard in it, so
-// 1,500 postcards bill at $0.85 each — not just the ones past the break.
+// 1,501 postcards bill at $0.85 each — not just the ones past the break.
 // Server side is POS-230 (app/services/pricing.py).
 // ⚠️ LAUNCH GATE (POS-229): POS-230 must be in production before this page
 // goes live, or the site publishes a rate checkout will not honor. The EDDM
 // card below is still gated on the POS-224 scope call.
 const TARGETED_TIERS = [
-  { range: "1 – 1,499 postcards", price: "$0.89" },
-  { range: "1,500+ postcards", price: "$0.85" },
+  { range: "1 – 1,500 postcards", price: "$0.89" },
+  { range: "1,501+ postcards", price: "$0.85" },
 ] as const;
 </script>
 
@@ -51,7 +51,7 @@ const TARGETED_TIERS = [
             </li>
           </ul>
           <p class="pricing-note">
-            One rate per campaign. Reach 1,500 postcards and every postcard in
+            One rate per campaign. Pass 1,500 postcards and every postcard in
             that campaign bills at $0.85.
           </p>
         </article>
