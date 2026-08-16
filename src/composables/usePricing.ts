@@ -55,6 +55,26 @@ export function usePayPerSendTiers(): Readonly<{ list: PayPerSendTier[] }> {
   return readonly(tiers) as Readonly<{ list: PayPerSendTier[] }>;
 }
 
+/**
+ * Per-card rate (dollars) for a KNOWN campaign card count, resolved from the
+ * POS-230 volume tiers — the first tier whose max covers the count wins, and
+ * the rate applies retroactively to every card. Unknown or non-positive
+ * counts quote the no-count fallback (the highest tier) so we never promise
+ * a volume rate a campaign may not reach.
+ */
+export function payPerSendRateFor(cardCount: number | null | undefined): number {
+  load();
+  if (typeof cardCount !== "number" || !Number.isFinite(cardCount) || cardCount < 1) {
+    return rates.payPerSend;
+  }
+  for (const tier of tiers.list) {
+    if (tier.max_cards === null || cardCount <= tier.max_cards) {
+      return tier.rate_cents / 100;
+    }
+  }
+  return rates.payPerSend;
+}
+
 /** "1 – 1,500 postcards" / "1,501+ postcards" for a tier row. */
 export function formatTierRange(tier: PayPerSendTier): string {
   const min = tier.min_cards.toLocaleString();

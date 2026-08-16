@@ -37,6 +37,7 @@ vi.mock('@/components/targeting/EddmTargetingPanel.vue', () => ({
 }))
 vi.mock('@/composables/usePricing', () => ({
   usePricing: () => ({ payPerSend: 0.99 }),
+  payPerSendRateFor: () => 0.99,
 }))
 vi.mock('@/stores/useBrandKitStore', () => ({
   useBrandKitStore: () => ({ hydrated: true, fetch: vi.fn() }),

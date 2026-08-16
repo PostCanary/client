@@ -3,7 +3,7 @@ import { ref, computed, watch, provide, onMounted, onBeforeUnmount, nextTick } f
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { GOAL_DEFAULTS } from "@/types/campaign";
-import { usePricing } from "@/composables/usePricing";
+import { payPerSendRateFor } from "@/composables/usePricing";
 import type { TargetingSelection, TargetingFilters, JobReference, EddmSelection } from "@/types/campaign";
 import TargetingMap from "@/components/targeting/TargetingMap.vue";
 import TargetingPanel from "@/components/targeting/TargetingPanel.vue";
@@ -249,9 +249,8 @@ const excludedRecent = computed(() => apiExclusions.value.recentlyMailed);
 const finalHouseholdCount = computed(() => apiCount.value);
 const pastInArea = computed(() => apiExclusions.value.pastCustomers);
 const sequenceLength = computed(() => 1);
-const pricing = usePricing();
 const estimatedCostSequence = computed(
-  () => finalHouseholdCount.value * pricing.payPerSend * sequenceLength.value,
+  () => finalHouseholdCount.value * payPerSendRateFor(finalHouseholdCount.value) * sequenceLength.value,
 );
 
 // Watch areas + filters and trigger API fetch
@@ -317,8 +316,8 @@ function commitEddmTargeting() {
     finalHouseholdCount: sel.totalHouseholds,
     pastCustomersInArea: 0,
     recipientBreakdown: { newProspects: sel.totalHouseholds, pastCustomers: 0, pastCustomersIncluded: false },
-    estimatedCostSingle: sel.totalHouseholds * pricing.payPerSend,
-    estimatedCostSequence: sel.totalHouseholds * pricing.payPerSend * (draftStore.draft?.goal?.sequenceLength ?? 1),
+    estimatedCostSingle: sel.totalHouseholds * payPerSendRateFor(sel.totalHouseholds),
+    estimatedCostSequence: sel.totalHouseholds * payPerSendRateFor(sel.totalHouseholds) * (draftStore.draft?.goal?.sequenceLength ?? 1),
     countSource: 'mock',
     queryPlan: null,
     savedAudienceName: null,
@@ -368,7 +367,7 @@ function commitTargeting() {
       source: countSource.value,
     })) return;
     const seqLen = 1;
-    const perCard = pricing.payPerSend;
+    const perCard = payPerSendRateFor(apiCount.value);
 
     const targeting: TargetingSelection = {
       campaignGoal: goalType.value,
