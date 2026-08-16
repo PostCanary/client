@@ -44,6 +44,14 @@ import {
   campaignOrderNeedsAttention,
   formatOrderAmount,
 } from "@/utils/campaignDisplay";
+import { loadTargetingCapabilities } from "@/composables/useTargetingCapabilities";
+import {
+  extractOverRecipientCapError,
+  formatOverRecipientCapPurchaseError,
+  formatRecipientCapWarning,
+  isOverRecipientCap,
+  parsePurchaseRecordsMaxQty,
+} from "@/utils/recipientCap";
 
 const router = useRouter();
 const route = useRoute();
@@ -77,6 +85,8 @@ const paymentMethodError = ref<string | null>(null);
 const paymentMethodBusy = ref(false);
 const paymentStatusMessage = ref<string | null>(null);
 const reconciliationBlocked = ref(false);
+const purchaseRecordsMaxQty = ref<number | null>(null);
+const recipientCapResolved = ref(false);
 
 const paymentReady = computed(
   () =>
@@ -170,6 +180,23 @@ const householdCount = computed(() => {
 const audienceNoun = computed(() =>
   targeting.value?.audienceType === 'business' ? 'businesses' : 'households',
 );
+const overRecipientCap = computed(() =>
+  isOverRecipientCap(householdCount.value, purchaseRecordsMaxQty.value),
+);
+const recipientCapWarning = computed(() =>
+  overRecipientCap.value && purchaseRecordsMaxQty.value != null
+    ? formatRecipientCapWarning(purchaseRecordsMaxQty.value)
+    : null,
+);
+
+async function resolveRecipientCap() {
+  recipientCapResolved.value = false;
+  const result = await loadTargetingCapabilities();
+  purchaseRecordsMaxQty.value = parsePurchaseRecordsMaxQty(
+    result.capabilities?.purchase_records_max_qty,
+  );
+  recipientCapResolved.value = true;
+}
 const seqLen = computed(() => 1);
 // Campaign name — auto-generated, editable
 const campaignName = ref("");
@@ -191,6 +218,7 @@ onMounted(() => {
   }
   void loadOrgReturnAddress();
   void loadPaymentMethod();
+  void resolveRecipientCap();
   if (route.query.billing === "card_saved") {
     paymentStatusMessage.value = "Payment method saved.";
   } else if (route.query.billing === "card_setup_cancelled") {
@@ -471,6 +499,8 @@ const canApprove = computed(
     !staleMultiMailingDraft.value &&
     !reconciliationBlocked.value &&
     householdCount.value > 0 &&
+    recipientCapResolved.value &&
+    !overRecipientCap.value &&
     effectiveReturnAddress.value !== null &&
     acknowledgedAccuracy.value &&
     paymentReady.value &&
@@ -580,6 +610,12 @@ async function approve() {
           draftStore.error =
             "This campaign requires reconciliation, but its order details could not be confirmed. Contact support and do not approve or retry it again.";
         }
+        approving.value = false;
+        return;
+      }
+      const overCapError = extractOverRecipientCapError(purchaseErr);
+      if (overCapError) {
+        draftStore.error = formatOverRecipientCapPurchaseError(overCapError);
         approving.value = false;
         return;
       }
@@ -840,6 +876,19 @@ async function approve() {
             </button>
             and choose an area with at least one {{ audienceNoun === 'businesses' ? 'business' : 'household' }}.
           </template>
+        </div>
+        <div
+          v-else-if="recipientCapWarning"
+          data-testid="over-recipient-cap-warning"
+          class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+        >
+          {{ recipientCapWarning }}.
+          <button
+            class="font-semibold underline"
+            @click="draftStore.goToStep(2)"
+          >
+            Go back to Pick Your Neighborhood
+          </button>
         </div>
       </div>
 
@@ -1222,6 +1271,7 @@ async function approve() {
 
       <!-- Approve button -->
       <button
+        data-testid="review-approve"
         class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
         :disabled="!canApprove"
         @click="approve"

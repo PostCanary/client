@@ -19,6 +19,11 @@ import {
 } from "@/utils/targetingCapabilities";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
 import type { BusinessTargetingFilterSupport, TargetingCapabilities } from "@/types/targeting";
+import {
+  formatRecipientCapWarning,
+  isOverRecipientCap,
+  parsePurchaseRecordsMaxQty,
+} from "@/utils/recipientCap";
 
 const emit = defineEmits<{
   (e: "targeting-validity", valid: boolean): void;
@@ -247,6 +252,23 @@ const excludedPast = computed(() =>
 );
 const excludedRecent = computed(() => apiExclusions.value.recentlyMailed);
 const finalHouseholdCount = computed(() => apiCount.value);
+const purchaseRecordsMaxQty = computed(() =>
+  parsePurchaseRecordsMaxQty(targetingCapabilities.value?.purchase_records_max_qty),
+);
+const eddmHouseholdCount = computed(
+  () => mapRef.value?.selectedEddmHouseholds ?? 0,
+);
+const recipientCountForCap = computed(() =>
+  isEddmMode.value ? eddmHouseholdCount.value : finalHouseholdCount.value,
+);
+const overRecipientCap = computed(() =>
+  isOverRecipientCap(recipientCountForCap.value, purchaseRecordsMaxQty.value),
+);
+const recipientCapWarning = computed(() =>
+  overRecipientCap.value && purchaseRecordsMaxQty.value != null
+    ? formatRecipientCapWarning(purchaseRecordsMaxQty.value)
+    : null,
+);
 const pastInArea = computed(() => apiExclusions.value.pastCustomers);
 const sequenceLength = computed(() => 1);
 const estimatedCostSequence = computed(
@@ -324,7 +346,9 @@ function commitEddmTargeting() {
     eddmSelection: sel,
   };
   draftStore.setTargeting(targeting);
-  setTargetingValidity(true);
+  setTargetingValidity(
+    !isOverRecipientCap(sel.totalHouseholds, purchaseRecordsMaxQty.value),
+  );
 }
 
 // Debounced commit to draft store
@@ -350,9 +374,10 @@ function commitTargeting() {
     ) {
       return;
     }
-    // Persist only a positive live result. Rejected, zero, stale, or
-    // unattested results must keep this step invalid.
+    // Persist only a positive live result. Rejected, zero, stale,
+    // unattested, or over-cap results must keep this step invalid.
     if (!countReady.value || countLoading.value || countError.value || apiCount.value < 1) return;
+    if (isOverRecipientCap(apiCount.value, purchaseRecordsMaxQty.value)) return;
     const suppressionPolicy = {
       excludePastCustomers: excludePastCustomers.value,
       excludeMailedWithinDays: excludeMailedWithinDays.value,
@@ -431,6 +456,10 @@ watch(
   commitTargeting,
   { deep: true },
 );
+
+watch(overRecipientCap, (overCap) => {
+  if (overCap) setTargetingValidity(false);
+});
 
 // Watch map areas so drawing shapes triggers commitTargeting
 watch(
@@ -559,6 +588,7 @@ onBeforeUnmount(() => {
       :routes="mapRef?.eddmRoutes ?? []"
       :selected-crrt="mapRef?.selectedCrrt ?? new Set()"
       :selected-households="mapRef?.selectedEddmHouseholds ?? 0"
+      :recipient-cap-warning="recipientCapWarning"
       @load-routes="onLoadEddmRoutes"
       @toggle-route="onToggleEddmRoute"
       @clear="onClearEddmRoutes"
@@ -614,6 +644,7 @@ onBeforeUnmount(() => {
       :final-household-count="finalHouseholdCount"
       :estimated-cost-sequence="estimatedCostSequence"
       :sequence-length="sequenceLength"
+      :recipient-cap-warning="recipientCapWarning"
       @toggle-job="toggleJob"
       @select-all-jobs="selectAllJobs"
       @deselect-all-jobs="deselectAllJobs"

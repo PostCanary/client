@@ -61,6 +61,9 @@ export interface TargetingCapabilities {
     mode: 'target' | 'output_only' | 'unavailable'
     products: string[]
   }>
+  // Live Melissa-credit guardrail. Read from GET /api/targeting/capabilities.
+  // Never invent a client-side default — omit when the server does not send it.
+  purchase_records_max_qty?: number
 }
 
 export interface AudienceQueryPlan {
