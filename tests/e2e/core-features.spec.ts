@@ -136,52 +136,51 @@ test("settings saves both profile and organization changes", async ({ page }) =>
   await expect(page.getByTestId("org-switcher-trigger")).toContainText("Alpha Roofing HQ");
 });
 
-test("settings exposes billing controls for admins and removes delete account", async ({ page }) => {
-  const state = await setup(page);
+test("settings shows pay-per-send rates and the payment method for admins", async ({ page }) => {
+  await setup(page);
 
   await page.goto("/settings");
 
-  await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
-  await expect(page.getByTestId("settings-change-plan")).toBeVisible();
-  await expect(page.getByTestId("settings-pause-subscription")).toBeVisible();
-  await expect(page.getByTestId("settings-cancel-subscription")).toBeVisible();
+  // Subscriptions are retired (Dustin, 2026-08-15). Settings must show what a
+  // customer actually pays — the server-owned tier table — and the card we
+  // charge, with no plan, status, pause or cancel anywhere.
+  const tiers = page.getByTestId("settings-rate-tiers");
+  await expect(tiers).toContainText("1 – 1,499 postcards");
+  await expect(tiers).toContainText("$0.89");
+  await expect(tiers).toContainText("1,500+ postcards");
+  await expect(tiers).toContainText("$0.85");
+
+  await expect(page.getByTestId("settings-payment-method")).toBeVisible();
   await expect(page.getByTestId("settings-manage-billing")).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete account" })).toHaveCount(0);
 
-  await page.getByTestId("settings-change-plan").click();
-  await expect(page.getByTestId("change-plan-modal")).toBeVisible();
-  await page.getByTestId("settings-plan-option-elite").click();
-  await page.getByTestId("confirm-change-plan").click();
+  for (const testId of [
+    "settings-subscription-status",
+    "settings-plan-label",
+    "settings-change-plan",
+    "settings-pause-subscription",
+    "settings-cancel-subscription",
+    "settings-resume-subscription",
+  ]) {
+    await expect(page.getByTestId(testId)).toHaveCount(0);
+  }
 
-  await expect.poll(() => state.requestLog.changePlanCalls).toEqual(["ELITE"]);
-  await expect(page.getByTestId("settings-plan-label")).toContainText("Ultimate ($499/mo)");
-
-  await page.getByTestId("settings-pause-subscription").click();
-  await expect(page.getByTestId("pause-subscription-modal")).toBeVisible();
-  await page.getByTestId("confirm-pause-subscription").click();
-
-  await expect.poll(() => state.requestLog.pauseCalls).toBe(1);
-  await expect(page.getByTestId("settings-subscription-status")).toContainText("Pause scheduled");
-  await expect(page.getByTestId("settings-resume-subscription")).toContainText("Keep current plan");
-
-  await page.getByTestId("settings-resume-subscription").click();
-  await expect.poll(() => state.requestLog.resumeCalls).toBe(1);
-  await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
-
-  await page.getByTestId("settings-cancel-subscription").click();
-  await expect(page.getByTestId("cancel-subscription-modal")).toBeVisible();
-  await page.getByTestId("confirm-cancel-subscription").click();
-
-  await expect.poll(() => state.requestLog.cancelCalls).toBe(1);
-  await expect(page.getByTestId("settings-cancel-subscription")).toContainText("Cancellation scheduled");
-  await expect(page.getByTestId("settings-resume-subscription")).toContainText("Resume subscription");
-
-  await page.getByTestId("settings-resume-subscription").click();
-  await expect.poll(() => state.requestLog.resumeCalls).toBe(2);
-  await expect(page.getByTestId("settings-subscription-status")).toContainText("Active");
+  // "No subscription and no monthly fee" is deliberate copy, so assert on the
+  // retired UI itself rather than on the word "subscription".
+  const billing = page.getByTestId("settings-billing");
+  for (const dead of [
+    "Current plan",
+    "Change plan",
+    "Cancel subscription",
+    "Pause account",
+    "$99",
+    "$499",
+  ]) {
+    await expect(billing).not.toContainText(dead, { ignoreCase: true });
+  }
 });
 
-test("members can view billing status but not manage subscription actions", async ({ page }) => {
+test("members see billing rates but cannot manage the payment method", async ({ page }) => {
   await setup(page, (state) => {
     state.orgs[0].role = "member";
     state.authMe.org_role = "member";
@@ -190,7 +189,7 @@ test("members can view billing status but not manage subscription actions", asyn
 
   await page.goto("/settings");
 
-  await expect(page.getByTestId("settings-subscription-status")).toBeVisible();
+  await expect(page.getByTestId("settings-rate-tiers")).toBeVisible();
   await expect(page.getByTestId("settings-billing-role-note")).toBeVisible();
   await expect(page.getByTestId("settings-billing-actions")).toHaveCount(0);
 });

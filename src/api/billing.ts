@@ -41,8 +41,19 @@ export interface PaymentMethodSummary {
  * Backend: GET /api/billing/pricing  (public, cents)
  * ------------------------------------------------------------------ */
 
+// POS-230 volume tier. `max_cards: null` = the open-ended top tier.
+export interface PayPerSendTier {
+  min_cards: number;
+  max_cards: number | null;
+  rate_cents: number;
+}
+
 export interface PricingPayload {
+  // The rate quoted when the campaign size is unknown — the HIGHEST tier.
   pay_per_send_cents: number;
+  // POS-230: the published price sheet. Optional so an older server (or a
+  // cached payload) still parses; callers fall back to PAY_PER_SEND_TIERS.
+  pay_per_send_tiers?: PayPerSendTier[];
   subscription_rates_cents: Record<PlanCode, number>;
   // Optional until the server ships it (Flow v2 $199 design fee).
   custom_design_fee_cents?: number;
