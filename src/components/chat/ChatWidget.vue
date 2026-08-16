@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 import { BRAND } from "@/config/brand";
 import ChatMessage from "./ChatMessage.vue";
 import { generateEventId, trackLead } from "@/composables/useMetaPixel";
+import { ensureCsrfToken } from "@/api/http";
 
 const chat = useChatStore();
 const auth = useAuthStore();
@@ -67,6 +68,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener("keydown", onGlobalKeydown);
+  void ensureCsrfToken();
 });
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", onGlobalKeydown);

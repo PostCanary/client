@@ -73,25 +73,33 @@ export const http = axios.create({
 
 // ---- CSRF token (module-scope; fetched once per session, injected on state-changing requests)
 let _csrfToken: string | null = null;
+let _csrfTokenPromise: Promise<string> | null = null;
 const _CSRF_STATE_METHODS = new Set(["post", "put", "patch", "delete"]);
 
 export async function ensureCsrfToken(): Promise<string> {
   if (_csrfToken) return _csrfToken;
+  if (_csrfTokenPromise) return _csrfTokenPromise;
   // Use raw fetch (not axios) to avoid triggering this interceptor recursively
-  try {
-    const res = await fetch(`${AUTH_BASE}/auth/csrf-token`, { credentials: "include" });
-    if (res.ok) {
-      const data = await res.json();
-      _csrfToken = data.csrf_token as string;
+  _csrfTokenPromise = (async () => {
+    try {
+      const res = await fetch(`${AUTH_BASE}/auth/csrf-token`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        _csrfToken = data.csrf_token as string;
+      }
+    } catch {
+      // Non-fatal — requests proceed without the token; server will reject state-changing ones
+    } finally {
+      _csrfTokenPromise = null;
     }
-  } catch {
-    // Non-fatal — requests proceed without the token; server will reject state-changing ones
-  }
-  return _csrfToken ?? "";
+    return _csrfToken ?? "";
+  })();
+  return _csrfTokenPromise;
 }
 
 export function clearCsrfToken() {
   _csrfToken = null;
+  _csrfTokenPromise = null;
 }
 
 // ---- Request interceptor
