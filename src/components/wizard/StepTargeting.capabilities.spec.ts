@@ -21,8 +21,13 @@ vi.mock('@/components/targeting/TargetingMap.vue', () => ({
 vi.mock('@/components/targeting/TargetingPanel.vue', () => ({
   default: {
     name: 'TargetingPanel',
+    props: ['recipientCapWarning'],
     emits: ['update:audienceType'],
-    template: '<div data-testid="targeting-panel"><button data-testid="switch-business" @click="$emit(\'update:audienceType\', \'business\')">Business</button></div>',
+    template:
+      '<div data-testid="targeting-panel">' +
+      '<div v-if="recipientCapWarning" data-testid="over-recipient-cap-warning">{{ recipientCapWarning }}</div>' +
+      '<button data-testid="switch-business" @click="$emit(\'update:audienceType\', \'business\')">Business</button>' +
+      '</div>',
   },
 }))
 vi.mock('@/components/targeting/EddmTargetingPanel.vue', () => ({
@@ -241,5 +246,126 @@ describe('StepTargeting capability gate', () => {
     validityEvents = wrapper.emitted('targeting-validity') ?? []
     expect(validityEvents[validityEvents.length - 1]).toEqual([true])
     expect(store.draft?.targeting?.audienceType).toBe('business')
+  })
+
+  it('shows the over-cap warning and keeps Next disabled when the count exceeds the server cap', async () => {
+    vi.useFakeTimers()
+    const mockedCap = 11
+    vi.mocked(loadTargetingCapabilities).mockResolvedValue({
+      capabilities: { ...PLANNER_CAPABILITIES, purchase_records_max_qty: mockedCap },
+      failed: false,
+    })
+    const store = useCampaignDraftStore()
+    const now = '2026-08-16T00:00:00Z'
+    store.draft = {
+      id: '',
+      orgId: 'org-1',
+      currentStep: 2,
+      completedSteps: [1],
+      needsReviewSteps: [],
+      campaignType: 'targeted',
+      goal: null,
+      targeting: null,
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: now,
+      updatedAt: now,
+      schemaVersion: 1,
+    }
+    const wrapper = mount(StepTargeting)
+    await flushPromises()
+
+    const area = { type: 'zip', coordinates: [], zipCode: '10001' }
+    const overCapCount = mockedCap + 3
+    householdMock.current.count.value = overCapCount
+    householdMock.current.filteredCount.value = overCapCount
+    householdMock.current.queryPlan.value = {
+      schemaVersion: 1,
+      audienceType: 'consumer',
+      provider: 'melissa',
+      product: 'leadgen_property',
+      areas: [area],
+      filters: {},
+      suppressionPolicy: { excludePastCustomers: true, excludeMailedWithinDays: 30 },
+      requests: [],
+      outputColumns: [],
+      fingerprint: 'a'.repeat(64),
+      countProof: {
+        filteredCount: overCapCount,
+        finalCount: overCapCount,
+        exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+        source: 'melissa',
+      },
+      attestation: 'b'.repeat(64),
+    }
+    householdMock.current.ready.value = true
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+
+    const warning = wrapper.get('[data-testid="over-recipient-cap-warning"]')
+    expect(warning.text()).toContain(mockedCap.toLocaleString())
+    expect(warning.text()).toMatch(/narrow your filters/i)
+    const validityEvents = wrapper.emitted('targeting-validity') ?? []
+    expect(validityEvents[validityEvents.length - 1]).toEqual([false])
+  })
+
+  it('does not show the over-cap warning when the count is at the server cap', async () => {
+    vi.useFakeTimers()
+    const mockedCap = 11
+    vi.mocked(loadTargetingCapabilities).mockResolvedValue({
+      capabilities: { ...PLANNER_CAPABILITIES, purchase_records_max_qty: mockedCap },
+      failed: false,
+    })
+    const store = useCampaignDraftStore()
+    const now = '2026-08-16T00:00:00Z'
+    store.draft = {
+      id: '',
+      orgId: 'org-1',
+      currentStep: 2,
+      completedSteps: [1],
+      needsReviewSteps: [],
+      campaignType: 'targeted',
+      goal: null,
+      targeting: null,
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: now,
+      updatedAt: now,
+      schemaVersion: 1,
+    }
+    const wrapper = mount(StepTargeting)
+    await flushPromises()
+
+    const area = { type: 'zip', coordinates: [], zipCode: '10001' }
+    householdMock.current.count.value = mockedCap
+    householdMock.current.filteredCount.value = mockedCap
+    householdMock.current.queryPlan.value = {
+      schemaVersion: 1,
+      audienceType: 'consumer',
+      provider: 'melissa',
+      product: 'leadgen_property',
+      areas: [area],
+      filters: {},
+      suppressionPolicy: { excludePastCustomers: true, excludeMailedWithinDays: 30 },
+      requests: [],
+      outputColumns: [],
+      fingerprint: 'a'.repeat(64),
+      countProof: {
+        filteredCount: mockedCap,
+        finalCount: mockedCap,
+        exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+        source: 'melissa',
+      },
+      attestation: 'b'.repeat(64),
+    }
+    householdMock.current.ready.value = true
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="over-recipient-cap-warning"]').exists()).toBe(false)
+    const validityEvents = wrapper.emitted('targeting-validity') ?? []
+    expect(validityEvents[validityEvents.length - 1]).toEqual([true])
   })
 })

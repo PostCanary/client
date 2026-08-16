@@ -9,6 +9,7 @@ import type {
   TargetingGeographyType,
   BusinessTargetingFilterSupport,
 } from '@/types/targeting'
+import { parsePurchaseRecordsMaxQty } from '@/utils/recipientCap'
 
 export interface HouseholdCountResponse {
   ok: boolean
@@ -111,7 +112,11 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     })) return null
   }
 
-  return {
+  const purchaseRecordsMaxQty = parsePurchaseRecordsMaxQty(
+    response.purchase_records_max_qty,
+  )
+
+  const parsed: TargetingCapabilities = {
     ...(response as unknown as TargetingCapabilities),
     filters: {
       ...(filters as unknown as TargetingCapabilities['filters']),
@@ -120,6 +125,12 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
       hasEmail: filters.hasEmail === true,
     },
   }
+  if (purchaseRecordsMaxQty != null) {
+    parsed.purchase_records_max_qty = purchaseRecordsMaxQty
+  } else {
+    delete parsed.purchase_records_max_qty
+  }
+  return parsed
 }
 
 export async function getTargetingCapabilities(

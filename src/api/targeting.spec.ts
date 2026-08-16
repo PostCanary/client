@@ -70,6 +70,28 @@ describe('targeting API contracts', () => {
     expect(get).toHaveBeenCalledWith('/api/targeting/capabilities', undefined)
   })
 
+  it('threads purchase_records_max_qty from the capabilities response', async () => {
+    const purchaseRecordsMaxQty = 17
+    vi.mocked(get).mockResolvedValue({
+      ...DATA_RETRIEVER_CAPABILITIES,
+      purchase_records_max_qty: purchaseRecordsMaxQty,
+    })
+
+    await expect(getTargetingCapabilities()).resolves.toMatchObject({
+      purchase_records_max_qty: purchaseRecordsMaxQty,
+    })
+  })
+
+  it('omits a non-integer purchase_records_max_qty rather than inventing a cap', async () => {
+    vi.mocked(get).mockResolvedValue({
+      ...DATA_RETRIEVER_CAPABILITIES,
+      purchase_records_max_qty: 'unlimited',
+    })
+
+    const result = await getTargetingCapabilities()
+    expect(result.purchase_records_max_qty).toBeUndefined()
+  })
+
   it('accepts product-specific Business planner capabilities', async () => {
     const businessFilters = {
       businessSicCodes: true,

@@ -12,6 +12,7 @@ const props = defineProps<{
   // them next to the number so a filtered count never masquerades as the
   // area total.
   activeFilterCount?: number;
+  recipientCapWarning?: string | null;
 }>();
 
 const hc = inject(HOUSEHOLD_COUNT_KEY)!;
@@ -49,6 +50,14 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
       </div>
       <div class="text-xs text-gray-500 mt-0.5">
         Est. {{ formatCurrency(estimatedCostSequence) }} · {{ sequenceLength }} {{ sequenceLength === 1 ? 'card' : 'cards' }}
+      </div>
+      <div
+        v-if="recipientCapWarning"
+        data-testid="over-recipient-cap-warning"
+        role="alert"
+        class="mt-2 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1.5"
+      >
+        {{ recipientCapWarning }}
       </div>
     </template>
     <div v-else class="text-xs text-gray-400">

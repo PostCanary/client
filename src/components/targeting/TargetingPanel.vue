@@ -33,6 +33,7 @@ const props = defineProps<{
   finalHouseholdCount: number;
   estimatedCostSequence: number;
   sequenceLength: number;
+  recipientCapWarning?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -185,6 +186,7 @@ const tabs = [
       :estimated-cost-sequence="estimatedCostSequence"
       :sequence-length="sequenceLength"
       :active-filter-count="activeFilterCount"
+      :recipient-cap-warning="recipientCapWarning"
     />
   </div>
 </template>

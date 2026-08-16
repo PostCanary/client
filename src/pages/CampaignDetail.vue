@@ -11,6 +11,7 @@ import {
   normalizeOrderProjection,
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
+import { extractOverRecipientCapError, formatOverRecipientCapPurchaseError } from "@/utils/recipientCap";
 import { useAuthStore } from "@/stores/auth";
 import {
   campaignDesignPreviewUrl,
@@ -134,6 +135,11 @@ async function retryPrintSubmission() {
         "Fulfillment was updated, but the latest campaign details could not be refreshed.";
     }
   } catch (e: any) {
+    const overCapError = extractOverRecipientCapError(e);
+    if (overCapError) {
+      retryPrintError.value = formatOverRecipientCapPurchaseError(overCapError);
+      return;
+    }
     if (
       e?.status === 409 &&
       e?.data?.error === "reconciliation_required"

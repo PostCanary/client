@@ -6,6 +6,7 @@ const props = defineProps<{
   routes: EddmRoute[];
   selectedCrrt: Set<string>;
   selectedHouseholds: number;
+  recipientCapWarning?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -67,6 +68,14 @@ function submitZip() {
     <div v-if="routes.length > 0" class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between text-xs text-gray-600">
       <span>Selected: <strong class="text-[#0b2d50]">{{ selectedCrrt.size }} of {{ routes.length }}</strong></span>
       <span>~<strong class="text-[#0b2d50]">{{ selectedHouseholds.toLocaleString() }}</strong> households</span>
+    </div>
+    <div
+      v-if="recipientCapWarning"
+      data-testid="over-recipient-cap-warning"
+      role="alert"
+      class="mx-4 mt-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"
+    >
+      {{ recipientCapWarning }}
     </div>
 
     <!-- Route list -->
