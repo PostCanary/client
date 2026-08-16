@@ -5,12 +5,18 @@
 // they carry the same locked values, so the UI never flashes a wrong price.
 import { reactive, readonly } from "vue";
 
-import { fetchPricing } from "@/api/billing";
-import { PRICING } from "@/types/campaign";
+import { fetchPricing, type PayPerSendTier } from "@/api/billing";
+import { PAY_PER_SEND_TIERS, PRICING } from "@/types/campaign";
 
 type Rates = { -readonly [K in keyof typeof PRICING]: number };
 
 const rates = reactive<Rates>({ ...PRICING });
+
+// POS-230 volume tiers, as served by the API. Seeded from the fallback so a
+// price sheet always renders; replaced wholesale by the server's table.
+const tiers = reactive<{ list: PayPerSendTier[] }>({
+  list: PAY_PER_SEND_TIERS.map((t) => ({ ...t })),
+});
 
 let loaded = false;
 let inflight: Promise<void> | null = null;
@@ -22,6 +28,9 @@ function load(): void {
       rates.payPerSend = p.pay_per_send_cents / 100;
       if (typeof p.custom_design_fee_cents === "number") {
         rates.customDesignFee = p.custom_design_fee_cents / 100;
+      }
+      if (Array.isArray(p.pay_per_send_tiers) && p.pay_per_send_tiers.length) {
+        tiers.list = p.pay_per_send_tiers.map((t) => ({ ...t }));
       }
       rates.INSIGHT = p.subscription_rates_cents.INSIGHT / 100;
       rates.PERFORMANCE = p.subscription_rates_cents.PERFORMANCE / 100;
@@ -38,4 +47,17 @@ function load(): void {
 export function usePricing(): Readonly<Rates> {
   load();
   return readonly(rates) as Readonly<Rates>;
+}
+
+/** The published pay-per-send price sheet, server-owned. */
+export function usePayPerSendTiers(): Readonly<{ list: PayPerSendTier[] }> {
+  load();
+  return readonly(tiers) as Readonly<{ list: PayPerSendTier[] }>;
+}
+
+/** "1 – 1,499 postcards" / "1,500+ postcards" for a tier row. */
+export function formatTierRange(tier: PayPerSendTier): string {
+  const min = tier.min_cards.toLocaleString();
+  if (tier.max_cards === null) return `${min}+ postcards`;
+  return `${min} – ${tier.max_cards.toLocaleString()} postcards`;
 }
