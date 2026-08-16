@@ -1583,7 +1583,12 @@ export async function installMockApi(page: Page, state: MockAppState) {
 
     if (pathname === "/api/billing/pricing" && method === "GET") {
       return json(route, {
-        pay_per_send_cents: 99,
+        // POS-230 volume tiers, mirroring what the server serves.
+        pay_per_send_cents: 89,
+        pay_per_send_tiers: [
+          { min_cards: 1, max_cards: 1499, rate_cents: 89 },
+          { min_cards: 1500, max_cards: null, rate_cents: 85 },
+        ],
         subscription_rates_cents: {
           INSIGHT: 79,
           PERFORMANCE: 79,
