@@ -520,9 +520,13 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
     },
 
     /**
-     * POS-270: Replace on an uploaded design must clear the fields
-     * checkout/approve read (`design.uploadedAsset` + `design.designSource`)
-     * and un-complete step 3 so Next cannot advance on the stale artwork.
+     * POS-270: Replace must clear the purchase-facing asset
+     * (`design.uploadedAsset`) and un-complete step 3 so Next cannot
+     * advance on the stale artwork. Keep `designSource: "uploaded"` as
+     * the explicit cleared marker — dropping it reads as "generated"
+     * and would let generateCardsForDraft / scrape regen fill the gap.
+     * Review (name, date, seeds) does not depend on the artwork, so
+     * it is left in place.
      */
     clearUploadedDesign() {
       if (!this.draft?.design) return;
@@ -531,23 +535,22 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
         prev.designSource === "uploaded" || prev.uploadedAsset != null;
       if (!hadUploaded) return;
 
-      const { uploadedAsset: _droppedAsset, designSource: _droppedSource, ...rest } =
-        prev;
       this.draft.design = {
-        ...rest,
+        ...prev,
+        designSource: "uploaded",
         uploadedAsset: null,
         isCustomUpload: false,
         customUploadUrl: null,
         sequenceCards: [],
       };
       _designRevision++;
+      this.draft.designUserEdited = true;
       this.draft.completedSteps = this.draft.completedSteps.filter(
         (step) => step !== 3 && step !== 4,
       );
       this.draft.needsReviewSteps = this.draft.needsReviewSteps.filter(
         (step) => step !== 3 && step !== 4,
       );
-      this.draft.review = null;
       this._debounceSave();
     },
 

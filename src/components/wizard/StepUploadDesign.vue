@@ -31,6 +31,10 @@ const showDesignLibrary = ref(false);
 const designLibraryLoading = ref(false);
 const designLibrary = ref<DesignLibraryEntry[]>([]);
 const designLibraryError = ref("");
+// Library front+back arrive as one unit. A customer-uploaded back must
+// survive Replace on the front (POS-270 review). Session-only: a resumed
+// draft defaults to false so we never drop a back we cannot attribute.
+const fromLibrary = ref(false);
 
 async function openDesignLibrary() {
   showDesignLibrary.value = true;
@@ -46,6 +50,7 @@ async function openDesignLibrary() {
 }
 
 function selectLibraryDesign(design: DesignLibraryEntry) {
+  fromLibrary.value = true;
   draftStore.setUploadedDesign(design.uploaded_asset);
   frontFile.value = {
     fileName: design.front_asset.file_name,
@@ -320,6 +325,7 @@ async function handleFile(file: File, side: "front" | "back") {
       revokeLocalPreview(backFile.value);
       backFile.value = state;
     }
+    fromLibrary.value = false;
     commitUpload();
   } finally {
     processingRef.value = false;
@@ -346,13 +352,16 @@ function replaceFront() {
   frontError.value = null;
   frontUploadProgress.value = null;
   if (frontInputEl.value) frontInputEl.value.value = "";
-  // Library designs are one front+back unit. Clear the local back too so
-  // a later front upload cannot re-commit the old back URL.
-  revokeLocalPreview(backFile.value);
-  backFile.value = null;
-  backError.value = null;
-  backUploadProgress.value = null;
-  if (backInputEl.value) backInputEl.value.value = "";
+  // Library designs arrive as one front+back unit — clear both. A
+  // customer-uploaded back stays so the next commitUpload re-attaches it.
+  if (fromLibrary.value) {
+    revokeLocalPreview(backFile.value);
+    backFile.value = null;
+    backError.value = null;
+    backUploadProgress.value = null;
+    if (backInputEl.value) backInputEl.value.value = "";
+    fromLibrary.value = false;
+  }
   // POS-270: clear the purchase-facing draft fields, not just the preview.
   draftStore.clearUploadedDesign();
 }

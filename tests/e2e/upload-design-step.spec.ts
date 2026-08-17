@@ -152,7 +152,7 @@ test("POS-270: Replace clears the saved design and blocks Next until a new file 
   expect(JSON.stringify(cleared?.data?.design ?? {})).not.toContain(
     "/media/design-uploads/mock-org/saved-front.png",
   );
-  expect(cleared?.data?.design?.designSource).not.toBe("uploaded");
+  expect(cleared?.data?.design?.designSource).toBe("uploaded");
 
   const validPng = makeSolidPng(1875, 2775);
   await page.getByTestId("upload-front-input").setInputFiles({
@@ -169,6 +169,106 @@ test("POS-270: Replace clears the saved design and blocks Next until a new file 
   expect(JSON.stringify(replaced?.data?.design ?? {})).not.toContain(
     "/media/design-uploads/mock-org/saved-front.png",
   );
+});
+
+test("POS-270: replacing a customer-uploaded front keeps the existing back URL", async ({
+  page,
+}) => {
+  const state = await gotoStep3(page);
+  const validPng = makeSolidPng(1875, 2775);
+
+  await page.getByTestId("upload-front-input").setInputFiles({
+    name: "front.png",
+    mimeType: "image/png",
+    buffer: validPng,
+  });
+  await expect(page.getByTestId("upload-front-preview")).toBeVisible();
+
+  await page.getByTestId("upload-back-input").setInputFiles({
+    name: "back.png",
+    mimeType: "image/png",
+    buffer: validPng,
+  });
+  await expect(page.getByTestId("upload-back-preview")).toBeVisible();
+
+  await expect.poll(() => {
+    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+    return last?.data?.design?.uploadedAsset?.backUrl ?? "";
+  }).toMatch(/\/media\/design-uploads\/mock-org\/asset-/);
+  const beforeReplace = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+  const keptBackUrl = beforeReplace?.data?.design?.uploadedAsset?.backUrl;
+  expect(keptBackUrl).toBeTruthy();
+
+  await page.getByTestId("upload-front-replace").click();
+  await expect(page.getByTestId("upload-front-dropzone")).toBeVisible();
+  await expect(page.getByTestId("upload-back-preview")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+
+  await page.getByTestId("upload-front-input").setInputFiles({
+    name: "new-front.png",
+    mimeType: "image/png",
+    buffer: validPng,
+  });
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  await expect.poll(() => {
+    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+    return last?.data?.design?.uploadedAsset?.backUrl ?? "";
+  }).toBe(keptBackUrl);
+  const after = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+  expect(after?.data?.design?.uploadedAsset?.frontUrl).not.toBe(
+    beforeReplace?.data?.design?.uploadedAsset?.frontUrl,
+  );
+});
+
+test("POS-270: replacing a library design clears the paired back preview", async ({
+  page,
+}) => {
+  await gotoStep3(page, (mock) => {
+    mock.designs = [
+      {
+        id: "saved-pair-1",
+        name: "Paired design",
+        front_asset: {
+          url: "/media/design-uploads/mock-org/lib-front.png",
+          file_name: "lib-front.png",
+          mime_type: "image/png",
+          file_size_bytes: 1234,
+          width_px: 1875,
+          height_px: 2775,
+        },
+        back_asset: {
+          url: "/media/design-uploads/mock-org/lib-back.png",
+          file_name: "lib-back.png",
+          mime_type: "image/png",
+          file_size_bytes: 1200,
+          width_px: 1875,
+          height_px: 2775,
+        },
+        blank_back: false,
+        uploaded_asset: {
+          fileName: "lib-front.png",
+          mimeType: "image/png",
+          fileSizeBytes: 1234,
+          widthPx: 1875,
+          heightPx: 2775,
+          frontUrl: "/media/design-uploads/mock-org/lib-front.png",
+          backUrl: "/media/design-uploads/mock-org/lib-back.png",
+        },
+        created_at: "2026-07-23T12:00:00Z",
+        updated_at: "2026-07-23T12:00:00Z",
+      },
+    ];
+  });
+
+  await page.getByTestId("open-design-library").click();
+  await page.getByTestId("select-library-design-saved-pair-1").click();
+  await expect(page.getByTestId("upload-back-preview")).toBeVisible();
+
+  await page.getByTestId("upload-front-replace").click();
+  await expect(page.getByTestId("upload-front-dropzone")).toBeVisible();
+  await expect(page.getByTestId("upload-back-preview")).toHaveCount(0);
+  await expect(page.getByTestId("upload-back-dropzone")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
 });
 
 test("accepting a PDF shows the browser PDF preview instead of a file placeholder", async ({

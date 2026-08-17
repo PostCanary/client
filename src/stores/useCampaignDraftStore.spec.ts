@@ -699,6 +699,7 @@ describe("POS-270 — replace uploaded design", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
+    generateCardsMock.mockReset();
   });
 
   it("clears the purchase-facing uploaded asset so a save cannot carry the old artwork", async () => {
@@ -722,7 +723,8 @@ describe("POS-270 — replace uploaded design", () => {
     store.clearUploadedDesign();
 
     expect(store.draft!.design!.uploadedAsset).toBeNull();
-    expect(store.draft!.design!.designSource).toBeUndefined();
+    expect(store.draft!.design!.designSource).toBe("uploaded");
+    expect(store.draft!.designUserEdited).toBe(true);
     expect(store.draft!.design!.customUploadUrl).toBeNull();
     expect(store.isStepComplete(3)).toBe(false);
     expect(store.draft!.completedSteps).not.toContain(4);
@@ -733,9 +735,28 @@ describe("POS-270 — replace uploaded design", () => {
       design?: { uploadedAsset?: { frontUrl?: string } | null; designSource?: string };
     };
     expect(saved.design?.uploadedAsset).toBeNull();
-    expect(saved.design?.designSource).toBeUndefined();
+    expect(saved.design?.designSource).toBe("uploaded");
     expect(JSON.stringify(saved.design)).not.toContain("/media/old-front.png");
     expect(JSON.stringify(saved.design)).not.toContain("/media/old-back.png");
+  });
+
+  it("keeps designSource uploaded so generateCardsForDraft cannot fill the gap", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setUploadedDesign({
+      frontUrl: "/media/old-front.png",
+      backUrl: "/media/old-back.png",
+    } as any);
+
+    store.clearUploadedDesign();
+    await store.generateCardsForDraft();
+
+    expect(generateCardsMock).not.toHaveBeenCalled();
+    expect(store.draft!.design!.designSource).toBe("uploaded");
+    expect(store.draft!.design!.uploadedAsset).toBeNull();
+    expect(store.draft!.design!.sequenceCards).toEqual([]);
+    expect(store.draft!.designUserEdited).toBe(true);
+    expect(store.isStepComplete(3)).toBe(false);
   });
 
   it("does not resurrect the old asset from a later system card write", () => {
@@ -750,8 +771,35 @@ describe("POS-270 — replace uploaded design", () => {
     store.setSequenceCards([makeCard(1, "offer")], { source: "system" });
 
     expect(store.draft!.design!.uploadedAsset).toBeNull();
-    expect(store.draft!.design!.designSource).not.toBe("uploaded");
+    expect(store.draft!.design!.designSource).toBe("uploaded");
     expect(store.isStepComplete(3)).toBe(false);
     expect(JSON.stringify(store.draft!.design)).not.toContain("/media/old-front.png");
+  });
+
+  it("keeps review name, date, and seed settings after Replace", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setReview({
+      campaignName: "Keep this name",
+      schedules: [
+        { cardNumber: 1, scheduledDate: "2026-08-20", estimatedDeliveryDate: "2026-08-25" },
+      ],
+      sendSeedCopy: true,
+      seedAddress: "1 Main St",
+      additionalSeeds: [],
+      paymentMethodId: null,
+      paymentMethodLabel: null,
+    } as any);
+    store.setUploadedDesign({
+      frontUrl: "/media/old-front.png",
+      backUrl: "/media/old-back.png",
+    } as any);
+
+    store.clearUploadedDesign();
+
+    expect(store.draft!.review?.campaignName).toBe("Keep this name");
+    expect(store.draft!.review?.schedules[0]?.scheduledDate).toBe("2026-08-20");
+    expect(store.draft!.review?.seedAddress).toBe("1 Main St");
+    expect(store.isStepComplete(4)).toBe(false);
   });
 });
