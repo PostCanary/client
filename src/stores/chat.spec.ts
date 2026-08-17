@@ -41,14 +41,15 @@ function hasStreamingMessage(store: ReturnType<typeof useChatStore>) {
 describe("useChatStore.send", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    // Clear the module-scope timer before restoring real timers so a
+    // leftover interval from a previous test cannot fire for real.
+    useChatStore().clearConversation();
     vi.restoreAllMocks();
     vi.useRealTimers();
     streamChatMock.mockReset();
     sendChatMock.mockReset();
     saveChatSessionMock.mockReset().mockResolvedValue(undefined);
     captureChatLeadMock.mockReset().mockResolvedValue(undefined);
-    // Module-scope retry timer must not leak across tests.
-    useChatStore().clearConversation();
   });
 
   it("streams a normal SSE success response", async () => {
@@ -124,6 +125,10 @@ describe("useChatStore.send", () => {
     );
     expect(store.loading).toBe(false);
     expect(hasStreamingMessage(store)).toBe(false);
+
+    const blocked = await store.send("second");
+    expect(blocked).toBe("blocked");
+    expect(streamChatMock).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(CHAT_RETRY_AFTER_DEFAULT_SECONDS * 1000);
     expect(store.retryAfter).toBe(0);
@@ -249,6 +254,10 @@ describe("useChatStore.send", () => {
     expect(store.retryAfter).toBe(CHAT_RETRY_AFTER_MAX_SECONDS);
     expect(store.loading).toBe(false);
     expect(hasStreamingMessage(store)).toBe(false);
+
+    const blocked = await store.send("second");
+    expect(blocked).toBe("blocked");
+    expect(streamChatMock).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
   });
