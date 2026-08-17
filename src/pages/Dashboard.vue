@@ -22,7 +22,6 @@ import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue"
 
 import type { TopAreaRanking } from "@/composables/useRunData";
 import { useUploadAndMatch } from "@/composables/useUploadAndMatch";
-import { BRAND } from "@/config/brand";
 
 declare global {
   interface Window {
