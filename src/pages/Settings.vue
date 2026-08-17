@@ -711,9 +711,8 @@ function onReplayTour() {
         </div>
       </section>
 
-      <!-- Billing. Subscriptions are retired (Dustin, 2026-08-15): there is no
-           plan, no status, and nothing to pause or cancel. What a customer
-           needs here is the rate they pay and the card we charge. Rates come
+      <!-- Billing. A subscription covers platform/analysis volume only.
+           Every physical postcard remains a separate paid line item. Rates come
            from GET /api/billing/pricing so this can never drift from
            checkout — never hardcode them. -->
       <section
@@ -724,8 +723,8 @@ function onReplayTour() {
           <div>
             <h2 class="text-sm font-semibold text-slate-900">Billing</h2>
             <p class="mt-1 text-xs text-slate-500">
-              No subscription and no monthly fee. You pay per postcard when you
-              send a campaign, and analytics are free.
+              Your plan covers platform access and analysis-row volume only.
+              Every physical postcard is billed separately when you send.
             </p>
           </div>
 

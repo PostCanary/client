@@ -144,7 +144,7 @@ const sections: FaqSection[] = [
       },
       {
         q: "Is there a file size limit?",
-        a: "File size limits depend on your plan. The Starter plan supports up to 1,000 mailers per month, while the Ultimate plan handles up to 100,000. Check your plan details for exact limits.",
+        a: "Monthly analysis-row limits depend on your plan. Starter includes analysis of up to 1,000 uploaded recipient rows per month, while Ultimate includes up to 100,000. Physical postcards are charged separately.",
       },
       {
         q: "Can I upload just one file (mail only or CRM only)?",
@@ -274,11 +274,15 @@ const sections: FaqSection[] = [
     items: [
       {
         q: "What plans are available?",
-        a: `${BRAND.name} offers tiered plans starting at <strong>$49/month</strong> for smaller mailers and scaling up to <strong>$499/month</strong> for high-volume senders. Each plan includes a set number of mailers per month. Visit the pricing section on our home page for full details.`,
+        a: `${BRAND.name} offers platform and analysis plans from <strong>$49/month</strong> to <strong>$499/month</strong>. Each plan includes a monthly analysis-row limit. Printing, postage, recipient data, and custom design are separate paid line items.`,
       },
       {
-        q: 'What does "mailers per month" mean?',
-        a: "It's the maximum number of mail-file rows you can process in a billing cycle. For example, the Basic plan lets you upload and match up to 5,000 recipient records each month.",
+        q: 'What does "analysis rows per month" mean?',
+        a: "It is the maximum number of uploaded recipient rows you can process and analyze in a billing cycle. For example, Basic includes up to 5,000 analysis rows each month. It does not include 5,000 printed postcards.",
+      },
+      {
+        q: "What is charged when I send physical postcards?",
+        a: "Every physical postcard is charged separately, including for active and trialing plan customers. The campaign quantity sets one volume-tier rate for all pieces. Custom postcard design service is a separate <strong>$199</strong> charge before design work starts.",
       },
       {
         q: "How do I upgrade or downgrade my plan?",

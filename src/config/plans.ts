@@ -17,8 +17,8 @@ export const PLAN_DISPLAY_DETAILS: Record<PlanCode, PlanDisplay> = {
     price: "$49/mo",
     monthlyPrice: 49,
     limit: 1_000,
-    limitLabel: "Up to 1,000 mailers / month",
-    includedLabel: "Up to 1,000 mailers / month",
+    limitLabel: "Up to 1,000 analysis rows / month",
+    includedLabel: "Up to 1,000 analysis rows / month; physical mail billed separately",
   },
   PERFORMANCE: {
     code: "PERFORMANCE",
@@ -26,8 +26,8 @@ export const PLAN_DISPLAY_DETAILS: Record<PlanCode, PlanDisplay> = {
     price: "$99/mo",
     monthlyPrice: 99,
     limit: 5_000,
-    limitLabel: "Up to 5,000 mailers / month",
-    includedLabel: "Up to 5,000 mailers / month",
+    limitLabel: "Up to 5,000 analysis rows / month",
+    includedLabel: "Up to 5,000 analysis rows / month; physical mail billed separately",
   },
   PRECISION: {
     code: "PRECISION",
@@ -35,8 +35,8 @@ export const PLAN_DISPLAY_DETAILS: Record<PlanCode, PlanDisplay> = {
     price: "$199/mo",
     monthlyPrice: 199,
     limit: 25_000,
-    limitLabel: "Up to 25,000 mailers / month",
-    includedLabel: "Up to 25,000 mailers / month",
+    limitLabel: "Up to 25,000 analysis rows / month",
+    includedLabel: "Up to 25,000 analysis rows / month; physical mail billed separately",
   },
   ELITE: {
     code: "ELITE",
@@ -44,8 +44,8 @@ export const PLAN_DISPLAY_DETAILS: Record<PlanCode, PlanDisplay> = {
     price: "$499/mo",
     monthlyPrice: 499,
     limit: 100_000,
-    limitLabel: "Up to 100,000 mailers / month",
-    includedLabel: "Up to 100,000 mailers / month",
+    limitLabel: "Up to 100,000 analysis rows / month",
+    includedLabel: "Up to 100,000 analysis rows / month; physical mail billed separately",
   },
 };
 

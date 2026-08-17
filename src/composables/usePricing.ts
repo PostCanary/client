@@ -32,10 +32,6 @@ function load(): void {
       if (Array.isArray(p.pay_per_send_tiers) && p.pay_per_send_tiers.length) {
         tiers.list = p.pay_per_send_tiers.map((t) => ({ ...t }));
       }
-      rates.INSIGHT = p.subscription_rates_cents.INSIGHT / 100;
-      rates.PERFORMANCE = p.subscription_rates_cents.PERFORMANCE / 100;
-      rates.PRECISION = p.subscription_rates_cents.PRECISION / 100;
-      rates.ELITE = p.subscription_rates_cents.ELITE / 100;
       loaded = true;
     })
     .catch(() => {

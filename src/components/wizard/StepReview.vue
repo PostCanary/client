@@ -98,7 +98,7 @@ async function loadPaymentMethod() {
   paymentMethodLoading.value = true;
   paymentMethodError.value = null;
   try {
-    paymentMethod.value = await fetchPaymentMethodSummary();
+    paymentMethod.value = await fetchPaymentMethodSummary(householdCount.value);
   } catch (err) {
     console.error("[StepReview] Failed to load payment method:", err);
     paymentMethod.value = null;

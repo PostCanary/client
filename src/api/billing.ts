@@ -15,7 +15,7 @@ export interface CheckoutSessionResult {
 }
 
 export type PlanCode = "INSIGHT" | "PERFORMANCE" | "PRECISION" | "ELITE";
-export type BillingType = "subscription_included" | "internal" | "pay_per_send";
+export type BillingType = "internal" | "pay_per_send";
 
 export interface PaymentMethodSummary {
   billing_type: BillingType;
@@ -49,6 +49,10 @@ export interface PayPerSendTier {
 }
 
 export interface PricingPayload {
+  contract_version: string;
+  currency: "usd";
+  subscription_covers: "platform_and_analysis_volume_only";
+  physical_mail_charged_separately: true;
   // The rate quoted when the campaign size is unknown — the HIGHEST tier.
   pay_per_send_cents: number;
   // POS-230: the published price sheet. Optional so an older server (or a
@@ -57,6 +61,9 @@ export interface PricingPayload {
   subscription_rates_cents: Record<PlanCode, number>;
   // Optional until the server ships it (Flow v2 $199 design fee).
   custom_design_fee_cents?: number;
+  tax_policy: "not_collected";
+  refund_policy: string;
+  credit_policy: "explicit_internal_entitlement_only";
 }
 
 export async function fetchPricing(): Promise<PricingPayload> {
@@ -154,7 +161,6 @@ export async function createBillingPortalSession(): Promise<CheckoutSessionResul
 }
 
 const BILLING_TYPES = new Set<BillingType>([
-  "subscription_included",
   "internal",
   "pay_per_send",
 ]);
@@ -188,10 +194,7 @@ export function normalizePaymentMethodSummary(
     !Number.isSafeInteger(value.unit_rate_cents) ||
     value.unit_rate_cents < 0 ||
     value.currency !== "usd" ||
-    value.required !== (billingType === "pay_per_send") ||
-    (billingType === "subscription_included" && planCode === null) ||
-    (billingType === "pay_per_send" && planCode !== null) ||
-    (billingType === "internal" && value.unit_rate_cents !== 0)
+    value.required !== (billingType === "pay_per_send")
   ) {
     return null;
   }
@@ -210,9 +213,15 @@ export function normalizePaymentMethodSummary(
   };
 }
 
-export async function fetchPaymentMethodSummary(): Promise<PaymentMethodSummary> {
+export async function fetchPaymentMethodSummary(
+  cardCount?: number,
+): Promise<PaymentMethodSummary> {
+  const query =
+    Number.isSafeInteger(cardCount) && (cardCount ?? 0) > 0
+      ? `?card_count=${cardCount}`
+      : "";
   const summary = normalizePaymentMethodSummary(
-    await api<unknown>("/api/billing/payment-method"),
+    await api<unknown>(`/api/billing/payment-method${query}`),
   );
   if (!summary) throw new Error("invalid_billing_summary");
   return summary;

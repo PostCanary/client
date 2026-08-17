@@ -835,8 +835,6 @@ export interface MailCampaignCard {
 // campaign and applied to every card in it: $0.89 up to 1,500 cards and
 // $0.85 from 1,501 up. `payPerSend` is the no-count fallback and must stay
 // the HIGHER tier so nothing is ever under-quoted.
-// Subscriptions are retired (Dustin, 2026-08-15); the plan rates below
-// remain only for orgs still carrying a plan.
 // Components must read rates via usePricing(), which fetches from the
 // server and falls back to these values only while offline/loading.
 // Keys match PlanCode from @/api/billing (INSIGHT/PERFORMANCE/PRECISION/ELITE)
@@ -849,10 +847,6 @@ export const PAY_PER_SEND_TIERS = [
 
 export const PRICING = {
   payPerSend: 0.89,
-  INSIGHT: 0.79,
-  PERFORMANCE: 0.79,
-  PRECISION: 0.79,
-  ELITE: 0.79,
   // Flow v2: one-time professional design fee ("buy a design from our team,
   // $199"). Server-confirmable via custom_design_fee_cents once it ships.
   customDesignFee: 199,
