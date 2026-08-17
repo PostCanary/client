@@ -63,14 +63,15 @@ export class ChatApiError extends Error {
 }
 
 /**
- * Read `Retry-After` as delta-seconds. Returns undefined when the header is
- * missing, empty, negative, non-numeric, or an HTTP-date (CORS and CDNs
- * often strip or rewrite this header; the store must not depend on it).
+ * Read `Retry-After` as delta-seconds. Returns undefined when the value is
+ * missing, empty, negative, non-numeric, or an HTTP-date. Production chat
+ * is cross-origin and CORS may strip this header, so callers must not
+ * depend on a defined result — the store applies a default and a clamp.
  */
-export function parseRetryAfter(res: Response): number | undefined {
-  const header = res.headers.get("Retry-After")?.trim();
-  if (!header) return undefined;
-  const seconds = Number(header);
+export function parseRetryAfter(header: string | null | undefined): number | undefined {
+  const trimmed = header?.trim();
+  if (!trimmed) return undefined;
+  const seconds = Number(trimmed);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }
 
@@ -121,7 +122,7 @@ export async function streamChat(
     // text a streaming caller would otherwise expect. A generic network/5xx
     // error without a JSON body just falls through to `serverMessage`
     // undefined below.
-    const retryAfter = parseRetryAfter(res);
+    const retryAfter = parseRetryAfter(res.headers.get("Retry-After"));
     let serverMessage: string | undefined;
     const contentType = res.headers.get("Content-Type") || "";
     if (contentType.includes("json")) {

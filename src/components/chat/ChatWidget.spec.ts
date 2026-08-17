@@ -51,17 +51,24 @@ describe("ChatWidget handleSend", () => {
       new ChatApiError(429, "rate limited", { retryAfter: 60 })
     );
 
+    const pinia = createPinia();
+    setActivePinia(pinia);
     const store = useChatStore();
     store.open = true;
 
     const wrapper = mount(ChatWidget, {
       attachTo: document.body,
       global: {
-        stubs: { ChatMessage: true },
+        plugins: [pinia],
+        stubs: {
+          ChatMessage: true,
+          Teleport: { template: "<div><slot /></div>" },
+        },
       },
     });
 
     const textarea = wrapper.find("textarea");
+    expect(textarea.exists()).toBe(true);
     await textarea.setValue("please restore this");
     await wrapper.find(".chat-panel__send").trigger("click");
     await flushPromises();

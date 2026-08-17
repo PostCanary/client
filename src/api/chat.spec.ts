@@ -282,47 +282,39 @@ describe("streamChat", () => {
 });
 
 describe("parseRetryAfter", () => {
-  function responseWithRetryAfter(value?: string) {
-    return new Response(null, {
-      status: 429,
-      headers: value === undefined ? {} : { "Retry-After": value },
-    });
-  }
-
   it("returns undefined when the header is missing", () => {
-    expect(parseRetryAfter(responseWithRetryAfter())).toBeUndefined();
+    expect(parseRetryAfter(null)).toBeUndefined();
+    expect(parseRetryAfter(undefined)).toBeUndefined();
   });
 
   it("returns undefined when the header is empty or whitespace", () => {
-    expect(parseRetryAfter(responseWithRetryAfter(""))).toBeUndefined();
-    expect(parseRetryAfter(responseWithRetryAfter("   "))).toBeUndefined();
+    expect(parseRetryAfter("")).toBeUndefined();
+    expect(parseRetryAfter("   ")).toBeUndefined();
   });
 
   it("parses a numeric delta-seconds value", () => {
-    expect(parseRetryAfter(responseWithRetryAfter("60"))).toBe(60);
-    expect(parseRetryAfter(responseWithRetryAfter(" 60 "))).toBe(60);
+    expect(parseRetryAfter("60")).toBe(60);
+    expect(parseRetryAfter(" 60 ")).toBe(60);
   });
 
   it("returns undefined for a malformed value", () => {
-    expect(parseRetryAfter(responseWithRetryAfter("soon"))).toBeUndefined();
-    expect(parseRetryAfter(responseWithRetryAfter("60s"))).toBeUndefined();
+    expect(parseRetryAfter("soon")).toBeUndefined();
+    expect(parseRetryAfter("60s")).toBeUndefined();
   });
 
   it("returns undefined for a negative value", () => {
-    expect(parseRetryAfter(responseWithRetryAfter("-5"))).toBeUndefined();
+    expect(parseRetryAfter("-5")).toBeUndefined();
   });
 
   it("returns undefined for an HTTP-date value", () => {
-    expect(
-      parseRetryAfter(responseWithRetryAfter("Wed, 21 Oct 2015 07:28:00 GMT"))
-    ).toBeUndefined();
+    expect(parseRetryAfter("Wed, 21 Oct 2015 07:28:00 GMT")).toBeUndefined();
   });
 
   it("returns the raw seconds for a very large value (store clamps)", () => {
-    expect(parseRetryAfter(responseWithRetryAfter("3600"))).toBe(3600);
+    expect(parseRetryAfter("3600")).toBe(3600);
   });
 
   it("returns 0 for an explicit zero", () => {
-    expect(parseRetryAfter(responseWithRetryAfter("0"))).toBe(0);
+    expect(parseRetryAfter("0")).toBe(0);
   });
 });
