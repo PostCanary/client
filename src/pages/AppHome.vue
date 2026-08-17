@@ -188,15 +188,15 @@ onMounted(() => {
  * button and slightly growing in size" */
 .home-card:hover,
 .home-card:focus-visible {
-  background: #0f766e;
-  border-color: #0f766e;
+  background: var(--app-teal-hover, #3aa893);
+  border-color: var(--app-teal-hover, #3aa893);
   color: #fff;
   transform: scale(1.02);
   box-shadow: 0 10px 28px rgba(71, 191, 169, 0.35);
 }
 
 .home-card:focus-visible {
-  outline: 2px solid #115e59;
+  outline: 2px solid var(--app-teal, #47bfa9);
   outline-offset: 2px;
 }
 
