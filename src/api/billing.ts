@@ -32,11 +32,6 @@ export interface PaymentMethodSummary {
 }
 
 /* ------------------------------------------------------------------
- * Tiered subscription checkout
- * Backend: POST /api/billing/create-checkout-session
- * ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------
  * Per-postcard pricing (server-owned source of truth)
  * Backend: GET /api/billing/pricing  (public, cents)
  * ------------------------------------------------------------------ */
@@ -48,28 +43,22 @@ export interface PayPerSendTier {
   rate_cents: number;
 }
 
-export interface AnalyticsPlan {
-  name: string;
-  monthly_cents: number;
-  analysis_rows: number;
-}
-
 export interface PricingPayload {
   contract_version: string;
   currency: "usd";
-  subscription_covers: "platform_and_analysis_volume_only";
-  physical_mail_charged_separately: true;
+  billing_model: "pay_as_you_go_per_send";
+  subscription_fee_cents: 0;
+  subscription_covers: "nothing";
+  physical_mail_charged_per_send: true;
   // The rate quoted when the campaign size is unknown — the HIGHEST tier.
   pay_per_send_cents: number;
   // POS-230: the published price sheet. Optional so an older server (or a
   // cached payload) still parses; callers fall back to PAY_PER_SEND_TIERS.
   pay_per_send_tiers?: PayPerSendTier[];
-  analytics_plans: Record<PlanCode, AnalyticsPlan>;
-  subscription_rates_cents: Record<PlanCode, number>;
   // Optional until the server ships it (Flow v2 $199 design fee).
   custom_design_fee_cents?: number;
   tax_policy: "not_collected";
-  refund_policy: string;
+  refund_policy: "operator_recorded_only";
   credit_policy: "explicit_internal_entitlement_only";
 }
 
@@ -91,6 +80,7 @@ export interface PaywallConfig {
 }
 
 export interface BillingState {
+  legacy_subscription_present?: boolean;
   subscription_status?: string | null;
   is_subscribed?: boolean;
   can_run_matching?: boolean;
@@ -103,49 +93,8 @@ export interface BillingState {
   pause_at_period_end?: boolean;
 }
 
-/**
- * Create a Stripe Checkout session (tiered subscription).
- *
- * Backend route: POST /api/billing/create-checkout-session
- */
-export async function createCheckoutSession(
-  planCode: PlanCode,
-  source: string = "dashboard_paywall",
-  runId?: string | null,
-  metaEventId?: string,
-): Promise<CheckoutSessionResult> {
-  const body: Record<string, unknown> = {
-    plan_code: planCode,
-    source,
-  };
-
-  if (runId) {
-    body.run_id = runId; // optional hint so we can resume on success
-  }
-  if (metaEventId) {
-    body.meta_event_id = metaEventId;
-  }
-
-  const data = await postJson<CheckoutSessionRaw>(
-    "/api/billing/create-checkout-session",
-    body,
-    { withCredentials: true }
-  );
-
-  const url =
-    (data.checkout_url && String(data.checkout_url)) ||
-    (data.url && String(data.url)) ||
-    null;
-
-  if (!url) {
-    console.error("[billing.api] No checkout URL returned from backend", data);
-  }
-
-  return { url };
-}
-
 /* ------------------------------------------------------------------
- * Billing portal (manage subscription)
+ * Billing portal (legacy records, invoices, and payment methods)
  * Backend: POST /api/billing/create-portal-session
  * ------------------------------------------------------------------ */
 
@@ -252,36 +201,6 @@ export async function createSetupSession(
   }
 
   return { url };
-}
-
-export async function pauseSubscription(): Promise<{ billing?: BillingState | null }> {
-  return postJson<{ billing?: BillingState | null }>(
-    "/api/billing/pause-subscription",
-    {}
-  );
-}
-
-export async function changeSubscriptionPlan(
-  planCode: PlanCode
-): Promise<{ billing?: BillingState | null }> {
-  return postJson<{ billing?: BillingState | null }>(
-    "/api/billing/change-plan",
-    { plan_code: planCode }
-  );
-}
-
-export async function resumeSubscription(): Promise<{ billing?: BillingState | null }> {
-  return postJson<{ billing?: BillingState | null }>(
-    "/api/billing/resume-subscription",
-    {}
-  );
-}
-
-export async function cancelSubscription(): Promise<{ billing?: BillingState | null }> {
-  return postJson<{ billing?: BillingState | null }>(
-    "/api/billing/cancel-subscription",
-    {}
-  );
 }
 
 /* ------------------------------------------------------------------

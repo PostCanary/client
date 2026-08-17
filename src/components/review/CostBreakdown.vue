@@ -71,9 +71,10 @@ const isCovered = computed(
         ${{ perCardRate!.toFixed(2) }} per physical postcard.
       </template>
       <template v-else>
-        Server-confirmed physical-mail rate. Subscriptions cover platform and
-        analysis volume only. This amount is authorized before recipient data is
-        purchased and captured before fulfillment.
+        Server-confirmed pay-as-you-go rate. The subscription fee is $0, and no
+        plan or legacy subscription status offsets this send. This amount is
+        authorized before recipient data is purchased and captured before
+        fulfillment.
       </template>
     </p>
   </div>

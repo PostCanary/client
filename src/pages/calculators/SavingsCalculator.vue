@@ -46,7 +46,7 @@ const inputs = ref<SavingsCalculatorInputs>({
 // Track if user has calculated
 const hasCalculated = ref(false);
 
-// Get recommended tier based on volume
+// The PAYG contract has one $0-subscription platform option.
 const getRecommendedTier = (volume: number): PricingTier => {
   const tier = PRICING_TIERS.find((t) => volume <= t.maxAnalysisRows);
   // Always return the last tier if no match found
@@ -150,9 +150,9 @@ const faqContent: IndustryFAQContent = {
         "Manual data matching in Excel typically takes 2-4+ hours per session—comparing addresses, handling formatting differences, and trying to find matches. PostCanary does this automatically in seconds. Upload your files, and results appear in under 2 minutes.",
     },
     {
-      question: "What's included in each PostCanary tier?",
+      question: "Is there a PostCanary subscription fee?",
       answer:
-        "All tiers include the same core features: full ROI calculation, conversion rate tracking, revenue attribution, and geographic performance analysis (top cities/zip codes). Tiers differ only by monthly mail volume capacity.",
+        "No. The subscription fee is $0. There are no paid plans, free tiers, or monthly analysis-row entitlements. Physical-mail sends are pay as you go.",
     },
     {
       question: "How accurate is PostCanary compared to manual matching?",
@@ -160,14 +160,14 @@ const faqContent: IndustryFAQContent = {
         "PostCanary achieves 95%+ match accuracy using advanced address normalization. It handles variations like 'Ave' vs 'Avenue', unit numbers, and common data entry differences that make manual matching error-prone.",
     },
     {
-      question: "What if I exceed my tier's mail volume?",
+      question: "What if my mail volume grows?",
       answer:
-        "You can upgrade your tier at any time. There are no overage charges or penalties—just move to the next tier when your volume grows.",
+        "The campaign quantity selects the published per-postcard volume rate. You do not need to upgrade a subscription plan.",
     },
     {
-      question: "Is there a free trial?",
+      question: "Is there a free tier?",
       answer:
-        "Yes! You can sign up and try PostCanary with your actual data before committing to a subscription. See your real ROI numbers before you pay.",
+        "No. There is no subscription tier at all. The subscription fee is $0, and you pay for physical-mail sends and optional custom design.",
     },
   ],
 };
@@ -349,7 +349,7 @@ const faqContent: IndustryFAQContent = {
 
           <!-- Results Section -->
           <div v-if="hasCalculated" class="mt-12 space-y-8 animate-fade-in">
-            <!-- Recommended Tier Banner -->
+            <!-- PAYG contract banner -->
             <div
               class="bg-gradient-to-r from-[var(--mkt-teal)]/80 to-[var(--mkt-teal)]/60 rounded-[14px] p-6 sm:p-8 text-white"
             >
@@ -358,19 +358,14 @@ const faqContent: IndustryFAQContent = {
                   <div class="flex items-center gap-2 mb-2">
                     <Award class="h-6 w-6" />
                     <span class="text-sm font-medium text-white/80"
-                      >Recommended for You</span
+                      >PostCanary pricing</span
                     >
                   </div>
                   <h3 class="text-2xl sm:text-3xl font-bold">
-                    {{ results.recommendedTier.name }}
-                    - {{ formatCurrency(results.recommendedTier.monthlyPrice) }}/mo
+                    $0 Subscription Fee
                   </h3>
                   <p class="text-white/80 mt-1">
-                    {{
-                      results.recommendedTier.maxAnalysisRows === Infinity
-                        ? "Unlimited analysis rows/month"
-                        : `Up to ${formatNumber(results.recommendedTier.maxAnalysisRows)} analysis rows/month`
-                    }}
+                    Pay only when you send physical mail.
                   </p>
                 </div>
                 <button
@@ -432,7 +427,7 @@ const faqContent: IndustryFAQContent = {
                   </h4>
                   <div class="space-y-3">
                     <div class="flex justify-between">
-                      <span class="text-[var(--mkt-text-muted)]">Monthly subscription</span>
+                      <span class="text-[var(--mkt-text-muted)]">Subscription fee</span>
                       <span class="font-medium text-[var(--mkt-text)]">{{
                         formatCurrency(results.monthlyPostCanaryCost)
                       }}</span>
@@ -654,7 +649,7 @@ const faqContent: IndustryFAQContent = {
                 class="inline-flex items-center gap-2 rounded-lg bg-[var(--mkt-yellow)] px-8 py-4 text-lg font-semibold text-[var(--mkt-bg-alt)] shadow-md hover:brightness-110 cursor-pointer transition-all"
               >
                 <Zap class="h-5 w-5" />
-                Get Started Free
+                Get Started
               </button>
             </div>
           </div>
@@ -662,7 +657,7 @@ const faqContent: IndustryFAQContent = {
       </div>
     </section>
 
-    <!-- Pricing Tiers Reference -->
+    <!-- PAYG pricing reference -->
     <section class="bg-[var(--mkt-bg-alt)] py-16 sm:py-20">
       <div
         class="mx-auto max-w-[1660px] 2xl:max-w-[1760px] px-4 sm:px-6 md:px-10 xl:px-16"
@@ -674,7 +669,7 @@ const faqContent: IndustryFAQContent = {
             Simple, Transparent Pricing
           </h2>
           <p class="text-[var(--mkt-text-muted)] mt-4">
-            Scale only when you need to. No hidden fees.
+            $0 subscription fee. Physical mail is pay as you go.
           </p>
         </div>
 
@@ -692,11 +687,7 @@ const faqContent: IndustryFAQContent = {
               ${{ tier.monthlyPrice }}
             </div>
             <div class="text-xs text-[var(--mkt-text-muted)] mt-1">
-              {{
-                tier.maxAnalysisRows === Infinity
-                  ? "Unlimited analysis rows/month"
-                  : `Up to ${formatNumber(tier.maxAnalysisRows)} analysis rows/month`
-              }}
+              No monthly analysis-row tier
             </div>
             <div
               v-if="tier.name === results.recommendedTier.name && hasCalculated"

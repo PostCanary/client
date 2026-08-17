@@ -5,7 +5,6 @@ import { computed } from "vue";
 
 import {
   formatTierRange,
-  useAnalyticsPlans,
   usePayPerSendTiers,
   usePricing,
 } from "@/composables/usePricing";
@@ -13,7 +12,6 @@ import { formatCurrency, formatNumber } from "@/utils/format";
 
 const pricing = usePricing();
 const targetedTiers = usePayPerSendTiers();
-const analyticsPlans = useAnalyticsPlans();
 const volumeTierNote = computed(() => {
   const tier = targetedTiers.list[1];
   return tier
@@ -31,7 +29,7 @@ const volumeTierNote = computed(() => {
   >
     <!-- Full-width band, per mockup -->
     <div class="pricing-band">
-      <p>Subscriptions cover platform and analysis. Physical mail is billed separately.</p>
+      <p>$0 Subscription Fee — pay only when you send.</p>
     </div>
 
     <div
@@ -65,20 +63,16 @@ const volumeTierNote = computed(() => {
           </p>
         </article>
 
-        <!-- Analytics -->
+        <!-- Platform -->
         <article class="pricing-card">
           <h3 class="pricing-card-title">Platform &amp; Analytics</h3>
-          <ul v-if="analyticsPlans.list.length" class="pricing-tiers">
-            <li v-for="plan in analyticsPlans.list" :key="plan.code">
-              <span>{{ plan.name }} · {{ formatNumber(plan.analysis_rows) }} rows</span>
-              <span class="pricing-tier-price">
-                {{ formatCurrency(plan.monthly_cents / 100) }}/mo
-              </span>
-            </li>
-          </ul>
-          <p v-else class="pricing-note">Loading server-confirmed plans…</p>
+          <div class="pricing-flat">
+            <span class="pricing-flat-label">Subscription fee</span>
+            <span class="pricing-flat-price">$0</span>
+          </div>
           <p class="pricing-note">
-            Monthly analysis-row capacity only. Physical postcards are billed separately.
+            No paid plans, free tiers, or monthly analysis-row entitlements.
+            Physical postcards are pay as you go.
           </p>
         </article>
 

@@ -104,9 +104,8 @@ export function useUploadAndMatch(
   } = useBilling(route, router);
 
   const isPreviewMode = ref(false);
-  const billingReadOnly = computed(
-    () => String(auth.billing?.subscription_status || "").toLowerCase() === "paused",
-  );
+  // Legacy subscription states never gate platform access.
+  const billingReadOnly = computed(() => false);
 
   const paywallConfigOverride = ref<BillingPaywallConfig | null>(null);
 
@@ -137,7 +136,6 @@ export function useUploadAndMatch(
       secondaryLabel: config.secondaryLabel ?? config.secondary_label,
       bullets: Array.isArray(config.bullets) ? config.bullets : [],
       tierPicker: Boolean(config.tierPicker ?? config.tier_picker),
-      defaultPlanCode: config.defaultPlanCode ?? config.default_plan_code,
       tierHint: config.tierHint ?? config.tier_hint,
     };
   }
@@ -281,11 +279,12 @@ export function useUploadAndMatch(
     if (reason === "usage_limit_exceeded") {
       message.warning(
         data?.message ||
-          "This upload would put you over your plan's mail limit. Upgrade to normalize and match these files.",
+          "The server returned a retired usage-tier gate. Refresh and try again.",
       );
     } else if (reason === "paused_subscription") {
       message.warning(
-        data?.message || "Uploads are paused until you resume a paid plan.",
+        data?.message ||
+          "The server returned a retired subscription gate. Refresh and try again.",
       );
     }
 

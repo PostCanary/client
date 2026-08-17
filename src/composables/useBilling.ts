@@ -3,8 +3,7 @@ import { ref, computed, watch } from "vue";
 import type { RouteLocationNormalizedLoaded, Router } from "vue-router";
 
 import { useAuthStore } from "@/stores/auth";
-import type { PlanCode } from "@/api/billing";
-import { createCheckoutSession, createBillingPortalSession } from "@/api/billing";
+import { createSetupSession } from "@/api/billing";
 import { captureEvent } from "@/composables/usePostHog";
 
 interface BackendPaywallConfig {
@@ -25,7 +24,6 @@ interface BackendPaywallConfig {
 
   // tier UX (optional from backend)
   tier_picker?: boolean;
-  default_plan_code?: PlanCode;
   tier_hint?: string;
 }
 
@@ -38,16 +36,7 @@ export interface PaywallConfig {
   bullets?: string[];
 
   tierPicker?: boolean;
-  defaultPlanCode?: PlanCode;
   tierHint?: string;
-}
-
-function asPlanCode(v: unknown): PlanCode | null {
-  const s = String(v || "").trim().toUpperCase();
-  if (s === "INSIGHT" || s === "PERFORMANCE" || s === "PRECISION" || s === "ELITE") {
-    return s as PlanCode;
-  }
-  return null;
 }
 
 export function useBilling(route: RouteLocationNormalizedLoaded, router: Router) {
@@ -78,7 +67,6 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
       bullets: cfg.bullets ?? [],
 
       tierPicker: !!cfg.tier_picker,
-      defaultPlanCode: cfg.default_plan_code,
       tierHint: cfg.tier_hint,
     };
 
@@ -93,38 +81,8 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
     () => showPaywall.value || showPaymentFailed.value
   );
 
-  // Watch for “payment failed” statuses from backend billing
-  watch(
-    () => billing.value,
-    (b) => {
-      if (!b) return;
-      const status = String(b.subscription_status || (b as any).status || "").toLowerCase();
-      if (["past_due", "unpaid", "incomplete"].includes(status)) {
-        showPaymentFailed.value = true;
-      }
-    },
-    { immediate: true }
-  );
-
-  // Success banner after returning from Stripe
-  const billingQuery = computed(() => route.query.billing as string | undefined);
-  const billingDismissed = ref(false);
-
-  const showBillingSuccess = computed(
-    () =>
-      !billingDismissed.value &&
-      billingQuery.value === "success" &&
-      !!billing.value?.is_subscribed
-  );
-
-  // Track subscription success when returning from Stripe
-  watch(showBillingSuccess, (isSuccess) => {
-    if (isSuccess) {
-      captureEvent("subscription_completed", {
-        plan: billing.value?.plan_code,
-      });
-    }
-  });
+  // Legacy subscription return parameters do not create a PAYG entitlement.
+  const showBillingSuccess = computed(() => false);
 
   // Track payment failures
   watch(showPaymentFailed, (isFailed) => {
@@ -136,48 +94,16 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
   });
 
   function dismissBillingSuccess() {
-    billingDismissed.value = true;
     const { billing: _billing, ...rest } = route.query;
     router.replace({ query: rest }).catch(() => {});
   }
-
-  /**
-   * Still used for query-driven checkout (startCheckout).
-   * Priority:
-   *   1) ?plan=...
-   *   2) backend config defaultPlanCode
-   *   3) fallback INSIGHT
-   */
-  const defaultPlanCode = computed<PlanCode>(() => {
-    const q = asPlanCode(route.query.plan);
-    if (q) return q;
-
-    const fromCfg = asPlanCode(paywallConfig.value?.defaultPlanCode);
-    if (fromCfg) return fromCfg;
-
-    return "INSIGHT";
-  });
 
   function onRequireSubscription() {
     showPaywall.value = true;
   }
 
-  /**
-   * PaywallModal must emit: emit("primary", { planCode })
-   */
-  async function onPaywallPrimary(payload?: { planCode?: PlanCode }) {
-    if (paywallBusy.value) return;
-    paywallBusy.value = true;
-
-    try {
-      const planCode = payload?.planCode ?? defaultPlanCode.value;
-      captureEvent("checkout_started", { plan: planCode, source: "dashboard_paywall" });
-      const { url } = await createCheckoutSession(planCode, "dashboard_paywall");
-      if (url) window.location.href = url;
-      else console.error("[DashboardBilling] No checkout URL received");
-    } finally {
-      paywallBusy.value = false;
-    }
+  function onPaywallPrimary() {
+    showPaywall.value = false;
   }
 
   function onPaywallSecondary() {
@@ -189,10 +115,10 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
     paymentFailedBusy.value = true;
 
     try {
-      const { url } = await createBillingPortalSession();
+      const { url } = await createSetupSession("/app/settings");
 
       if (!url) {
-        console.error("[Billing] No portal URL from createBillingPortalSession");
+        console.error("[Billing] No card setup URL");
         return;
       }
 
@@ -211,26 +137,9 @@ export function useBilling(route: RouteLocationNormalizedLoaded, router: Router)
   async function maybeStartCheckoutFromQuery() {
     const src = (route.query.startCheckout as string) || "";
     if (!src) return;
-
-    if (!auth.initialized && !auth.loading) {
-      await auth.fetchMe();
-    }
-    if (!auth.isAuthenticated) return;
-
-    const planFromQuery = asPlanCode(route.query.plan);
-    const planCode: PlanCode = planFromQuery ?? defaultPlanCode.value;
-
-    try {
-      captureEvent("checkout_started", { plan: planCode, source: src });
-      const { url } = await createCheckoutSession(planCode, src);
-      if (!url) {
-        console.error("[Billing] No checkout URL from createCheckoutSession (startCheckout=%s)", src);
-        return;
-      }
-      window.location.href = url;
-    } catch (err) {
-      console.error("[Billing] Failed to start checkout from query:", err);
-    }
+    captureEvent("retired_subscription_checkout_ignored", { source: src });
+    const { startCheckout: _startCheckout, plan: _plan, ...rest } = route.query;
+    await router.replace({ query: rest }).catch(() => {});
   }
 
   return {

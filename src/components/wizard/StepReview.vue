@@ -1197,7 +1197,7 @@ async function approve() {
           class="text-sm text-[#0b2d50]"
           data-testid="payment-method-covered"
         >
-          Included with your {{ paymentMethod.plan_code || "account" }} plan
+          Covered by an explicit internal credit
         </div>
         <div
           v-else

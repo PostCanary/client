@@ -178,7 +178,7 @@ function uploadErrorMessage(err: unknown, fileName: string): string {
     return "Please sign in again to upload your design.";
   }
   if (e.status === 402) {
-    return "A subscription is required to upload designs.";
+    return "A payment method is required before this paid request can continue.";
   }
   return `Couldn't upload "${fileName}". Please try again.`;
 }

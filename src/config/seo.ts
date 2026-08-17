@@ -13,7 +13,7 @@ export const marketingRoutes: RouteSeoData[] = [
     path: "/",
     title: "Send Direct Mail & EDDM Postcards, Track Every Result - PostCanary",
     description:
-      "Send targeted direct mail postcards and track every conversion. Subscription plans cover platform analytics; recipient data, printing, and postage are billed per postcard.",
+      "Send targeted direct mail postcards and track every conversion. $0 subscription fee; recipient data, printing, and postage are billed pay as you go per postcard.",
   },
   {
     path: "/attribution-gap-calculator",

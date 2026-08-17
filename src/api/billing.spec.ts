@@ -40,7 +40,7 @@ describe("pay-per-send billing API", () => {
     expect(result.unit_rate_cents).toBe(89);
   });
 
-  it("keeps the analytics plan snapshot while requiring physical-mail payment", async () => {
+  it("keeps a legacy plan snapshot while requiring physical-mail payment", async () => {
     vi.mocked(api).mockResolvedValue({
       billing_type: "pay_per_send",
       currency: "usd",

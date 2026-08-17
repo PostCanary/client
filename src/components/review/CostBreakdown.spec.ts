@@ -6,30 +6,20 @@ vi.mock("@/api/billing", async (importOriginal) => {
   return {
     ...actual,
     fetchPricing: vi.fn().mockResolvedValue({
-      contract_version: "2026-08-17",
+      contract_version: "2026-08-17-payg",
       currency: "usd",
-      subscription_covers: "platform_and_analysis_volume_only",
-      physical_mail_charged_separately: true,
+      billing_model: "pay_as_you_go_per_send",
+      subscription_fee_cents: 0,
+      subscription_covers: "nothing",
+      physical_mail_charged_per_send: true,
       pay_per_send_cents: 89,
       pay_per_send_tiers: [
         { min_cards: 1, max_cards: 1500, rate_cents: 89 },
         { min_cards: 1501, max_cards: null, rate_cents: 85 },
       ],
-      analytics_plans: {
-        INSIGHT: { name: "Starter", monthly_cents: 4900, analysis_rows: 1000 },
-        PERFORMANCE: { name: "Basic", monthly_cents: 9900, analysis_rows: 5000 },
-        PRECISION: { name: "Pro", monthly_cents: 19900, analysis_rows: 25000 },
-        ELITE: { name: "Ultimate", monthly_cents: 49900, analysis_rows: 100000 },
-      },
-      subscription_rates_cents: {
-        INSIGHT: 4900,
-        PERFORMANCE: 9900,
-        PRECISION: 19900,
-        ELITE: 49900,
-      },
       custom_design_fee_cents: 19900,
       tax_policy: "not_collected",
-      refund_policy: "full_before_fulfillment_cutoff",
+      refund_policy: "operator_recorded_only",
       credit_policy: "explicit_internal_entitlement_only",
     }),
   };
@@ -63,7 +53,7 @@ describe("canonical cost breakdown", () => {
       "$89.00",
     );
     expect(wrapper.text()).toContain(
-      "Subscriptions cover platform and analysis volume only",
+      "The subscription fee is $0",
     );
     expect(wrapper.text()).not.toContain("Covered by your");
   });

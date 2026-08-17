@@ -8,7 +8,6 @@ import { useSidebar } from '@/composables/useSidebar'
 import { captureEvent } from '@/composables/usePostHog'
 import CampaignManageModal from '@/components/CampaignManageModal.vue'
 import OrgSwitcher from '@/components/OrgSwitcher.vue'
-import SubscriptionStateBanner from '@/components/billing/SubscriptionStateBanner.vue'
 
 /* Icons */
 import {
@@ -242,7 +241,6 @@ function onToggleClick() {
     <!-- Campaign manage modal -->
     <CampaignManageModal :open="showManageCampaigns" @close="showManageCampaigns = false" />
   </div>
-  <SubscriptionStateBanner />
   </div>
 </template>
 

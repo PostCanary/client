@@ -6,10 +6,8 @@ import { useMessage } from "naive-ui";
 
 import { useUserProfile } from "@/composables/useUserProfile";
 import {
-  createBillingPortalSession,
   createSetupSession,
   fetchPaymentMethodSummary,
-  type BillingState,
   type PaymentMethodSummary,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
@@ -173,10 +171,6 @@ async function onSaveReturnAddress() {
     returnAddressSaving.value = false;
   }
 }
-// `billing` is still read from /auth/me elsewhere in the app (paywall,
-// read-only gating). Settings no longer surfaces subscription state.
-const billing = computed<BillingState | null>(() => (auth.billing as BillingState | null) ?? null);
-const hasStripeCustomer = computed(() => !!billing.value?.plan_code);
 const canManageBilling = computed(() => !!auth.orgId && isOrgAdmin.value);
 const paymentMethodActionLabel = computed(() =>
   paymentMethod.value?.has_payment_method
@@ -279,11 +273,7 @@ async function onManageBilling() {
   billingBusy.value = true;
 
   try {
-    // Orgs Stripe already knows get the portal (card + invoice history);
-    // everyone else goes straight to card setup.
-    const { url } = hasStripeCustomer.value
-      ? await createBillingPortalSession()
-      : await createSetupSession("/app/settings");
+    const { url } = await createSetupSession("/app/settings");
     if (url) {
       window.location.href = url;
       return;
@@ -291,21 +281,7 @@ async function onManageBilling() {
     console.error("[Settings] No billing URL returned from backend");
     message.error("Unable to open billing right now.");
   } catch (err: any) {
-    if (
-      hasStripeCustomer.value &&
-      err?.data?.error === "no_stripe_customer"
-    ) {
-      try {
-        const { url } = await createSetupSession("/app/settings");
-        if (url) {
-          window.location.href = url;
-          return;
-        }
-      } catch (setupErr) {
-        console.error("[Settings] Failed to open card setup:", setupErr);
-      }
-    }
-    console.error("[Settings] Failed to open billing portal:", err);
+    console.error("[Settings] Failed to open card setup:", err);
     message.error("Unable to open billing right now.");
   } finally {
     billingBusy.value = false;
@@ -711,8 +687,8 @@ function onReplayTour() {
         </div>
       </section>
 
-      <!-- Billing. A subscription covers platform/analysis volume only.
-           Every physical postcard remains a separate paid line item. Rates come
+      <!-- Billing. The subscription fee is $0 and every physical postcard is
+           a pay-as-you-go line item. Rates come
            from GET /api/billing/pricing so this can never drift from
            checkout — never hardcode them. -->
       <section
@@ -723,8 +699,8 @@ function onReplayTour() {
           <div>
             <h2 class="text-sm font-semibold text-slate-900">Billing</h2>
             <p class="mt-1 text-xs text-slate-500">
-              Your plan covers platform access and analysis-row volume only.
-              Every physical postcard is billed separately when you send.
+              $0 subscription fee. Every physical postcard is billed
+              pay as you go when you send.
             </p>
           </div>
 

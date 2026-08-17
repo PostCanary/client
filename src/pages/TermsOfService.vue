@@ -119,13 +119,13 @@
         <section class="terms-section">
           <h2>10) Plans, Fees, and Billing</h2>
           <p>
-            <strong>Fees.</strong> The Service is offered on subscription plans that may include usage-based components (for example, mail pieces or records processed). Prices, features, and limits are described at checkout or in an order document.
+            <strong>Fees.</strong> The subscription fee is $0. Physical-mail sends and optional custom-design work are charged as pay-as-you-go line items. Prices and quantities are shown before payment.
           </p>
           <p>
             <strong>Billing &amp; Taxes.</strong> Fees are billed in advance per term; usage charges are typically billed in arrears. Fees are exclusive of taxes; Customer is responsible for applicable taxes, except taxes on {{ BRAND.legalEntity }}'s net income.
           </p>
           <p>
-            <strong>Auto-Renewal &amp; Cancellation.</strong> Subscriptions renew automatically for the same term unless canceled via the in-app billing page or by contacting {{ BRAND.email.support }}. Cancellation takes effect at the end of the then-current term. Except where required by law or expressly stated, fees are non-refundable.
+            <strong>Payment &amp; Refunds.</strong> Payment is required before paid fulfillment starts. Refunds are not automatic. Contact {{ BRAND.email.support }} to request operator review. Except where required by law or expressly approved, fees are non-refundable.
           </p>
           <p>
             <strong>Late Payments.</strong> Past-due amounts may accrue interest at the lesser of 1.5% per month or the maximum permitted by law, and {{ BRAND.legalEntity }} may suspend the Service after reasonable notice for non-payment.
