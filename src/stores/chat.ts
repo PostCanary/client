@@ -5,6 +5,7 @@ import {
   sendChat,
   saveChatSession,
   captureChatLead,
+  ChatApiError,
   type ChatMessage,
   type ChatRole,
 } from "@/api/chat";
@@ -37,6 +38,14 @@ export const useChatStore = defineStore("chat", {
     dismissed: sessionStorage.getItem("chat_dismissed") === "1",
     /** Whether the teaser tooltip is showing (mobile auto-open) */
     teaser: false,
+    /**
+     * Seconds remaining before the visitor may send again, set from a 429's
+     * `Retry-After` header (POS-274). Ticks down once per second; the send
+     * control stays disabled while this is > 0.
+     */
+    retryAfter: 0,
+    /** Interval driving the retryAfter countdown. */
+    _retryTimer: null as ReturnType<typeof setInterval> | null,
   }),
 
   getters: {
@@ -97,7 +106,7 @@ export const useChatStore = defineStore("chat", {
     /** Send a user message and get an AI response. */
     async send(text: string) {
       const trimmed = text.trim();
-      if (!trimmed || this.loading) return;
+      if (!trimmed || this.loading || this.retryAfter > 0) return;
 
       // Add user message
       this.messages.push({
@@ -144,12 +153,26 @@ export const useChatStore = defineStore("chat", {
       } catch (e: any) {
         if (e.name === "AbortError") return;
 
+        // POS-274: the abuse-gate statuses (429/413/503) must never trigger
+        // the plain-fetch fallback below — retrying a 429 burns the same
+        // per-IP budget that caused the 429, and 413/503 will never
+        // succeed on an identical retry either. Apply the friendly message
+        // and stop; no second request goes out.
+        if (e instanceof ChatApiError) {
+          this._applyChatApiError(e, assistantId);
+          return;
+        }
+
         try {
           const msg = assistantMsg();
           if (msg) msg.content = "";
           const res = await sendChat({ messages: apiMessages, context: this.context });
           if (msg) msg.content = res.reply;
-        } catch {
+        } catch (fallbackErr: any) {
+          if (fallbackErr instanceof ChatApiError) {
+            this._applyChatApiError(fallbackErr, assistantId);
+            return;
+          }
           this.error = "Sorry, I'm having trouble connecting. Please try again.";
           this.messages = this.messages.filter((m) => m.id !== assistantId);
         }
@@ -160,6 +183,57 @@ export const useChatStore = defineStore("chat", {
         this._abortController = null;
         this._saveSession();
       }
+    },
+
+    /**
+     * Apply a friendly, status-specific message for an abuse-gate error
+     * (POS-274) and clean up the in-flight assistant placeholder so the
+     * widget never gets stuck "thinking". Never auto-retries.
+     */
+    _applyChatApiError(e: ChatApiError, assistantId: number) {
+      this.messages = this.messages.filter((m) => m.id !== assistantId);
+      this.error = this._chatApiErrorMessage(e);
+      if (e.status === 429 && e.retryAfter) {
+        this._startRetryCountdown(e.retryAfter);
+      }
+    },
+
+    _chatApiErrorMessage(e: ChatApiError): string {
+      switch (e.status) {
+        case 429:
+          // Wording avoids "you" / "your" — the limit is per-IP, not
+          // per-session, so office NAT or mobile CGNAT visitors can share
+          // a budget with strangers and shouldn't be told they personally
+          // sent too many messages.
+          return e.retryAfter
+            ? `This connection has reached its chat limit for now. Please wait ${Math.ceil(e.retryAfter)}s and send your message again.`
+            : "This connection has reached its chat limit for now. Please wait a moment and send your message again.";
+        case 413:
+          return "That message is too long. Please shorten it and try again.";
+        case 503:
+          return "Chat is temporarily unavailable. Please try again shortly, or email support@postcanary.com.";
+        default:
+          return "Sorry, I'm having trouble connecting. Please try again.";
+      }
+    },
+
+    /** Start (or restart) the post-429 send-lockout countdown. */
+    _startRetryCountdown(seconds: number) {
+      this._clearRetryCountdown();
+      this.retryAfter = Math.max(0, Math.ceil(seconds));
+      if (this.retryAfter <= 0) return;
+      this._retryTimer = setInterval(() => {
+        this.retryAfter = Math.max(0, this.retryAfter - 1);
+        if (this.retryAfter <= 0) this._clearRetryCountdown();
+      }, 1000);
+    },
+
+    _clearRetryCountdown() {
+      if (this._retryTimer) {
+        clearInterval(this._retryTimer);
+        this._retryTimer = null;
+      }
+      this.retryAfter = 0;
     },
 
     /** Fire-and-forget save of the current session to the server. */
@@ -195,6 +269,7 @@ export const useChatStore = defineStore("chat", {
     /** Clear conversation and start fresh */
     clearConversation() {
       this.cancelRequest();
+      this._clearRetryCountdown();
       this.messages = [];
       this.error = null;
       this.leadCaptured = false;

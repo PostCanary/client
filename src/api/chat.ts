@@ -34,6 +34,41 @@ export type ChatLeadPayload = {
   meta_event_id?: string;
 };
 
+/**
+ * Thrown by streamChat/sendChat for the abuse-gate responses added in
+ * POS-234 (server PR #170): 429 rate-limited, 413 payload too large, 503
+ * kill switch. These come back as `application/json` (never SSE), so
+ * callers must check `instanceof ChatApiError` before falling back to any
+ * retry logic — retrying a 429 burns the same per-IP budget that got the
+ * visitor rate-limited in the first place.
+ */
+export class ChatApiError extends Error {
+  readonly status: number;
+  /** Seconds to wait before retrying, from the `Retry-After` header (429/503). */
+  readonly retryAfter?: number;
+  /** Raw `error` (or `message`) field from the JSON body, if present. */
+  readonly serverMessage?: string;
+
+  constructor(
+    status: number,
+    message: string,
+    opts?: { retryAfter?: number; serverMessage?: string }
+  ) {
+    super(message);
+    this.name = "ChatApiError";
+    this.status = status;
+    this.retryAfter = opts?.retryAfter;
+    this.serverMessage = opts?.serverMessage;
+  }
+}
+
+function parseRetryAfter(res: Response): number | undefined {
+  const header = res.headers.get("Retry-After");
+  if (!header) return undefined;
+  const seconds = Number(header);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
 // Chat uses raw fetch for SSE, so the axios CSRF interceptor never runs.
 async function chatHeaders(): Promise<Record<string, string>> {
   const token = await ensureCsrfToken();
@@ -76,8 +111,32 @@ export async function streamChat(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Chat request failed (${res.status}): ${text}`);
+    // POS-274: the abuse gates added in server PR #170 (429/413/503) return
+    // `application/json`, never SSE — parse them as JSON instead of the raw
+    // text a streaming caller would otherwise expect. A generic network/5xx
+    // error without a JSON body just falls through to `serverMessage`
+    // undefined below.
+    const retryAfter = parseRetryAfter(res);
+    let serverMessage: string | undefined;
+    const contentType = res.headers.get("Content-Type") || "";
+    if (contentType.includes("json")) {
+      try {
+        const data = await res.json();
+        serverMessage =
+          typeof data?.error === "string"
+            ? data.error
+            : typeof data?.message === "string"
+              ? data.message
+              : undefined;
+      } catch {
+        // Malformed JSON body — fall through with no serverMessage.
+      }
+    }
+    throw new ChatApiError(
+      res.status,
+      serverMessage || `Chat request failed (${res.status})`,
+      { retryAfter, serverMessage }
+    );
   }
 
   const reader = res.body?.getReader();
