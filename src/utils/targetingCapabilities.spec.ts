@@ -10,6 +10,7 @@ import {
   normalizeBusinessTargetingFilters,
   normalizeTargetingFilters,
   queryPlanMatchesTargetingState,
+  assignTargetingAreasIfChanged,
   targetingAreasAreEqual,
   targetingCountQueryKey,
   targetingFiltersAreSupported,
@@ -294,5 +295,51 @@ describe('targeting count query identity (POS-269)', () => {
       [{ type: 'zip', coordinates: [], zipCode: '10002' }],
       query.areas,
     )).toBe(false)
+  })
+
+  it('matches the server normalize_suppression_policy and _active snapshots', () => {
+    // server/app/services/audience_query_plan.py
+    // normalize_suppression_policy (~267): null days → 60
+    // _active (~114): homeowner "all" is not an active filter (same as null)
+    expect(targetingCountQueryKey({
+      ...query,
+      suppressionPolicy: {
+        excludePastCustomers: true,
+        excludeMailedWithinDays: null,
+      },
+    })).toBe(targetingCountQueryKey({
+      ...query,
+      suppressionPolicy: {
+        excludePastCustomers: true,
+        excludeMailedWithinDays: 60,
+      },
+    }))
+    expect(targetingCountQueryKey({
+      ...query,
+      filters: { ...filters, homeowner: 'all' },
+    })).toBe(targetingCountQueryKey({
+      ...query,
+      filters: { ...filters, homeowner: null },
+    }))
+    expect(targetingCountQueryKey({
+      ...query,
+      audienceType: 'business',
+    })).not.toBe(targetingCountQueryKey(query))
+    expect(targetingCountQueryKey({
+      ...query,
+      suppressionPolicy: {
+        ...query.suppressionPolicy,
+        excludePastCustomers: false,
+      },
+    })).not.toBe(targetingCountQueryKey(query))
+  })
+
+  it('POS-269 useTargetingMap guard: same geometry does not replace the array', () => {
+    const current = [{ type: 'zip' as const, coordinates: [], zipCode: '10001' }]
+    const same = [{ type: 'zip' as const, coordinates: [], zipCode: '10001' }]
+    expect(assignTargetingAreasIfChanged(current, same)).toBeNull()
+    const changed = [{ type: 'zip' as const, coordinates: [], zipCode: '10002' }]
+    expect(assignTargetingAreasIfChanged(current, changed)).toEqual(changed)
+    expect(assignTargetingAreasIfChanged(current, [])).toEqual([])
   })
 })

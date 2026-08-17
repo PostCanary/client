@@ -184,6 +184,18 @@ export function targetingAreasAreEqual(
   return canonicalJson(left) === canonicalJson(right)
 }
 
+/**
+ * POS-269: useTargetingMap.syncAreasFromLayers writes only when geometry
+ * changed. Return null to keep the current array identity.
+ */
+export function assignTargetingAreasIfChanged(
+  current: TargetingArea[],
+  next: TargetingArea[],
+): TargetingArea[] | null {
+  if (targetingAreasAreEqual(current, next)) return null
+  return next
+}
+
 const SHA256_HEX = /^[a-f0-9]{64}$/
 
 export interface TargetingPlanState {
