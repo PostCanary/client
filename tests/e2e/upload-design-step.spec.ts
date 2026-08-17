@@ -197,12 +197,17 @@ test("POS-270: replacing a customer-uploaded front keeps the existing back URL",
   }).toMatch(/\/media\/design-uploads\/mock-org\/asset-/);
   const beforeReplace = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
   const keptBackUrl = beforeReplace?.data?.design?.uploadedAsset?.backUrl;
+  const oldFrontUrl = beforeReplace?.data?.design?.uploadedAsset?.frontUrl;
   expect(keptBackUrl).toBeTruthy();
 
   await page.getByTestId("upload-front-replace").click();
   await expect(page.getByTestId("upload-front-dropzone")).toBeVisible();
   await expect(page.getByTestId("upload-back-preview")).toBeVisible();
   await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+  await expect.poll(() => {
+    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+    return last?.data?.design?.uploadedAsset === null;
+  }).toBe(true);
 
   await page.getByTestId("upload-front-input").setInputFiles({
     name: "new-front.png",
@@ -211,13 +216,10 @@ test("POS-270: replacing a customer-uploaded front keeps the existing back URL",
   });
   await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
   await expect.poll(() => {
-    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
-    return last?.data?.design?.uploadedAsset?.backUrl ?? "";
-  }).toBe(keptBackUrl);
-  const after = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
-  expect(after?.data?.design?.uploadedAsset?.frontUrl).not.toBe(
-    beforeReplace?.data?.design?.uploadedAsset?.frontUrl,
-  );
+    const asset = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload
+      ?.data?.design?.uploadedAsset;
+    return asset?.backUrl === keptBackUrl && !!asset?.frontUrl && asset.frontUrl !== oldFrontUrl;
+  }).toBe(true);
 });
 
 test("POS-270: replacing a library design clears the paired back preview", async ({
