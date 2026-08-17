@@ -694,3 +694,63 @@ describe("POS-174 single-mailing draft normalization", () => {
     expect(GOAL_DEFAULTS.send_to_list.defaultPostcards).toBe(1);
   });
 });
+
+describe("POS-270 — replace uploaded design", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
+  });
+
+  it("clears the purchase-facing uploaded asset so a save cannot carry the old artwork", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.draft!.currentStep = 3;
+
+    store.setUploadedDesign({
+      fileName: "old-front.png",
+      mimeType: "image/png",
+      fileSizeBytes: 10,
+      widthPx: 1875,
+      heightPx: 2775,
+      frontUrl: "/media/old-front.png",
+      backUrl: "/media/old-back.png",
+    } as any);
+
+    expect(store.draft!.design!.designSource).toBe("uploaded");
+    expect(store.isStepComplete(3)).toBe(true);
+
+    store.clearUploadedDesign();
+
+    expect(store.draft!.design!.uploadedAsset).toBeNull();
+    expect(store.draft!.design!.designSource).toBeUndefined();
+    expect(store.draft!.design!.customUploadUrl).toBeNull();
+    expect(store.isStepComplete(3)).toBe(false);
+    expect(store.draft!.completedSteps).not.toContain(4);
+
+    await store.saveNow();
+    const saved = vi.mocked(saveDraft).mock.calls.at(-1)?.[0] as {
+      design?: { uploadedAsset?: { frontUrl?: string } | null; designSource?: string };
+    };
+    expect(saved.design?.uploadedAsset).toBeNull();
+    expect(saved.design?.designSource).toBeUndefined();
+    expect(JSON.stringify(saved.design)).not.toContain("/media/old-front.png");
+    expect(JSON.stringify(saved.design)).not.toContain("/media/old-back.png");
+  });
+
+  it("does not resurrect the old asset from a later system card write", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setUploadedDesign({
+      frontUrl: "/media/old-front.png",
+      backUrl: "/media/old-back.png",
+    } as any);
+
+    store.clearUploadedDesign();
+    store.setSequenceCards([makeCard(1, "offer")], { source: "system" });
+
+    expect(store.draft!.design!.uploadedAsset).toBeNull();
+    expect(store.draft!.design!.designSource).not.toBe("uploaded");
+    expect(store.isStepComplete(3)).toBe(false);
+    expect(JSON.stringify(store.draft!.design)).not.toContain("/media/old-front.png");
+  });
+});

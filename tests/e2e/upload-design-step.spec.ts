@@ -103,6 +103,71 @@ test("selecting from Designs reuses the saved asset without uploading again", as
   expect(state.requestLog.designUploads).toHaveLength(0);
 });
 
+test("POS-270: Replace clears the saved design and blocks Next until a new file is uploaded", async ({
+  page,
+}) => {
+  const state = await gotoStep3(page, (mock) => {
+    mock.designs = [
+      {
+        id: "saved-design-1",
+        name: "July postcard",
+        front_asset: {
+          url: "/media/design-uploads/mock-org/saved-front.png",
+          file_name: "saved-front.png",
+          mime_type: "image/png",
+          file_size_bytes: 1234,
+          width_px: 1875,
+          height_px: 2775,
+        },
+        back_asset: null,
+        blank_back: true,
+        uploaded_asset: {
+          fileName: "saved-front.png",
+          mimeType: "image/png",
+          fileSizeBytes: 1234,
+          widthPx: 1875,
+          heightPx: 2775,
+          frontUrl: "/media/design-uploads/mock-org/saved-front.png",
+          backUrl: null,
+        },
+        created_at: "2026-07-23T12:00:00Z",
+        updated_at: "2026-07-23T12:00:00Z",
+      },
+    ];
+  });
+
+  await page.getByTestId("open-design-library").click();
+  await page.getByTestId("select-library-design-saved-design-1").click();
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+
+  await page.getByTestId("upload-front-replace").click();
+  await expect(page.getByTestId("upload-front-dropzone")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+
+  await expect.poll(() => {
+    const last = state.requestLog.draftSaves.at(-1)?.payload;
+    return last?.data?.design?.uploadedAsset ?? "missing";
+  }).toBeNull();
+  const cleared = state.requestLog.draftSaves.at(-1)?.payload;
+  expect(JSON.stringify(cleared?.data?.design ?? {})).not.toContain(
+    "/media/design-uploads/mock-org/saved-front.png",
+  );
+  expect(cleared?.data?.design?.designSource).not.toBe("uploaded");
+
+  const validPng = makeSolidPng(1875, 2775);
+  await page.getByTestId("upload-front-input").setInputFiles({
+    name: "replacement.png",
+    mimeType: "image/png",
+    buffer: validPng,
+  });
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  await expect.poll(() => state.requestLog.draftSaves.at(-1)?.payload?.data?.design?.uploadedAsset?.frontUrl)
+    .toMatch(/\/media\/design-uploads\/mock-org\/asset-/);
+  expect(JSON.stringify(state.requestLog.draftSaves.at(-1)?.payload?.data?.design ?? {})).not.toContain(
+    "/media/design-uploads/mock-org/saved-front.png",
+  );
+});
+
 test("accepting a PDF shows the browser PDF preview instead of a file placeholder", async ({
   page,
 }) => {

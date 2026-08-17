@@ -346,6 +346,15 @@ function replaceFront() {
   frontError.value = null;
   frontUploadProgress.value = null;
   if (frontInputEl.value) frontInputEl.value.value = "";
+  // Library designs are one front+back unit. Clear the local back too so
+  // a later front upload cannot re-commit the old back URL.
+  revokeLocalPreview(backFile.value);
+  backFile.value = null;
+  backError.value = null;
+  backUploadProgress.value = null;
+  if (backInputEl.value) backInputEl.value.value = "";
+  // POS-270: clear the purchase-facing draft fields, not just the preview.
+  draftStore.clearUploadedDesign();
 }
 
 function replaceBack() {
@@ -354,6 +363,10 @@ function replaceBack() {
   backError.value = null;
   backUploadProgress.value = null;
   if (backInputEl.value) backInputEl.value.value = "";
+  if (!frontFile.value?.serverUrl) {
+    draftStore.clearUploadedDesign();
+    return;
+  }
   // Re-commit front-only asset so the draft drops the previous back URL.
   commitUpload();
 }

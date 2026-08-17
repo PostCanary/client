@@ -519,6 +519,38 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this._debounceSave();
     },
 
+    /**
+     * POS-270: Replace on an uploaded design must clear the fields
+     * checkout/approve read (`design.uploadedAsset` + `design.designSource`)
+     * and un-complete step 3 so Next cannot advance on the stale artwork.
+     */
+    clearUploadedDesign() {
+      if (!this.draft?.design) return;
+      const prev = this.draft.design;
+      const hadUploaded =
+        prev.designSource === "uploaded" || prev.uploadedAsset != null;
+      if (!hadUploaded) return;
+
+      const { uploadedAsset: _droppedAsset, designSource: _droppedSource, ...rest } =
+        prev;
+      this.draft.design = {
+        ...rest,
+        uploadedAsset: null,
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+      };
+      _designRevision++;
+      this.draft.completedSteps = this.draft.completedSteps.filter(
+        (step) => step !== 3 && step !== 4,
+      );
+      this.draft.needsReviewSteps = this.draft.needsReviewSteps.filter(
+        (step) => step !== 3 && step !== 4,
+      );
+      this.draft.review = null;
+      this._debounceSave();
+    },
+
     /** Flow v2 (POS-148): customer requested a $199 professional design
      * instead of uploading or using the studio. Network delivery of the
      * brief to the server (POST /api/design-requests) is handled by the
