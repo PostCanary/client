@@ -145,10 +145,10 @@ test("POS-270: Replace clears the saved design and blocks Next until a new file 
   await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
 
   await expect.poll(() => {
-    const last = state.requestLog.draftSaves.at(-1)?.payload;
-    return last?.data?.design?.uploadedAsset ?? "missing";
-  }).toBeNull();
-  const cleared = state.requestLog.draftSaves.at(-1)?.payload;
+    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+    return last?.data?.design?.uploadedAsset === null;
+  }).toBe(true);
+  const cleared = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
   expect(JSON.stringify(cleared?.data?.design ?? {})).not.toContain(
     "/media/design-uploads/mock-org/saved-front.png",
   );
@@ -161,9 +161,12 @@ test("POS-270: Replace clears the saved design and blocks Next until a new file 
     buffer: validPng,
   });
   await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-  await expect.poll(() => state.requestLog.draftSaves.at(-1)?.payload?.data?.design?.uploadedAsset?.frontUrl)
-    .toMatch(/\/media\/design-uploads\/mock-org\/asset-/);
-  expect(JSON.stringify(state.requestLog.draftSaves.at(-1)?.payload?.data?.design ?? {})).not.toContain(
+  await expect.poll(() => {
+    const last = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+    return last?.data?.design?.uploadedAsset?.frontUrl ?? "";
+  }).toMatch(/\/media\/design-uploads\/mock-org\/asset-/);
+  const replaced = state.requestLog.draftSaves[state.requestLog.draftSaves.length - 1]?.payload;
+  expect(JSON.stringify(replaced?.data?.design ?? {})).not.toContain(
     "/media/design-uploads/mock-org/saved-front.png",
   );
 });
