@@ -640,6 +640,13 @@ async function approve() {
         }
         draftStore.error =
           "Your campaign is approved, but it hasn't been sent because a valid payment method is required. Add a card, then tap Approve again.";
+      } else if (
+        knownPreProviderFailure &&
+        purchaseErr?.status === 402 &&
+        purchaseErr?.data?.error === "authentication_required"
+      ) {
+        draftStore.error =
+          "Your bank requires authentication. No recipient purchase started. Use secure card setup to verify or replace your card, then tap Approve again.";
       } else if (knownPreProviderFailure) {
         draftStore.error =
           "Campaign approved and proof saved. The server confirmed no provider purchase started. " +

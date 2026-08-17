@@ -48,7 +48,7 @@ const hasCalculated = ref(false);
 
 // Get recommended tier based on volume
 const getRecommendedTier = (volume: number): PricingTier => {
-  const tier = PRICING_TIERS.find((t) => volume <= t.maxVolume);
+  const tier = PRICING_TIERS.find((t) => volume <= t.maxAnalysisRows);
   // Always return the last tier if no match found
   return tier ?? PRICING_TIERS[PRICING_TIERS.length - 1]!;
 };
@@ -367,9 +367,9 @@ const faqContent: IndustryFAQContent = {
                   </h3>
                   <p class="text-white/80 mt-1">
                     {{
-                      results.recommendedTier.maxVolume === Infinity
-                        ? "Unlimited mailers/month"
-                        : `Up to ${formatNumber(results.recommendedTier.maxVolume)} mailers/month`
+                      results.recommendedTier.maxAnalysisRows === Infinity
+                        ? "Unlimited analysis rows/month"
+                        : `Up to ${formatNumber(results.recommendedTier.maxAnalysisRows)} analysis rows/month`
                     }}
                   </p>
                 </div>
@@ -692,7 +692,11 @@ const faqContent: IndustryFAQContent = {
               ${{ tier.monthlyPrice }}
             </div>
             <div class="text-xs text-[var(--mkt-text-muted)] mt-1">
-              {{ tier.maxVolume === Infinity ? "Unlimited" : `Up to ${formatNumber(tier.maxVolume)}` }}
+              {{
+                tier.maxAnalysisRows === Infinity
+                  ? "Unlimited analysis rows/month"
+                  : `Up to ${formatNumber(tier.maxAnalysisRows)} analysis rows/month`
+              }}
             </div>
             <div
               v-if="tier.name === results.recommendedTier.name && hasCalculated"

@@ -48,6 +48,12 @@ export interface PayPerSendTier {
   rate_cents: number;
 }
 
+export interface AnalyticsPlan {
+  name: string;
+  monthly_cents: number;
+  analysis_rows: number;
+}
+
 export interface PricingPayload {
   contract_version: string;
   currency: "usd";
@@ -58,6 +64,7 @@ export interface PricingPayload {
   // POS-230: the published price sheet. Optional so an older server (or a
   // cached payload) still parses; callers fall back to PAY_PER_SEND_TIERS.
   pay_per_send_tiers?: PayPerSendTier[];
+  analytics_plans: Record<PlanCode, AnalyticsPlan>;
   subscription_rates_cents: Record<PlanCode, number>;
   // Optional until the server ships it (Flow v2 $199 design fee).
   custom_design_fee_cents?: number;

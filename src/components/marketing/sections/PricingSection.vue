@@ -1,17 +1,25 @@
 <!-- src/components/marketing/sections/PricingSection.vue -->
-<!-- POS-227 pricing section. -->
+<!-- POS-198 canonical pricing section. -->
 <script setup lang="ts">
-// Targeted Mail price sheet decided by Dustin 2026-08-15 (POS-227). The tier
-// is picked from the whole campaign and applied to every postcard in it, so
-// 1,501 postcards bill at $0.85 each — not just the ones past the break.
-// Server side is POS-230 (app/services/pricing.py).
-// ⚠️ LAUNCH GATE (POS-229): POS-230 must be in production before this page
-// goes live, or the site publishes a rate checkout will not honor. The EDDM
-// card below is still gated on the POS-224 scope call.
-const TARGETED_TIERS = [
-  { range: "1 – 1,500 postcards", price: "$0.89" },
-  { range: "1,501+ postcards", price: "$0.85" },
-] as const;
+import { computed } from "vue";
+
+import {
+  formatTierRange,
+  useAnalyticsPlans,
+  usePayPerSendTiers,
+  usePricing,
+} from "@/composables/usePricing";
+import { formatCurrency, formatNumber } from "@/utils/format";
+
+const pricing = usePricing();
+const targetedTiers = usePayPerSendTiers();
+const analyticsPlans = useAnalyticsPlans();
+const volumeTierNote = computed(() => {
+  const tier = targetedTiers.list[1];
+  return tier
+    ? `At ${formatNumber(tier.min_cards)} postcards, every postcard in that campaign bills at ${formatCurrency(tier.rate_cents / 100)}.`
+    : "One server-confirmed rate applies to every postcard in the campaign.";
+});
 </script>
 
 <template>
@@ -23,7 +31,7 @@ const TARGETED_TIERS = [
   >
     <!-- Full-width band, per mockup -->
     <div class="pricing-band">
-      <p>$0 Subscription Fee. Pay Per Postcard.</p>
+      <p>Subscriptions cover platform and analysis. Physical mail is billed separately.</p>
     </div>
 
     <div
@@ -40,30 +48,52 @@ const TARGETED_TIERS = [
            of launch scope (POS-164) and has no billing path in the server at
            all (POS-231), so the mockup's flat $0.47 advertised a rate checkout
            could not charge. Do not re-add a price before POS-231 ships. -->
-      <div class="mt-12 grid gap-6 md:grid-cols-2 md:max-w-4xl md:mx-auto">
+      <div class="mt-12 grid gap-6 md:grid-cols-3 md:max-w-6xl md:mx-auto">
         <!-- Targeted Mail -->
         <article class="pricing-card pricing-card-featured">
           <h3 class="pricing-card-title">Targeted Mail</h3>
           <ul class="pricing-tiers">
-            <li v-for="tier in TARGETED_TIERS" :key="tier.range">
-              <span>{{ tier.range }}</span>
-              <span class="pricing-tier-price">{{ tier.price }}</span>
+            <li v-for="tier in targetedTiers.list" :key="tier.min_cards">
+              <span>{{ formatTierRange(tier) }}</span>
+              <span class="pricing-tier-price">
+                {{ formatCurrency(tier.rate_cents / 100) }}
+              </span>
             </li>
           </ul>
           <p class="pricing-note">
-            One rate per campaign. Pass 1,500 postcards and every postcard in
-            that campaign bills at $0.85.
+            {{ volumeTierNote }} Includes recipient data, printing, and postage.
           </p>
         </article>
 
         <!-- Analytics -->
         <article class="pricing-card">
-          <h3 class="pricing-card-title">Analytics</h3>
+          <h3 class="pricing-card-title">Platform &amp; Analytics</h3>
+          <ul v-if="analyticsPlans.list.length" class="pricing-tiers">
+            <li v-for="plan in analyticsPlans.list" :key="plan.code">
+              <span>{{ plan.name }} · {{ formatNumber(plan.analysis_rows) }} rows</span>
+              <span class="pricing-tier-price">
+                {{ formatCurrency(plan.monthly_cents / 100) }}/mo
+              </span>
+            </li>
+          </ul>
+          <p v-else class="pricing-note">Loading server-confirmed plans…</p>
+          <p class="pricing-note">
+            Monthly analysis-row capacity only. Physical postcards are billed separately.
+          </p>
+        </article>
+
+        <!-- Custom design -->
+        <article class="pricing-card">
+          <h3 class="pricing-card-title">Custom Postcard Design</h3>
           <div class="pricing-flat">
-            <span class="pricing-flat-label">Audit your mail send</span>
-            <span class="pricing-flat-price">Free</span>
+            <span class="pricing-flat-label">One accepted design request</span>
+            <span class="pricing-flat-price">
+              {{ formatCurrency(pricing.customDesignFee) }}
+            </span>
           </div>
-          <p class="pricing-note">Every campaign, conversion, and KPI.</p>
+          <p class="pricing-note">
+            A separate service line item, paid before design work starts.
+          </p>
         </article>
       </div>
     </div>

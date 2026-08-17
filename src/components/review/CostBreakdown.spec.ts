@@ -15,6 +15,12 @@ vi.mock("@/api/billing", async (importOriginal) => {
         { min_cards: 1, max_cards: 1500, rate_cents: 89 },
         { min_cards: 1501, max_cards: null, rate_cents: 85 },
       ],
+      analytics_plans: {
+        INSIGHT: { name: "Starter", monthly_cents: 4900, analysis_rows: 1000 },
+        PERFORMANCE: { name: "Basic", monthly_cents: 9900, analysis_rows: 5000 },
+        PRECISION: { name: "Pro", monthly_cents: 19900, analysis_rows: 25000 },
+        ELITE: { name: "Ultimate", monthly_cents: 49900, analysis_rows: 100000 },
+      },
       subscription_rates_cents: {
         INSIGHT: 4900,
         PERFORMANCE: 9900,

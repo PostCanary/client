@@ -61,7 +61,7 @@ export interface SavingsCalculatorInputs {
 
 export interface PricingTier {
   name: string;
-  maxVolume: number;
+  maxAnalysisRows: number;
   monthlyPrice: number;
   isEnterprise?: boolean;
 }
@@ -98,7 +98,7 @@ export interface IndustryBenchmark {
 
 export const PRICING_TIERS: PricingTier[] = PLAN_DISPLAY_ORDER.map((code) => ({
   name: PLAN_DISPLAY_DETAILS[code].name,
-  maxVolume: PLAN_DISPLAY_DETAILS[code].limit,
+  maxAnalysisRows: PLAN_DISPLAY_DETAILS[code].limit,
   monthlyPrice: PLAN_DISPLAY_DETAILS[code].monthlyPrice,
 }));
 

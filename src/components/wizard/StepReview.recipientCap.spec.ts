@@ -36,7 +36,7 @@ vi.mock("@/api/billing", () => ({
   fetchPaymentMethodSummary: vi.fn().mockResolvedValue({
     billing_type: "pay_per_send",
     currency: "usd",
-    unit_rate_cents: 99,
+    unit_rate_cents: 89,
     plan_code: null,
     required: true,
     has_payment_method: true,

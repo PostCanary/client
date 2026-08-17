@@ -5,7 +5,12 @@
 // they carry the same locked values, so the UI never flashes a wrong price.
 import { reactive, readonly } from "vue";
 
-import { fetchPricing, type PayPerSendTier } from "@/api/billing";
+import {
+  fetchPricing,
+  type AnalyticsPlan,
+  type PayPerSendTier,
+  type PlanCode,
+} from "@/api/billing";
 import { PAY_PER_SEND_TIERS, PRICING } from "@/types/campaign";
 
 type Rates = { -readonly [K in keyof typeof PRICING]: number };
@@ -17,6 +22,8 @@ const rates = reactive<Rates>({ ...PRICING });
 const tiers = reactive<{ list: PayPerSendTier[] }>({
   list: PAY_PER_SEND_TIERS.map((t) => ({ ...t })),
 });
+export type AnalyticsPlanRow = AnalyticsPlan & { code: PlanCode };
+const analyticsPlans = reactive<{ list: AnalyticsPlanRow[] }>({ list: [] });
 
 let loaded = false;
 let inflight: Promise<void> | null = null;
@@ -32,6 +39,9 @@ function load(): void {
       if (Array.isArray(p.pay_per_send_tiers) && p.pay_per_send_tiers.length) {
         tiers.list = p.pay_per_send_tiers.map((t) => ({ ...t }));
       }
+      analyticsPlans.list = Object.entries(p.analytics_plans).map(
+        ([code, plan]) => ({ code: code as PlanCode, ...plan }),
+      );
       loaded = true;
     })
     .catch(() => {
@@ -49,6 +59,12 @@ export function usePricing(): Readonly<Rates> {
 export function usePayPerSendTiers(): Readonly<{ list: PayPerSendTier[] }> {
   load();
   return readonly(tiers) as Readonly<{ list: PayPerSendTier[] }>;
+}
+
+/** The server-owned analytics subscription catalog. */
+export function useAnalyticsPlans(): Readonly<{ list: AnalyticsPlanRow[] }> {
+  load();
+  return readonly(analyticsPlans) as Readonly<{ list: AnalyticsPlanRow[] }>;
 }
 
 /**
