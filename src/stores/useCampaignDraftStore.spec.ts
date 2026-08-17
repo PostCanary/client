@@ -728,7 +728,8 @@ describe("POS-270 — replace uploaded design", () => {
     expect(store.draft!.completedSteps).not.toContain(4);
 
     await store.saveNow();
-    const saved = vi.mocked(saveDraft).mock.calls.at(-1)?.[0] as {
+    const saveCalls = vi.mocked(saveDraft).mock.calls;
+    const saved = saveCalls[saveCalls.length - 1]?.[0] as {
       design?: { uploadedAsset?: { frontUrl?: string } | null; designSource?: string };
     };
     expect(saved.design?.uploadedAsset).toBeNull();
