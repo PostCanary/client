@@ -10,6 +10,8 @@ import {
   normalizeBusinessTargetingFilters,
   normalizeTargetingFilters,
   queryPlanMatchesTargetingState,
+  targetingAreasAreEqual,
+  targetingCountQueryKey,
   targetingFiltersAreSupported,
   unsupportedTargetingFilterLabels,
 } from './targetingCapabilities'
@@ -228,5 +230,69 @@ describe('attested targeting plan matching', () => {
       ...state,
       audienceType: 'business',
     })).toBe(false)
+  })
+})
+
+describe('targeting count query identity (POS-269)', () => {
+  const area: TargetingArea = { type: 'zip', coordinates: [], zipCode: '10001' }
+  const filters: TargetingFilters = {
+    homeowner: null,
+    homeValueMin: null,
+    homeValueMax: null,
+    yearBuiltMin: null,
+    yearBuiltMax: null,
+    propertyTypes: [],
+    hhageMin: null,
+    hhageMax: null,
+    incomeMin: null,
+    loresMin: null,
+    loresMax: null,
+    squareFootageMin: null,
+    squareFootageMax: null,
+    hasEmail: null,
+    businessSicCodes: [],
+    businessNaicsCodes: [],
+    businessJobTitles: [],
+    businessManagementLevels: [],
+    businessEmployeeMin: null,
+    businessEmployeeMax: null,
+    businessSalesMin: null,
+    businessSalesMax: null,
+    businessHasEmail: null,
+    businessWorkAtHome: null,
+  }
+  const query = {
+    audienceType: 'consumer' as const,
+    areas: [area],
+    filters,
+    suppressionPolicy: {
+      excludePastCustomers: true,
+      excludeMailedWithinDays: 30,
+    },
+  }
+
+  it('treats a cloned area list as the same count query', () => {
+    const cloned = {
+      ...query,
+      areas: [{ ...area, coordinates: [...area.coordinates] }],
+      filters: { ...filters, propertyTypes: [...filters.propertyTypes] },
+    }
+    expect(targetingCountQueryKey(cloned)).toBe(targetingCountQueryKey(query))
+    expect(targetingAreasAreEqual(cloned.areas, query.areas)).toBe(true)
+  })
+
+  it('treats a real area or filter change as a new count query', () => {
+    expect(targetingCountQueryKey({
+      ...query,
+      areas: [{ type: 'zip', coordinates: [], zipCode: '10002' }],
+    })).not.toBe(targetingCountQueryKey(query))
+    expect(targetingCountQueryKey({
+      ...query,
+      filters: { ...filters, homeValueMin: 200000 },
+    })).not.toBe(targetingCountQueryKey(query))
+    expect(targetingAreasAreEqual(
+      [{ type: 'zip', coordinates: [], zipCode: '10002' }],
+      query.areas,
+    )).toBe(false)
   })
 })

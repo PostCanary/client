@@ -4,20 +4,27 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 
 const householdMock = vi.hoisted(() => ({ current: null as any }))
-
-vi.mock('@/components/targeting/TargetingMap.vue', () => ({
-  default: {
-    name: 'TargetingMap',
-    setup(_: unknown, { expose }: { expose: (value: unknown) => void }) {
-      expose({
-        areas: ref([{ type: 'zip', coordinates: [], zipCode: '10001' }]),
-        selectedCrrt: new Set(),
-      })
-      return {}
-    },
-    template: '<div data-testid="targeting-map" />',
-  },
+const mapAreasMock = vi.hoisted(() => ({
+  current: null as { value: Array<{ type: string; coordinates: unknown[]; zipCode: string }> } | null,
 }))
+
+vi.mock('@/components/targeting/TargetingMap.vue', () => {
+  const areas = ref([{ type: 'zip', coordinates: [], zipCode: '10001' }])
+  mapAreasMock.current = areas
+  return {
+    default: {
+      name: 'TargetingMap',
+      setup(_: unknown, { expose }: { expose: (value: unknown) => void }) {
+        expose({
+          areas,
+          selectedCrrt: new Set(),
+        })
+        return {}
+      },
+      template: '<div data-testid="targeting-map" />',
+    },
+  }
+})
 vi.mock('@/components/targeting/TargetingPanel.vue', () => ({
   default: {
     name: 'TargetingPanel',
@@ -134,6 +141,9 @@ describe('StepTargeting capability gate', () => {
     householdMock.current.source.value = 'melissa'
     householdMock.current.ready.value = false
     householdMock.current.queryPlan.value = null
+    if (mapAreasMock.current) {
+      mapAreasMock.current.value = [{ type: 'zip', coordinates: [], zipCode: '10001' }]
+    }
   })
 
   afterEach(() => {
@@ -367,5 +377,81 @@ describe('StepTargeting capability gate', () => {
     expect(wrapper.find('[data-testid="over-recipient-cap-warning"]').exists()).toBe(false)
     const validityEvents = wrapper.emitted('targeting-validity') ?? []
     expect(validityEvents[validityEvents.length - 1]).toEqual([true])
+  })
+
+  it('POS-269: a same-query area resync does not drop an attested count', async () => {
+    vi.useFakeTimers()
+    vi.mocked(loadTargetingCapabilities).mockResolvedValue({
+      capabilities: PLANNER_CAPABILITIES,
+      failed: false,
+    })
+    const store = useCampaignDraftStore()
+    const now = '2026-08-17T00:00:00Z'
+    store.draft = {
+      id: 'draft-1',
+      orgId: 'org-1',
+      currentStep: 2,
+      completedSteps: [1],
+      needsReviewSteps: [],
+      campaignType: 'targeted',
+      goal: null,
+      targeting: null,
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: now,
+      updatedAt: now,
+      schemaVersion: 1,
+    }
+    const wrapper = mount(StepTargeting)
+    await flushPromises()
+
+    const area = { type: 'zip', coordinates: [], zipCode: '10001' }
+    const attestedPlan = {
+      schemaVersion: 1,
+      audienceType: 'consumer',
+      provider: 'melissa',
+      product: 'leadgen_property',
+      areas: [area],
+      filters: {},
+      suppressionPolicy: { excludePastCustomers: true, excludeMailedWithinDays: 30 },
+      requests: [],
+      outputColumns: [],
+      fingerprint: 'a'.repeat(64),
+      countProof: {
+        filteredCount: 12,
+        finalCount: 12,
+        exclusions: { pastCustomers: 0, recentlyMailed: 0, doNotMail: 0 },
+        source: 'melissa',
+      },
+      attestation: 'b'.repeat(64),
+    }
+    householdMock.current.count.value = 12
+    householdMock.current.filteredCount.value = 12
+    householdMock.current.queryPlan.value = attestedPlan
+    householdMock.current.ready.value = true
+    await vi.advanceTimersByTimeAsync(1000)
+    await flushPromises()
+
+    let validityEvents = wrapper.emitted('targeting-validity') ?? []
+    expect(validityEvents[validityEvents.length - 1]).toEqual([true])
+    const fetchCountCalls = householdMock.current.fetchCount.mock.calls.length
+    const invalidateCalls = householdMock.current.invalidate.mock.calls.length
+
+    // Document mouseup rebuilds a new array with the same geometry.
+    mapAreasMock.current!.value = [{ type: 'zip', coordinates: [], zipCode: '10001' }]
+    await flushPromises()
+
+    validityEvents = wrapper.emitted('targeting-validity') ?? []
+    expect(validityEvents[validityEvents.length - 1]).toEqual([true])
+    expect(householdMock.current.fetchCount).toHaveBeenCalledTimes(fetchCountCalls)
+    expect(householdMock.current.invalidate).toHaveBeenCalledTimes(invalidateCalls)
+
+    mapAreasMock.current!.value = [{ type: 'zip', coordinates: [], zipCode: '10002' }]
+    await flushPromises()
+
+    validityEvents = wrapper.emitted('targeting-validity') ?? []
+    expect(validityEvents[validityEvents.length - 1]).toEqual([false])
+    expect(householdMock.current.fetchCount.mock.calls.length).toBeGreaterThan(fetchCountCalls)
   })
 })

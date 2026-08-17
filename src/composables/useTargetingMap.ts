@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import "@/styles/leaflet-edit-handles.css";
 import type { TargetingArea, EddmRoute } from "@/types/campaign";
+import { targetingAreasAreEqual } from "@/utils/targetingCapabilities";
 import { fetchRoutes } from "@/composables/useEddmRoutes";
 import { getZipCentroids } from "@/api/targeting";
 
@@ -490,6 +491,9 @@ export function useTargetingMap(
         result.push({ type: "polygon", coordinates: latlngs });
       }
     });
+    // Document mouseup re-reads Leaflet geometry after every click,
+    // including Next. A new array with the same shape is not a new query.
+    if (targetingAreasAreEqual(areas.value, result)) return;
     areas.value = result;
   }
 

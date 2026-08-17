@@ -154,6 +154,36 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalize(value))
 }
 
+export interface TargetingCountQuery {
+  audienceType: 'consumer' | 'business'
+  areas: TargetingArea[]
+  filters: TargetingFilters
+  suppressionPolicy: AudienceSuppressionPolicy
+}
+
+/**
+ * Stable key for the household-count query. A document mouseup or a new
+ * array identity with the same geometry must not look like a new query.
+ */
+export function targetingCountQueryKey(state: TargetingCountQuery): string {
+  return canonicalJson({
+    audienceType: state.audienceType,
+    areas: state.areas,
+    filters: activeFilterSnapshot(state.filters, state.audienceType),
+    suppressionPolicy: {
+      excludePastCustomers: state.suppressionPolicy.excludePastCustomers,
+      excludeMailedWithinDays: state.suppressionPolicy.excludeMailedWithinDays ?? 60,
+    },
+  })
+}
+
+export function targetingAreasAreEqual(
+  left: TargetingArea[],
+  right: TargetingArea[],
+): boolean {
+  return canonicalJson(left) === canonicalJson(right)
+}
+
 const SHA256_HEX = /^[a-f0-9]{64}$/
 
 export interface TargetingPlanState {
