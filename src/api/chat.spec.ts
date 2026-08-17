@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ChatApiError, streamChat } from "@/api/chat";
+import { ChatApiError, parseRetryAfter, streamChat } from "@/api/chat";
 import { clearCsrfToken } from "@/api/http";
 
 function sseResponse(chunks: string[]) {
@@ -181,5 +181,148 @@ describe("streamChat", () => {
     expect(err).toBeInstanceOf(ChatApiError);
     expect((err as ChatApiError).status).toBe(503);
     expect((err as ChatApiError).retryAfter).toBe(300);
+  });
+
+  it("does not throw when the error body is HTML from a proxy", async () => {
+    const fetchMock = withCsrfStub(
+      () =>
+        new Response("<!doctype html><html><title>400 Bad Request</title></html>", {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(ChatApiError);
+    expect((err as ChatApiError).status).toBe(400);
+    expect((err as ChatApiError).serverMessage).toBeUndefined();
+    expect((err as ChatApiError).message).toBe("Chat request failed (400)");
+  });
+
+  it("does not throw when the body is empty with a JSON content type", async () => {
+    const fetchMock = withCsrfStub(
+      () =>
+        new Response("", {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(ChatApiError);
+    expect((err as ChatApiError).status).toBe(500);
+    expect((err as ChatApiError).serverMessage).toBeUndefined();
+    expect((err as ChatApiError).message).toBe("Chat request failed (500)");
+  });
+
+  it("leaves retryAfter undefined for a malformed Retry-After header", async () => {
+    const fetchMock = withCsrfStub(() =>
+      jsonErrorResponse(429, { error: "rate limited" }, { "Retry-After": "soon" })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect(err).toBeInstanceOf(ChatApiError);
+    expect((err as ChatApiError).retryAfter).toBeUndefined();
+  });
+
+  it("leaves retryAfter undefined for a negative Retry-After header", async () => {
+    const fetchMock = withCsrfStub(() =>
+      jsonErrorResponse(429, { error: "rate limited" }, { "Retry-After": "-5" })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect((err as ChatApiError).retryAfter).toBeUndefined();
+  });
+
+  it("leaves retryAfter undefined for an HTTP-date Retry-After header", async () => {
+    const fetchMock = withCsrfStub(() =>
+      jsonErrorResponse(
+        429,
+        { error: "rate limited" },
+        { "Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT" }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect((err as ChatApiError).retryAfter).toBeUndefined();
+  });
+
+  it("parses a very large Retry-After without clamping at the API layer", async () => {
+    const fetchMock = withCsrfStub(() =>
+      jsonErrorResponse(429, { error: "rate limited" }, { "Retry-After": "3600" })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await streamChat({ messages: [{ role: "user", content: "hi" }] }, () => {}).catch(
+      (e) => e
+    );
+
+    expect((err as ChatApiError).retryAfter).toBe(3600);
+  });
+});
+
+describe("parseRetryAfter", () => {
+  function responseWithRetryAfter(value?: string) {
+    return new Response(null, {
+      status: 429,
+      headers: value === undefined ? {} : { "Retry-After": value },
+    });
+  }
+
+  it("returns undefined when the header is missing", () => {
+    expect(parseRetryAfter(responseWithRetryAfter())).toBeUndefined();
+  });
+
+  it("returns undefined when the header is empty or whitespace", () => {
+    expect(parseRetryAfter(responseWithRetryAfter(""))).toBeUndefined();
+    expect(parseRetryAfter(responseWithRetryAfter("   "))).toBeUndefined();
+  });
+
+  it("parses a numeric delta-seconds value", () => {
+    expect(parseRetryAfter(responseWithRetryAfter("60"))).toBe(60);
+    expect(parseRetryAfter(responseWithRetryAfter(" 60 "))).toBe(60);
+  });
+
+  it("returns undefined for a malformed value", () => {
+    expect(parseRetryAfter(responseWithRetryAfter("soon"))).toBeUndefined();
+    expect(parseRetryAfter(responseWithRetryAfter("60s"))).toBeUndefined();
+  });
+
+  it("returns undefined for a negative value", () => {
+    expect(parseRetryAfter(responseWithRetryAfter("-5"))).toBeUndefined();
+  });
+
+  it("returns undefined for an HTTP-date value", () => {
+    expect(
+      parseRetryAfter(responseWithRetryAfter("Wed, 21 Oct 2015 07:28:00 GMT"))
+    ).toBeUndefined();
+  });
+
+  it("returns the raw seconds for a very large value (store clamps)", () => {
+    expect(parseRetryAfter(responseWithRetryAfter("3600"))).toBe(3600);
+  });
+
+  it("returns 0 for an explicit zero", () => {
+    expect(parseRetryAfter(responseWithRetryAfter("0"))).toBe(0);
   });
 });

@@ -62,8 +62,13 @@ export class ChatApiError extends Error {
   }
 }
 
-function parseRetryAfter(res: Response): number | undefined {
-  const header = res.headers.get("Retry-After");
+/**
+ * Read `Retry-After` as delta-seconds. Returns undefined when the header is
+ * missing, empty, negative, non-numeric, or an HTTP-date (CORS and CDNs
+ * often strip or rewrite this header; the store must not depend on it).
+ */
+export function parseRetryAfter(res: Response): number | undefined {
+  const header = res.headers.get("Retry-After")?.trim();
   if (!header) return undefined;
   const seconds = Number(header);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;

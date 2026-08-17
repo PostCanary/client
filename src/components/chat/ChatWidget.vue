@@ -40,10 +40,17 @@ function scrollToBottom() {
   }
 }
 
-function handleSend() {
+async function handleSend() {
   if (!input.value.trim() || chat.loading || chat.retryAfter > 0) return;
-  chat.send(input.value);
+  const text = input.value;
   input.value = "";
+  const result = await chat.send(text);
+  // Gate errors (429/413/503/400) tell the visitor to send again or
+  // shorten the message — put the typed text back so they do not retype
+  // from the transcript bubble.
+  if (result !== "ok") {
+    input.value = text;
+  }
 }
 
 function handleKeydown(e: KeyboardEvent) {
