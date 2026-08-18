@@ -1021,3 +1021,83 @@ describe("POS-183 — Back to goal and abandoned-branch reset", () => {
     expect(store.currentStep).toBe(1);
   });
 });
+
+describe("POS-188 campaign name persistence", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
+    vi.mocked(loadDraft).mockReset();
+  });
+
+  it("startNew drops a previous draft's campaign name so Anoka cannot leak", async () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setCampaignName("Send to a List — anoka — Jul 27", false);
+    expect(store.draft!.review?.campaignName).toMatch(/anoka/i);
+
+    await store.startNew("org-1");
+    expect(store.draft!.review).toBeNull();
+    expect(store.draft!.goal).toBeNull();
+  });
+
+  it("setCampaignName persists a user edit without completing step 4", () => {
+    const store = useCampaignDraftStore();
+    seedDraft(store);
+    store.setReview({
+      campaignName: "2026/07/27 - Send to a List",
+      campaignNameIsCustom: false,
+      schedules: [
+        { cardNumber: 1, scheduledDate: "2026-08-20", estimatedDeliveryDate: "2026-08-25" },
+      ],
+      sendSeedCopy: true,
+      seedAddress: "1 Main St",
+      additionalSeeds: [],
+      paymentMethodId: null,
+      paymentMethodLabel: null,
+      agreedToTerms: false,
+    } as any);
+    expect(store.isStepComplete(4)).toBe(true);
+
+    store.draft!.completedSteps = store.draft!.completedSteps.filter((step) => step !== 4);
+    store.setCampaignName("2026/03/14 - 20% off Installation", true);
+
+    expect(store.draft!.review?.campaignName).toBe(
+      "2026/03/14 - 20% off Installation",
+    );
+    expect(store.draft!.review?.campaignNameIsCustom).toBe(true);
+    expect(store.draft!.review?.schedules[0]?.scheduledDate).toBe("2026-08-20");
+    expect(store.isStepComplete(4)).toBe(false);
+  });
+
+  it("resume keeps a user-edited name and does not restore a prior campaign", async () => {
+    vi.mocked(loadDraft).mockResolvedValue({
+      id: "draft-resume",
+      orgId: "org-1",
+      currentStep: 4,
+      completedSteps: [1, 2, 3],
+      needsReviewSteps: [],
+      campaignType: "targeted",
+      goal: {
+        goalType: "send_to_list",
+        goalLabel: "Send to a List",
+        sequenceLength: 1,
+      },
+      targeting: { sequenceLength: 1, estimatedCostSingle: 1, estimatedCostSequence: 1 },
+      design: { sequenceCards: [makeCard(1, "offer")] },
+      review: {
+        campaignName: "2026/03/14 - 20% off Installation",
+        campaignNameIsCustom: true,
+        schedules: [
+          { cardNumber: 1, scheduledDate: "2026-08-20", estimatedDeliveryDate: "2026-08-25" },
+        ],
+      },
+    } as any);
+
+    const store = useCampaignDraftStore();
+    await store.resume("draft-resume");
+    expect(store.draft!.review?.campaignName).toBe(
+      "2026/03/14 - 20% off Installation",
+    );
+    expect(store.draft!.review?.campaignNameIsCustom).toBe(true);
+  });
+});

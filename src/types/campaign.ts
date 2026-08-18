@@ -518,6 +518,9 @@ export interface MailScheduleInvalidDetails
 
 export interface ReviewSelection {
   campaignName: string                 // auto-generated, editable
+  // POS-188: true only after the customer types a name. Generated defaults
+  // must stay replaceable so a prior city/goal cannot leak into a new send.
+  campaignNameIsCustom?: boolean
   schedules: CardSchedule[]
   sendSeedCopy: boolean                // default true (free)
   seedAddress: string                  // from profile

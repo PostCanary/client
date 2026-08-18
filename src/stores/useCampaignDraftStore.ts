@@ -34,6 +34,7 @@ import {
 import type { CampaignGoalType } from "@/types/campaign";
 import { disarmScrapeRegenWatcher } from "@/composables/scrapeRegenState";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { emptyReviewNamePatch } from "@/utils/defaultCampaignName";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -592,6 +593,29 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.draft.designUserEdited = true;
       this._markComplete(3);
       this._clearReview(3);
+      this._debounceSave();
+    },
+
+    /**
+     * POS-188: persist the Step 4 name without completing the step.
+     * Completing here would let a default name mark Review done before
+     * the customer confirms schedule, payment, and terms.
+     */
+    setCampaignName(campaignName: string, campaignNameIsCustom: boolean) {
+      if (!this.draft) return;
+      const current = this.draft.review;
+      if (current) {
+        this.draft.review = {
+          ...current,
+          campaignName,
+          campaignNameIsCustom,
+        };
+      } else {
+        this.draft.review = emptyReviewNamePatch(
+          campaignName,
+          campaignNameIsCustom,
+        );
+      }
       this._debounceSave();
     },
 

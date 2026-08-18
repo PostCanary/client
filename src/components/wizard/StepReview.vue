@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { CreateOutline } from "@vicons/ionicons5";
 import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
@@ -52,6 +53,7 @@ import {
   isOverRecipientCap,
   parsePurchaseRecordsMaxQty,
 } from "@/utils/recipientCap";
+import { resolveCampaignName } from "@/utils/defaultCampaignName";
 
 const router = useRouter();
 const route = useRoute();
@@ -198,24 +200,37 @@ async function resolveRecipientCap() {
   recipientCapResolved.value = true;
 }
 const seqLen = computed(() => 1);
-// Campaign name — auto-generated, editable
+// Campaign name — auto-generated, editable. A typed name is persisted with
+// campaignNameIsCustom so a later generate / reload / resume cannot replace it.
 const campaignName = ref("");
-onMounted(() => {
-  if (draftStore.draft?.review?.campaignName) {
-    campaignName.value = draftStore.draft.review.campaignName;
-  } else {
-    const goalLabel = goal.value?.goalLabel ?? "Campaign";
-    const date = new Date().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-    // Format: [Goal] — [Primary Area] — [Date]
-    const area = targeting.value?.areas?.[0]?.zipCode
-      ?? brandKitStore.brandKit?.location
-      ?? "";
-    const areaStr = area ? ` — ${area}` : "";
-    campaignName.value = `${goalLabel}${areaStr} — ${date}`;
+const campaignNameIsCustom = ref(false);
+
+function applyResolvedCampaignName() {
+  const review = draftStore.draft?.review;
+  const resolved = resolveCampaignName({
+    savedName: review?.campaignName,
+    isCustom: review?.campaignNameIsCustom,
+    goalLabel: goal.value?.goalLabel,
+    staleTokens: [
+      brandKitStore.brandKit?.location,
+      targeting.value?.areas?.[0]?.zipCode,
+    ],
+  });
+  campaignName.value = resolved;
+  campaignNameIsCustom.value =
+    review?.campaignNameIsCustom === true && Boolean(review.campaignName?.trim());
+  if (!campaignNameIsCustom.value) {
+    draftStore.setCampaignName(resolved, false);
   }
+}
+
+function onCampaignNameInput() {
+  campaignNameIsCustom.value = true;
+  draftStore.setCampaignName(campaignName.value, true);
+}
+
+onMounted(() => {
+  applyResolvedCampaignName();
   void loadOrgReturnAddress();
   void loadPaymentMethod();
   void resolveRecipientCap();
@@ -225,6 +240,14 @@ onMounted(() => {
     paymentStatusMessage.value = "Payment method setup was canceled.";
   }
 });
+
+watch(
+  () => goal.value?.goalLabel,
+  () => {
+    if (campaignNameIsCustom.value) return;
+    applyResolvedCampaignName();
+  },
+);
 
 // Targeting method label
 const targetingMethodLabel = computed(() => {
@@ -545,6 +568,7 @@ async function approve() {
 
   const review: ReviewSelection = {
     campaignName: campaignName.value.trim(),
+    campaignNameIsCustom: campaignNameIsCustom.value,
     schedules: schedules.value,
     sendSeedCopy: sendSeedCopy.value,
     seedAddress: seedAddress.value,
@@ -835,13 +859,32 @@ async function approve() {
     <div class="w-full shrink-0 border-t border-gray-200 p-4 sm:p-6 lg:w-96 lg:border-l lg:border-t-0 lg:overflow-y-auto">
       <!-- Campaign name -->
       <div class="mb-5">
-        <label class="text-xs text-gray-400 uppercase tracking-wider">
+        <label
+          class="text-xs text-gray-400 uppercase tracking-wider"
+          for="review-campaign-name"
+        >
           Campaign Name
         </label>
-        <input
-          v-model="campaignName"
-          class="w-full text-lg font-semibold text-[#0b2d50] border-b border-gray-200 pb-1 focus:border-[#47bfa9] outline-none mt-1"
-        />
+        <div class="relative mt-1">
+          <input
+            id="review-campaign-name"
+            v-model="campaignName"
+            data-testid="review-campaign-name"
+            class="w-full text-lg font-semibold border-b border-gray-200 pb-1 pr-8 focus:border-[#47bfa9] outline-none"
+            :class="
+              campaignNameIsCustom ? 'text-[#0b2d50]' : 'text-gray-400'
+            "
+            aria-describedby="review-campaign-name-hint"
+            @input="onCampaignNameInput"
+          />
+          <CreateOutline
+            class="pointer-events-none absolute right-0 top-1.5 h-5 w-5 text-gray-400"
+            aria-hidden="true"
+          />
+        </div>
+        <p id="review-campaign-name-hint" class="mt-1 text-xs text-gray-400">
+          This is a default name. You can change it.
+        </p>
       </div>
 
       <!-- Targeting summary -->
