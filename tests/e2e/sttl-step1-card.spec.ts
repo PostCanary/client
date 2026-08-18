@@ -102,6 +102,44 @@ test("only the hovered audience option is highlighted", async ({ page }) => {
   await expect(areaOption).toHaveCSS("background-color", white);
 });
 
+test("Back from Send to a List returns to Choose Your Goal so either goal can be picked", async ({
+  page,
+}) => {
+  const state = createMockAppState();
+  await installMockApi(page, state);
+
+  await page.goto("/app/send");
+  await page.getByTestId("choose-send-to-list").click();
+  await expect(page).toHaveURL(/\/app\/send\/sttl-step-2$/);
+  await expect(page.getByRole("heading", { name: "Upload your audience CSV" })).toBeVisible();
+
+  await page.getByTestId("sttl-back-btn").click();
+
+  await expect(page.getByTestId("choose-send-to-list")).toBeVisible();
+  await expect(page.getByTestId("choose-target-area")).toBeVisible();
+  expect(state.requestLog.draftCreates).toBe(0);
+
+  await page.getByTestId("choose-target-area").click();
+  await expect(page.getByTestId("choose-target-area")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Pick Your Area/ })).toBeVisible();
+  expect(state.requestLog.draftCreates).toBe(0);
+});
+
+test("Back from Target an Area returns to Choose Your Goal", async ({ page }) => {
+  const state = createMockAppState();
+  await installMockApi(page, state);
+
+  await page.goto("/app/send");
+  await page.getByTestId("choose-target-area").click();
+  await expect(page.getByTestId("wizard-back")).toBeVisible();
+
+  await page.getByTestId("wizard-back").click();
+
+  await expect(page.getByTestId("choose-send-to-list")).toBeVisible();
+  await expect(page.getByTestId("choose-target-area")).toBeVisible();
+  expect(state.requestLog.draftCreates).toBe(0);
+});
+
 test("Target an Area commits the goal and advances to the map step", async ({ page }) => {
   const state = createMockAppState();
   await installMockApi(page, state);

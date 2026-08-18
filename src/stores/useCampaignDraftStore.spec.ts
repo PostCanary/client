@@ -803,3 +803,218 @@ describe("POS-270 — replace uploaded design", () => {
     expect(store.isStepComplete(4)).toBe(false);
   });
 });
+
+describe("POS-183 — Back to goal and abandoned-branch reset", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.mocked(saveDraft).mockReset().mockResolvedValue(undefined as any);
+    vi.mocked(createDraft).mockReset();
+    generateCardsMock.mockReset();
+  });
+
+  function areaGoal() {
+    return {
+      goalType: "target_area" as const,
+      goalLabel: "Target an Area",
+      serviceType: null,
+      sequenceLength: 1,
+      sequenceSpacingDays: 14,
+      otherGoalText: null,
+    };
+  }
+
+  function listGoal() {
+    return {
+      goalType: "send_to_list" as const,
+      goalLabel: "Send to a List",
+      serviceType: null,
+      sequenceLength: 1,
+      sequenceSpacingDays: 14,
+      otherGoalText: null,
+    };
+  }
+
+  function seedListDraft(
+    store: ReturnType<typeof useCampaignDraftStore>,
+    overrides: Record<string, unknown> = {},
+  ) {
+    seedDraft(store);
+    store.draft = {
+      ...store.draft!,
+      currentStep: 2,
+      completedSteps: [1, 2, 3, 4],
+      goal: listGoal(),
+      targeting: null,
+      audience: {
+        audienceId: "aud-keep",
+        audienceSource: "csv",
+        suppressionResult: { deliverable_count: 12 } as any,
+        costPreview: { total_cents: 948 } as any,
+      },
+      design: {
+        templateId: "t",
+        templateLayoutType: "full-bleed",
+        isCustomUpload: false,
+        customUploadUrl: null,
+        sequenceCards: [],
+        designSource: "uploaded",
+        uploadedAsset: { frontUrl: "/media/front.png" },
+      } as any,
+      review: {
+        campaignName: "List campaign",
+        schedules: [],
+        sendSeedCopy: true,
+        seedAddress: "1 Main",
+        additionalSeeds: [],
+        paymentMethodId: null,
+        paymentMethodLabel: null,
+        totalCost: 9.48,
+      } as any,
+      ...overrides,
+    } as any;
+  }
+
+  it("returnToGoalSelection moves to step 1 through goToStep and keeps list work", async () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store);
+
+    await expect(store.returnToGoalSelection()).resolves.toBe(true);
+
+    expect(store.currentStep).toBe(1);
+    expect(store.draft!.audience?.audienceId).toBe("aud-keep");
+    expect(store.draft!.goal?.goalType).toBe("send_to_list");
+    expect(store.consumePreserveDraftOnWizardRemount()).toBe(true);
+    expect(saveDraft).toHaveBeenCalled();
+    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+      currentStep: number;
+      audience: { audienceId: string } | null;
+    };
+    expect(saved.currentStep).toBe(1);
+    expect(saved.audience?.audienceId).toBe("aud-keep");
+  });
+
+  it("re-selecting the same list goal keeps the uploaded audience", () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store);
+    store.draft!.currentStep = 1;
+
+    store.setGoal(listGoal());
+
+    expect(store.draft!.audience?.audienceId).toBe("aud-keep");
+    expect(store.draft!.completedSteps).toEqual(
+      expect.arrayContaining([1, 2, 3, 4]),
+    );
+    expect(store.draft!.review?.campaignName).toBe("List campaign");
+  });
+
+  it("switching from list to area clears the abandoned list and review", async () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store);
+
+    store.setGoal(areaGoal());
+    await store.saveNow();
+
+    expect(store.draft!.goal?.goalType).toBe("target_area");
+    expect(store.draft!.audience).toBeNull();
+    expect(store.draft!.targeting).toBeNull();
+    expect(store.draft!.review).toBeNull();
+    expect(store.draft!.completedSteps).toEqual([1, 3]);
+    expect(store.draft!.design?.designSource).toBe("uploaded");
+    expect(store.draft!.design?.uploadedAsset?.frontUrl).toBe("/media/front.png");
+
+    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+      audience: unknown;
+      targeting: unknown;
+      review: unknown;
+      goal: { goalType: string };
+    };
+    expect(saved.goal.goalType).toBe("target_area");
+    expect(saved.audience).toBeNull();
+    expect(saved.targeting).toBeNull();
+    expect(saved.review).toBeNull();
+  });
+
+  it("switching from area to list clears targeting so checkout cannot reuse the area", async () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store, {
+      goal: areaGoal(),
+      audience: null,
+      targeting: {
+        sequenceLength: 1,
+        estimatedCostSingle: 79,
+        estimatedCostSequence: 79,
+        finalHouseholdCount: 40,
+      },
+    });
+
+    store.setGoal(listGoal());
+    await store.saveNow();
+
+    expect(store.draft!.targeting).toBeNull();
+    expect(store.draft!.audience).toBeNull();
+    expect(store.draft!.review).toBeNull();
+    expect(store.draft!.completedSteps).toEqual([1, 3]);
+
+    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+      audience: unknown;
+      targeting: unknown;
+    };
+    expect(saved.targeting).toBeNull();
+    expect(saved.audience).toBeNull();
+  });
+
+  it("an area-to-area goal change keeps targeting work", () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store, {
+      goal: {
+        goalType: "neighbor_marketing",
+        goalLabel: "Neighbor Marketing",
+        serviceType: null,
+        sequenceLength: 1,
+        sequenceSpacingDays: 14,
+        otherGoalText: null,
+      },
+      audience: null,
+      targeting: {
+        sequenceLength: 1,
+        estimatedCostSingle: 79,
+        estimatedCostSequence: 79,
+        finalHouseholdCount: 40,
+      },
+    });
+
+    store.setGoal(areaGoal());
+
+    expect(store.draft!.targeting?.finalHouseholdCount).toBe(40);
+    expect(store.draft!.audience).toBeNull();
+    expect(store.draft!.completedSteps).toEqual(
+      expect.arrayContaining([1, 2, 3, 4]),
+    );
+  });
+
+  it("returnToGoalSelection does not create a new server draft", async () => {
+    const store = useCampaignDraftStore();
+    await store.startNew("org-1");
+    store.setGoal(listGoal());
+    store.goToStep(2);
+
+    await expect(store.returnToGoalSelection()).resolves.toBe(true);
+
+    expect(store.currentStep).toBe(1);
+    expect(store.isPersisted).toBe(false);
+    expect(createDraft).not.toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("goToStep still caps navigation at max(completedSteps)+1 after a branch reset", () => {
+    const store = useCampaignDraftStore();
+    seedListDraft(store);
+    store.setGoal(areaGoal());
+
+    expect(store.draft!.completedSteps).toEqual([1, 3]);
+    store.goToStep(2);
+    expect(store.currentStep).toBe(2);
+    store.goToStep(1);
+    expect(store.currentStep).toBe(1);
+  });
+});
