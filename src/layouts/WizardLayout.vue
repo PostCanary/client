@@ -74,7 +74,7 @@ async function handleClose() {
 <template>
   <div class="h-screen bg-white flex flex-col">
     <!-- Top bar -->
-    <header class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+    <header class="flex shrink-0 items-center justify-between px-6 py-4 sm:py-5 border-b border-gray-100">
       <!-- Logo -->
       <button
         type="button"
@@ -83,7 +83,7 @@ async function handleClose() {
         data-testid="wizard-logo"
         @click="handleClose"
       >
-        <img :src="LogoUrl" alt="PostCanary" class="h-20 sm:h-24 w-auto object-contain -my-4 sm:-my-5" />
+        <img :src="LogoUrl" alt="PostCanary" class="h-16 sm:h-20 w-auto object-contain" />
       </button>
 
       <!-- Progress remains in the shared header for every wizard route. -->

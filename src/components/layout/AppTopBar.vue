@@ -416,8 +416,9 @@ function onToggleClick() {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #0f766e;
-  color: #ffffff;
+  background: var(--app-teal, #47bfa9);
+  /* POS-265: navy on brand teal = 6.17:1 */
+  color: var(--app-navy, #0b2d50);
   font-size: 13px;
   font-weight: 600;
 }
