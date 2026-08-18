@@ -105,6 +105,9 @@ export function persistIndustryProfileValue(
   otherText: string,
 ): string {
   if (!key) return ''
+  // Keep the "other" sentinel in the picker so Other stays selected
+  // while the custom field is still empty. Do not send this to the API —
+  // use industryValueForApi() on save.
   if (key === 'other') return otherText.trim() || 'other'
   return key
 }
@@ -113,6 +116,23 @@ export function persistIndustryEnum(
   key: Industry | '',
 ): Industry | null {
   if (!key) return null
+  return key
+}
+
+/** API / brand-kit payload. Bare "other" (no custom text) persists as empty. */
+export function industryValueForApi(raw: string | null | undefined): string {
+  const { key, otherText } = parseIndustrySelection(raw)
+  if (!key) return ''
+  if (key === 'other') return otherText.trim()
+  return key
+}
+
+export function industryEnumForSave(
+  raw: string | null | undefined,
+): Industry | null {
+  const { key, otherText } = parseIndustrySelection(raw)
+  if (!key) return null
+  if (key === 'other') return otherText.trim() ? 'other' : null
   return key
 }
 

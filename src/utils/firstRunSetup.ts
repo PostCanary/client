@@ -130,6 +130,15 @@ export async function evaluateNeedsFirstRun(
   });
 }
 
+/** Invited teammates and non-admins must not write org mailing data. */
+export function canEditOrgReturnAddress(opts: {
+  isInvitedUser?: boolean | null;
+  orgRole?: string | null;
+}): boolean {
+  if (opts.isInvitedUser) return false;
+  return opts.orgRole === "owner" || opts.orgRole === "admin";
+}
+
 export function humanizeAuth0LoginError(code: string): string {
   const normalized = code.trim().toLowerCase();
   const known: Record<string, string> = {

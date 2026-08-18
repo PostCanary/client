@@ -41,6 +41,11 @@ export type BrandLocationSyncDeps = {
   brandLocation: string | null | undefined;
   brandIndustry: string | null | undefined;
   profileIndustry: string | null | undefined;
+  /**
+   * When provided (including null), use this instead of fetching
+   * GET /api/organizations/return-address.
+   */
+  knownReturnAddress?: OrgReturnAddress | null;
   /** When true, overwrite brand kit location from return address / org. */
   forceLocation?: boolean;
   updateBrandKit: (partial: {
@@ -74,11 +79,15 @@ export async function syncBrandLocationFromProfile(
   let industry: Industry | null = asIndustry(deps.brandIndustry);
 
   if (!location) {
-    try {
-      const addr = await getReturnAddress();
-      location = locationLabelFromReturnAddress(addr);
-    } catch {
-      // Route may be missing on older servers — fall through to org.location.
+    if (deps.knownReturnAddress !== undefined) {
+      location = locationLabelFromReturnAddress(deps.knownReturnAddress);
+    } else {
+      try {
+        const addr = await getReturnAddress();
+        location = locationLabelFromReturnAddress(addr);
+      } catch {
+        // Route may be missing on older servers — fall through to org.location.
+      }
     }
   }
 

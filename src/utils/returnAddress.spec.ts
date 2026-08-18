@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isCompleteReturnAddress,
+  returnAddressFieldsEqual,
   toReturnAddressPayload,
   validateReturnAddressForm,
 } from "./returnAddress";
@@ -74,5 +75,35 @@ describe("isCompleteReturnAddress / payload", () => {
       state: "AZ",
       zip: "85251",
     });
+  });
+
+  it("treats equivalent payloads as unchanged", () => {
+    const saved = {
+      name: "Acme",
+      address: "1 Main",
+      address2: null,
+      city: "Scottsdale",
+      state: "AZ",
+      zip: "85251",
+    };
+    expect(
+      returnAddressFieldsEqual(
+        saved,
+        toReturnAddressPayload({
+          name: "Acme",
+          address: "1 Main",
+          address2: "",
+          city: "Scottsdale",
+          state: "az",
+          zip: "85251",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      returnAddressFieldsEqual(saved, {
+        ...saved,
+        address: "2 Main",
+      }),
+    ).toBe(false);
   });
 });

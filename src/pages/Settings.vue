@@ -25,8 +25,8 @@ import {
 import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
 import IndustryPicker from "@/components/IndustryPicker.vue";
 import {
+  industryEnumForSave,
   parseIndustrySelection,
-  persistIndustryEnum,
 } from "@/types/campaign";
 import {
   toReturnAddressPayload,
@@ -249,6 +249,14 @@ async function onSubmit() {
   const newBizName = bizName.value.trim();
   const bizNameChanged = newBizName !== prevBizName;
 
+  const { key: industryKey, otherText } = parseIndustrySelection(
+    form.value.industry,
+  );
+  if (industryKey === "other" && !otherText.trim()) {
+    message.error("Tell us your industry.");
+    return;
+  }
+
   brandKitError.value = null;
   const prevIndustry = (profile.value?.industry ?? "").trim();
   await saveProfile();
@@ -256,8 +264,7 @@ async function onSubmit() {
   // pile a brand-kit failure on top of an unsaved profile.
   if (error.value) return;
 
-  const { key: industryKey } = parseIndustrySelection(form.value.industry);
-  const industryEnum = persistIndustryEnum(industryKey);
+  const industryEnum = industryEnumForSave(form.value.industry);
   const industryChanged =
     form.value.industry.trim() !== prevIndustry ||
     (!!industryEnum && brandKitStore.brandKit?.industry !== industryEnum);

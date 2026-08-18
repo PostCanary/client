@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  industryEnumForSave,
+  industryValueForApi,
   normalizeIndustry,
   parseIndustrySelection,
   persistIndustryEnum,
@@ -35,5 +37,15 @@ describe("resolveIndustry / parseIndustrySelection", () => {
     );
     expect(persistIndustryEnum("other")).toBe("other");
     expect(persistIndustryEnum("plumbing")).toBe("plumbing");
+  });
+
+  it("does not persist the literal other sentinel to the API", () => {
+    expect(industryValueForApi("other")).toBe("");
+    expect(industryValueForApi("")).toBe("");
+    expect(industryValueForApi("Pool service")).toBe("Pool service");
+    expect(industryValueForApi("plumbing")).toBe("plumbing");
+    expect(industryEnumForSave("other")).toBeNull();
+    expect(industryEnumForSave("Pool service")).toBe("other");
+    expect(industryEnumForSave("hvac")).toBe("hvac");
   });
 });

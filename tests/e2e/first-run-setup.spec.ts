@@ -61,6 +61,75 @@ test("new user with empty industry and address sees the first-run page once", as
   await expect(page.getByTestId("choose-target-area")).toBeVisible();
 });
 
+const EXISTING_RETURN = {
+  name: "Acme Plumbing",
+  address: "100 Main Street",
+  address2: null,
+  city: "Scottsdale",
+  state: "AZ",
+  zip: "85251",
+};
+
+function industryOnlyMissing(state: MockAppState) {
+  state.profile.industry = "";
+  state.profile.profile_complete = false;
+  state.profile.created_at = new Date().toISOString();
+  state.profile.is_invited_user = false;
+  state.brandKit.data = {
+    ...(state.brandKit.data ?? {}),
+    industry: null,
+  };
+  state.returnAddress = { ...EXISTING_RETURN };
+}
+
+test("industry-only missing prefills the return address and does not overwrite it", async ({
+  page,
+}) => {
+  const state = await boot(page, industryOnlyMissing);
+
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("first-run-street")).toHaveValue("100 Main Street");
+  await expect(page.getByTestId("first-run-city")).toHaveValue("Scottsdale");
+  await expect(page.getByTestId("first-run-state")).toHaveValue("AZ");
+  await expect(page.getByTestId("first-run-zip")).toHaveValue("85251");
+
+  await page.getByTestId("industry-pill-hvac").click();
+  await page.getByTestId("first-run-continue").click();
+
+  await expect(page).toHaveURL(/\/app\/home$/);
+  await expect.poll(() => state.profile.industry).toBe("hvac");
+  await expect.poll(() => state.returnAddress?.address).toBe("100 Main Street");
+  await expect.poll(() => state.returnAddress?.city).toBe("Scottsdale");
+  expect(state.requestLog.returnAddressUpdates).toEqual([]);
+});
+
+test("invited teammate sets industry without writing the org return address", async ({
+  page,
+}) => {
+  const state = await boot(page, (s) => {
+    industryOnlyMissing(s);
+    s.profile.is_invited_user = true;
+    s.profile.full_name = "Jordan Member";
+    s.authMe.org_role = "member";
+    const org = s.orgs.find((o) => o.id === s.authMe.org_id);
+    if (org) org.role = "member";
+  });
+
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("first-run-street")).toHaveCount(0);
+  await expect(page.getByTestId("first-run-address-locked")).toBeVisible();
+
+  await page.getByTestId("industry-pill-plumbing").click();
+  await page.getByTestId("first-run-continue").click();
+
+  await expect(page).toHaveURL(/\/app\/home$/);
+  await expect.poll(() => state.profile.industry).toBe("plumbing");
+  await expect.poll(() => state.returnAddress).toEqual(EXISTING_RETURN);
+  expect(state.requestLog.returnAddressUpdates).toEqual([]);
+});
+
 test("complete profiles and invited teammates never see the first-run page", async ({
   page,
 }) => {
@@ -99,6 +168,11 @@ test("Settings industry is a controlled list with Other", async ({ page }) => {
 
   await expect.poll(() => state.profile.industry).toBe("Pool service");
   await expect.poll(() => state.brandKit.data.industry).toBe("other");
+
+  await select.selectOption("other");
+  await page.getByTestId("industry-other-text").fill("");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect.poll(() => state.profile.industry).toBe("Pool service");
 });
 
 test("/login opens the in-app modal and surfaces SSO errors", async ({

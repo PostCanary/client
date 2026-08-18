@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { updateUserProfile } from "@/api/users";
-import { updateReturnAddress } from "@/api/orgs";
+import {
+  getReturnAddress,
+  updateReturnAddress,
+  type OrgReturnAddress,
+} from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import IndustryPicker from "@/components/IndustryPicker.vue";
 import { BRAND } from "@/config/brand";
 import {
+  industryEnumForSave,
+  industryValueForApi,
   parseIndustrySelection,
-  persistIndustryEnum,
 } from "@/types/campaign";
 import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
+import { canEditOrgReturnAddress } from "@/utils/firstRunSetup";
 import {
+  isCompleteReturnAddress,
+  returnAddressFieldsEqual,
   toReturnAddressPayload,
   validateReturnAddressForm,
 } from "@/utils/returnAddress";
@@ -27,45 +35,109 @@ const address = ref("");
 const city = ref("");
 const state = ref("");
 const zip = ref("");
+const loadedAddress = ref<OrgReturnAddress | null>(null);
+const loading = ref(true);
 const saving = ref(false);
 const error = ref<string | null>(null);
 
 const industrySelection = computed(() => parseIndustrySelection(industry.value));
+const industryOk = computed(() => {
+  if (!industrySelection.value.key) return false;
+  if (industrySelection.value.key === "other") {
+    return !!industrySelection.value.otherText.trim();
+  }
+  return true;
+});
 
-const canSave = computed(() => {
-  const industryOk =
-    !!industrySelection.value.key &&
-    (industrySelection.value.key !== "other" ||
-      !!industrySelection.value.otherText.trim());
-  return (
-    industryOk &&
+const canWriteAddress = computed(() =>
+  canEditOrgReturnAddress({
+    isInvitedUser: auth.profile?.is_invited_user,
+    orgRole: auth.orgRole,
+  }),
+);
+
+const addressAlreadyComplete = computed(() =>
+  isCompleteReturnAddress(loadedAddress.value),
+);
+
+const showAddressFields = computed(() => canWriteAddress.value);
+
+const currentAddressPayload = computed(() =>
+  toReturnAddressPayload({
+    name: loadedAddress.value?.name ?? "",
+    address2: loadedAddress.value?.address2 ?? "",
+    address: address.value,
+    city: city.value,
+    state: state.value,
+    zip: zip.value,
+  }),
+);
+
+const addressChanged = computed(
+  () =>
+    !returnAddressFieldsEqual(loadedAddress.value, currentAddressPayload.value),
+);
+
+const addressRequired = computed(
+  () => canWriteAddress.value && !addressAlreadyComplete.value,
+);
+
+const addressValid = computed(
+  () =>
     validateReturnAddressForm({
       address: address.value,
       city: city.value,
       state: state.value,
       zip: zip.value,
-    }) === null
-  );
+    }) === null,
+);
+
+const canSave = computed(() => {
+  if (!industryOk.value) return false;
+  if (addressRequired.value) return addressValid.value;
+  return true;
+});
+
+function applyLoadedAddress(addr: OrgReturnAddress | null) {
+  loadedAddress.value = addr;
+  address.value = addr?.address ?? "";
+  city.value = addr?.city ?? "";
+  state.value = addr?.state ?? "";
+  zip.value = addr?.zip ?? "";
+}
+
+onMounted(async () => {
+  try {
+    if (!brandKitStore.hydrated) {
+      await brandKitStore.fetch();
+    }
+    if (!industry.value.trim() && brandKitStore.brandKit?.industry) {
+      industry.value = brandKitStore.brandKit.industry;
+    }
+    const addr = await getReturnAddress();
+    applyLoadedAddress(addr);
+  } catch {
+    applyLoadedAddress(null);
+  } finally {
+    loading.value = false;
+  }
 });
 
 async function onSubmit() {
   if (!canSave.value || saving.value) return;
 
-  const addressError = validateReturnAddressForm({
-    address: address.value,
-    city: city.value,
-    state: state.value,
-    zip: zip.value,
-  });
-  if (addressError) {
-    error.value = addressError;
+  if (!industryOk.value) {
+    error.value = "Tell us your industry.";
     return;
   }
-  if (
-    industrySelection.value.key === "other" &&
-    !industrySelection.value.otherText.trim()
-  ) {
-    error.value = "Tell us your industry.";
+  if (addressRequired.value && !addressValid.value) {
+    error.value =
+      validateReturnAddressForm({
+        address: address.value,
+        city: city.value,
+        state: state.value,
+        zip: zip.value,
+      }) ?? "Street address is required.";
     return;
   }
 
@@ -73,32 +145,33 @@ async function onSubmit() {
   error.value = null;
 
   try {
-    const updated = await updateUserProfile({ industry: industry.value.trim() });
+    const profileIndustry = industryValueForApi(industry.value);
+    const updated = await updateUserProfile({ industry: profileIndustry });
     auth.profile = updated;
 
-    const savedAddress = await updateReturnAddress(
-      toReturnAddressPayload({
-        address: address.value,
-        city: city.value,
-        state: state.value,
-        zip: zip.value,
-      }),
-    );
-    if (!savedAddress) {
-      throw new Error("Failed to save business mailing address.");
+    let knownAddress = loadedAddress.value;
+    const shouldWriteAddress =
+      canWriteAddress.value &&
+      addressValid.value &&
+      (!addressAlreadyComplete.value || addressChanged.value);
+
+    if (shouldWriteAddress) {
+      const savedAddress = await updateReturnAddress(currentAddressPayload.value);
+      if (!savedAddress) {
+        throw new Error("Failed to save business mailing address.");
+      }
+      knownAddress = savedAddress;
+      applyLoadedAddress(savedAddress);
     }
 
-    if (!brandKitStore.hydrated) {
-      await brandKitStore.fetch();
-    }
-
-    const industryEnum = persistIndustryEnum(industrySelection.value.key);
+    const industryEnum = industryEnumForSave(industry.value);
     await syncBrandLocationFromProfile({
-      orgId: auth.orgId,
+      orgId: canWriteAddress.value ? auth.orgId : null,
       brandLocation: brandKitStore.brandKit?.location,
       brandIndustry: brandKitStore.brandKit?.industry ?? null,
       profileIndustry: industryEnum ?? updated.industry,
-      forceLocation: true,
+      knownReturnAddress: knownAddress,
+      forceLocation: shouldWriteAddress,
       updateBrandKit: (partial) => brandKitStore.update(partial),
       patchBrandKitLocal: (partial) => {
         brandKitStore.$patch({
@@ -110,10 +183,7 @@ async function onSubmit() {
       },
     });
 
-    if (
-      industryEnum &&
-      brandKitStore.brandKit?.industry !== industryEnum
-    ) {
+    if (industryEnum && brandKitStore.brandKit?.industry !== industryEnum) {
       await brandKitStore.update({ industry: industryEnum });
     }
 
@@ -139,7 +209,13 @@ async function onSubmit() {
     </header>
 
     <main class="first-run-main">
-      <form class="first-run-card" @submit.prevent="onSubmit">
+      <div v-if="loading" class="first-run-loading" data-testid="first-run-loading">
+        <div
+          class="w-6 h-6 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
+        />
+      </div>
+
+      <form v-else class="first-run-card" @submit.prevent="onSubmit">
         <h1 class="first-run-title">A couple things before you send</h1>
         <p class="first-run-sub">
           This helps us target the right neighborhoods and print your return
@@ -154,7 +230,7 @@ async function onSubmit() {
             <IndustryPicker v-model="industry" variant="pills" />
           </div>
 
-          <div>
+          <div v-if="showAddressFields">
             <p class="block text-sm font-medium text-slate-700 mb-2">
               Business mailing / return address
             </p>
@@ -217,6 +293,15 @@ async function onSubmit() {
               </div>
             </div>
           </div>
+
+          <p
+            v-else-if="addressAlreadyComplete"
+            class="text-sm text-slate-500"
+            data-testid="first-run-address-locked"
+          >
+            Your team already has a business mailing address. You only need to
+            set your industry.
+          </p>
         </div>
 
         <p v-if="error" class="mt-4 text-sm text-red-600" data-testid="first-run-error">
@@ -259,6 +344,13 @@ async function onSubmit() {
   align-items: center;
   justify-content: center;
   padding: 24px 16px 48px;
+}
+
+.first-run-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
 }
 
 .first-run-card {

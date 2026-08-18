@@ -52,3 +52,19 @@ export function toReturnAddressPayload(
     zip: fields.zip.trim(),
   };
 }
+
+export function returnAddressFieldsEqual(
+  a: Partial<OrgReturnAddress> | null | undefined,
+  b: Partial<OrgReturnAddress> | null | undefined,
+): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return (
+    (a.name ?? "") === (b.name ?? "") &&
+    (a.address ?? "").trim() === (b.address ?? "").trim() &&
+    (a.address2 ?? "") === (b.address2 ?? "") &&
+    (a.city ?? "").trim() === (b.city ?? "").trim() &&
+    (a.state ?? "").trim().toUpperCase() === (b.state ?? "").trim().toUpperCase() &&
+    (a.zip ?? "").trim() === (b.zip ?? "").trim()
+  );
+}

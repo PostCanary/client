@@ -7,6 +7,7 @@ vi.mock("@/api/orgs", () => ({
 
 import { getOrg, getReturnAddress } from "@/api/orgs";
 import {
+  canEditOrgReturnAddress,
   evaluateNeedsFirstRun,
   hasIndustryValue,
   hasMailingLocation,
@@ -138,6 +139,20 @@ describe("evaluateNeedsFirstRun", () => {
         fetchBrandKit,
       }),
     ).resolves.toBe(true);
+  });
+});
+
+describe("canEditOrgReturnAddress", () => {
+  it("blocks invited teammates and non-admins", () => {
+    expect(
+      canEditOrgReturnAddress({ isInvitedUser: true, orgRole: "admin" }),
+    ).toBe(false);
+    expect(
+      canEditOrgReturnAddress({ isInvitedUser: false, orgRole: "member" }),
+    ).toBe(false);
+    expect(
+      canEditOrgReturnAddress({ isInvitedUser: false, orgRole: "owner" }),
+    ).toBe(true);
   });
 });
 

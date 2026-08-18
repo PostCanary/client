@@ -77,6 +77,32 @@ describe("syncBrandLocationFromProfile", () => {
     expect(updateBrandKit).not.toHaveBeenCalled();
   });
 
+  it("uses a known return address instead of re-fetching", async () => {
+    const result = await syncBrandLocationFromProfile({
+      orgId: "org-1",
+      brandLocation: "",
+      brandIndustry: null,
+      profileIndustry: "plumbing",
+      knownReturnAddress: {
+        name: null,
+        address: "9 Pine",
+        address2: null,
+        city: "Buffalo",
+        state: "NY",
+        zip: "14201",
+      },
+      updateBrandKit,
+      patchBrandKitLocal,
+    });
+
+    expect(result.location).toBe("Buffalo, NY");
+    expect(getReturnAddress).not.toHaveBeenCalled();
+    expect(updateBrandKit).toHaveBeenCalledWith({
+      location: "Buffalo, NY",
+      industry: "plumbing",
+    });
+  });
+
   it("fills location from return address and industry from profile", async () => {
     vi.mocked(getReturnAddress).mockResolvedValue({
       name: null,
