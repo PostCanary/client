@@ -16,6 +16,7 @@ export interface DesignLibraryEntry {
   front_asset: DesignAsset;
   back_asset: DesignAsset | null;
   blank_back: boolean;
+  asset_missing?: boolean;
   uploaded_asset: UploadedDesignAsset;
   created_at: string;
   updated_at: string;

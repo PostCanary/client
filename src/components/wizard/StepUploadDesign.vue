@@ -50,6 +50,10 @@ async function openDesignLibrary() {
 }
 
 function selectLibraryDesign(design: DesignLibraryEntry) {
+  if (design.asset_missing) {
+    message.error("Artwork missing — please re-upload");
+    return;
+  }
   fromLibrary.value = true;
   draftStore.setUploadedDesign(design.uploaded_asset);
   frontFile.value = {
@@ -750,11 +754,20 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             :key="design.id"
             type="button"
             class="design-library-option"
+            :class="{ 'is-missing': design.asset_missing }"
             :data-testid="`select-library-design-${design.id}`"
+            :disabled="design.asset_missing"
             @click="selectLibraryDesign(design)"
           >
+            <div
+              v-if="design.asset_missing"
+              class="missing-art"
+              data-testid="design-library-artwork-missing"
+            >
+              Artwork missing — please re-upload
+            </div>
             <img
-              v-if="design.front_asset.mime_type.startsWith('image/')"
+              v-else-if="design.front_asset.mime_type.startsWith('image/')"
               :src="mediaSrc(design.front_asset.url)"
               :alt="`${design.name} front`"
             />
@@ -905,12 +918,30 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 }
 
 .design-library-option img,
-.design-library-option object {
+.design-library-option object,
+.design-library-option .missing-art {
   width: 100%;
   height: 180px;
   object-fit: cover;
   background: #f8fafc;
   pointer-events: none;
+}
+
+.design-library-option .missing-art {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border-bottom: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  object-fit: unset;
+}
+
+.design-library-option.is-missing {
+  cursor: not-allowed;
+  opacity: 0.85;
 }
 
 .design-library-option strong,
