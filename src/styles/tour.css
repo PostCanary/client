@@ -88,12 +88,12 @@
 
 /* Primary button (Next / Done) */
 .shepherd-button-primary {
-  background: #47bfa9;
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
 }
 
 .shepherd-button-primary:hover {
-  background: #3aa893;
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 /* Secondary button (Back) */

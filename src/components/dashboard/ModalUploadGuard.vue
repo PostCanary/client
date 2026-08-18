@@ -251,8 +251,8 @@ function onConfirm() {
 
 /* Harmonize with UploadCard buttons */
 .btn-primary {
-  background: #47bfa9;
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   border-color: #47bfa9;
 }
 

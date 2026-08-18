@@ -11,7 +11,7 @@ export default defineConfig({
     "campaign-detail-flow-v2.spec.ts",
     "release-accessibility.spec.ts",
   ],
-  grep: /invite accept page prompts unauthenticated users|org switcher reloads the app|dashboard upload-and-match flow|settings exposes billing controls|keeps POS-170 draft badges synchronized|durable order counts and server amounts|release accessibility|keyboard navigation reaches and activates/,
+  grep: /invite accept page prompts unauthenticated users|org switcher reloads the app|dashboard upload-and-match flow|settings exposes billing controls|keeps POS-170 draft badges synchronized|durable order counts and server amounts|release accessibility|keyboard navigation reaches and activates|interactive surfaces hold contrast|interactive palette tokens satisfy/,
   reporter: process.env.CI
     ? [["github"], ["html", { open: "never", outputFolder: "playwright-report-release" }]]
     : [["list"], ["html", { open: "never", outputFolder: "playwright-report-release" }]],

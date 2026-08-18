@@ -249,15 +249,15 @@ const presets: { label: string; value: Preset }[] = [
   padding: 6px 16px;
   border: none;
   border-radius: 8px;
-  background: var(--app-teal, #47bfa9);
-  color: #fff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s ease;
 }
-.filter-apply:hover { background: #3aa893; }
+.filter-apply:hover { background: var(--app-btn-bg-hover, #163b69); }
 
 .filter-spacer { flex: 1; }
 

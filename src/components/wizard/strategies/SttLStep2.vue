@@ -323,7 +323,7 @@ onMounted(runFlow)
       <button
         type="button"
         :disabled="!canApprove"
-        class="px-6 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-2"
+        class="px-6 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b2d50] focus-visible:ring-offset-2"
         :class="
           canApprove
             ? 'bg-[#47bfa9] text-white hover:bg-[#3aad97]'
