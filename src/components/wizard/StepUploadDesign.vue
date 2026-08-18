@@ -22,10 +22,12 @@ import { createSetupSession } from "@/api/billing";
 import { listDesigns, type DesignLibraryEntry } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
+import { useIndustryTemplatePack } from "@/composables/useIndustryTemplatePack";
 
 const draftStore = useCampaignDraftStore();
 const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
+const { packId, templates: industryTemplates } = useIndustryTemplatePack();
 const pricing = usePricing();
 const message = useMessage();
 const showDesignLibrary = ref(false);
@@ -581,6 +583,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
     <!-- Background content — blurs/dims while the design-request modal is open -->
     <div
       data-testid="upload-design-content"
+      :data-pack-id="packId"
       :class="showDesignRequestModal ? 'upload-design-content--blurred' : ''"
     >
       <h1 class="text-xl font-semibold text-[#0b2d50] mb-1">Upload Your Design</h1>
@@ -752,6 +755,31 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
           Our team will reach out to {{ designRequestSummary.email }} to design your postcard (Template {{ designRequestSummary.template }}).
         </p>
       </div>
+
+      <section
+        class="mt-6 pt-5 border-t border-gray-100"
+        data-testid="industry-template-pack"
+        :data-pack-id="packId"
+      >
+        <h2 class="text-sm font-semibold text-[#0b2d50]">Postcard templates</h2>
+        <p class="text-xs text-gray-500 mt-1 mb-3">
+          Approved launch templates for your industry. Upload your own artwork above, or start from one of these.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <article
+            v-for="template in industryTemplates"
+            :key="template.id"
+            class="rounded-xl border border-gray-200 bg-white p-3"
+            data-testid="design-library-template"
+          >
+            <p class="text-[11px] uppercase tracking-wide text-gray-400">
+              {{ template.cardPosition.replace("_", " ") }}
+            </p>
+            <p class="text-sm font-semibold text-[#0b2d50] mt-1">{{ template.name }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ template.renderTemplateId }}</p>
+          </article>
+        </div>
+      </section>
 
       <div class="text-center pt-2 border-t border-gray-100">
         <button

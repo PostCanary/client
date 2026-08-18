@@ -74,3 +74,20 @@ test("keeps Download PDF hidden until a curated template has a real asset", asyn
   await expect(cards).toHaveCount(3);
   await expect(cards.getByRole("button", { name: "Download PDF" })).toHaveCount(0);
 });
+
+test("restaurant industry still shows HVAC cards until fridge_menu assets exist", async ({
+  page,
+}) => {
+  const state = createMockAppState();
+  state.profile.industry = "restaurant";
+  state.brandKit.data.industry = "restaurant";
+  await installMockApi(page, state);
+  await page.goto("/app/designs");
+
+  await expect(page.getByTestId("industry-template-pack")).toHaveAttribute(
+    "data-pack-id",
+    "fallback",
+  );
+  await expect(page.getByTestId("design-library-template")).toHaveCount(3);
+  await expect(page.getByText("HVAC Neighborhood Offer")).toBeVisible();
+});

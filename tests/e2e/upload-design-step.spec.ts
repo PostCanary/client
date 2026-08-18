@@ -361,3 +361,17 @@ test("submitting a valid design request enables Next and posts the brief", async
   expect(request.draft_id).toBe("mock-draft-001");
   expect(request.full_name).toBeTruthy();
 });
+
+test("restaurant and dental still see HVAC cards while those packs have no assets", async ({
+  page,
+}) => {
+  await gotoStep3(page, (mock) => {
+    mock.profile.industry = "restaurant";
+    mock.brandKit.data.industry = "restaurant";
+  });
+
+  const pack = page.getByTestId("industry-template-pack");
+  await expect(pack).toHaveAttribute("data-pack-id", "fallback");
+  await expect(page.getByTestId("design-library-template")).toHaveCount(3);
+  await expect(page.getByText("HVAC Neighborhood Offer")).toBeVisible();
+});

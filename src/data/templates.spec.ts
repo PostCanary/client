@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEMO_VISIBLE_LAYOUTS,
+  DESIGN_LIBRARY_TEMPLATES,
   GOAL_TEMPLATE_MAP,
   LAYOUT_RENDER_TEMPLATE_IDS,
   getDesignLibraryTemplate,
@@ -12,6 +13,7 @@ import {
   visibleDesignLibraryTemplates,
   useCaseLabel,
 } from "./templates";
+import { FALLBACK_TEMPLATE_PACK_ID } from "./industryTemplatePacks";
 
 describe("design library templates", () => {
   it("exposes only render-worker-backed curated launch templates", () => {
@@ -21,6 +23,7 @@ describe("design library templates", () => {
       expect(template.status).toBe("visible");
       expect(template.source).toBe("curated");
       expect(template.industry).toBe("hvac");
+      expect(template.packId).toBe(FALLBACK_TEMPLATE_PACK_ID);
       expect(template.layoutType).toBe("full-bleed");
       expect(template.renderTemplateId).toBe("hac-1000-front-v1");
       expect(template.previewStrategy).toBe("render-worker");
@@ -107,6 +110,36 @@ describe("design library templates", () => {
     expect(
       targetAreaSets.find((set) => set.recommended)?.layout,
     ).toBe("bold-graphic");
+  });
+
+  it("falls back to the HVAC launch set when an industry pack has no assets", () => {
+    const restaurant = getVisibleDesignLibraryTemplates(
+      undefined,
+      "restaurant",
+    );
+    const dental = getVisibleDesignLibraryTemplates("neighbor_marketing", "dental");
+    const empty = getVisibleDesignLibraryTemplates(undefined, "");
+
+    expect(restaurant.map((template) => template.id)).toEqual(
+      visibleDesignLibraryTemplates.map((template) => template.id),
+    );
+    expect(dental.map((template) => template.id)).toEqual(
+      visibleDesignLibraryTemplates.map((template) => template.id),
+    );
+    expect(empty).toEqual(visibleDesignLibraryTemplates);
+    expect(
+      getRecommendedTemplateSet("neighbor_marketing", "restaurant").map(
+        (template) => template.id,
+      ),
+    ).toEqual(visibleDesignLibraryTemplates.map((template) => template.id));
+  });
+
+  it("does not treat today's HVAC cards as neighborhood_coupons assets", () => {
+    expect(
+      DESIGN_LIBRARY_TEMPLATES.every(
+        (template) => template.packId === FALLBACK_TEMPLATE_PACK_ID,
+      ),
+    ).toBe(true);
   });
 
   it("looks up only visible design library templates by id", () => {

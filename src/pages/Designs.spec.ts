@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 
 const apiMocks = vi.hoisted(() => ({
   listDesigns: vi.fn(),
@@ -21,6 +22,19 @@ vi.mock("naive-ui", () => ({ useMessage: () => messageMocks }));
 vi.mock("vue-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 import Designs from "./Designs.vue";
+import { useAuthStore } from "@/stores/auth";
+import { useBrandKitStore } from "@/stores/useBrandKitStore";
+
+function mountDesigns(industry = "hvac") {
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const brandKit = useBrandKitStore();
+  brandKit.hydrated = true;
+  brandKit.brandKit = { industry } as any;
+  const auth = useAuthStore();
+  auth.profile = { industry } as any;
+  return mount(Designs, { global: { plugins: [pinia] } });
+}
 
 const design = {
   id: "design-1",
@@ -69,7 +83,7 @@ describe("Designs library", () => {
   });
 
   it("defaults the editable name to today and uploads without creating a campaign draft", async () => {
-    const wrapper = mount(Designs);
+    const wrapper = mountDesigns();
     await flushPromises();
     await wrapper.get('[data-testid="upload-design"]').trigger("click");
 
@@ -105,7 +119,7 @@ describe("Designs library", () => {
 
   it("shows the front thumbnail, blank-back detail, and deletes the library entry", async () => {
     apiMocks.listDesigns.mockResolvedValue([design]);
-    const wrapper = mount(Designs);
+    const wrapper = mountDesigns();
     await flushPromises();
 
     expect(wrapper.get('[data-testid="design-front-thumbnail"]').attributes("src")).toContain(
@@ -126,7 +140,7 @@ describe("Designs library", () => {
   it("shows an explicit missing-artwork state instead of a broken image", async () => {
     apiMocks.listDesigns.mockResolvedValue([{ ...design, asset_missing: true }]);
     apiMocks.getDesign.mockResolvedValue({ ...design, asset_missing: true });
-    const wrapper = mount(Designs);
+    const wrapper = mountDesigns();
     await flushPromises();
 
     expect(wrapper.get('[data-testid="design-artwork-missing"]').text()).toContain(
@@ -139,5 +153,16 @@ describe("Designs library", () => {
     expect(wrapper.get('[data-testid="design-detail-artwork-missing"]').text()).toContain(
       "Artwork missing — please re-upload",
     );
+  });
+
+  it("shows the HVAC fallback pack for restaurant until fridge_menu assets exist", async () => {
+    const wrapper = mountDesigns("restaurant");
+    await flushPromises();
+
+    const pack = wrapper.get('[data-testid="industry-template-pack"]');
+    expect(pack.attributes("data-pack-id")).toBe("fallback");
+    const cards = wrapper.findAll('[data-testid="design-library-template"]');
+    expect(cards).toHaveLength(3);
+    expect(cards[0]!.text()).toContain("HVAC Neighborhood Offer");
   });
 });
