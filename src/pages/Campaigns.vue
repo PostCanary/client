@@ -8,6 +8,7 @@ import CampaignViewModal from "@/components/campaigns/CampaignViewModal.vue";
 import { pauseMailCampaign, resumeMailCampaign, getMailCampaign } from "@/api/mailCampaigns";
 import { deleteDraft } from "@/api/campaignDrafts";
 import type { MailCampaign } from "@/types/campaign";
+import { draftListDisplayName } from "@/utils/defaultCampaignName";
 
 const router = useRouter();
 const route = useRoute();
@@ -186,7 +187,7 @@ const emptyMessages: Record<CampaignTab, string> = {
           <div class="flex items-center justify-between">
             <div>
               <h3 class="font-semibold text-[#0b2d50]">
-                {{ draft.goal?.goalLabel ?? "Untitled Draft" }}
+                {{ draftListDisplayName(draft) }}
               </h3>
               <p class="text-sm text-gray-500">
                 Draft (Step {{ draft.currentStep }} of 4)
