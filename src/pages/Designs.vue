@@ -122,8 +122,15 @@ function downloadPdf(template: TemplateWithAsset) {
     <div v-else-if="designs.length" class="designs-grid">
       <article v-for="design in designs" :key="design.id" class="design-card">
         <button class="thumbnail" type="button" @click="openDetail(design)">
+          <div
+            v-if="design.asset_missing"
+            class="missing-art"
+            data-testid="design-artwork-missing"
+          >
+            Artwork missing — please re-upload
+          </div>
           <img
-            v-if="design.front_asset.mime_type.startsWith('image/')"
+            v-else-if="design.front_asset.mime_type.startsWith('image/')"
             :src="mediaSrc(design.front_asset.url)"
             :alt="`${design.name} front`"
             data-testid="design-front-thumbnail"
@@ -208,8 +215,15 @@ function downloadPdf(template: TemplateWithAsset) {
         <div class="detail-sides">
           <figure>
             <figcaption>Front</figcaption>
+            <div
+              v-if="selected.asset_missing"
+              class="missing-art"
+              data-testid="design-detail-artwork-missing"
+            >
+              Artwork missing — please re-upload
+            </div>
             <img
-              v-if="selected.front_asset.mime_type.startsWith('image/')"
+              v-else-if="selected.front_asset.mime_type.startsWith('image/')"
               :src="mediaSrc(selected.front_asset.url)"
               :alt="`${selected.name} front detail`"
             />
@@ -224,6 +238,12 @@ function downloadPdf(template: TemplateWithAsset) {
             <figcaption>Back</figcaption>
             <div v-if="selected.blank_back" class="blank-back" data-testid="blank-back-state">
               Blank back
+            </div>
+            <div
+              v-else-if="selected.asset_missing"
+              class="missing-art"
+            >
+              Artwork missing — please re-upload
             </div>
             <img
               v-else-if="selected.back_asset?.mime_type.startsWith('image/')"
@@ -254,6 +274,20 @@ function downloadPdf(template: TemplateWithAsset) {
 .design-card { overflow: hidden; border: 1px solid #e2e8f0; border-radius: 12px; background: white; }
 .thumbnail { display: block; width: 100%; aspect-ratio: 6.25 / 9.25; max-height: 280px; padding: 0; border: 0; background: #f1f5f9; cursor: pointer; }
 .thumbnail img, .thumbnail object { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.missing-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
 .card-meta { display: flex; flex-direction: column; gap: 4px; padding: 14px; color: #64748b; font-size: 12px; }
 .card-meta strong { color: #0c2d50; font-size: 14px; }
 .card-actions { display: flex; gap: 12px; margin-top: 8px; }
@@ -282,7 +316,7 @@ function downloadPdf(template: TemplateWithAsset) {
 .detail-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .detail-sides figure { margin: 0; }
 .detail-sides figcaption { margin-bottom: 8px; color: #0c2d50; font-size: 13px; font-weight: 700; }
-.detail-sides img, .detail-sides object, .blank-back { width: 100%; aspect-ratio: 6.25 / 9.25; max-height: 430px; border: 1px solid #e2e8f0; border-radius: 10px; object-fit: contain; background: #f8fafc; }
+.detail-sides img, .detail-sides object, .blank-back, .detail-sides .missing-art { width: 100%; aspect-ratio: 6.25 / 9.25; max-height: 430px; border: 1px solid #e2e8f0; border-radius: 10px; object-fit: contain; background: #f8fafc; }
 .blank-back { display: grid; place-items: center; color: #94a3b8; }
 .detail-delete { margin-top: 20px; }
 @media (max-width: 640px) { .designs-header { align-items: flex-start; flex-direction: column; } .detail-sides { grid-template-columns: 1fr; } }
