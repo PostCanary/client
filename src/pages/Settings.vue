@@ -23,6 +23,17 @@ import {
   type OrgReturnAddress,
 } from "@/api/orgs";
 import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
+import IndustryPicker from "@/components/IndustryPicker.vue";
+import {
+  industryEnumForSave,
+  parseIndustrySelection,
+} from "@/types/campaign";
+import { canEditOrgReturnAddress } from "@/utils/firstRunSetup";
+import {
+  isCompleteReturnAddress,
+  toReturnAddressPayload,
+  validateReturnAddressForm,
+} from "@/utils/returnAddress";
 
 const {
   profile,
@@ -68,6 +79,13 @@ function syncBizNameFromKit() {
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
 const isOrgAdmin = computed(() => orgStore.isAdmin);
+const canWriteReturnAddress = computed(() =>
+  canEditOrgReturnAddress({
+    isInvitedUser:
+      profile.value?.is_invited_user ?? auth.profile?.is_invited_user,
+    orgRole: auth.orgRole,
+  }),
+);
 
 // POS-161 — Business mailing (return) address. Required for postcard print
 // submit; account-level default that campaigns can override in Review.
@@ -83,19 +101,19 @@ const returnAddressLoading = ref(false);
 const returnAddressSaving = ref(false);
 const returnAddressError = ref<string | null>(null);
 
-const ZIP_RE = /^\d{5}(-\d{4})?$/;
-const STATE_RE = /^[A-Za-z]{2}$/;
-
-function validateReturnAddressForm(): string | null {
-  const f = returnAddressForm.value;
-  if (!f.address.trim()) return "Street address is required.";
-  if (!f.city.trim()) return "City is required.";
-  if (!STATE_RE.test(f.state.trim())) return "State must be a 2-letter code.";
-  if (!ZIP_RE.test(f.zip.trim())) {
-    return "ZIP must be 5 digits or ZIP+4 (12345 or 12345-6789).";
-  }
-  return null;
+function validateSettingsReturnAddress(): string | null {
+  return validateReturnAddressForm(returnAddressForm.value);
 }
+
+const mailingAddressComplete = computed(() =>
+  isCompleteReturnAddress(returnAddressForm.value),
+);
+const isAccountComplete = computed(
+  () => isProfileComplete.value && mailingAddressComplete.value,
+);
+const profileBadgeReady = computed(
+  () => !loading.value && !returnAddressLoading.value,
+);
 
 function applyReturnAddress(addr: OrgReturnAddress | null) {
   if (!addr) {
@@ -137,22 +155,16 @@ async function loadReturnAddress() {
 }
 
 async function onSaveReturnAddress() {
-  if (!auth.orgId || returnAddressSaving.value) return;
-  const validationError = validateReturnAddressForm();
+  if (!auth.orgId || returnAddressSaving.value || !canWriteReturnAddress.value) {
+    return;
+  }
+  const validationError = validateSettingsReturnAddress();
   if (validationError) {
     message.error(validationError);
     return;
   }
 
-  const f = returnAddressForm.value;
-  const payload: OrgReturnAddress = {
-    name: f.name.trim() || null,
-    address: f.address.trim(),
-    address2: f.address2.trim() || null,
-    city: f.city.trim(),
-    state: f.state.trim().toUpperCase(),
-    zip: f.zip.trim(),
-  };
+  const payload: OrgReturnAddress = toReturnAddressPayload(returnAddressForm.value);
 
   returnAddressSaving.value = true;
   returnAddressError.value = null;
@@ -258,11 +270,34 @@ async function onSubmit() {
   const newBizName = bizName.value.trim();
   const bizNameChanged = newBizName !== prevBizName;
 
+  const { key: industryKey, otherText } = parseIndustrySelection(
+    form.value.industry,
+  );
+  if (industryKey === "other" && !otherText.trim()) {
+    message.error("Tell us your industry.");
+    return;
+  }
+
   brandKitError.value = null;
+  const prevIndustry = (profile.value?.industry ?? "").trim();
   await saveProfile();
   // saveProfile() already surfaces its own failure via `error` — don't
   // pile a brand-kit failure on top of an unsaved profile.
   if (error.value) return;
+
+  const industryEnum = industryEnumForSave(form.value.industry);
+  const industryChanged =
+    form.value.industry.trim() !== prevIndustry ||
+    (!!industryEnum && brandKitStore.brandKit?.industry !== industryEnum);
+  if (industryEnum && industryChanged) {
+    try {
+      if (!brandKitStore.hydrated) await brandKitStore.fetch();
+      await brandKitStore.update({ industry: industryEnum });
+    } catch (err) {
+      console.error("[Settings] brand kit industry update failed", err);
+    }
+  }
+
   if (!websiteChanged && !bizNameChanged) return;
 
   // Website changes rescan the brand kit (logo/colors/photos/services);
@@ -334,20 +369,21 @@ function onReplayTour() {
         </div>
 
         <span
-          v-if="!loading"
+          v-if="profileBadgeReady"
           class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
+          data-testid="settings-profile-badge"
           :class="
-            isProfileComplete
+            isAccountComplete
               ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
               : 'border-amber-300 bg-amber-50 text-amber-700'
           "
         >
           <span
             class="h-2 w-2 rounded-full"
-            :class="isProfileComplete ? 'bg-emerald-500' : 'bg-amber-500'"
+            :class="isAccountComplete ? 'bg-emerald-500' : 'bg-amber-500'"
           />
           <span>
-            {{ isProfileComplete ? "Profile complete" : "Profile incomplete" }}
+            {{ isAccountComplete ? "Profile complete" : "Profile incomplete" }}
           </span>
         </span>
       </header>
@@ -428,14 +464,17 @@ function onReplayTour() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label
+              for="settings-industry"
+              class="block text-sm font-medium text-slate-700"
+            >
               Industry
             </label>
-            <input
+            <IndustryPicker
+              id="settings-industry"
               v-model="form.industry"
-              type="text"
-              placeholder="Home services, real estate…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              variant="select"
+              :disabled="loading || saving"
             />
           </div>
 
@@ -563,7 +602,7 @@ function onReplayTour() {
           </div>
 
           <fieldset
-            :disabled="returnAddressLoading || returnAddressSaving || !isOrgAdmin"
+            :disabled="returnAddressLoading || returnAddressSaving || !canWriteReturnAddress"
             class="space-y-3"
           >
             <div>
@@ -674,7 +713,7 @@ function onReplayTour() {
           </fieldset>
 
           <p
-            v-if="!isOrgAdmin"
+            v-if="!canWriteReturnAddress"
             class="text-xs text-slate-500"
             data-testid="settings-return-address-role-note"
           >
@@ -696,7 +735,7 @@ function onReplayTour() {
               Saving…
             </span>
             <button
-              v-if="isOrgAdmin"
+              v-if="canWriteReturnAddress"
               type="button"
               class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="returnAddressLoading || returnAddressSaving"

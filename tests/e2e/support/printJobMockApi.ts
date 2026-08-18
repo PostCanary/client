@@ -151,7 +151,7 @@ export async function installPrintJobMockApi(
         email: "test@example.com",
         full_name: "Mock User",
         website_url: null,
-        industry: null,
+        industry: "hvac",
         crm: null,
         mail_provider: null,
         avatar_url: null,
@@ -166,8 +166,33 @@ export async function installPrintJobMockApi(
     // Stub brand-kit so brandKitStore.fetch() doesn't hit the Vite proxy
     // (which has no real Flask session → 401 → auth.loginModalOpen=true →
     // LoginModal backdrop blocks button clicks in E2E tests).
+    if (pathname === "/api/organizations/return-address" && method === "GET") {
+      return json(route, {
+        return_address: {
+          name: "Mock HVAC",
+          address: "1 Main St",
+          address2: null,
+          city: "Phoenix",
+          state: "AZ",
+          zip: "85001",
+        },
+      });
+    }
+
     if (pathname === "/api/brand-kit" && method === "GET") {
-      return json(route, { brand_kit: null });
+      return json(route, {
+        ok: true,
+        id: "brand-kit-mock",
+        org_id: "org-mock",
+        data: {
+          businessName: "Mock HVAC",
+          location: "Phoenix, AZ",
+          industry: "hvac",
+        },
+        scrape_status: "complete",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      });
     }
 
     const campaignMatch = pathname.match(/^\/api\/mail-campaigns\/([^/]+)$/);

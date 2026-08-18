@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useCampaignStore } from '@/stores/useCampaignStore'
 import { useSidebar } from '@/composables/useSidebar'
 import { captureEvent } from '@/composables/usePostHog'
+import { logoutAndLeave } from '@/utils/sessionLogout'
 import CampaignManageModal from '@/components/CampaignManageModal.vue'
 import OrgSwitcher from '@/components/OrgSwitcher.vue'
 
@@ -102,9 +103,8 @@ function handleSettingsClick() {
 }
 
 async function handleLogoutClick() {
-  await auth.logout()
   closeDropdown()
-  window.location.href = '/'
+  await logoutAndLeave()
 }
 
 function handleClickOutside(event: MouseEvent) {

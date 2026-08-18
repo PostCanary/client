@@ -22,6 +22,7 @@ vi.mock("@/api/users", () => ({
 
 vi.mock("@/api/http", () => ({
   api: vi.fn(),
+  clearCsrfToken: vi.fn(),
 }));
 
 vi.mock("@/api/orgs", () => ({

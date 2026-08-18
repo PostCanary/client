@@ -7,6 +7,8 @@ import { getSeoData, SITE_URL } from "@/config/seo";
 import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
 import { initMetaPixel } from "@/composables/useMetaPixel";
 import { isChunkLoadError, shouldReloadForChunkError } from "@/utils/chunkReload";
+import { humanizeAuth0LoginError } from "@/utils/firstRunSetup";
+import { hasSignedOutQuery } from "@/utils/sessionLogout";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -33,6 +35,7 @@ const appQaRoutes: RouteRecordRaw[] = qaRoutesEnabled
           title: "Step Review Approval Flow (dev)",
           navbarTitle: "Review",
           requiresFeature: "postcards",
+          skipFirstRunGuard: true,
         },
       },
     ]
@@ -44,25 +47,41 @@ const qaRoutes: RouteRecordRaw[] = qaRoutesEnabled
         path: "/dev/sttl-step2-preview",
         name: "DevSttLStep2Preview",
         component: () => import("@/pages/dev/SttLStep2Preview.vue"),
-        meta: { title: "SttL Step 2 Preview (dev)", marketing: false },
+        meta: {
+          title: "SttL Step 2 Preview (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/step-review-approval-flow",
         name: "DevStepReviewApprovalFlow",
         component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
-        meta: { title: "Step Review Approval Flow (dev)", marketing: false },
+        meta: {
+          title: "Step Review Approval Flow (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/step-design-fold",
         name: "DevStepDesignFold",
         component: () => import("@/pages/dev/StepDesignFold.vue"),
-        meta: { title: "Step Design Fold (dev)", marketing: false },
+        meta: {
+          title: "Step Design Fold (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/wizard-shell-strips",
         name: "DevWizardShellStrips",
         component: () => import("@/pages/dev/WizardShellStrips.vue"),
-        meta: { title: "Wizard Shell Strips (dev)", marketing: false },
+        meta: {
+          title: "Wizard Shell Strips (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
     ]
   : [];
@@ -78,6 +97,14 @@ const routes: RouteRecordRaw[] = [
         name: "Home",
         component: () => import("@/pages/Home.vue"),
         meta: seoMeta("/"),
+      },
+      // Auth0 SSO errors land on /login?error=… — there is no hosted
+      // signup page. This route opens the in-app LoginModal on Home.
+      {
+        path: "login",
+        name: "Login",
+        component: () => import("@/pages/Home.vue"),
+        meta: { ...seoMeta("/"), marketing: true },
       },
       {
         path: "terms",
@@ -147,6 +174,17 @@ const routes: RouteRecordRaw[] = [
   },
 
   { path: "/home", redirect: "/" },
+
+  // First-run industry + return address. Full page, not OnboardingModal.
+  {
+    path: "/app/setup",
+    name: "FirstRunSetup",
+    component: () => import("@/pages/FirstRunSetup.vue"),
+    meta: {
+      title: `Set up • ${BRAND.name}`,
+      skipFirstRunGuard: true,
+    },
+  },
 
   // ── App pages (wrapped in MainLayout) ──────────────────
   {
@@ -356,13 +394,57 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore();
 
-  if (to.meta?.marketing) return next();
-
   // Skip authentication if SKIP_AUTH is enabled (for development/testing)
   const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
   if (skipAuth) {
     return next();
   }
+
+  if (to.name === "Login" || to.path === "/login") {
+    if (!auth.initialized) {
+      await auth.fetchMe();
+    }
+
+    const applyLoginError = () => {
+      const rawError = to.query.error;
+      const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
+      if (typeof errorCode === "string" && errorCode.trim()) {
+        auth.loginError = humanizeAuth0LoginError(errorCode);
+      }
+    };
+
+    // Explicit sign-out: never send this navigation to AppHome / setup,
+    // even if a cookie survived POST /auth/logout and fetchMe reminted.
+    if (hasSignedOutQuery(to.query)) {
+      if (auth.isAuthenticated) {
+        await auth.logout();
+      }
+      auth.openLoginModal("/app/home", "login");
+      applyLoginError();
+      return next();
+    }
+
+    if (auth.isAuthenticated) {
+      // First-run users who type /login must be able to switch accounts.
+      // next(AppHome) would hit the first-run guard and bounce to setup.
+      if (await auth.needsFirstRunSetup()) {
+        auth.openLoginModal("/app/home", "login");
+        applyLoginError();
+        return next();
+      }
+      return next({ name: "AppHome" });
+    }
+
+    const nextPath =
+      typeof to.query.next === "string" && to.query.next
+        ? to.query.next
+        : "/app/home";
+    auth.openLoginModal(nextPath, "login");
+    applyLoginError();
+    return next();
+  }
+
+  if (to.meta?.marketing) return next();
 
   if (!auth.initialized) {
     await auth.fetchMe();
@@ -371,6 +453,24 @@ router.beforeEach(async (to, _from, next) => {
   if (!auth.isAuthenticated) {
     auth.openLoginModal(to.fullPath || "/");
     return next(false);
+  }
+
+  // Collect industry + return address once, before any other app surface.
+  // Skip when both are already set (invited teammates, QA fixtures).
+  // /dev/* harnesses are not a first-run surface.
+  const skipFirstRun =
+    to.matched.some((r) => r.meta?.skipFirstRunGuard) ||
+    to.path.includes("/dev/");
+  if (!skipFirstRun) {
+    const needed = await auth.needsFirstRunSetup();
+    if (needed) {
+      return next({ name: "FirstRunSetup" });
+    }
+  } else if (to.name === "FirstRunSetup") {
+    const needed = await auth.needsFirstRunSetup();
+    if (!needed) {
+      return next({ name: "AppHome" });
+    }
   }
 
   // Feature gate (S85): postcards surfaces are early-access. Checked via

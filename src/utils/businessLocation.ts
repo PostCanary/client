@@ -8,7 +8,21 @@ import {
   type OrgReturnAddress,
 } from "@/api/orgs";
 import { getZipCentroids } from "@/api/targeting";
-import type { Industry } from "@/types/campaign";
+import { resolveIndustry, type Industry } from "@/types/campaign";
+
+export function parseLocationLabel(
+  raw?: string | null,
+): { city: string; state: string } | null {
+  const label = (raw ?? "").trim();
+  if (!label) return null;
+  const match = label.match(/^(.+),\s*([A-Za-z]{2})$/);
+  const city = match?.[1]?.trim();
+  const state = match?.[2]?.toUpperCase();
+  if (city && state) {
+    return { city, state };
+  }
+  return { city: label, state: "" };
+}
 
 export function locationLabelFromParts(
   city?: string | null,
@@ -41,6 +55,11 @@ export type BrandLocationSyncDeps = {
   brandLocation: string | null | undefined;
   brandIndustry: string | null | undefined;
   profileIndustry: string | null | undefined;
+  /**
+   * When provided (including null), use this instead of fetching
+   * GET /api/organizations/return-address.
+   */
+  knownReturnAddress?: OrgReturnAddress | null;
   /** When true, overwrite brand kit location from return address / org. */
   forceLocation?: boolean;
   updateBrandKit: (partial: {
@@ -54,8 +73,8 @@ export type BrandLocationSyncDeps = {
 };
 
 function asIndustry(value: string | null | undefined): Industry | null {
-  if (!value) return null;
-  return value as Industry;
+  if (!value?.trim()) return null;
+  return resolveIndustry(value) ?? "other";
 }
 
 /**
@@ -74,11 +93,15 @@ export async function syncBrandLocationFromProfile(
   let industry: Industry | null = asIndustry(deps.brandIndustry);
 
   if (!location) {
-    try {
-      const addr = await getReturnAddress();
-      location = locationLabelFromReturnAddress(addr);
-    } catch {
-      // Route may be missing on older servers — fall through to org.location.
+    if (deps.knownReturnAddress !== undefined) {
+      location = locationLabelFromReturnAddress(deps.knownReturnAddress);
+    } else {
+      try {
+        const addr = await getReturnAddress();
+        location = locationLabelFromReturnAddress(addr);
+      } catch {
+        // Route may be missing on older servers — fall through to org.location.
+      }
     }
   }
 
