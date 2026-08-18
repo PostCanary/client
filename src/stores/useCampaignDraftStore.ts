@@ -34,6 +34,7 @@ import {
 import type { CampaignGoalType } from "@/types/campaign";
 import { disarmScrapeRegenWatcher } from "@/composables/scrapeRegenState";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
+import { emptyReviewNamePatch } from "@/utils/defaultCampaignName";
 
 // Module-level — NOT in Pinia state (avoids HMR/serialization issues)
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,6 +50,10 @@ let _designRevision = 0;
 let _saveChain: Promise<void> | null = null;
 let _persistForStepThreeChain: Promise<string> | null = null;
 let _saveRevision = 0;
+// POS-183: the Send-to-a-List step lives on a sibling route. Going Back
+// remounts SendWizard, which would otherwise startNew() and wipe the
+// in-memory draft. This flag is consumed once on that remount.
+let _preserveDraftOnWizardRemount = false;
 const MAX_RETRIES = 3;
 const KEEPALIVE_MAX_BYTES = 60000; // 60KB conservative limit (browser spec is 64KB)
 const SINGLE_MAILING_COUNT = 1;
@@ -175,6 +180,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       _dirty = false;
       _saveChain = null;
       _persistForStepThreeChain = null;
+      _preserveDraftOnWizardRemount = false;
       this.error = null;
       const now = new Date().toISOString();
       this.draft = {
@@ -306,13 +312,21 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
 
     setGoal(goal: GoalSelection) {
       if (!this.draft) return;
-      const goalChanged = this.draft.goal?.goalType !== goal.goalType;
+      const previousType = this.draft.goal?.goalType ?? null;
+      const goalChanged = previousType !== goal.goalType;
       this.draft.goal = { ...goal, sequenceLength: SINGLE_MAILING_COUNT };
       this._markComplete(1);
 
+      // POS-183: switching between the list branch and an area branch
+      // must drop the abandoned Step 2 data so checkout cannot mail the
+      // wrong audience. Re-selecting the same goal keeps that work.
+      if (goalChanged && previousType != null) {
+        this._resetAbandonedGoalBranch(previousType, goal.goalType);
+      }
+
       if (goalChanged && this.draft.completedSteps.length > 1) {
-        // Flag later steps for review but DON'T wipe data
-        // Include step 4 (Review) — cost/schedule data depends on goal
+        // Flag later steps for review but DON'T wipe remaining data
+        // (design stays). Include step 4 — cost/schedule depends on goal.
         this.draft.needsReviewSteps = [2, 3, 4].filter((s) =>
           this.draft!.completedSteps.includes(s as WizardStep),
         ) as WizardStep[];
@@ -582,6 +596,29 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this._debounceSave();
     },
 
+    /**
+     * POS-188: persist the Step 4 name without completing the step.
+     * Completing here would let a default name mark Review done before
+     * the customer confirms schedule, payment, and terms.
+     */
+    setCampaignName(campaignName: string, campaignNameIsCustom: boolean) {
+      if (!this.draft) return;
+      const current = this.draft.review;
+      if (current) {
+        this.draft.review = {
+          ...current,
+          campaignName,
+          campaignNameIsCustom,
+        };
+      } else {
+        this.draft.review = emptyReviewNamePatch(
+          campaignName,
+          campaignNameIsCustom,
+        );
+      }
+      this._debounceSave();
+    },
+
     setReview(review: ReviewSelection) {
       if (!this.draft) return;
       this.draft.review = {
@@ -641,7 +678,82 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       }
     },
 
+    /** Path for the main wizard after leaving the dedicated STTL route. */
+    mainWizardPath(): string {
+      const id = this.draft?.id;
+      return id ? `/app/send/${id}` : "/app/send";
+    },
+
+    markPreserveDraftOnWizardRemount() {
+      _preserveDraftOnWizardRemount = true;
+    },
+
+    consumePreserveDraftOnWizardRemount(): boolean {
+      const keep = _preserveDraftOnWizardRemount;
+      _preserveDraftOnWizardRemount = false;
+      return keep;
+    },
+
+    /**
+     * POS-183: leave Step 2 (list or area) for Choose Your Goal without
+     * bypassing the goToStep cap. Persisted drafts write currentStep so a
+     * later resume does not bounce back onto the list route.
+     */
+    async returnToGoalSelection(): Promise<boolean> {
+      if (!this.draft) return false;
+      this.goToStep(1);
+      if (this.draft.currentStep !== 1) return false;
+      _preserveDraftOnWizardRemount = true;
+      if (this.draft.id) {
+        try {
+          await this.saveNow();
+        } catch {
+          // In-memory step 1 still lets Back work in this session.
+        }
+      }
+      return true;
+    },
+
     // --- Internal ---
+    _isListGoal(type: CampaignGoalType | null | undefined): boolean {
+      return type === "send_to_list";
+    },
+
+    /**
+     * Clear only the abandoned Step 2 branch. Area goals (target_area,
+     * neighbor_marketing, …) share targeting; list is audience. Same-side
+     * switches keep Step 2 work. Design is left in place — generateCardsForDraft
+     * still no-ops when designSource is uploaded/requested.
+     */
+    _resetAbandonedGoalBranch(
+      previousType: CampaignGoalType,
+      nextType: CampaignGoalType,
+    ) {
+      if (!this.draft) return;
+      const wasList = this._isListGoal(previousType);
+      const isList = this._isListGoal(nextType);
+      if (wasList === isList) return;
+
+      if (wasList) {
+        this.draft.audience = null;
+        this.clearAudienceState();
+      } else {
+        this.draft.targeting = null;
+      }
+
+      // Review quotes recipients and cost from the abandoned branch.
+      this.draft.review = null;
+      // Uncomplete 2 and 4. Keep 3 when design work exists so generated
+      // drafts can still pass canAdvance (it gates on the step-3 flag;
+      // uploaded/requested gate on the artwork — POS-270).
+      this.draft.completedSteps = this.draft.completedSteps.filter(
+        (step) => step !== 2 && step !== 4,
+      );
+      this.draft.needsReviewSteps = this.draft.needsReviewSteps.filter((step) =>
+        this.draft!.completedSteps.includes(step),
+      );
+    },
+
     _markComplete(step: WizardStep) {
       if (!this.draft) return;
       if (!this.draft.completedSteps.includes(step)) {

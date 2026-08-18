@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useTargetingMap } from "@/composables/useTargetingMap";
 import { AROUND_MY_JOBS } from "@/config/featureFlags";
+import { resolveMapCenterFromReturnAddress } from "@/utils/businessLocation";
 import type { CampaignType } from "@/types/campaign";
 
 const props = defineProps<{ campaignType?: CampaignType }>();
@@ -31,8 +32,10 @@ function dismissIntro(method: "draw" | "zip" | "around_jobs") {
   }, 300);
 }
 
-onMounted(() => {
-  initMap();
+onMounted(async () => {
+  // Prefer business mailing ZIP for the initial map center; fall back to Phoenix.
+  const center = await resolveMapCenterFromReturnAddress();
+  initMap(center ?? undefined);
   if (!introSeen.value) {
     introTimer = setTimeout(() => dismissIntro("draw"), 10000);
   }

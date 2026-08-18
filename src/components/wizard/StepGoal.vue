@@ -13,6 +13,7 @@ import {
   type GoalDefinition,
 } from "@/data/campaignGoals";
 import { EDDM_ENABLED } from "@/config/featureFlags";
+import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
 
 const route = useRoute();
 const router = useRouter();
@@ -29,6 +30,7 @@ const needsSetup = computed(
 const setupLocation = ref("");
 const setupIndustry = ref<Industry | "">("");
 const savingSetup = ref(false);
+const syncingProfileLocation = ref(false);
 const canCompleteSetup = computed(
   () =>
     (!missingSetupLocation.value || !!setupLocation.value.trim()) &&
@@ -36,6 +38,29 @@ const canCompleteSetup = computed(
 );
 
 const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
+
+async function syncLocationFromProfile() {
+  syncingProfileLocation.value = true;
+  try {
+    await syncBrandLocationFromProfile({
+      orgId: auth.orgId,
+      brandLocation: brandKitStore.brandKit?.location,
+      brandIndustry: brandKitStore.brandKit?.industry ?? null,
+      profileIndustry: auth.profile?.industry ?? null,
+      updateBrandKit: (partial) => brandKitStore.update(partial),
+      patchBrandKitLocal: (partial) => {
+        brandKitStore.$patch({
+          brandKit: {
+            ...brandKitStore.brandKit,
+            ...partial,
+          },
+        });
+      },
+    });
+  } finally {
+    syncingProfileLocation.value = false;
+  }
+}
 
 async function completeSetup() {
   if (!canCompleteSetup.value) return;
@@ -119,17 +144,22 @@ async function chooseSendToList() {
   if (!sendToListGoal) return;
   commitGoal(sendToListGoal);
   draftStore.goToStep(2);
-  await router.push(
-    draftStore.draft?.id
+  const audienceId = draftStore.draft?.audience?.audienceId;
+  await router.push({
+    path: draftStore.draft?.id
       ? `/app/send/${draftStore.draft.id}/sttl-step-2`
       : "/app/send/sttl-step-2",
-  );
+    query: audienceId ? { audienceId } : {},
+  });
 }
 
 onMounted(async () => {
   if (!brandKitStore.hydrated) {
-    brandKitStore.fetch();
+    await brandKitStore.fetch();
   }
+  // Prefer Settings mailing address / org.location / profile industry so the
+  // yellow gate does not ask again when the profile already has them.
+  await syncLocationFromProfile();
 
   // S69: arriving from the Home page Recommendation card means the goal was
   // already expressed by that click — auto-apply the recommended goal and
@@ -158,7 +188,7 @@ onMounted(async () => {
   <div class="max-w-2xl mx-auto py-8 px-4">
     <!-- Existing user missing fields -->
     <div
-      v-if="needsSetup && !savingSetup"
+      v-if="needsSetup && !savingSetup && !syncingProfileLocation"
       class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-8"
     >
       <h3 class="text-base font-semibold text-[#0b2d50] mb-1">
@@ -215,7 +245,7 @@ onMounted(async () => {
 
     <!-- Loading setup -->
     <div
-      v-else-if="savingSetup"
+      v-else-if="savingSetup || syncingProfileLocation"
       class="flex items-center justify-center py-12"
     >
       <div

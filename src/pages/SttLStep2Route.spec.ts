@@ -158,6 +158,42 @@ describe('SttLStep2Route — post-approval navigation', () => {
     expect(wrapper.find('[data-testid="sttl-file-error"]').exists()).toBe(false)
   })
 
+  it('Back from the upload dropzone returns to Choose Your Goal, not history.back', async () => {
+    routeState.params = { draftId: 'draft-1' }
+    routeState.query = {}
+    loadDraftMock.mockResolvedValue(makeDraft())
+    const wrapper = mountRoute()
+    await flushPromises()
+
+    const draftStore = useCampaignDraftStore()
+    expect(draftStore.currentStep).toBe(2)
+
+    await wrapper.get('[data-testid="sttl-back-btn"]').trigger('click')
+    await flushPromises()
+
+    expect(draftStore.currentStep).toBe(1)
+    expect(draftStore.draft?.goal?.goalType).toBe('send_to_list')
+    expect(backMock).not.toHaveBeenCalled()
+    expect(pushMock).toHaveBeenCalledWith('/app/send/draft-1')
+    expect(saveDraftMock).toHaveBeenCalled()
+    const saved = saveDraftMock.mock.calls.at(-1)![0]
+    expect(saved.currentStep).toBe(1)
+  })
+
+  it('Back from the review child returns to Choose Your Goal', async () => {
+    const wrapper = mountRoute()
+    await flushPromises()
+
+    const child = wrapper.findComponent({ name: 'SttLStep2' })
+    child.vm.$emit('back')
+    await flushPromises()
+
+    const draftStore = useCampaignDraftStore()
+    expect(draftStore.currentStep).toBe(1)
+    expect(backMock).not.toHaveBeenCalled()
+    expect(pushMock).toHaveBeenCalledWith('/app/send/draft-1')
+  })
+
   it('rejects a non-CSV dropped on the upload zone', async () => {
     routeState.params = {}
     routeState.query = {}

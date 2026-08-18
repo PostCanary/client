@@ -16,6 +16,7 @@ import {
   authLogout,
 } from "@/api/auth";
 import { identifyUser, resetUser, captureEvent } from "@/composables/usePostHog";
+import { ONBOARDING_ENABLED } from "@/config/featureFlags";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 import { useRunStore } from "@/stores/useRunStore";
 
@@ -134,13 +135,17 @@ export const useAuthStore = defineStore("auth", {
     },
 
     openOnboarding() {
-      if (this.isAuthenticated && !this.profileComplete) {
+      if (
+        ONBOARDING_ENABLED &&
+        this.isAuthenticated &&
+        !this.profileComplete
+      ) {
         this.onboardingOpen = true;
       }
     },
 
     closeOnboarding() {
-      if (this.profileComplete) {
+      if (this.profileComplete || !ONBOARDING_ENABLED) {
         this.onboardingOpen = false;
       }
     },
@@ -359,7 +364,8 @@ export const useAuthStore = defineStore("auth", {
             try {
               const profile = await fetchUserProfile();
               this.profile = profile;
-              this.onboardingOpen = !profile.profile_complete;
+              this.onboardingOpen =
+                ONBOARDING_ENABLED && !profile.profile_complete;
             } catch (err) {
               console.error("[auth] fetchUserProfile failed", err);
               this.profile = null;

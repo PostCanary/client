@@ -122,4 +122,22 @@ describe("Designs library", () => {
     expect(apiMocks.deleteDesign).toHaveBeenCalledWith("design-1");
     expect(wrapper.find('[data-testid="design-front-thumbnail"]').exists()).toBe(false);
   });
+
+  it("shows an explicit missing-artwork state instead of a broken image", async () => {
+    apiMocks.listDesigns.mockResolvedValue([{ ...design, asset_missing: true }]);
+    apiMocks.getDesign.mockResolvedValue({ ...design, asset_missing: true });
+    const wrapper = mount(Designs);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="design-artwork-missing"]').text()).toContain(
+      "Artwork missing — please re-upload",
+    );
+    expect(wrapper.find('[data-testid="design-front-thumbnail"]').exists()).toBe(false);
+
+    await wrapper.get(".thumbnail").trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="design-detail-artwork-missing"]').text()).toContain(
+      "Artwork missing — please re-upload",
+    );
+  });
 });

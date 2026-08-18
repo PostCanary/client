@@ -9,11 +9,16 @@ import OnboardingModal from "@/components/OnboardingModal.vue";
 import TourManager from "@/components/tour/TourManager.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useSidebar } from "@/composables/useSidebar";
+import { ONBOARDING_ENABLED } from "@/config/featureFlags";
 
 const auth = useAuthStore();
 const { sidebarWidth, isMobile } = useSidebar();
 
 const route = useRoute();
+const showOnboarding = computed(
+  () =>
+    ONBOARDING_ENABLED && auth.onboardingOpen && auth.isAuthenticated,
+);
 
 /* Page title from route meta */
 const navbarTitle = computed(
@@ -41,7 +46,7 @@ const showCampaignFilter = computed(() => {
 
     <div
       class="app-shell-inner"
-      :class="{ 'app-shell-inner--blurred': auth.onboardingOpen }"
+      :class="{ 'app-shell-inner--blurred': showOnboarding }"
     >
       <!-- Top Bar -->
       <header class="app-topbar">
@@ -65,7 +70,7 @@ const showCampaignFilter = computed(() => {
 
     <!-- Hard-gated onboarding modal, lives above blurred content -->
     <OnboardingModal
-      v-if="auth.onboardingOpen && auth.isAuthenticated"
+      v-if="showOnboarding"
       @completed="auth.closeOnboarding()"
     />
   </div>
