@@ -1,10 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
+import { defineComponent, ref } from "vue";
 import IndustryPicker from "./IndustryPicker.vue";
 
-function mountPicker(modelValue = "") {
-  return mount(IndustryPicker, {
-    props: { modelValue },
+const Host = defineComponent({
+  components: { IndustryPicker },
+  props: {
+    initial: { type: String, default: "" },
+  },
+  setup(props) {
+    const industry = ref(props.initial);
+    return { industry };
+  },
+  template: `<IndustryPicker v-model="industry" />`,
+});
+
+function mountPicker(initial = "") {
+  return mount(Host, {
+    props: { initial },
     attachTo: document.body,
   });
 }
@@ -49,7 +62,7 @@ describe("IndustryPicker", () => {
     );
 
     await wrapper.get('[data-testid="industry-option-plumbing"]').trigger("click");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["plumbing"]);
+    expect((wrapper.vm as { industry: string }).industry).toBe("plumbing");
     wrapper.unmount();
   });
 
@@ -58,12 +71,15 @@ describe("IndustryPicker", () => {
     await wrapper.get('[data-testid="industry-combobox-input"]').trigger("focus");
     await wrapper.get('[data-testid="industry-option-other"]').trigger("click");
 
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["other"]);
-    const other = wrapper.get('[data-testid="industry-other-text"]');
-    expect(other.exists()).toBe(true);
+    expect((wrapper.vm as { industry: string }).industry).toBe("other");
+    expect(wrapper.find('[data-testid="industry-other-text"]').exists()).toBe(
+      true,
+    );
 
-    await other.setValue("Pool service");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["Pool service"]);
+    await wrapper
+      .get('[data-testid="industry-other-text"]')
+      .setValue("Pool service");
+    expect((wrapper.vm as { industry: string }).industry).toBe("Pool service");
     wrapper.unmount();
   });
 
@@ -74,7 +90,7 @@ describe("IndustryPicker", () => {
     await input.trigger("focus");
     await input.setValue("dentist");
     await input.trigger("keydown", { key: "Enter" });
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["dental"]);
+    expect((wrapper.vm as { industry: string }).industry).toBe("dental");
 
     await input.trigger("focus");
     expect(wrapper.find('[data-testid="industry-combobox-list"]').exists()).toBe(

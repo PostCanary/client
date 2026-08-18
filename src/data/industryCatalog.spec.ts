@@ -87,8 +87,8 @@ describe("industry catalog", () => {
   it("filters the grouped list by alias and always keeps Other", () => {
     const groups = filterIndustryCatalog("plumber");
     expect(groups.map((group) => group.id)).toEqual(["home_services", "other"]);
-    expect(groups[0].options.map((option) => option.slug)).toEqual(["plumbing"]);
-    expect(groups[1].options.map((option) => option.slug)).toEqual(["other"]);
+    expect(groups[0]?.options.map((option) => option.slug)).toEqual(["plumbing"]);
+    expect(groups[1]?.options.map((option) => option.slug)).toEqual(["other"]);
   });
 });
 
