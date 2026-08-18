@@ -889,7 +889,9 @@ function confirm() {
 }
 
 .col-select:focus {
-  outline: 2px solid var(--app-teal);
+  /* POS-277: teal rings measure 2.01:1 against --app-bg and fail WCAG
+   * 1.4.11 (3:1). --app-focus-ring holds 12.44:1. */
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 1px;
   border-color: var(--app-teal);
 }

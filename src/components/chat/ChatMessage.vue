@@ -53,7 +53,9 @@ function formatTime(ts: number): string {
   height: 28px;
   border-radius: 50%;
   background: var(--app-teal, #47bfa9);
-  color: white;
+  /* Accent surface, not a button: teal fill only ever carries navy text
+   * (6.17:1). White on teal is 2.26:1 and fails AA. */
+  color: var(--app-on-teal, #0b2d50);
   display: flex;
   align-items: center;
   justify-content: center;
