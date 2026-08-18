@@ -159,6 +159,6 @@ async function save() {
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .modal-actions button { border-radius: 8px; cursor: pointer; font-weight: 700; padding: 10px 14px; }
 .secondary { border: 1px solid #dbe3ea; background: white; color: #334155; }
-.primary { border: 0; background: #47bfa9; color: white; }
+.primary { border: 0; background: var(--app-btn-bg, #0b2d50); color: var(--app-btn-fg, #ffffff); }
 .primary:disabled { cursor: not-allowed; opacity: .5; }
 </style>
