@@ -195,8 +195,11 @@ onMounted(() => {
   box-shadow: 0 10px 28px rgba(71, 191, 169, 0.35);
 }
 
+/* Navy, not teal: the teal ring measures 2.01:1 against --app-bg and fails
+ * WCAG 1.4.11 (3:1). Navy holds 12.4:1 over the page and 4.8:1 against
+ * the teal fill the card takes while focused. */
 .home-card:focus-visible {
-  outline: 2px solid var(--app-teal, #47bfa9);
+  outline: 2px solid var(--app-navy, #0b2d50);
   outline-offset: 2px;
 }
 
