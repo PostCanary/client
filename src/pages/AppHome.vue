@@ -4,6 +4,7 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { captureEvent } from '@/composables/usePostHog'
 import { useAuthStore } from '@/stores/auth'
+import { isFirstSessionProfile } from '@/utils/firstRunSetup'
 
 /* Icons from @vicons/ionicons5 only — mixing icon sources caused the
  * teal-vs-navy inconsistency Drake caught in S69. */
@@ -69,6 +70,17 @@ const cards = computed(() =>
 )
 
 const firstName = computed(() => auth.userName.split(' ')[0])
+const isFirstSession = computed(() => isFirstSessionProfile(auth.profile))
+const greeting = computed(() =>
+  isFirstSession.value
+    ? `Welcome, ${firstName.value}`
+    : `Welcome back, ${firstName.value}`,
+)
+const tagline = computed(() =>
+  isFirstSession.value
+    ? 'Send your first campaign when you are ready.'
+    : 'Pick up where you left off, or start something new.',
+)
 
 function onCardClick(card: HomeCard) {
   captureEvent('home_card_clicked', { card: card.key })
@@ -84,9 +96,9 @@ onMounted(() => {
   <div class="app-home">
     <div class="home-content">
       <header class="home-header">
-        <h1 class="home-greeting">Welcome back, {{ firstName }}</h1>
+        <h1 class="home-greeting">{{ greeting }}</h1>
         <p class="home-tagline">
-          Pick up where you left off, or start something new.
+          {{ tagline }}
         </p>
       </header>
       <div class="home-grid" :class="{ single: cards.length === 1 }">

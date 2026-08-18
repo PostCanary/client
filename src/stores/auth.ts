@@ -19,6 +19,7 @@ import { identifyUser, resetUser, captureEvent } from "@/composables/usePostHog"
 import { ONBOARDING_ENABLED } from "@/config/featureFlags";
 import { useCampaignDraftListStore } from "@/stores/useCampaignDraftListStore";
 import { useRunStore } from "@/stores/useRunStore";
+import { evaluateNeedsFirstRun } from "@/utils/firstRunSetup";
 
 type LoginMode = "login" | "signup";
 
@@ -51,6 +52,10 @@ export const useAuthStore = defineStore("auth", {
 
     // Onboarding modal state (hard-gated)
     onboardingOpen: false as boolean,
+
+    // First-run industry + return-address page. In-memory only — never
+    // persisted to localStorage (tenant PII rule).
+    firstRunStatus: null as null | "needed" | "complete",
 
     // Login modal UI state
     loginModalOpen: false,
@@ -148,6 +153,40 @@ export const useAuthStore = defineStore("auth", {
       if (this.profileComplete || !ONBOARDING_ENABLED) {
         this.onboardingOpen = false;
       }
+    },
+
+    markFirstRunComplete() {
+      this.firstRunStatus = "complete";
+    },
+
+    resetFirstRunStatus() {
+      this.firstRunStatus = null;
+    },
+
+    async needsFirstRunSetup(): Promise<boolean> {
+      if (!this.isAuthenticated) return false;
+      if (this.firstRunStatus === "complete") return false;
+      if (this.firstRunStatus === "needed") return true;
+
+      const { useBrandKitStore } = await import("@/stores/useBrandKitStore");
+      const brandKitStore = useBrandKitStore();
+      const needed = await evaluateNeedsFirstRun({
+        orgId: this.orgId,
+        profileIndustry: this.profile?.industry,
+        fetchBrandKit: async () => {
+          if (!brandKitStore.hydrated) {
+            await brandKitStore.fetch();
+          }
+          return brandKitStore.brandKit
+            ? {
+                location: brandKitStore.brandKit.location,
+                industry: brandKitStore.brandKit.industry,
+              }
+            : null;
+        },
+      });
+      this.firstRunStatus = needed ? "needed" : "complete";
+      return needed;
     },
 
     // ----------------------------
@@ -351,6 +390,7 @@ export const useAuthStore = defineStore("auth", {
           const nextIdentity = tenantIdentity(me);
           if (!nextIdentity || previousIdentity !== nextIdentity) {
             clearTenantRunState();
+            this.firstRunStatus = null;
           }
           this.me = me;
           useCampaignDraftListStore().setActiveOrg(
@@ -411,6 +451,7 @@ export const useAuthStore = defineStore("auth", {
       useCampaignDraftListStore().setActiveOrg(null);
       this.profile = null;
       this.onboardingOpen = false;
+      this.firstRunStatus = null;
       this.loginModalOpen = false;
       this.loginError = "";
       this.loginMode = "login";

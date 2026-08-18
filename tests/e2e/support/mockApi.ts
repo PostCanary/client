@@ -1176,6 +1176,14 @@ export async function installMockApi(page: Page, state: MockAppState) {
     }
 
     const orgUpdateMatch = pathname.match(/^\/api\/orgs\/([^/]+)$/);
+    if (orgUpdateMatch && method === "GET") {
+      const orgId = decodeURIComponent(orgUpdateMatch[1]);
+      const org = state.orgs.find((candidate) => candidate.id === orgId);
+      if (!org) {
+        return json(route, { error: "org_not_found" }, 404);
+      }
+      return json(route, org);
+    }
     if (orgUpdateMatch && method === "PATCH") {
       const orgId = decodeURIComponent(orgUpdateMatch[1]);
       const payload = parseJson(route);

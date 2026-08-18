@@ -6,5 +6,7 @@ declare module 'vue-router' {
     description?: string
     requiresPro?: boolean
     marketing?: boolean   // <- used to hide sidebar
+    skipFirstRunGuard?: boolean
+    requiresFeature?: string
   }
 }

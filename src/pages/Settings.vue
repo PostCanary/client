@@ -23,6 +23,15 @@ import {
   type OrgReturnAddress,
 } from "@/api/orgs";
 import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
+import IndustryPicker from "@/components/IndustryPicker.vue";
+import {
+  parseIndustrySelection,
+  persistIndustryEnum,
+} from "@/types/campaign";
+import {
+  toReturnAddressPayload,
+  validateReturnAddressForm,
+} from "@/utils/returnAddress";
 
 const {
   profile,
@@ -83,18 +92,8 @@ const returnAddressLoading = ref(false);
 const returnAddressSaving = ref(false);
 const returnAddressError = ref<string | null>(null);
 
-const ZIP_RE = /^\d{5}(-\d{4})?$/;
-const STATE_RE = /^[A-Za-z]{2}$/;
-
-function validateReturnAddressForm(): string | null {
-  const f = returnAddressForm.value;
-  if (!f.address.trim()) return "Street address is required.";
-  if (!f.city.trim()) return "City is required.";
-  if (!STATE_RE.test(f.state.trim())) return "State must be a 2-letter code.";
-  if (!ZIP_RE.test(f.zip.trim())) {
-    return "ZIP must be 5 digits or ZIP+4 (12345 or 12345-6789).";
-  }
-  return null;
+function validateSettingsReturnAddress(): string | null {
+  return validateReturnAddressForm(returnAddressForm.value);
 }
 
 function applyReturnAddress(addr: OrgReturnAddress | null) {
@@ -138,21 +137,13 @@ async function loadReturnAddress() {
 
 async function onSaveReturnAddress() {
   if (!auth.orgId || returnAddressSaving.value) return;
-  const validationError = validateReturnAddressForm();
+  const validationError = validateSettingsReturnAddress();
   if (validationError) {
     message.error(validationError);
     return;
   }
 
-  const f = returnAddressForm.value;
-  const payload: OrgReturnAddress = {
-    name: f.name.trim() || null,
-    address: f.address.trim(),
-    address2: f.address2.trim() || null,
-    city: f.city.trim(),
-    state: f.state.trim().toUpperCase(),
-    zip: f.zip.trim(),
-  };
+  const payload: OrgReturnAddress = toReturnAddressPayload(returnAddressForm.value);
 
   returnAddressSaving.value = true;
   returnAddressError.value = null;
@@ -259,10 +250,26 @@ async function onSubmit() {
   const bizNameChanged = newBizName !== prevBizName;
 
   brandKitError.value = null;
+  const prevIndustry = (profile.value?.industry ?? "").trim();
   await saveProfile();
   // saveProfile() already surfaces its own failure via `error` — don't
   // pile a brand-kit failure on top of an unsaved profile.
   if (error.value) return;
+
+  const { key: industryKey } = parseIndustrySelection(form.value.industry);
+  const industryEnum = persistIndustryEnum(industryKey);
+  const industryChanged =
+    form.value.industry.trim() !== prevIndustry ||
+    (!!industryEnum && brandKitStore.brandKit?.industry !== industryEnum);
+  if (industryEnum && industryChanged) {
+    try {
+      if (!brandKitStore.hydrated) await brandKitStore.fetch();
+      await brandKitStore.update({ industry: industryEnum });
+    } catch (err) {
+      console.error("[Settings] brand kit industry update failed", err);
+    }
+  }
+
   if (!websiteChanged && !bizNameChanged) return;
 
   // Website changes rescan the brand kit (logo/colors/photos/services);
@@ -428,14 +435,17 @@ function onReplayTour() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">
+            <label
+              for="settings-industry"
+              class="block text-sm font-medium text-slate-700"
+            >
               Industry
             </label>
-            <input
+            <IndustryPicker
+              id="settings-industry"
               v-model="form.industry"
-              type="text"
-              placeholder="Home services, real estate…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              variant="select"
+              :disabled="loading || saving"
             />
           </div>
 

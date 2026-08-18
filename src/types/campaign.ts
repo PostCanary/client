@@ -69,12 +69,51 @@ const INDUSTRY_ALIASES: Record<string, Industry> = {
   landscaping: 'landscaping',
   'lawn care': 'landscaping',
   'lawn service': 'landscaping',
+  other: 'other',
 }
 
 export function normalizeIndustry(raw: string | null): Industry | null {
   if (!raw) return null
   const normalized = raw.toLowerCase().trim()
   return INDUSTRY_ALIASES[normalized] ?? null
+}
+
+/** Map a stored profile/brand-kit value to the controlled list. */
+export function resolveIndustry(raw: string | null | undefined): Industry | null {
+  if (!raw?.trim()) return null
+  const known = normalizeIndustry(raw)
+  if (known) return known
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_')
+  if (key in INDUSTRY_LABELS) return key as Industry
+  return null
+}
+
+export function parseIndustrySelection(raw: string | null | undefined): {
+  key: Industry | ''
+  otherText: string
+} {
+  if (!raw?.trim()) return { key: '', otherText: '' }
+  const resolved = resolveIndustry(raw)
+  if (resolved && resolved !== 'other') return { key: resolved, otherText: '' }
+  if (raw.trim().toLowerCase() === 'other') return { key: 'other', otherText: '' }
+  return { key: 'other', otherText: raw.trim() }
+}
+
+/** User-profile value: enum key for known industries, custom text for Other. */
+export function persistIndustryProfileValue(
+  key: Industry | '',
+  otherText: string,
+): string {
+  if (!key) return ''
+  if (key === 'other') return otherText.trim() || 'other'
+  return key
+}
+
+export function persistIndustryEnum(
+  key: Industry | '',
+): Industry | null {
+  if (!key) return null
+  return key
 }
 
 // ============================================================

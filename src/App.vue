@@ -16,7 +16,11 @@ const demo = useDemoStore();
 const route = useRoute();
 
 // Hide chatbot inside the campaign wizard — it overlaps the Next button
-const showChat = computed(() => !route.path.startsWith("/app/send"));
+const showChat = computed(
+  () =>
+    !route.path.startsWith("/app/send") &&
+    !route.path.startsWith("/app/setup"),
+);
 </script>
 
 <template>

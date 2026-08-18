@@ -8,7 +8,7 @@ import {
   type OrgReturnAddress,
 } from "@/api/orgs";
 import { getZipCentroids } from "@/api/targeting";
-import type { Industry } from "@/types/campaign";
+import { resolveIndustry, type Industry } from "@/types/campaign";
 
 export function locationLabelFromParts(
   city?: string | null,
@@ -54,8 +54,8 @@ export type BrandLocationSyncDeps = {
 };
 
 function asIndustry(value: string | null | undefined): Industry | null {
-  if (!value) return null;
-  return value as Industry;
+  if (!value?.trim()) return null;
+  return resolveIndustry(value) ?? "other";
 }
 
 /**

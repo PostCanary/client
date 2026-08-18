@@ -7,6 +7,7 @@ import { getSeoData, SITE_URL } from "@/config/seo";
 import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
 import { initMetaPixel } from "@/composables/useMetaPixel";
 import { isChunkLoadError, shouldReloadForChunkError } from "@/utils/chunkReload";
+import { humanizeAuth0LoginError } from "@/utils/firstRunSetup";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -79,6 +80,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Home.vue"),
         meta: seoMeta("/"),
       },
+      // Auth0 SSO errors land on /login?error=… — there is no hosted
+      // signup page. This route opens the in-app LoginModal on Home.
+      {
+        path: "login",
+        name: "Login",
+        component: () => import("@/pages/Home.vue"),
+        meta: { ...seoMeta("/"), marketing: true },
+      },
       {
         path: "terms",
         name: "TermsOfService",
@@ -147,6 +156,17 @@ const routes: RouteRecordRaw[] = [
   },
 
   { path: "/home", redirect: "/" },
+
+  // First-run industry + return address. Full page, not OnboardingModal.
+  {
+    path: "/app/setup",
+    name: "FirstRunSetup",
+    component: () => import("@/pages/FirstRunSetup.vue"),
+    meta: {
+      title: `Set up • ${BRAND.name}`,
+      skipFirstRunGuard: true,
+    },
+  },
 
   // ── App pages (wrapped in MainLayout) ──────────────────
   {
@@ -356,13 +376,33 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore();
 
-  if (to.meta?.marketing) return next();
-
   // Skip authentication if SKIP_AUTH is enabled (for development/testing)
   const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
   if (skipAuth) {
     return next();
   }
+
+  if (to.name === "Login" || to.path === "/login") {
+    if (!auth.initialized) {
+      await auth.fetchMe();
+    }
+    if (auth.isAuthenticated) {
+      return next({ name: "AppHome" });
+    }
+    const rawError = to.query.error;
+    const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
+    if (typeof errorCode === "string" && errorCode.trim()) {
+      auth.loginError = humanizeAuth0LoginError(errorCode);
+    }
+    const nextPath =
+      typeof to.query.next === "string" && to.query.next
+        ? to.query.next
+        : "/app/home";
+    auth.openLoginModal(nextPath, "login");
+    return next();
+  }
+
+  if (to.meta?.marketing) return next();
 
   if (!auth.initialized) {
     await auth.fetchMe();
@@ -371,6 +411,21 @@ router.beforeEach(async (to, _from, next) => {
   if (!auth.isAuthenticated) {
     auth.openLoginModal(to.fullPath || "/");
     return next(false);
+  }
+
+  // Collect industry + return address once, before any other app surface.
+  // Skip when both are already set (invited teammates, QA fixtures).
+  const skipFirstRun = to.matched.some((r) => r.meta?.skipFirstRunGuard);
+  if (!skipFirstRun) {
+    const needed = await auth.needsFirstRunSetup();
+    if (needed) {
+      return next({ name: "FirstRunSetup" });
+    }
+  } else if (to.name === "FirstRunSetup") {
+    const needed = await auth.needsFirstRunSetup();
+    if (!needed) {
+      return next({ name: "AppHome" });
+    }
   }
 
   // Feature gate (S85): postcards surfaces are early-access. Checked via
