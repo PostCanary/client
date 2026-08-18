@@ -2,6 +2,11 @@
 // PostCanary V1 Campaign Types — shared across all terminals
 // ============================================================
 
+import {
+  INDUSTRY_ALIASES,
+  INDUSTRY_LABELS,
+  type Industry,
+} from "@/data/industryCatalog";
 import type {
   AudienceCostPreview,
   AudienceSuppressionResult,
@@ -16,27 +21,12 @@ import type { TargetingCountSource } from "@/types/targeting";
 // ============================================================
 // INDUSTRY (structured enum, not free text)
 // ============================================================
+// Catalog in src/data/industryCatalog.ts is the source of truth for
+// slugs, labels, groups, and search aliases (setup, Settings, send
+// gate, brand kit).
 
-export type Industry =
-  | 'hvac'
-  | 'plumbing'
-  | 'roofing'
-  | 'cleaning'
-  | 'electrical'
-  | 'pest_control'
-  | 'landscaping'
-  | 'other'
-
-export const INDUSTRY_LABELS: Record<Industry, string> = {
-  hvac: 'HVAC',
-  plumbing: 'Plumbing',
-  roofing: 'Roofing',
-  cleaning: 'Cleaning',
-  electrical: 'Electrical',
-  pest_control: 'Pest Control',
-  landscaping: 'Landscaping',
-  other: 'Other',
-}
+export type { Industry };
+export { INDUSTRY_LABELS };
 
 // ============================================================
 // INDUSTRY NORMALIZATION
@@ -47,34 +37,9 @@ export const INDUSTRY_LABELS: Record<Industry, string> = {
 // free-text values to the enum. Returns null for unrecognized values
 // (use generic defaults in that case).
 
-const INDUSTRY_ALIASES: Record<string, Industry> = {
-  hvac: 'hvac',
-  'heating and cooling': 'hvac',
-  'air conditioning': 'hvac',
-  ac: 'hvac',
-  'ac repair': 'hvac',
-  plumbing: 'plumbing',
-  plumber: 'plumbing',
-  roofing: 'roofing',
-  roofer: 'roofing',
-  cleaning: 'cleaning',
-  'carpet cleaning': 'cleaning',
-  'house cleaning': 'cleaning',
-  'pressure washing': 'cleaning',
-  electrical: 'electrical',
-  electrician: 'electrical',
-  'pest control': 'pest_control',
-  'pest_control': 'pest_control',
-  exterminator: 'pest_control',
-  landscaping: 'landscaping',
-  'lawn care': 'landscaping',
-  'lawn service': 'landscaping',
-  other: 'other',
-}
-
 export function normalizeIndustry(raw: string | null): Industry | null {
   if (!raw) return null
-  const normalized = raw.toLowerCase().trim()
+  const normalized = raw.toLowerCase().trim().replace(/\s+/g, ' ')
   return INDUSTRY_ALIASES[normalized] ?? null
 }
 
@@ -86,6 +51,12 @@ export function resolveIndustry(raw: string | null | undefined): Industry | null
   const key = raw.trim().toLowerCase().replace(/\s+/g, '_')
   if (key in INDUSTRY_LABELS) return key as Industry
   return null
+}
+
+/** Brand-kit enum: known slug, or Other when the stored value is custom text. */
+export function asIndustry(value: string | null | undefined): Industry | null {
+  if (!value?.trim()) return null
+  return resolveIndustry(value) ?? "other"
 }
 
 export function parseIndustrySelection(raw: string | null | undefined): {

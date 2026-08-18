@@ -8,7 +8,7 @@ import {
   type OrgReturnAddress,
 } from "@/api/orgs";
 import { getZipCentroids } from "@/api/targeting";
-import { resolveIndustry, type Industry } from "@/types/campaign";
+import { asIndustry, type Industry } from "@/types/campaign";
 
 export function parseLocationLabel(
   raw?: string | null,
@@ -71,11 +71,6 @@ export type BrandLocationSyncDeps = {
     industry?: Industry;
   }) => void;
 };
-
-function asIndustry(value: string | null | undefined): Industry | null {
-  if (!value?.trim()) return null;
-  return resolveIndustry(value) ?? "other";
-}
 
 /**
  * Fill empty brand-kit location (and industry) from Settings return address,

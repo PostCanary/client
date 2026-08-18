@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  asIndustry,
   industryEnumForSave,
   industryValueForApi,
   normalizeIndustry,
@@ -15,7 +16,11 @@ describe("resolveIndustry / parseIndustrySelection", () => {
     expect(resolveIndustry("Roofing")).toBe("roofing");
     expect(resolveIndustry("pest control")).toBe("pest_control");
     expect(resolveIndustry("other")).toBe("other");
+    expect(resolveIndustry("plumber")).toBe("plumbing");
+    expect(resolveIndustry("dental")).toBe("dental");
     expect(resolveIndustry("")).toBeNull();
+    expect(asIndustry("hvac")).toBe("hvac");
+    expect(asIndustry("Pool service")).toBe("other");
   });
 
   it("treats unrecognized text as Other with the custom value", () => {

@@ -49,7 +49,7 @@ const acceptedTerms = ref(false);
 
 const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
 
-const SERVICE_OPTIONS: Record<Industry, string[]> = {
+const SERVICE_OPTIONS: Partial<Record<Industry, string[]>> = {
   hvac: ["AC Repair", "Heating", "Duct Cleaning", "Installation", "Maintenance"],
   plumbing: ["Drain Cleaning", "Water Heater", "Pipe Repair", "Remodel", "Emergency"],
   roofing: ["Repair", "Replacement", "Inspection", "Storm Damage", "Commercial"],

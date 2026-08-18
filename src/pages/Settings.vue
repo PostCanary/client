@@ -473,7 +473,6 @@ function onReplayTour() {
             <IndustryPicker
               id="settings-industry"
               v-model="form.industry"
-              variant="select"
               :disabled="loading || saving"
             />
           </div>

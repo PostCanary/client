@@ -3,8 +3,9 @@ import { ref, computed, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
-import type { GoalSelection, Industry } from "@/types/campaign";
-import { INDUSTRY_LABELS } from "@/types/campaign";
+import type { GoalSelection } from "@/types/campaign";
+import { industryEnumForSave } from "@/types/campaign";
+import IndustryPicker from "@/components/IndustryPicker.vue";
 import { updateOrg } from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
 import { MapOutline, ListOutline } from "@vicons/ionicons5";
@@ -28,16 +29,14 @@ const needsSetup = computed(
   () => missingSetupLocation.value || missingSetupIndustry.value,
 );
 const setupLocation = ref("");
-const setupIndustry = ref<Industry | "">("");
+const setupIndustry = ref("");
 const savingSetup = ref(false);
 const syncingProfileLocation = ref(false);
 const canCompleteSetup = computed(
   () =>
     (!missingSetupLocation.value || !!setupLocation.value.trim()) &&
-    (!missingSetupIndustry.value || !!setupIndustry.value),
+    (!missingSetupIndustry.value || !!industryEnumForSave(setupIndustry.value)),
 );
-
-const industries = Object.entries(INDUSTRY_LABELS) as [Industry, string][];
 
 async function syncLocationFromProfile() {
   syncingProfileLocation.value = true;
@@ -71,8 +70,9 @@ async function completeSetup() {
         location: setupLocation.value.trim(),
       });
     }
-    if (setupIndustry.value) {
-      await brandKitStore.update({ industry: setupIndustry.value });
+    const industryEnum = industryEnumForSave(setupIndustry.value);
+    if (industryEnum) {
+      await brandKitStore.update({ industry: industryEnum });
     }
     await brandKitStore.fetch();
   } catch {
@@ -87,7 +87,7 @@ async function completeSetup() {
           ? setupLocation.value.trim()
           : brandKitStore.brandKit?.location,
         industry: missingSetupIndustry.value
-          ? setupIndustry.value
+          ? industryEnumForSave(setupIndustry.value)
           : brandKitStore.brandKit?.industry,
       },
     });
@@ -212,25 +212,16 @@ onMounted(async () => {
         </div>
 
         <div v-if="missingSetupIndustry" class="field">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            for="send-gate-industry"
+            class="block text-sm font-medium text-gray-700 mb-1"
+          >
             What industry are you in?
           </label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="[key, label] in industries"
-              :key="key"
-              type="button"
-              class="px-3 py-1.5 rounded-lg border text-sm transition-all"
-              :class="
-                setupIndustry === key
-                  ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
-              "
-              @click="setupIndustry = key"
-            >
-              {{ label }}
-            </button>
-          </div>
+          <IndustryPicker
+            id="send-gate-industry"
+            v-model="setupIndustry"
+          />
         </div>
 
         <button
