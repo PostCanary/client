@@ -355,7 +355,8 @@ async function onSignOut() {
   justify-content: center;
   gap: 8px;
   height: 40px;
-  background: #0f766e;
+  /* POS-265: match header "+ Send Postcards" (#47bfa9), not dark emerald */
+  background: var(--app-teal, #47bfa9);
   color: #ffffff;
   font-weight: 600;
   font-size: 14px;
@@ -366,7 +367,7 @@ async function onSignOut() {
 }
 
 .cta-expanded:hover {
-  background: #115e59;
+  background: var(--app-teal-hover, #3aa893);
 }
 
 .cta-collapsed {
@@ -376,7 +377,7 @@ async function onSignOut() {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  background: #0f766e;
+  background: var(--app-teal, #47bfa9);
   color: #ffffff;
   border: none;
   border-radius: 50%;
@@ -385,7 +386,7 @@ async function onSignOut() {
 }
 
 .cta-collapsed:hover {
-  background: #115e59;
+  background: var(--app-teal-hover, #3aa893);
 }
 
 .cta-icon {
@@ -489,7 +490,7 @@ async function onSignOut() {
 /* Active state */
 .sidebar-item.active {
   background: var(--sidebar-item-active-bg, rgba(71, 191, 169, 0.08));
-  color: #0f766e;
+  color: var(--app-teal, #47bfa9);
   font-weight: 600;
 }
 
@@ -523,7 +524,7 @@ async function onSignOut() {
 }
 
 .sidebar-item.active .item-icon--component {
-  color: #0f766e;
+  color: var(--app-teal, #47bfa9);
 }
 
 /* ── Labels (hidden when collapsed) ───────────────────── */

@@ -418,7 +418,7 @@ function onToggleClick() {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #0f766e;
+  background: var(--app-teal, #47bfa9);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
