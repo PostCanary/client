@@ -16,8 +16,10 @@ export function parseLocationLabel(
   const label = (raw ?? "").trim();
   if (!label) return null;
   const match = label.match(/^(.+),\s*([A-Za-z]{2})$/);
-  if (match) {
-    return { city: match[1].trim(), state: match[2].toUpperCase() };
+  const city = match?.[1]?.trim();
+  const state = match?.[2]?.toUpperCase();
+  if (city && state) {
+    return { city, state };
   }
   return { city: label, state: "" };
 }
