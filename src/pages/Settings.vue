@@ -28,7 +28,9 @@ import {
   industryEnumForSave,
   parseIndustrySelection,
 } from "@/types/campaign";
+import { canEditOrgReturnAddress } from "@/utils/firstRunSetup";
 import {
+  isCompleteReturnAddress,
   toReturnAddressPayload,
   validateReturnAddressForm,
 } from "@/utils/returnAddress";
@@ -77,6 +79,13 @@ function syncBizNameFromKit() {
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
 const isOrgAdmin = computed(() => orgStore.isAdmin);
+const canWriteReturnAddress = computed(() =>
+  canEditOrgReturnAddress({
+    isInvitedUser:
+      profile.value?.is_invited_user ?? auth.profile?.is_invited_user,
+    orgRole: auth.orgRole,
+  }),
+);
 
 // POS-161 — Business mailing (return) address. Required for postcard print
 // submit; account-level default that campaigns can override in Review.
@@ -95,6 +104,16 @@ const returnAddressError = ref<string | null>(null);
 function validateSettingsReturnAddress(): string | null {
   return validateReturnAddressForm(returnAddressForm.value);
 }
+
+const mailingAddressComplete = computed(() =>
+  isCompleteReturnAddress(returnAddressForm.value),
+);
+const isAccountComplete = computed(
+  () => isProfileComplete.value && mailingAddressComplete.value,
+);
+const profileBadgeReady = computed(
+  () => !loading.value && !returnAddressLoading.value,
+);
 
 function applyReturnAddress(addr: OrgReturnAddress | null) {
   if (!addr) {
@@ -136,7 +155,9 @@ async function loadReturnAddress() {
 }
 
 async function onSaveReturnAddress() {
-  if (!auth.orgId || returnAddressSaving.value) return;
+  if (!auth.orgId || returnAddressSaving.value || !canWriteReturnAddress.value) {
+    return;
+  }
   const validationError = validateSettingsReturnAddress();
   if (validationError) {
     message.error(validationError);
@@ -348,20 +369,21 @@ function onReplayTour() {
         </div>
 
         <span
-          v-if="!loading"
+          v-if="profileBadgeReady"
           class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
+          data-testid="settings-profile-badge"
           :class="
-            isProfileComplete
+            isAccountComplete
               ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
               : 'border-amber-300 bg-amber-50 text-amber-700'
           "
         >
           <span
             class="h-2 w-2 rounded-full"
-            :class="isProfileComplete ? 'bg-emerald-500' : 'bg-amber-500'"
+            :class="isAccountComplete ? 'bg-emerald-500' : 'bg-amber-500'"
           />
           <span>
-            {{ isProfileComplete ? "Profile complete" : "Profile incomplete" }}
+            {{ isAccountComplete ? "Profile complete" : "Profile incomplete" }}
           </span>
         </span>
       </header>
@@ -580,7 +602,7 @@ function onReplayTour() {
           </div>
 
           <fieldset
-            :disabled="returnAddressLoading || returnAddressSaving || !isOrgAdmin"
+            :disabled="returnAddressLoading || returnAddressSaving || !canWriteReturnAddress"
             class="space-y-3"
           >
             <div>
@@ -691,7 +713,7 @@ function onReplayTour() {
           </fieldset>
 
           <p
-            v-if="!isOrgAdmin"
+            v-if="!canWriteReturnAddress"
             class="text-xs text-slate-500"
             data-testid="settings-return-address-role-note"
           >
@@ -713,7 +735,7 @@ function onReplayTour() {
               Saving…
             </span>
             <button
-              v-if="isOrgAdmin"
+              v-if="canWriteReturnAddress"
               type="button"
               class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="returnAddressLoading || returnAddressSaving"

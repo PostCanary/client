@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { updateUserProfile } from "@/api/users";
 import {
+  getOrg,
   getReturnAddress,
   updateReturnAddress,
   type OrgReturnAddress,
@@ -16,7 +17,10 @@ import {
   industryValueForApi,
   parseIndustrySelection,
 } from "@/types/campaign";
-import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
+import {
+  parseLocationLabel,
+  syncBrandLocationFromProfile,
+} from "@/utils/businessLocation";
 import { canEditOrgReturnAddress } from "@/utils/firstRunSetup";
 import {
   isCompleteReturnAddress,
@@ -106,6 +110,14 @@ function applyLoadedAddress(addr: OrgReturnAddress | null) {
   zip.value = addr?.zip ?? "";
 }
 
+function prefillCityStateFromLabel(label?: string | null) {
+  if (city.value.trim() || state.value.trim()) return;
+  const parsed = parseLocationLabel(label);
+  if (!parsed) return;
+  city.value = parsed.city;
+  state.value = parsed.state;
+}
+
 onMounted(async () => {
   try {
     if (!brandKitStore.hydrated) {
@@ -114,10 +126,22 @@ onMounted(async () => {
     if (!industry.value.trim() && brandKitStore.brandKit?.industry) {
       industry.value = brandKitStore.brandKit.industry;
     }
-    const addr = await getReturnAddress();
-    applyLoadedAddress(addr);
-  } catch {
-    applyLoadedAddress(null);
+    try {
+      applyLoadedAddress(await getReturnAddress());
+    } catch {
+      applyLoadedAddress(null);
+    }
+    if (!isCompleteReturnAddress(loadedAddress.value)) {
+      prefillCityStateFromLabel(brandKitStore.brandKit?.location);
+      if (!city.value.trim() && auth.orgId) {
+        try {
+          const org = await getOrg(auth.orgId);
+          prefillCityStateFromLabel(org.location);
+        } catch {
+          // Prefill only — skip decision never uses org.location.
+        }
+      }
+    }
   } finally {
     loading.value = false;
   }

@@ -104,29 +104,62 @@ test("industry-only missing prefills the return address and does not overwrite i
   expect(state.requestLog.returnAddressUpdates).toEqual([]);
 });
 
-test("invited teammate sets industry without writing the org return address", async ({
+test("owner with industry and brand location but no return address lands on setup", async ({
+  page,
+}) => {
+  await boot(page, (s) => {
+    s.profile.industry = "Roofing";
+    s.profile.profile_complete = true;
+    s.profile.is_invited_user = false;
+    s.brandKit.data = {
+      ...(s.brandKit.data ?? {}),
+      location: "Atlanta, GA",
+      industry: "roofing",
+    };
+    s.returnAddress = null;
+  });
+
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("first-run-setup")).toBeVisible();
+  await expect(page.getByTestId("first-run-street")).toHaveValue("");
+  await expect(page.getByTestId("first-run-city")).toHaveValue("Atlanta");
+  await expect(page.getByTestId("first-run-state")).toHaveValue("GA");
+  await expect(page.getByTestId("first-run-zip")).toHaveValue("");
+
+  await page.goto("/app/setup");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("first-run-setup")).toBeVisible();
+});
+
+test("invited teammate skips setup even with a blank return address", async ({
   page,
 }) => {
   const state = await boot(page, (s) => {
-    industryOnlyMissing(s);
     s.profile.is_invited_user = true;
+    s.profile.industry = "Roofing";
+    s.profile.profile_complete = true;
     s.profile.full_name = "Jordan Member";
     s.authMe.org_role = "member";
+    s.returnAddress = null;
     const org = s.orgs.find((o) => o.id === s.authMe.org_id);
     if (org) org.role = "member";
   });
 
   await page.goto("/app/home");
-  await expect(page).toHaveURL(/\/app\/setup$/);
-  await expect(page.getByTestId("first-run-street")).toHaveCount(0);
-  await expect(page.getByTestId("first-run-address-locked")).toBeVisible();
-
-  await page.getByTestId("industry-pill-plumbing").click();
-  await page.getByTestId("first-run-continue").click();
-
   await expect(page).toHaveURL(/\/app\/home$/);
-  await expect.poll(() => state.profile.industry).toBe("plumbing");
-  await expect.poll(() => state.returnAddress).toEqual(EXISTING_RETURN);
+  await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+
+  await page.goto("/app/setup");
+  await expect(page).toHaveURL(/\/app\/home$/);
+  await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+
+  await page.goto("/app/settings");
+  await expect(page).toHaveURL(/\/app\/settings$/);
+  await expect(page.getByTestId("settings-profile-badge")).toContainText(
+    "Profile incomplete",
+  );
+  await expect(page.getByTestId("settings-return-name")).toBeDisabled();
   expect(state.requestLog.returnAddressUpdates).toEqual([]);
 });
 
@@ -150,6 +183,16 @@ test("complete profiles and invited teammates never see the first-run page", asy
   await page.goto("/app/settings");
   await expect(page).toHaveURL(/\/app\/settings$/);
   await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+});
+
+test("Settings badge is complete only when mailing address is filled", async ({
+  page,
+}) => {
+  await boot(page);
+  await page.goto("/app/settings");
+  await expect(page.getByTestId("settings-profile-badge")).toContainText(
+    "Profile complete",
+  );
 });
 
 test("Settings industry is a controlled list with Other", async ({ page }) => {

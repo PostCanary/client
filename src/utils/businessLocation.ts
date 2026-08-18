@@ -10,6 +10,18 @@ import {
 import { getZipCentroids } from "@/api/targeting";
 import { resolveIndustry, type Industry } from "@/types/campaign";
 
+export function parseLocationLabel(
+  raw?: string | null,
+): { city: string; state: string } | null {
+  const label = (raw ?? "").trim();
+  if (!label) return null;
+  const match = label.match(/^(.+),\s*([A-Za-z]{2})$/);
+  if (match) {
+    return { city: match[1].trim(), state: match[2].toUpperCase() };
+  }
+  return { city: label, state: "" };
+}
+
 export function locationLabelFromParts(
   city?: string | null,
   state?: string | null,

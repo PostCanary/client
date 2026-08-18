@@ -2,10 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/api/orgs", () => ({
   getReturnAddress: vi.fn(),
-  getOrg: vi.fn(),
 }));
 
-import { getOrg, getReturnAddress } from "@/api/orgs";
+import { getReturnAddress } from "@/api/orgs";
 import {
   canEditOrgReturnAddress,
   evaluateNeedsFirstRun,
@@ -17,23 +16,32 @@ import {
 } from "./firstRunSetup";
 
 describe("first-run completeness", () => {
-  it("requires both industry and a mailing location", () => {
+  it("requires industry and a complete structured return address", () => {
     expect(
       needsFirstRunFields({
         profileIndustry: "plumbing",
-        brandLocation: "Scottsdale, AZ",
+        returnAddress: {
+          address: "1 Main",
+          city: "Scottsdale",
+          state: "AZ",
+          zip: "85251",
+        },
       }),
     ).toBe(false);
     expect(
       needsFirstRunFields({
-        profileIndustry: "",
-        brandLocation: "Scottsdale, AZ",
+        profileIndustry: "plumbing",
       }),
     ).toBe(true);
     expect(
       needsFirstRunFields({
-        profileIndustry: "hvac",
-        brandLocation: "",
+        profileIndustry: "",
+        returnAddress: {
+          address: "1 Main",
+          city: "Scottsdale",
+          state: "AZ",
+          zip: "85251",
+        },
       }),
     ).toBe(true);
   });
@@ -44,7 +52,7 @@ describe("first-run completeness", () => {
     expect(hasIndustryValue("", "")).toBe(false);
   });
 
-  it("accepts a complete return address or brand/org location", () => {
+  it("counts only a complete structured return address as mailing", () => {
     expect(
       hasMailingLocation({
         returnAddress: {
@@ -55,8 +63,6 @@ describe("first-run completeness", () => {
         },
       }),
     ).toBe(true);
-    expect(hasMailingLocation({ brandLocation: "Atlanta, GA" })).toBe(true);
-    expect(hasMailingLocation({ orgLocation: "Phoenix, AZ" })).toBe(true);
     expect(hasMailingLocation({})).toBe(false);
   });
 });
@@ -99,10 +105,9 @@ describe("evaluateNeedsFirstRun", () => {
       }),
     ).resolves.toBe(false);
     expect(fetchBrandKit).not.toHaveBeenCalled();
-    expect(getOrg).not.toHaveBeenCalled();
   });
 
-  it("skips QA fixtures that only have brand-kit location + industry", async () => {
+  it("does not skip when industry is set but the return address is blank", async () => {
     vi.mocked(getReturnAddress).mockResolvedValue(null);
     fetchBrandKit.mockResolvedValue({
       location: "Atlanta, GA",
@@ -115,22 +120,26 @@ describe("evaluateNeedsFirstRun", () => {
         profileIndustry: "Roofing",
         fetchBrandKit,
       }),
-    ).resolves.toBe(false);
-    expect(getOrg).not.toHaveBeenCalled();
+    ).resolves.toBe(true);
   });
 
-  it("requires the page when both industry and location are empty", async () => {
+  it("skips invited teammates even with a blank return address", async () => {
+    vi.mocked(getReturnAddress).mockResolvedValue(null);
+
+    await expect(
+      evaluateNeedsFirstRun({
+        orgId: "org-alpha",
+        profileIndustry: "Roofing",
+        isInvitedUser: true,
+        fetchBrandKit,
+      }),
+    ).resolves.toBe(false);
+    expect(fetchBrandKit).not.toHaveBeenCalled();
+  });
+
+  it("requires the page when both industry and return address are empty", async () => {
     vi.mocked(getReturnAddress).mockResolvedValue(null);
     fetchBrandKit.mockResolvedValue({ location: "", industry: null });
-    vi.mocked(getOrg).mockResolvedValue({
-      id: "org-1",
-      name: "New Co",
-      slug: "new-co",
-      role: "owner",
-      business_name: null,
-      location: null,
-      service_types: null,
-    });
 
     await expect(
       evaluateNeedsFirstRun({

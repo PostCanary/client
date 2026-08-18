@@ -801,8 +801,16 @@ export function createMockAppState(): MockAppState {
       chatRequests: [],
     },
     draftOverride: null,
-    // POS-161: default null so existing specs see "not configured".
-    returnAddress: null,
+    // Complete structured address so first-run setup is skipped for the
+    // default fixture. Specs that want a blank mailing address set null.
+    returnAddress: {
+      name: "Alpha Roofing",
+      address: "200 Peachtree St",
+      address2: null,
+      city: "Atlanta",
+      state: "GA",
+      zip: "30303",
+    },
     designs: [],
   };
 

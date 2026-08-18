@@ -166,6 +166,19 @@ export async function installPrintJobMockApi(
     // Stub brand-kit so brandKitStore.fetch() doesn't hit the Vite proxy
     // (which has no real Flask session → 401 → auth.loginModalOpen=true →
     // LoginModal backdrop blocks button clicks in E2E tests).
+    if (pathname === "/api/organizations/return-address" && method === "GET") {
+      return json(route, {
+        return_address: {
+          name: "Mock HVAC",
+          address: "1 Main St",
+          address2: null,
+          city: "Phoenix",
+          state: "AZ",
+          zip: "85001",
+        },
+      });
+    }
+
     if (pathname === "/api/brand-kit" && method === "GET") {
       return json(route, {
         ok: true,

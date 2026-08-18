@@ -1,4 +1,4 @@
-import { getOrg, getReturnAddress } from "@/api/orgs";
+import { getReturnAddress } from "@/api/orgs";
 import { resolveIndustry } from "@/types/campaign";
 import { isCompleteReturnAddress } from "@/utils/returnAddress";
 import type { UserProfile } from "@/api/users";
@@ -22,13 +22,8 @@ export function hasMailingLocation(opts: {
     state?: string | null;
     zip?: string | null;
   } | null;
-  brandLocation?: string | null;
-  orgLocation?: string | null;
 }): boolean {
-  if (isCompleteReturnAddress(opts.returnAddress)) return true;
-  if ((opts.brandLocation ?? "").trim()) return true;
-  if ((opts.orgLocation ?? "").trim()) return true;
-  return false;
+  return isCompleteReturnAddress(opts.returnAddress);
 }
 
 export function needsFirstRunFields(opts: {
@@ -40,8 +35,6 @@ export function needsFirstRunFields(opts: {
     state?: string | null;
     zip?: string | null;
   } | null;
-  brandLocation?: string | null;
-  orgLocation?: string | null;
 }): boolean {
   return (
     !hasIndustryValue(opts.profileIndustry, opts.brandIndustry) ||
@@ -65,21 +58,21 @@ export function isFirstSessionProfile(
 export type FirstRunSources = {
   orgId: string | null;
   profileIndustry: string | null | undefined;
+  isInvitedUser?: boolean;
   fetchBrandKit: () => Promise<Pick<BrandKit, "location" | "industry"> | null>;
 };
 
 /**
- * True when industry or mailing location is still missing after checking
- * profile, return address, brand kit, and org.location. Skip for invited
- * teammates / QA fixtures that already have both.
+ * True when industry or a complete structured return address is missing.
+ * Brand kit / org.location may prefill the form later — they do not skip
+ * this page. Invited teammates skip entirely (they cannot write org mail).
  */
 export async function evaluateNeedsFirstRun(
   sources: FirstRunSources,
 ): Promise<boolean> {
-  let brand: Pick<BrandKit, "location" | "industry"> | null = null;
-  let returnAddress = null as Awaited<ReturnType<typeof getReturnAddress>>;
-  let orgLocation: string | null = null;
+  if (sources.isInvitedUser) return false;
 
+  let returnAddress = null as Awaited<ReturnType<typeof getReturnAddress>>;
   try {
     returnAddress = await getReturnAddress();
   } catch {
@@ -95,29 +88,12 @@ export async function evaluateNeedsFirstRun(
     return false;
   }
 
-  try {
-    brand = await sources.fetchBrandKit();
-  } catch {
-    brand = null;
-  }
-
-  if (
-    !needsFirstRunFields({
-      profileIndustry: sources.profileIndustry,
-      brandIndustry: brand?.industry,
-      returnAddress,
-      brandLocation: brand?.location,
-    })
-  ) {
-    return false;
-  }
-
-  if (sources.orgId) {
+  let brand: Pick<BrandKit, "location" | "industry"> | null = null;
+  if (!hasIndustryValue(sources.profileIndustry)) {
     try {
-      const org = await getOrg(sources.orgId);
-      orgLocation = org.location ?? null;
+      brand = await sources.fetchBrandKit();
     } catch {
-      orgLocation = null;
+      brand = null;
     }
   }
 
@@ -125,8 +101,6 @@ export async function evaluateNeedsFirstRun(
     profileIndustry: sources.profileIndustry,
     brandIndustry: brand?.industry,
     returnAddress,
-    brandLocation: brand?.location,
-    orgLocation,
   });
 }
 

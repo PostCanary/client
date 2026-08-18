@@ -173,6 +173,7 @@ export const useAuthStore = defineStore("auth", {
       const needed = await evaluateNeedsFirstRun({
         orgId: this.orgId,
         profileIndustry: this.profile?.industry,
+        isInvitedUser: this.profile?.is_invited_user === true,
         fetchBrandKit: async () => {
           if (!brandKitStore.hydrated) {
             await brandKitStore.fetch();

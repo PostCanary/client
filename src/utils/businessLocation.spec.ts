@@ -19,10 +19,30 @@ import { getZipCentroids } from "@/api/targeting";
 import {
   locationLabelFromParts,
   locationLabelFromReturnAddress,
+  parseLocationLabel,
   resolveMapCenterFromReturnAddress,
   syncBrandLocationFromProfile,
   zip5FromReturnAddress,
 } from "./businessLocation";
+
+describe("parseLocationLabel", () => {
+  it("splits city, ST labels for prefill only", () => {
+    expect(parseLocationLabel("Atlanta, GA")).toEqual({
+      city: "Atlanta",
+      state: "GA",
+    });
+    expect(parseLocationLabel("  Scottsdale, az ")).toEqual({
+      city: "Scottsdale",
+      state: "AZ",
+    });
+    expect(parseLocationLabel("Phoenix")).toEqual({
+      city: "Phoenix",
+      state: "",
+    });
+    expect(parseLocationLabel("")).toBeNull();
+    expect(parseLocationLabel(null)).toBeNull();
+  });
+});
 
 describe("locationLabelFromParts", () => {
   it("formats city and state", () => {
