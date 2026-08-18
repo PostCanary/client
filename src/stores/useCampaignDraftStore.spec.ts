@@ -885,7 +885,8 @@ describe("POS-183 — Back to goal and abandoned-branch reset", () => {
     expect(store.draft!.goal?.goalType).toBe("send_to_list");
     expect(store.consumePreserveDraftOnWizardRemount()).toBe(true);
     expect(saveDraft).toHaveBeenCalled();
-    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+    const saveCalls = vi.mocked(saveDraft).mock.calls;
+    const saved = saveCalls[saveCalls.length - 1]?.[0] as {
       currentStep: number;
       audience: { audienceId: string } | null;
     };
@@ -922,7 +923,8 @@ describe("POS-183 — Back to goal and abandoned-branch reset", () => {
     expect(store.draft!.design?.designSource).toBe("uploaded");
     expect(store.draft!.design?.uploadedAsset?.frontUrl).toBe("/media/front.png");
 
-    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+    const saveCalls = vi.mocked(saveDraft).mock.calls;
+    const saved = saveCalls[saveCalls.length - 1]?.[0] as {
       audience: unknown;
       targeting: unknown;
       review: unknown;
@@ -955,7 +957,8 @@ describe("POS-183 — Back to goal and abandoned-branch reset", () => {
     expect(store.draft!.review).toBeNull();
     expect(store.draft!.completedSteps).toEqual([1, 3]);
 
-    const saved = vi.mocked(saveDraft).mock.calls.at(-1)![0] as {
+    const saveCalls = vi.mocked(saveDraft).mock.calls;
+    const saved = saveCalls[saveCalls.length - 1]?.[0] as {
       audience: unknown;
       targeting: unknown;
     };
