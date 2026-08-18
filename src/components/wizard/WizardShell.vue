@@ -122,7 +122,10 @@ const canAdvance = computed(() => {
   if (step.value === 3) {
     const design = draftStore.draft?.design;
     const source = design?.designSource;
-    if (source === "uploaded" || source === "requested") return true;
+    // POS-270: Replace clears uploadedAsset. Source alone must not
+    // keep Next enabled or let checkout reuse the old artwork.
+    if (source === "uploaded") return Boolean(design?.uploadedAsset?.frontUrl);
+    if (source === "requested") return true;
     return (
       completedSteps.value.includes(3) &&
       (design?.sequenceCards?.length ?? 0) > 0
