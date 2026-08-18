@@ -22,6 +22,7 @@ import {
   updateReturnAddress,
   type OrgReturnAddress,
 } from "@/api/orgs";
+import { syncBrandLocationFromProfile } from "@/utils/businessLocation";
 
 const {
   profile,
@@ -158,6 +159,27 @@ async function onSaveReturnAddress() {
   try {
     const saved = await updateReturnAddress(payload);
     applyReturnAddress(saved ?? payload);
+    // Keep brand kit / org.location in sync so Step 1 and map defaults use
+    // the same city/state as the mailing address (no onboarding required).
+    if (!brandKitStore.hydrated) {
+      await brandKitStore.fetch();
+    }
+    await syncBrandLocationFromProfile({
+      orgId: auth.orgId,
+      brandLocation: brandKitStore.brandKit?.location,
+      brandIndustry: brandKitStore.brandKit?.industry ?? null,
+      profileIndustry: auth.profile?.industry ?? null,
+      forceLocation: true,
+      updateBrandKit: (partial) => brandKitStore.update(partial),
+      patchBrandKitLocal: (partial) => {
+        brandKitStore.$patch({
+          brandKit: {
+            ...brandKitStore.brandKit,
+            ...partial,
+          },
+        });
+      },
+    });
     message.success("Business mailing address saved.");
   } catch (err: any) {
     console.error("[Settings] updateReturnAddress failed", err);
