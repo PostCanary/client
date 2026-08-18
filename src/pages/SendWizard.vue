@@ -34,7 +34,14 @@ onMounted(async () => {
   const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
 
   if (skipAuth) {
-    await draftStore.startNew(auth.orgId || "mock-org");
+    if (
+      !(
+        draftStore.consumePreserveDraftOnWizardRemount() &&
+        draftStore.draft
+      )
+    ) {
+      await draftStore.startNew(auth.orgId || "mock-org");
+    }
     // Hydrate brand kit with mock data so setup screen is skipped
     await brandKitStore.fetch();
     initializing.value = false;
@@ -56,7 +63,16 @@ onMounted(async () => {
     }
     const draftId = route.params.draftId as string | undefined;
     if (draftId) {
-      await draftStore.resume(draftId);
+      // Already-loaded draft (Back from the sibling STTL route) must not
+      // be replaced by a server resume that still has currentStep 2.
+      if (draftStore.draft?.id !== draftId) {
+        await draftStore.resume(draftId);
+      }
+    } else if (
+      draftStore.consumePreserveDraftOnWizardRemount() &&
+      draftStore.draft
+    ) {
+      // Keep the local pre-Step-3 draft so the customer can re-pick a goal.
     } else {
       await draftStore.startNew(auth.orgId);
     }

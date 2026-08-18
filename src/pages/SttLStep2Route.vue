@@ -112,12 +112,13 @@ async function onApproved(audienceId: string) {
   router.push(`/app/send/${targetDraftId}`);
 }
 
-function goBack() {
-  if (window.history.length > 1) {
-    router.back();
-    return;
-  }
-  router.push("/app/send");
+async function goBack() {
+  // POS-183: do not use router.back(). The dedicated STTL route is a
+  // sibling of SendWizard; history back lands on /app/send with
+  // currentStep still 2, and WizardShell immediately redirects here.
+  const returned = await draftStore.returnToGoalSelection();
+  if (!returned) return;
+  await router.push(draftStore.mainWizardPath());
 }
 
 onMounted(async () => {
@@ -182,6 +183,18 @@ onMounted(async () => {
         >
           {{ fileSelectionError }}
         </p>
+
+        <button
+          type="button"
+          class="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+          data-testid="sttl-back-btn"
+          @click="goBack"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+          Back
+        </button>
       </div>
 
       <SttLStep2

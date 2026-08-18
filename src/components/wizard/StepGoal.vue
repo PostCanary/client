@@ -144,11 +144,13 @@ async function chooseSendToList() {
   if (!sendToListGoal) return;
   commitGoal(sendToListGoal);
   draftStore.goToStep(2);
-  await router.push(
-    draftStore.draft?.id
+  const audienceId = draftStore.draft?.audience?.audienceId;
+  await router.push({
+    path: draftStore.draft?.id
       ? `/app/send/${draftStore.draft.id}/sttl-step-2`
       : "/app/send/sttl-step-2",
-  );
+    query: audienceId ? { audienceId } : {},
+  });
 }
 
 onMounted(async () => {

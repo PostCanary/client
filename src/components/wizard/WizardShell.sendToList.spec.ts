@@ -31,6 +31,14 @@ vi.mock("@/composables/useScrapeRegenWatcher", () => ({
   }),
 }));
 
+vi.mock("@/api/campaignDrafts", () => ({
+  saveDraft: vi.fn().mockResolvedValue(undefined),
+  loadDraft: vi.fn(),
+  createDraft: vi.fn(),
+  deleteDraft: vi.fn(),
+  listDrafts: vi.fn().mockResolvedValue([]),
+}));
+
 import WizardShell from "./WizardShell.vue";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 
@@ -99,6 +107,36 @@ describe("WizardShell Send-to-a-List Step 2 routing (POS-190)", () => {
     await flushPromises();
 
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("Back from the area Step 2 returns to Choose Your Goal", async () => {
+    const store = useCampaignDraftStore();
+    store.draft = {
+      id: "draft-1",
+      orgId: "org-1",
+      currentStep: 2,
+      completedSteps: [1],
+      needsReviewSteps: [],
+      campaignType: "targeted",
+      goal: { goalType: "target_area", sequenceLength: 1 },
+      targeting: { finalHouseholdCount: 12 },
+      audience: null,
+      design: null,
+      review: null,
+      createdAt: "2026-07-28T00:00:00Z",
+      updatedAt: "2026-07-28T00:00:00Z",
+      schemaVersion: 1,
+    };
+
+    const wrapper = shallowMount(WizardShell);
+    const back = wrapper.find('[data-testid="wizard-back"]');
+    expect(back.exists()).toBe(true);
+    await back.trigger("click");
+    await flushPromises();
+
+    expect(store.currentStep).toBe(1);
+    expect(store.draft?.targeting?.finalHouseholdCount).toBe(12);
+    expect(store.draft?.goal?.goalType).toBe("target_area");
   });
 
   it("disables Next again as soon as the targeting query becomes stale", async () => {

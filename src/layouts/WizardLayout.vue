@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { RouterView, useRouter } from "vue-router";
+import { RouterView, useRoute, useRouter } from "vue-router";
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore";
 import { useMessage } from "naive-ui";
 import LogoUrl from "@/assets/brand/logo-hz-800.png";
 import WizardProgress from "@/components/wizard/WizardProgress.vue";
 import type { WizardStep } from "@/types/campaign";
 
+const route = useRoute();
 const router = useRouter();
 const draftStore = useCampaignDraftStore();
 const message = useMessage();
@@ -15,8 +16,36 @@ const completedSteps = computed(
   () => (draftStore.draft?.completedSteps ?? []) as WizardStep[],
 );
 
-function goToStep(step: WizardStep) {
-  draftStore.goToStep(step);
+function isSttlStep2Route() {
+  return (
+    route.path.includes("/sttl-step-2") ||
+    route.path.includes("/send-to-a-list")
+  );
+}
+
+async function goToStep(step: WizardStep) {
+  // The dedicated list route always renders Step 2. Leaving it must
+  // change the URL or the progress control appears to do nothing.
+  if (!isSttlStep2Route() || step === 2) {
+    draftStore.goToStep(step);
+    return;
+  }
+  if (step === 1) {
+    const returned = await draftStore.returnToGoalSelection();
+    if (!returned) return;
+  } else {
+    draftStore.goToStep(step);
+    if (draftStore.currentStep !== step) return;
+    draftStore.markPreserveDraftOnWizardRemount();
+    if (draftStore.isPersisted) {
+      try {
+        await draftStore.saveNow();
+      } catch {
+        // Still leave the list route so the customer is not stuck.
+      }
+    }
+  }
+  await router.push(draftStore.mainWizardPath());
 }
 
 async function handleClose() {
