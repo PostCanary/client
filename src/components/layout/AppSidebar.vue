@@ -8,6 +8,7 @@ import { useCampaignDraftListStore } from '@/stores/useCampaignDraftListStore'
 import { useSidebar } from '@/composables/useSidebar'
 import { BRAND } from '@/config/brand'
 import { captureEvent } from '@/composables/usePostHog'
+import { logoutAndLeave } from '@/utils/sessionLogout'
 
 /* Logo — cropped version for sidebar, bird portion for collapsed */
 import LogoUrl from '@/assets/brand/logo-hz-800.png'
@@ -124,8 +125,7 @@ function onAnalyticsClick() {
 
 /* ── Sign out (same as existing Sidebar.vue) ────────────── */
 async function onSignOut() {
-  await auth.logout()
-  window.location.href = '/'
+  await logoutAndLeave()
 }
 </script>
 

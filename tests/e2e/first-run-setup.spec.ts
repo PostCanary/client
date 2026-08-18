@@ -131,6 +131,49 @@ test("sign out from first-run lands on marketing home, not setup", async ({
   await page.goto("/login");
   await expect(page).not.toHaveURL(/\/app\/setup/);
   await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+  await expect(
+    page.getByRole("paragraph").filter({ hasText: "Sign in" }),
+  ).toBeVisible();
+});
+
+test("login while first-run is needed stays on the login modal", async ({
+  page,
+}) => {
+  await boot(page, (s) => {
+    s.profile.industry = "Roofing";
+    s.profile.profile_complete = true;
+    s.returnAddress = null;
+  });
+
+  await page.goto("/login");
+  await expect(page).not.toHaveURL(/\/app\/setup/);
+  await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+  await expect(
+    page.getByRole("paragraph").filter({ hasText: "Sign in" }),
+  ).toBeVisible();
+});
+
+test("ZIP keystroke does not wipe industry or address", async ({ page }) => {
+  await boot(page, incompleteNewUser);
+
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+
+  await page.getByTestId("industry-pill-plumbing").click();
+  await page.getByTestId("first-run-street").fill("123 Palm Ave");
+  await page.getByTestId("first-run-city").fill("Scottsdale");
+  await page.getByTestId("first-run-state").fill("AZ");
+  await page.getByTestId("first-run-zip").pressSequentially("85251", {
+    delay: 30,
+  });
+
+  await expect(page.getByTestId("first-run-street")).toHaveValue("123 Palm Ave");
+  await expect(page.getByTestId("first-run-city")).toHaveValue("Scottsdale");
+  await expect(page.getByTestId("first-run-state")).toHaveValue("AZ");
+  await expect(page.getByTestId("first-run-zip")).toHaveValue("85251");
+  await expect(page.getByTestId("industry-pill-plumbing")).toHaveClass(
+    /47bfa9/,
+  );
 });
 
 test("owner with industry and brand location but no return address lands on setup", async ({

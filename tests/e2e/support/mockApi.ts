@@ -1000,6 +1000,28 @@ export async function installMockApi(page: Page, state: MockAppState) {
 
     if (pathname === "/auth/logout") {
       state.authMe = { authenticated: false };
+      if (method === "GET") {
+        let dest = "/";
+        const next = searchParams.get("next");
+        if (next) {
+          try {
+            const parsed = new URL(next, url.origin);
+            if (
+              parsed.hostname === "localhost" ||
+              parsed.hostname === "127.0.0.1"
+            ) {
+              dest = `${parsed.pathname}${parsed.search}`;
+            }
+          } catch {
+            dest = "/";
+          }
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "text/html",
+          body: `<!doctype html><script>location.replace(${JSON.stringify(dest)})</script>`,
+        });
+      }
       return noContent(route);
     }
 

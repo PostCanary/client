@@ -5,7 +5,7 @@ import {
   type UserProfile,
   type AuthMeResponse,
 } from "@/api/users";
-import { api } from "@/api/http";
+import { api, clearCsrfToken } from "@/api/http";
 
 import {
   authMe,
@@ -446,6 +446,7 @@ export const useAuthStore = defineStore("auth", {
         console.error("[auth] logout failed", err);
       }
 
+      clearCsrfToken();
       clearTenantRunState();
       resetUser();
       this.me = { authenticated: false };

@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useCampaignStore } from "@/stores/useCampaignStore";
 import LogoUrl from "@/assets/brand/logo-hz-800.png";
 import { BRAND } from "@/config/brand";
+import { logoutAndLeave } from "@/utils/sessionLogout";
 import CampaignManageModal from "@/components/CampaignManageModal.vue";
 import OrgSwitcher from "@/components/OrgSwitcher.vue";
 
@@ -129,10 +130,8 @@ function handleSettingsClick() {
 }
 
 async function handleLogoutClick() {
-  await auth.logout();
   closeDropdown();
-  // Hard redirect to clear any in-memory state and reload
-  window.location.href = "/";
+  await logoutAndLeave();
 }
 
 // Close dropdown when clicking outside

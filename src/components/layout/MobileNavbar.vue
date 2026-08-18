@@ -2,9 +2,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
 import LogoUrl from "@/assets/brand/logo-hz-800.png";
 import { BRAND } from "@/config/brand";
+import { logoutAndLeave } from "@/utils/sessionLogout";
 
 const props = withDefaults(
   defineProps<{
@@ -28,7 +28,6 @@ const emit = defineEmits<{
 
 const router = useRouter();
 const route = useRoute();
-const auth = useAuthStore();
 
 const dropdownOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
@@ -64,10 +63,8 @@ function handleSettingsClick() {
 }
 
 async function handleLogoutClick() {
-  await auth.logout();
   closeDropdown();
-  // Hard redirect to clear any in-memory state and reload
-  window.location.href = "/";
+  await logoutAndLeave();
 }
 
 // Close dropdown when clicking outside

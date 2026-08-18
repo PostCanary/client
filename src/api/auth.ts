@@ -1,6 +1,6 @@
 // src/api/auth.ts
 import { AUTH_BASE } from "@/config/auth";
-import { ensureCsrfToken } from "@/api/http";
+import { clearCsrfToken, ensureCsrfToken } from "@/api/http";
 import type { AuthMeResponse } from "@/api/users";
 
 /**
@@ -86,9 +86,13 @@ export async function authForgotPassword(email: string): Promise<Response> {
 
 export async function authLogout(): Promise<void> {
   const token = await ensureCsrfToken();
-  await fetch(join(AUTH_BASE, "/auth/logout"), {
+  const res = await fetch(join(AUTH_BASE, "/auth/logout"), {
     method: "POST",
     credentials: "include",
     headers: token ? { "X-CSRF-Token": token } : {},
   });
+  clearCsrfToken();
+  if (!res.ok) {
+    throw new Error(`logout failed: ${res.status}`);
+  }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { updateUserProfile } from "@/api/users";
 import {
@@ -22,6 +22,8 @@ import {
   syncBrandLocationFromProfile,
 } from "@/utils/businessLocation";
 import { canEditOrgReturnAddress } from "@/utils/firstRunSetup";
+import { logoutAndLeave } from "@/utils/sessionLogout";
+import { getFirstRunDraft, setFirstRunDraft } from "@/utils/firstRunDraft";
 import {
   isCompleteReturnAddress,
   returnAddressFieldsEqual,
@@ -34,16 +36,38 @@ const router = useRouter();
 const auth = useAuthStore();
 const brandKitStore = useBrandKitStore();
 
-const industry = ref(auth.profile?.industry ?? "");
-const address = ref("");
-const city = ref("");
-const state = ref("");
-const zip = ref("");
+const savedDraft = getFirstRunDraft();
+const industry = ref(savedDraft?.industry ?? auth.profile?.industry ?? "");
+const address = ref(savedDraft?.address ?? "");
+const city = ref(savedDraft?.city ?? "");
+const state = ref(savedDraft?.state ?? "");
+const zip = ref(savedDraft?.zip ?? "");
 const loadedAddress = ref<OrgReturnAddress | null>(null);
 const loading = ref(true);
+const formReady = ref(!!savedDraft);
 const saving = ref(false);
 const signingOut = ref(false);
+const formDirty = ref(!!savedDraft);
 const error = ref<string | null>(null);
+
+function persistDraft() {
+  setFirstRunDraft({
+    industry: industry.value,
+    address: address.value,
+    city: city.value,
+    state: state.value,
+    zip: zip.value,
+  });
+}
+
+function markFormDirty() {
+  formDirty.value = true;
+  persistDraft();
+}
+
+watch([industry, address, city, state, zip], () => {
+  if (formDirty.value) persistDraft();
+});
 
 const industrySelection = computed(() => parseIndustrySelection(industry.value));
 const industryOk = computed(() => {
@@ -103,7 +127,13 @@ const canSave = computed(() => {
   return true;
 });
 
-function applyLoadedAddress(addr: OrgReturnAddress | null) {
+function applyLoadedAddress(
+  addr: OrgReturnAddress | null,
+  opts: { force?: boolean } = {},
+) {
+  // Never clobber fields the user has already typed (ZIP keystroke used
+  // to land on a late refetch / remount that wiped industry + address).
+  if (formDirty.value && !opts.force) return;
   loadedAddress.value = addr;
   address.value = addr?.address ?? "";
   city.value = addr?.city ?? "";
@@ -112,6 +142,7 @@ function applyLoadedAddress(addr: OrgReturnAddress | null) {
 }
 
 function prefillCityStateFromLabel(label?: string | null) {
+  if (formDirty.value) return;
   if (city.value.trim() || state.value.trim()) return;
   const parsed = parseLocationLabel(label);
   if (!parsed) return;
@@ -124,7 +155,11 @@ onMounted(async () => {
     if (!brandKitStore.hydrated) {
       await brandKitStore.fetch();
     }
-    if (!industry.value.trim() && brandKitStore.brandKit?.industry) {
+    if (
+      !formDirty.value &&
+      !industry.value.trim() &&
+      brandKitStore.brandKit?.industry
+    ) {
       industry.value = brandKitStore.brandKit.industry;
     }
     try {
@@ -145,6 +180,7 @@ onMounted(async () => {
     }
   } finally {
     loading.value = false;
+    formReady.value = true;
   }
 });
 
@@ -186,7 +222,7 @@ async function onSubmit() {
         throw new Error("Failed to save business mailing address.");
       }
       knownAddress = savedAddress;
-      applyLoadedAddress(savedAddress);
+      applyLoadedAddress(savedAddress, { force: true });
     }
 
     const industryEnum = industryEnumForSave(industry.value);
@@ -212,6 +248,7 @@ async function onSubmit() {
       await brandKitStore.update({ industry: industryEnum });
     }
 
+    setFirstRunDraft(null);
     auth.markFirstRunComplete();
     await router.replace({ name: "AppHome" });
   } catch (err: unknown) {
@@ -229,11 +266,11 @@ async function onSubmit() {
 async function onSignOut() {
   if (signingOut.value) return;
   signingOut.value = true;
+  setFirstRunDraft(null);
   try {
-    await auth.logout();
+    await logoutAndLeave();
   } finally {
-    // Hard redirect so first-run cannot bounce a stale session back to setup.
-    window.location.href = "/";
+    signingOut.value = false;
   }
 }
 </script>
@@ -242,25 +279,47 @@ async function onSignOut() {
   <div class="first-run" data-testid="first-run-setup">
     <header class="first-run-header">
       <img :src="landingLogo" :alt="`${BRAND.name} logo`" class="first-run-logo" />
-      <button
-        type="button"
-        class="first-run-sign-out"
-        data-testid="first-run-sign-out"
-        :disabled="signingOut"
-        @click="onSignOut"
-      >
-        {{ signingOut ? "Signing out…" : "Sign out" }}
-      </button>
+      <div class="first-run-user">
+        <button
+          type="button"
+          class="first-run-avatar"
+          data-testid="first-run-avatar"
+          :aria-expanded="false"
+          :disabled="signingOut"
+          @click="onSignOut"
+        >
+          {{ (auth.userName || "U").slice(0, 1).toUpperCase() }}
+        </button>
+        <button
+          type="button"
+          class="first-run-sign-out"
+          data-testid="first-run-sign-out"
+          :disabled="signingOut"
+          @click="onSignOut"
+        >
+          {{ signingOut ? "Signing out…" : "Sign out" }}
+        </button>
+      </div>
     </header>
 
     <main class="first-run-main">
-      <div v-if="loading" class="first-run-loading" data-testid="first-run-loading">
+      <div
+        v-if="loading && !formReady"
+        class="first-run-loading"
+        data-testid="first-run-loading"
+      >
         <div
           class="w-6 h-6 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
         />
       </div>
 
-      <form v-else class="first-run-card" @submit.prevent="onSubmit">
+      <form
+        v-else
+        class="first-run-card"
+        autocomplete="off"
+        @submit.prevent="onSubmit"
+        @input="markFormDirty"
+      >
         <h1 class="first-run-title">A couple things before you send</h1>
         <p class="first-run-sub">
           This helps us target the right neighborhoods and print your return
@@ -272,7 +331,9 @@ async function onSignOut() {
             <p class="block text-sm font-medium text-slate-700 mb-2">
               What industry are you in?
             </p>
-            <IndustryPicker v-model="industry" variant="pills" />
+            <div @click="markFormDirty">
+              <IndustryPicker v-model="industry" variant="pills" />
+            </div>
           </div>
 
           <div v-if="showAddressFields">
@@ -288,7 +349,7 @@ async function onSignOut() {
                   id="first-run-street"
                   v-model="address"
                   type="text"
-                  autocomplete="address-line1"
+                  autocomplete="off"
                   data-testid="first-run-street"
                   class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
@@ -302,7 +363,7 @@ async function onSignOut() {
                     id="first-run-city"
                     v-model="city"
                     type="text"
-                    autocomplete="address-level2"
+                    autocomplete="off"
                     data-testid="first-run-city"
                     class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
@@ -316,7 +377,7 @@ async function onSignOut() {
                     v-model="state"
                     type="text"
                     maxlength="2"
-                    autocomplete="address-level1"
+                    autocomplete="off"
                     data-testid="first-run-state"
                     class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
@@ -330,7 +391,7 @@ async function onSignOut() {
                     v-model="zip"
                     type="text"
                     inputmode="numeric"
-                    autocomplete="postal-code"
+                    autocomplete="off"
                     data-testid="first-run-zip"
                     class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
@@ -380,6 +441,29 @@ async function onSignOut() {
   justify-content: space-between;
   gap: 16px;
   padding: 20px 24px 0;
+}
+
+.first-run-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.first-run-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #d7dde5;
+  background: #0b2d50;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.first-run-avatar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .first-run-sign-out {

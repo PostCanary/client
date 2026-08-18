@@ -8,6 +8,7 @@ import { loadMetaPixelScript } from "@/composables/loadMetaPixelScript";
 import { initMetaPixel } from "@/composables/useMetaPixel";
 import { isChunkLoadError, shouldReloadForChunkError } from "@/utils/chunkReload";
 import { humanizeAuth0LoginError } from "@/utils/firstRunSetup";
+import { hasSignedOutQuery } from "@/utils/sessionLogout";
 
 /** Build route meta from the shared SEO data module */
 function seoMeta(path: string) {
@@ -403,20 +404,43 @@ router.beforeEach(async (to, _from, next) => {
     if (!auth.initialized) {
       await auth.fetchMe();
     }
+
+    const applyLoginError = () => {
+      const rawError = to.query.error;
+      const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
+      if (typeof errorCode === "string" && errorCode.trim()) {
+        auth.loginError = humanizeAuth0LoginError(errorCode);
+      }
+    };
+
+    // Explicit sign-out: never send this navigation to AppHome / setup,
+    // even if a cookie survived POST /auth/logout and fetchMe reminted.
+    if (hasSignedOutQuery(to.query)) {
+      if (auth.isAuthenticated) {
+        await auth.logout();
+      }
+      auth.openLoginModal("/app/home", "login");
+      applyLoginError();
+      return next();
+    }
+
     if (auth.isAuthenticated) {
+      // First-run users who type /login must be able to switch accounts.
+      // next(AppHome) would hit the first-run guard and bounce to setup.
+      if (await auth.needsFirstRunSetup()) {
+        auth.openLoginModal("/app/home", "login");
+        applyLoginError();
+        return next();
+      }
       return next({ name: "AppHome" });
     }
+
     const nextPath =
       typeof to.query.next === "string" && to.query.next
         ? to.query.next
         : "/app/home";
     auth.openLoginModal(nextPath, "login");
-    // openLoginModal clears loginError — apply the Auth0 query after.
-    const rawError = to.query.error;
-    const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
-    if (typeof errorCode === "string" && errorCode.trim()) {
-      auth.loginError = humanizeAuth0LoginError(errorCode);
-    }
+    applyLoginError();
     return next();
   }
 
