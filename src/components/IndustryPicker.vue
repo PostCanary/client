@@ -30,6 +30,7 @@ const emit = defineEmits<{
 const open = ref(false);
 const query = ref("");
 const highlightIndex = ref(0);
+const suppressOpenOnFocus = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const listRef = ref<HTMLElement | null>(null);
@@ -82,6 +83,14 @@ function syncQueryToSelection() {
   query.value = selectedLabel.value;
 }
 
+function searchTextFromInput(raw: string): string {
+  const label = selectedLabel.value;
+  if (label && raw.startsWith(label) && raw !== label) {
+    return raw.slice(label.length);
+  }
+  return raw;
+}
+
 function close() {
   open.value = false;
   highlightIndex.value = 0;
@@ -90,11 +99,28 @@ function close() {
 
 function openList() {
   if (props.disabled) return;
+  const wasClosed = !open.value;
   open.value = true;
+  // Opened list is a search field. Keep the committed label only as the
+  // placeholder — do not leave it in the input for keystrokes to append to.
+  if (wasClosed && (query.value === "" || query.value === selectedLabel.value)) {
+    query.value = "";
+  }
   const current = selection.value.key;
   const index = flatOptions.value.findIndex((option) => option.slug === current);
   highlightIndex.value = index >= 0 ? index : 0;
-  void nextTick(() => scrollHighlightedIntoView());
+  void nextTick(() => {
+    inputRef.value?.focus();
+    scrollHighlightedIntoView();
+  });
+}
+
+function onFocus() {
+  if (suppressOpenOnFocus.value) {
+    suppressOpenOnFocus.value = false;
+    return;
+  }
+  openList();
 }
 
 function toggle() {
@@ -112,6 +138,7 @@ function selectOption(slug: Industry) {
       document.getElementById(`${props.id}-other`)?.focus();
     });
   } else {
+    suppressOpenOnFocus.value = true;
     inputRef.value?.focus();
   }
 }
@@ -132,7 +159,9 @@ function moveHighlight(delta: number) {
 }
 
 function onInput(event: Event) {
-  query.value = (event.target as HTMLInputElement).value;
+  query.value = searchTextFromInput(
+    (event.target as HTMLInputElement).value,
+  );
   if (!open.value) openList();
   highlightIndex.value = 0;
 }
@@ -224,7 +253,7 @@ onBeforeUnmount(() => {
         data-testid="industry-combobox-input"
         class="industry-combobox__input"
         @input="onInput"
-        @focus="openList"
+        @focus="onFocus"
         @keydown="onKeydown"
       />
       <button

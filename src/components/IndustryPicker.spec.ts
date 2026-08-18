@@ -83,6 +83,34 @@ describe("IndustryPicker", () => {
     wrapper.unmount();
   });
 
+  it("does not append keystrokes onto the committed label when the list opens", async () => {
+    const wrapper = mountPicker("roofing");
+    const input = wrapper.get('[data-testid="industry-combobox-input"]');
+    const el = input.element as HTMLInputElement;
+    expect(el.value).toBe("Roofing");
+
+    await input.trigger("focus");
+    expect(el.value).toBe("");
+    expect(wrapper.find('[data-testid="industry-combobox-list"]').exists()).toBe(
+      true,
+    );
+
+    el.value = "Roofingplumber";
+    await input.trigger("input");
+    expect(el.value).toBe("plumber");
+    expect(wrapper.find('[data-testid="industry-option-plumbing"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="industry-option-roofing"]').exists()).toBe(
+      false,
+    );
+
+    await input.trigger("keydown", { key: "Escape" });
+    expect(el.value).toBe("Roofing");
+    expect((wrapper.vm as { industry: string }).industry).toBe("roofing");
+    wrapper.unmount();
+  });
+
   it("supports type / arrow / enter / escape", async () => {
     const wrapper = mountPicker();
     const input = wrapper.get('[data-testid="industry-combobox-input"]');
@@ -91,8 +119,9 @@ describe("IndustryPicker", () => {
     await input.setValue("dentist");
     await input.trigger("keydown", { key: "Enter" });
     expect((wrapper.vm as { industry: string }).industry).toBe("dental");
+    expect((input.element as HTMLInputElement).value).toBe("Dental");
 
-    await input.trigger("focus");
+    await wrapper.get('[data-testid="industry-combobox-toggle"]').trigger("click");
     expect(wrapper.find('[data-testid="industry-combobox-list"]').exists()).toBe(
       true,
     );

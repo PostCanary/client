@@ -279,6 +279,29 @@ test("Settings badge is complete only when mailing address is filled", async ({
   );
 });
 
+test("typing in the industry combobox replaces the selected label", async ({
+  page,
+}) => {
+  await boot(page);
+  await page.goto("/app/settings");
+
+  const input = page.getByTestId("industry-combobox-input");
+  await expect(input).toHaveValue("Roofing");
+
+  await input.click();
+  await expect(page.getByTestId("industry-combobox-list")).toBeVisible();
+  await expect(input).toHaveValue("");
+  await input.pressSequentially("plumber");
+  await expect(input).toHaveValue("plumber");
+  await expect(page.getByTestId("industry-option-plumbing")).toHaveText(
+    "Plumbing",
+  );
+  await expect(page.getByTestId("industry-option-roofing")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(input).toHaveValue("Roofing");
+});
+
 test("Settings and first-run share the searchable grouped industry combobox", async ({
   page,
 }) => {
