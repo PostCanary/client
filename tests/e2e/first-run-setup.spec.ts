@@ -25,6 +25,18 @@ async function boot(page: Page, mutate?: (state: MockAppState) => void) {
   return state;
 }
 
+async function selectIndustry(
+  page: Page,
+  opts: { search?: string; slug: string },
+) {
+  const input = page.getByTestId("industry-combobox-input");
+  await input.click();
+  if (opts.search) {
+    await input.fill(opts.search);
+  }
+  await page.getByTestId(`industry-option-${opts.slug}`).click();
+}
+
 test("new user with empty industry and address sees the first-run page once", async ({
   page,
 }) => {
@@ -37,7 +49,7 @@ test("new user with empty industry and address sees the first-run page once", as
     page.getByRole("heading", { name: "A couple things before you send" }),
   ).toBeVisible();
 
-  await page.getByTestId("industry-pill-plumbing").click();
+  await selectIndustry(page, { search: "plumber", slug: "plumbing" });
   await page.getByTestId("first-run-street").fill("123 Palm Ave");
   await page.getByTestId("first-run-city").fill("Scottsdale");
   await page.getByTestId("first-run-state").fill("AZ");
@@ -94,7 +106,7 @@ test("industry-only missing prefills the return address and does not overwrite i
   await expect(page.getByTestId("first-run-state")).toHaveValue("AZ");
   await expect(page.getByTestId("first-run-zip")).toHaveValue("85251");
 
-  await page.getByTestId("industry-pill-hvac").click();
+  await selectIndustry(page, { slug: "hvac" });
   await page.getByTestId("first-run-continue").click();
 
   await expect(page).toHaveURL(/\/app\/home$/);
@@ -159,7 +171,7 @@ test("ZIP keystroke does not wipe industry or address", async ({ page }) => {
   await page.goto("/app/home");
   await expect(page).toHaveURL(/\/app\/setup$/);
 
-  await page.getByTestId("industry-pill-plumbing").click();
+  await selectIndustry(page, { search: "plumber", slug: "plumbing" });
   await page.getByTestId("first-run-street").fill("123 Palm Ave");
   await page.getByTestId("first-run-city").fill("Scottsdale");
   await page.getByTestId("first-run-state").fill("AZ");
@@ -171,8 +183,8 @@ test("ZIP keystroke does not wipe industry or address", async ({ page }) => {
   await expect(page.getByTestId("first-run-city")).toHaveValue("Scottsdale");
   await expect(page.getByTestId("first-run-state")).toHaveValue("AZ");
   await expect(page.getByTestId("first-run-zip")).toHaveValue("85251");
-  await expect(page.getByTestId("industry-pill-plumbing")).toHaveClass(
-    /47bfa9/,
+  await expect(page.getByTestId("industry-combobox-input")).toHaveValue(
+    "Plumbing",
   );
 });
 
@@ -267,27 +279,76 @@ test("Settings badge is complete only when mailing address is filled", async ({
   );
 });
 
-test("Settings industry is a controlled list with Other", async ({ page }) => {
+test("Settings and first-run share the searchable grouped industry combobox", async ({
+  page,
+}) => {
   const state = await boot(page);
   await page.goto("/app/settings");
 
-  const select = page.getByTestId("industry-select");
-  await expect(select).toBeVisible();
-  await expect(select).toBeEnabled();
-  await expect(select).toHaveValue("roofing");
+  const input = page.getByTestId("industry-combobox-input");
+  await expect(input).toBeVisible();
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue("Roofing");
   await expect(page.getByTestId("industry-other-text")).toHaveCount(0);
+  await expect(page.getByTestId("industry-pill-hvac")).toHaveCount(0);
 
-  await select.selectOption("other");
+  await input.click();
+  await expect(page.getByTestId("industry-group-home_services")).toBeVisible();
+  await expect(page.getByTestId("industry-group-health")).toBeVisible();
+  await input.fill("ac");
+  await expect(page.getByTestId("industry-option-hvac")).toHaveText("HVAC");
+
+  await selectIndustry(page, { slug: "other" });
   await page.getByTestId("industry-other-text").fill("Pool service");
   await page.getByRole("button", { name: "Save changes" }).click();
 
   await expect.poll(() => state.profile.industry).toBe("Pool service");
   await expect.poll(() => state.brandKit.data.industry).toBe("other");
 
-  await select.selectOption("other");
+  await selectIndustry(page, { slug: "other" });
   await page.getByTestId("industry-other-text").fill("");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect.poll(() => state.profile.industry).toBe("Pool service");
+});
+
+test("existing hvac hydrates in Settings and Other needs custom text on first-run", async ({
+  page,
+}) => {
+  await boot(page, (s) => {
+    s.profile.industry = "hvac";
+    s.brandKit.data = {
+      ...(s.brandKit.data ?? {}),
+      industry: "hvac",
+    };
+  });
+  await page.goto("/app/settings");
+  await expect(page.getByTestId("industry-combobox-input")).toHaveValue("HVAC");
+
+  await boot(page, incompleteNewUser);
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("industry-picker")).toBeVisible();
+  await expect(page.getByTestId("industry-pill-plumbing")).toHaveCount(0);
+
+  const continueBtn = page.getByTestId("first-run-continue");
+  await expect(continueBtn).toBeDisabled();
+
+  await page.getByTestId("industry-combobox-input").click();
+  await expect(page.getByTestId("industry-group-home_services")).toBeVisible();
+  await page.getByTestId("industry-combobox-input").fill("plumber");
+  await expect(page.getByTestId("industry-option-plumbing")).toHaveText(
+    "Plumbing",
+  );
+
+  await selectIndustry(page, { slug: "other" });
+  await expect(page.getByTestId("industry-other-text")).toBeVisible();
+  await expect(continueBtn).toBeDisabled();
+  await page.getByTestId("industry-other-text").fill("Pool service");
+  await page.getByTestId("first-run-street").fill("123 Palm Ave");
+  await page.getByTestId("first-run-city").fill("Scottsdale");
+  await page.getByTestId("first-run-state").fill("AZ");
+  await page.getByTestId("first-run-zip").fill("85251");
+  await expect(continueBtn).toBeEnabled();
 });
 
 test("/login opens the in-app modal and surfaces SSO errors", async ({

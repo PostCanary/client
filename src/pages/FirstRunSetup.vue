@@ -332,7 +332,7 @@ async function onSignOut() {
               What industry are you in?
             </p>
             <div @click="markFormDirty">
-              <IndustryPicker v-model="industry" variant="pills" />
+              <IndustryPicker v-model="industry" />
             </div>
           </div>
 
