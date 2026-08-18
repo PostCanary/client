@@ -515,8 +515,8 @@ function requestHuman() {
 }
 
 .chat-panel__chip:hover {
-  background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
 }
 
 /* ---- Error ---- */
@@ -640,8 +640,8 @@ function requestHuman() {
   height: 38px;
   border-radius: 50%;
   border: none;
-  background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -651,7 +651,7 @@ function requestHuman() {
 }
 
 .chat-panel__send:hover:not(:disabled) {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .chat-panel__send:disabled {

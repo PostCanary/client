@@ -81,6 +81,27 @@
   --app-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
   --app-card-radius: 12px;
 
+  /* ── Interactive palette (POS-277 / POS-279) ────────────────
+   * One source of truth for actionable surfaces. Every pairing
+   * below is asserted in tests/e2e/release-accessibility.spec.ts
+   * for the resting, hover AND focus states.
+   *
+   *   button label on fill     13.95:1   (AA needs 4.5)
+   *   button label on hover    11.27:1   (AA needs 4.5)
+   *   focus ring vs page bg    12.44:1   (1.4.11 needs 3.0)
+   *
+   * Teal is an ACCENT, not an action colour: white text on
+   * --app-teal is 2.26:1 and on --app-teal-hover 2.92:1, both
+   * far below AA. Teal fills may only carry --app-navy text
+   * (6.17:1). Teal focus rings are 2.01:1 against --app-bg and
+   * fail 1.4.11 — always ring with --app-focus-ring. */
+  --app-btn-bg: var(--app-navy, #0b2d50);
+  --app-btn-fg: #ffffff;
+  --app-btn-bg-hover: var(--app-navy-light, #163b69);
+  /* Text colour for the teal accent surfaces (card hover, chips). */
+  --app-on-teal: var(--app-navy, #0b2d50);
+  --app-focus-ring: var(--app-navy, #0b2d50);
+
   /* ── Sidebar + Top Bar ──────────────────────────────────── */
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;

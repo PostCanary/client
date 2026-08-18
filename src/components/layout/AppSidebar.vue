@@ -355,10 +355,10 @@ async function onSignOut() {
   justify-content: center;
   gap: 8px;
   height: 40px;
-  /* POS-265: match header "+ Send Postcards" (#47bfa9), not dark emerald */
-  background: var(--app-teal, #47bfa9);
-  /* POS-265: navy on brand teal = 6.17:1 (white was 2.26:1, failed WCAG AA) */
-  color: var(--app-navy, #0b2d50);
+  /* POS-279: the primary action uses the shared button tokens, so it reads
+   * the same as every other primary button. Teal stays an accent colour. */
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-weight: 600;
   font-size: 14px;
   border: none;
@@ -368,7 +368,15 @@ async function onSignOut() {
 }
 
 .cta-expanded:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
+}
+
+/* POS-277: without an explicit ring this fell back to the UA default, which
+ * measured 2.65:1 and failed WCAG 1.4.11. */
+.cta-expanded:focus-visible,
+.cta-collapsed:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
+  outline-offset: 2px;
 }
 
 .cta-collapsed {
@@ -378,9 +386,8 @@ async function onSignOut() {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  background: var(--app-teal, #47bfa9);
-  /* POS-265: navy on brand teal = 6.17:1 */
-  color: var(--app-navy, #0b2d50);
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -388,7 +395,7 @@ async function onSignOut() {
 }
 
 .cta-collapsed:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .cta-icon {

@@ -330,18 +330,22 @@ onMounted(async () => {
 }
 
 /* Both choices share the same hover treatment; neither is highlighted until
- * the customer points at it. */
+ * the customer points at it.
+ *
+ * Same card affordance as .home-card (POS-279): a choice card is a surface,
+ * not a button, so it keeps its light background and gains a navy edge and
+ * lift instead of filling with the colour buttons use. */
 .audience-option:hover,
 .audience-option:focus-visible {
-  background: var(--app-teal, #47bfa9);
-  border-color: var(--app-teal, #47bfa9);
-  color: #fff;
+  background: var(--app-card-bg, #ffffff);
+  border-color: var(--app-navy, #0b2d50);
+  color: var(--app-navy, #0b2d50);
   transform: scale(1.03);
-  box-shadow: 0 8px 24px rgba(71, 191, 169, 0.35);
+  box-shadow: 0 0 0 1px var(--app-navy, #0b2d50), 0 12px 28px rgba(11, 45, 80, 0.16);
 }
 
 .audience-option:focus-visible {
-  outline: 2px solid var(--app-teal-hover, #3aa893);
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 2px;
 }
 </style>

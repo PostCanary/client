@@ -230,8 +230,8 @@ function isCurrent(step: ChecklistStep, index: number): boolean {
   align-items: center;
   margin-top: 12px;
   padding: 8px 16px;
-  background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-weight: 600;
   font-size: 13px;
   border: none;
@@ -241,7 +241,7 @@ function isCurrent(step: ChecklistStep, index: number): boolean {
 }
 
 .checklist-cta:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .checklist-done-label {

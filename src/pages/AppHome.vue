@@ -196,23 +196,26 @@ onMounted(() => {
   }
 }
 
-/* Wireframe annotation: "responds to user hovering over by filling the
- * button and slightly growing in size" */
+/* The wireframe asked for a fill on hover, and it was teal. That made a card
+ * read as an action surface in the same colour buttons no longer use, so the
+ * page carried two competing "actionable" colours (POS-279).
+ *
+ * A card is a surface you navigate into, not a control you press, so it gets
+ * a card affordance: it stays light and gains a navy edge and lift. Text
+ * holds 13.94:1 rather than the 4.78:1 the teal fill allowed. */
 .home-card:hover,
 .home-card:focus-visible {
-  background: var(--app-teal-hover, #3aa893);
-  border-color: var(--app-teal-hover, #3aa893);
-  /* POS-265: navy on the teal hover fill = 7.9:1 (white was 2.92:1) */
+  background: var(--app-card-bg, #ffffff);
+  border-color: var(--app-navy, #0b2d50);
   color: var(--app-navy, #0b2d50);
   transform: scale(1.02);
-  box-shadow: 0 10px 28px rgba(71, 191, 169, 0.35);
+  box-shadow: 0 0 0 1px var(--app-navy, #0b2d50), 0 12px 28px rgba(11, 45, 80, 0.16);
 }
 
 /* Navy, not teal: the teal ring measures 2.01:1 against --app-bg and fails
- * WCAG 1.4.11 (3:1). Navy holds 12.4:1 over the page and 4.8:1 against
- * the teal fill the card takes while focused. */
+ * WCAG 1.4.11 (3:1). Navy holds 12.44:1 over the page. */
 .home-card:focus-visible {
-  outline: 2px solid var(--app-navy, #0b2d50);
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 2px;
 }
 
@@ -228,9 +231,11 @@ onMounted(() => {
   transition: background 0.15s ease-out, color 0.15s ease-out;
 }
 
+/* The card no longer fills, so a white wash would vanish. Tint toward navy
+ * so the icon picks up the same emphasis as the border. */
 .home-card:hover .home-card-icon,
 .home-card:focus-visible .home-card-icon {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(11, 45, 80, 0.08);
   color: var(--app-navy, #0b2d50);
 }
 
@@ -250,10 +255,9 @@ onMounted(() => {
   transition: color 0.15s ease-out;
 }
 
-.home-card:hover .home-card-subtitle,
-.home-card:focus-visible .home-card-subtitle {
-  color: var(--app-navy, #0b2d50);
-}
+/* The card keeps its light background on hover, so the subtitle keeps its
+ * muted colour and the title/subtitle hierarchy survives. #52677b on white
+ * is 5.86:1. It only needed overriding back when the card filled. */
 
 @media (prefers-reduced-motion: reduce) {
   .home-card {

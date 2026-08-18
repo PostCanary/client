@@ -85,13 +85,13 @@ const iconMap: Record<string, any> = {
 }
 
 .qa-card--primary {
-  background: var(--app-teal, #47bfa9);
+  background: var(--app-btn-bg, #0b2d50);
   border-color: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  color: var(--app-btn-fg, #ffffff);
 }
 
 .qa-card--primary:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .qa-card--primary .qa-icon {

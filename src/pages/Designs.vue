@@ -269,7 +269,7 @@ function downloadPdf(template: TemplateWithAsset) {
 .designs-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .designs-header h1 { margin: 0; color: #0c2d50; font-size: 24px; }
 .designs-header p, .status, .empty p, .detail-card p { margin: 4px 0 0; color: #64748b; font-size: 14px; }
-.primary { border: 0; border-radius: 8px; background: #47bfa9; color: white; cursor: pointer; font-weight: 700; padding: 10px 15px; }
+.primary { border: 0; border-radius: 8px; background: var(--app-btn-bg, #0b2d50); color: var(--app-btn-fg, #ffffff); cursor: pointer; font-weight: 700; padding: 10px 15px; }
 .designs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .design-card { overflow: hidden; border: 1px solid #e2e8f0; border-radius: 12px; background: white; }
 .thumbnail { display: block; width: 100%; aspect-ratio: 6.25 / 9.25; max-height: 280px; padding: 0; border: 0; background: #f1f5f9; cursor: pointer; }

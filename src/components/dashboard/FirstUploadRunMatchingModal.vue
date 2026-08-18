@@ -196,8 +196,8 @@ function handleRunMatching() {
   padding: 10px 24px;
   border-radius: 8px;
   border: none;
-  background: #47bfa9;
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -205,7 +205,7 @@ function handleRunMatching() {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #3aa893;
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .btn-primary:disabled {
