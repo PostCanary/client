@@ -297,8 +297,8 @@ function onCrossSellClick() {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-weight: 600;
   font-size: 14px;
   border: none;
@@ -308,7 +308,7 @@ function onCrossSellClick() {
 }
 
 .cross-sell-cta:hover {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .cross-sell-cta-icon {

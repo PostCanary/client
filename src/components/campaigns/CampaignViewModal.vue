@@ -369,8 +369,8 @@ async function downloadAudience() {
 
 .primary-btn {
   width: 100%;
-  background: #47bfa9;
-  color: #fff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   font-weight: 600;
   font-size: 14px;
   padding: 10px 16px;
@@ -381,7 +381,7 @@ async function downloadAudience() {
 }
 
 .primary-btn:hover {
-  background: #3aa893;
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .link-btn {

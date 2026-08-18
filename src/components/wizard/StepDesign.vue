@@ -1628,7 +1628,7 @@ watch(
               :title="zone.label"
               :aria-label="zone.label"
               tabindex="0"
-              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-1 rounded"
+              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0b2d50] focus-visible:ring-offset-1 rounded"
               :style="{
                 left: zone.left + '%',
                 top: zone.top + '%',
@@ -1741,7 +1741,7 @@ watch(
               :title="zone.label"
               :aria-label="zone.label"
               tabindex="0"
-              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#47bfa9] focus-visible:ring-offset-1 rounded"
+              class="absolute group cursor-pointer bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0b2d50] focus-visible:ring-offset-1 rounded"
               :style="{
                 left: zone.left + '%',
                 top: zone.top + '%',

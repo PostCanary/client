@@ -316,7 +316,7 @@ function onToggleClick() {
 }
 
 .campaign-select:focus {
-  outline: 2px solid var(--app-teal, #47bfa9);
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: -1px;
 }
 
@@ -331,7 +331,7 @@ function onToggleClick() {
 }
 
 .campaign-input:focus {
-  outline: 2px solid var(--app-teal, #47bfa9);
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: -1px;
 }
 

@@ -78,7 +78,7 @@ async function handleClose() {
       <!-- Logo -->
       <button
         type="button"
-        class="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47bfa9]"
+        class="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b2d50]"
         aria-label="PostCanary home"
         data-testid="wizard-logo"
         @click="handleClose"

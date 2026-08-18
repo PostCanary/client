@@ -335,13 +335,13 @@ onMounted(async () => {
 .audience-option:focus-visible {
   background: var(--app-teal, #47bfa9);
   border-color: var(--app-teal, #47bfa9);
-  color: #fff;
+  color: var(--app-on-teal, #0b2d50);
   transform: scale(1.03);
   box-shadow: 0 8px 24px rgba(71, 191, 169, 0.35);
 }
 
 .audience-option:focus-visible {
-  outline: 2px solid var(--app-teal-hover, #3aa893);
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 2px;
 }
 </style>

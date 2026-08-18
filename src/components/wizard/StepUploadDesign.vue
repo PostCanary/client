@@ -1105,14 +1105,14 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
   padding: 10px 24px;
   font-size: 14px;
   font-weight: 500;
-  background: #47bfa9;
-  color: #ffffff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #3aa893;
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .submit-btn:disabled {

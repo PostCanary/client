@@ -455,7 +455,7 @@ function onClose() {
 }
 
 .field input:focus {
-  outline: 2px solid #47bfa9;
+  outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 1px;
   border-color: #47bfa9;
 }
@@ -501,15 +501,15 @@ function onClose() {
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
-  background: #47bfa9;
-  color: #fff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
   border: none;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #3aa893;
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .btn-submit:disabled {

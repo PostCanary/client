@@ -709,12 +709,12 @@ function browseCrm() {
 }
 
 .btn-primary {
-  background: var(--app-teal, #47bfa9);
-  color: #fff;
+  background: var(--app-btn-bg, #0b2d50);
+  color: var(--app-btn-fg, #ffffff);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--app-teal-hover, #3aa893);
+  background: var(--app-btn-bg-hover, #163b69);
 }
 
 .btn-primary:disabled {
