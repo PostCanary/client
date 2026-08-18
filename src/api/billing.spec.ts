@@ -22,7 +22,7 @@ describe("pay-per-send billing API", () => {
     vi.mocked(api).mockResolvedValue({
       billing_type: "pay_per_send",
       currency: "usd",
-      unit_rate_cents: 99,
+      unit_rate_cents: 89,
       plan_code: null,
       required: true,
       has_payment_method: true,
@@ -37,15 +37,41 @@ describe("pay-per-send billing API", () => {
 
     expect(api).toHaveBeenCalledWith("/api/billing/payment-method");
     expect(result.label).toBe("Visa ending in 1881");
-    expect(result.unit_rate_cents).toBe(99);
+    expect(result.unit_rate_cents).toBe(89);
+  });
+
+  it("keeps a legacy plan snapshot while requiring physical-mail payment", async () => {
+    vi.mocked(api).mockResolvedValue({
+      billing_type: "pay_per_send",
+      currency: "usd",
+      unit_rate_cents: 85,
+      plan_code: "ELITE",
+      required: true,
+      has_payment_method: true,
+      brand: "visa",
+      last4: "1881",
+      exp_month: 12,
+      exp_year: 2030,
+      label: "Visa ending in 1881",
+    });
+
+    const result = await fetchPaymentMethodSummary(1501);
+
+    expect(api).toHaveBeenCalledWith(
+      "/api/billing/payment-method?card_count=1501",
+    );
+    expect(result.billing_type).toBe("pay_per_send");
+    expect(result.plan_code).toBe("ELITE");
+    expect(result.unit_rate_cents).toBe(85);
+    expect(result.required).toBe(true);
   });
 
   it.each([
     ["missing rate", { billing_type: "pay_per_send", currency: "usd", plan_code: null, required: true, has_payment_method: true }],
-    ["mismatched required flag", { billing_type: "pay_per_send", currency: "usd", unit_rate_cents: 99, plan_code: null, required: false, has_payment_method: true }],
+    ["mismatched required flag", { billing_type: "pay_per_send", currency: "usd", unit_rate_cents: 89, plan_code: null, required: false, has_payment_method: true }],
     ["covered plan without plan code", { billing_type: "subscription_included", currency: "usd", unit_rate_cents: 79, plan_code: null, required: false, has_payment_method: false }],
-    ["unsupported currency", { billing_type: "pay_per_send", currency: "eur", unit_rate_cents: 99, plan_code: null, required: true, has_payment_method: true }],
-    ["invalid plan code disguised as null entitlement", { billing_type: "pay_per_send", currency: "usd", unit_rate_cents: 99, plan_code: "STARTER", required: true, has_payment_method: true }],
+    ["unsupported currency", { billing_type: "pay_per_send", currency: "eur", unit_rate_cents: 89, plan_code: null, required: true, has_payment_method: true }],
+    ["invalid plan code disguised as null entitlement", { billing_type: "pay_per_send", currency: "usd", unit_rate_cents: 89, plan_code: "STARTER", required: true, has_payment_method: true }],
   ])("rejects an incomplete server billing summary: %s", (_name, value) => {
     expect(normalizePaymentMethodSummary(value)).toBeNull();
   });

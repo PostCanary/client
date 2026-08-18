@@ -5,7 +5,10 @@
 // they carry the same locked values, so the UI never flashes a wrong price.
 import { reactive, readonly } from "vue";
 
-import { fetchPricing, type PayPerSendTier } from "@/api/billing";
+import {
+  fetchPricing,
+  type PayPerSendTier,
+} from "@/api/billing";
 import { PAY_PER_SEND_TIERS, PRICING } from "@/types/campaign";
 
 type Rates = { -readonly [K in keyof typeof PRICING]: number };
@@ -17,7 +20,6 @@ const rates = reactive<Rates>({ ...PRICING });
 const tiers = reactive<{ list: PayPerSendTier[] }>({
   list: PAY_PER_SEND_TIERS.map((t) => ({ ...t })),
 });
-
 let loaded = false;
 let inflight: Promise<void> | null = null;
 
@@ -32,10 +34,6 @@ function load(): void {
       if (Array.isArray(p.pay_per_send_tiers) && p.pay_per_send_tiers.length) {
         tiers.list = p.pay_per_send_tiers.map((t) => ({ ...t }));
       }
-      rates.INSIGHT = p.subscription_rates_cents.INSIGHT / 100;
-      rates.PERFORMANCE = p.subscription_rates_cents.PERFORMANCE / 100;
-      rates.PRECISION = p.subscription_rates_cents.PRECISION / 100;
-      rates.ELITE = p.subscription_rates_cents.ELITE / 100;
       loaded = true;
     })
     .catch(() => {

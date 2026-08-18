@@ -86,7 +86,7 @@ const greeting = computed(() => {
     return `Hi! I'm ${BRAND.name}'s AI assistant. How can I help you today?`;
   }
   if (!auth.isAuthenticated) {
-    return `Welcome to ${BRAND.name}! Send direct mail and track exactly what it earns \u2014 no subscription, pay per postcard. Ask me anything!`;
+    return `Welcome to ${BRAND.name}! The subscription fee is $0, and physical mail is pay as you go per postcard. Ask me anything!`;
   }
   return `Welcome to ${BRAND.name}! I can answer questions about sending direct mail, tracking results, pricing, and features. How can I help?`;
 });
@@ -121,7 +121,7 @@ function sendSuggestion(question: string) {
     // Intercept: add canned messages and show lead capture immediately
     chat.addUserMessage(question);
     chat.addAssistantMessage(
-      "Happy to help you get started with PostCanary.\n\nThere is no subscription \u2014 you pay per postcard, and analytics are free. Leave your email below and we will set you up."
+      "Happy to help you get started with PostCanary.\n\nThe subscription fee is $0. Physical postcards are pay as you go, and custom design is a separate $199 service. Leave your email below and we will set you up."
     );
     trialRequested.value = true;
     return;

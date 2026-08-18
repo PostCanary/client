@@ -142,8 +142,8 @@ describe("mail campaign approval artifacts", () => {
       {
         error: "payment_method_required",
         message: "Card required",
-        estimated_cost_cents: 9900,
-        per_postcard_rate_cents: 99,
+        estimated_cost_cents: 8900,
+        per_postcard_rate_cents: 89,
       },
     ],
     [
@@ -153,7 +153,7 @@ describe("mail campaign approval artifacts", () => {
         message: "Budget exceeded",
         cap_cents: 10000,
         remaining_cents: 100,
-        estimated_cost_cents: 9900,
+        estimated_cost_cents: 8900,
       },
     ],
     [
@@ -162,6 +162,14 @@ describe("mail campaign approval artifacts", () => {
         error: "card_declined",
         message: "Card declined",
         reason: "declined",
+      },
+    ],
+    [
+      402,
+      {
+        error: "authentication_required",
+        message: "Bank authentication required",
+        reason: "authentication_required",
       },
     ],
     [

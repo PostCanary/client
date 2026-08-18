@@ -442,7 +442,7 @@ function browseCrm() {
       class="upload-readonly"
       data-testid="upload-readonly-message"
     >
-      Subscription is paused. Historical data stays available, but uploads and matching are disabled until you resume a paid plan.
+      This legacy billing gate is no longer active. Refresh to continue.
     </p>
 
     <!-- PROGRESS -->
@@ -486,7 +486,7 @@ function browseCrm() {
         :disabled="!!props.mappingBlocked || !!props.billingBlocked"
         :title="
           props.billingBlocked
-            ? 'Uploads are disabled while the subscription is paused'
+            ? 'This legacy billing gate is no longer active'
             : props.mappingBlocked
             ? 'Please fix column mapping before attempting an upload'
             : isUploading

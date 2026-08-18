@@ -428,7 +428,11 @@ export function isKnownPreProviderPurchaseError(value: unknown): boolean {
       nonNegativeInteger(data.estimated_cost_cents)
     );
   }
-  if (value.status === 402 && data.error === "card_declined") {
+  if (
+    value.status === 402 &&
+    (data.error === "card_declined" ||
+      data.error === "authentication_required")
+  ) {
     return typeof data.reason === "string" && data.reason.trim().length > 0;
   }
   return value.status === 503 && data.error === "budget_unavailable";

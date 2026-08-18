@@ -18,6 +18,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
 import { usePricing } from "@/composables/usePricing";
 import { postJson, postMultipart } from "@/api/http";
+import { createSetupSession } from "@/api/billing";
 import { listDesigns, type DesignLibraryEntry } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
@@ -182,7 +183,7 @@ function uploadErrorMessage(err: unknown, fileName: string): string {
     return "Please sign in again to upload your design.";
   }
   if (e.status === 402) {
-    return "A subscription is required to upload designs.";
+    return "A payment method is required before this paid request can continue.";
   }
   return `Couldn't upload "${fileName}". Please try again.`;
 }
@@ -391,6 +392,8 @@ function processingLabel(side: "front" | "back"): string {
 // --- Design request modal --------------------------------------------
 const showDesignRequestModal = ref(false);
 const submittingRequest = ref(false);
+const designPaymentError = ref("");
+const openingCardSetup = ref(false);
 const requestForm = reactive({
   fullName: "",
   email: "",
@@ -451,14 +454,12 @@ async function submitDesignRequest() {
       notes: requestForm.notes.trim(),
       submittedAt: new Date().toISOString(),
     };
-    // Completes step 3 immediately — the network call below is
-    // fire-and-forget and must not gate the wizard on server availability.
-    draftStore.setDesignRequest(brief);
-    showDesignRequestModal.value = false;
-
-    // Wire contract is snake_case (server blueprint design_requests.py,
-    // PR #132) — the store keeps the camelCase DesignRequestBrief shape.
-    postJson("/api/design-requests", {
+    designPaymentError.value = "";
+    const result = await postJson<{
+      ok: boolean;
+      payment_status: "paid" | "credited";
+      amount_cents: number;
+    }>("/api/design-requests", {
       full_name: brief.fullName,
       email: brief.email,
       phone: brief.phone,
@@ -466,13 +467,58 @@ async function submitDesignRequest() {
       template: brief.template,
       notes: brief.notes,
       draft_id: draftStore.draft?.id ?? null,
-    }).catch(() => {
-      message.error(
-        "Your design request was saved, but we couldn't notify our design team yet. We'll retry automatically.",
-      );
     });
+    if (
+      !result.ok ||
+      !["paid", "credited"].includes(result.payment_status) ||
+      result.amount_cents < 0
+    ) {
+      throw new Error("invalid_design_payment_confirmation");
+    }
+    // The server starts fulfillment only after durable capture or credit.
+    draftStore.setDesignRequest(brief);
+    showDesignRequestModal.value = false;
+    message.success("Design service payment confirmed. Your request is in the queue.");
+  } catch (error) {
+    const failure = error as Error & {
+      status?: number;
+      data?: { error?: string; message?: string; amount_cents?: number };
+    };
+    const code = failure.data?.error;
+    if (
+      failure.status === 402 &&
+      (code === "payment_method_required" ||
+        code === "authentication_required" ||
+        code === "card_declined")
+    ) {
+      designPaymentError.value =
+        code === "authentication_required"
+          ? "Your bank requires authentication. Verify or replace your card, then submit again."
+          : code === "card_declined"
+            ? "Your card was declined. Replace it, then submit again."
+            : "Add a card before design work can start.";
+    } else {
+      designPaymentError.value =
+        failure.data?.message ??
+        "Payment could not be safely confirmed. Design work has not started. Contact support before retrying.";
+    }
   } finally {
     submittingRequest.value = false;
+  }
+}
+
+async function openDesignCardSetup() {
+  if (openingCardSetup.value) return;
+  openingCardSetup.value = true;
+  try {
+    const { url } = await createSetupSession(
+      `${window.location.pathname}${window.location.search}`,
+    );
+    if (!url) throw new Error("missing_card_setup_url");
+    window.location.href = url;
+  } catch {
+    designPaymentError.value = "Secure card setup could not open. Try again.";
+    openingCardSetup.value = false;
   }
 }
 
@@ -842,8 +888,25 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             :disabled="!canSubmitDesignRequest || submittingRequest"
             data-testid="design-request-submit"
           >
-            {{ submittingRequest ? 'Submitting…' : 'Submit' }}
+            {{ submittingRequest ? 'Authorizing $' + pricing.customDesignFee + '…' : 'Pay $' + pricing.customDesignFee + ' & submit' }}
           </button>
+          <div
+            v-if="designPaymentError"
+            class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            role="alert"
+            data-testid="design-payment-error"
+          >
+            <p>{{ designPaymentError }}</p>
+            <button
+              type="button"
+              class="mt-2 font-semibold underline"
+              :disabled="openingCardSetup"
+              data-testid="design-card-setup"
+              @click="openDesignCardSetup"
+            >
+              {{ openingCardSetup ? "Opening secure card setup…" : "Verify or replace card" }}
+            </button>
+          </div>
         </form>
       </div>
     </div>

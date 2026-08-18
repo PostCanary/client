@@ -98,7 +98,7 @@ async function loadPaymentMethod() {
   paymentMethodLoading.value = true;
   paymentMethodError.value = null;
   try {
-    paymentMethod.value = await fetchPaymentMethodSummary();
+    paymentMethod.value = await fetchPaymentMethodSummary(householdCount.value);
   } catch (err) {
     console.error("[StepReview] Failed to load payment method:", err);
     paymentMethod.value = null;
@@ -640,6 +640,13 @@ async function approve() {
         }
         draftStore.error =
           "Your campaign is approved, but it hasn't been sent because a valid payment method is required. Add a card, then tap Approve again.";
+      } else if (
+        knownPreProviderFailure &&
+        purchaseErr?.status === 402 &&
+        purchaseErr?.data?.error === "authentication_required"
+      ) {
+        draftStore.error =
+          "Your bank requires authentication. No recipient purchase started. Use secure card setup to verify or replace your card, then tap Approve again.";
       } else if (knownPreProviderFailure) {
         draftStore.error =
           "Campaign approved and proof saved. The server confirmed no provider purchase started. " +
@@ -1190,7 +1197,7 @@ async function approve() {
           class="text-sm text-[#0b2d50]"
           data-testid="payment-method-covered"
         >
-          Included with your {{ paymentMethod.plan_code || "account" }} plan
+          Covered by an explicit internal credit
         </div>
         <div
           v-else

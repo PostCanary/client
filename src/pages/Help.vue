@@ -119,7 +119,7 @@ const sections: FaqSection[] = [
       },
       {
         q: "How do I get started?",
-        a: "Sign up for an account, choose a plan, and upload your first pair of CSV files. The three-step process is: <strong>1)</strong> Upload your files, <strong>2)</strong> Map the columns, and <strong>3)</strong> View your results on the dashboard.",
+        a: "Sign up for an account and upload your first pair of CSV files. The three-step process is: <strong>1)</strong> Upload your files, <strong>2)</strong> Map the columns, and <strong>3)</strong> View your results on the dashboard.",
       },
       {
         q: "Do I need technical knowledge to use PostCanary?",
@@ -144,7 +144,7 @@ const sections: FaqSection[] = [
       },
       {
         q: "Is there a file size limit?",
-        a: "File size limits depend on your plan. The Starter plan supports up to 1,000 mailers per month, while the Ultimate plan handles up to 100,000. Check your plan details for exact limits.",
+        a: "Monthly analysis-row limits depend on your plan. Starter includes analysis of up to 1,000 uploaded recipient rows per month, while Ultimate includes up to 100,000. Physical postcards are charged separately.",
       },
       {
         q: "Can I upload just one file (mail only or CRM only)?",
@@ -270,31 +270,27 @@ const sections: FaqSection[] = [
     ],
   },
   {
-    title: "Billing & Plans",
+    title: "Billing & Pricing",
     items: [
       {
-        q: "What plans are available?",
-        a: `${BRAND.name} offers tiered plans starting at <strong>$49/month</strong> for smaller mailers and scaling up to <strong>$499/month</strong> for high-volume senders. Each plan includes a set number of mailers per month. Visit the pricing section on our home page for full details.`,
+        q: `What does ${BRAND.name} cost?`,
+        a: `${BRAND.name} has a <strong>$0 subscription fee</strong>. There are no paid plans, free tiers, or monthly analysis-row entitlements. You pay for each physical-mail send and for any custom design service you request.`,
       },
       {
-        q: 'What does "mailers per month" mean?',
-        a: "It's the maximum number of mail-file rows you can process in a billing cycle. For example, the Basic plan lets you upload and match up to 5,000 recipient records each month.",
+        q: "How are physical postcards priced?",
+        a: "Every physical postcard is pay as you go. The campaign quantity sets one volume-tier rate for all pieces. The price includes recipient data, printing, and postage.",
       },
       {
-        q: "How do I upgrade or downgrade my plan?",
-        a: "Go to <strong>Settings → Billing</strong> in your account. Owners and admins can change plans from the billing controls at any time.",
+        q: "Does an old subscription status change my send price?",
+        a: "No. Active, trialing, free, paused, and other legacy subscription states do not change the price of a send. Only an explicit internal credit can offset a send, and that credit is recorded in the billing ledger.",
       },
       {
-        q: "How do I cancel my subscription?",
-        a: "Go to <strong>Settings → Billing</strong> and choose <strong>Cancel subscription</strong>. We will prompt you to pause first, and if you confirm cancellation your current access continues through the end of the billing period. Your historical data is retained.",
+        q: "How much does custom postcard design cost?",
+        a: "Custom postcard design is a separate <strong>$199</strong> charge. Payment must be captured before design work starts.",
       },
       {
-        q: "What happens when I pause my subscription?",
-        a: "Pausing schedules your account to move to a <strong>$20/month</strong> read-only mode at the end of the current billing period. Until that date, your paid plan stays active. Once the pause takes effect, you can still sign in and review historical data, settings, and history, but uploads and matching stay disabled until you resume a paid plan.",
-      },
-      {
-        q: "What happens if my payment fails?",
-        a: "We'll notify you by email and retry the charge. If the issue isn't resolved within a few days, your account may be paused until payment is updated.",
+        q: "Are refunds automatic?",
+        a: `No. Refunds are never automated. Contact <a href="${getSupportEmailLink()}">${BRAND.email.support}</a>; an authorized operator must complete and record any approved refund.`,
       },
     ],
   },

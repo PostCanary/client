@@ -1,7 +1,6 @@
 <!-- src/components/PaywallOverlay.vue -->
 <!--
-  Centered "Subscribe to unlock" CTA shown on top of blurred page content.
-  Place inside any page that should be gated behind a subscription.
+  Legacy gate overlay. Current PAYG servers do not require a subscription.
   The parent page handles the blur CSS — this component is just the overlay prompt.
 -->
 <template>
@@ -32,7 +31,7 @@
         class="paywall-overlay__cta"
         @click="$emit('subscribe')"
       >
-        Unlock Your Results
+        Continue
       </button>
     </div>
   </div>

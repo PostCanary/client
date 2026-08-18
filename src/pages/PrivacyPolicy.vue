@@ -24,7 +24,7 @@
           <h2>3. Personal Information We Collect (Controller Context)</h2>
           <ul>
             <li><strong>Account &amp; Contact:</strong> name, work email, company, password, role.</li>
-            <li><strong>Billing:</strong> subscription plan, invoices, payment status (payment details handled by our payment provider).</li>
+            <li><strong>Billing:</strong> pay-as-you-go quotes, invoices, payment status, and legacy subscription records (payment details handled by our payment provider).</li>
             <li><strong>Support &amp; Communications:</strong> messages, tickets, feedback, and call/meeting recordings if you opt in.</li>
             <li><strong>Device/Usage:</strong> IP address, device identifiers, browser/OS, pages viewed, product events (e.g., logins, feature use), diagnostics, crash logs.</li>
             <li><strong>Cookies/Tags:</strong> essential cookies for login and security; analytics. We do not use cross-context behavioral advertising cookies. You can manage preferences via our cookie banner or browser settings.</li>

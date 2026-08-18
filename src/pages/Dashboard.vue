@@ -22,7 +22,6 @@ import PreviewUpgradeBanner from "@/components/billing/PreviewUpgradeBanner.vue"
 
 import type { TopAreaRanking } from "@/composables/useRunData";
 import { useUploadAndMatch } from "@/composables/useUploadAndMatch";
-import { BRAND } from "@/config/brand";
 
 declare global {
   interface Window {
@@ -151,7 +150,7 @@ async function onDashboardDateRangeApply(payload: { start?: string; end?: string
       class="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
     >
       <p class="mr-2">
-        Your {{ BRAND.name }} subscription is now active. Go ahead and upload your CSVs
+        Your billing setup is ready. Physical-mail sends remain pay as you go.
         – we’ll keep your history in sync and match automatically.
       </p>
 
