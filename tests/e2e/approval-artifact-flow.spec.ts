@@ -98,13 +98,33 @@ async function installApprovalFlowMocks(page: Page) {
   );
 
   await page.route("**/api/config", (route) => json(route, { ok: true }));
+  await page.route("**/api/targeting/capabilities", (route) =>
+    json(route, {
+      provider: "leadgen",
+      geographyTypes: ["zip"],
+      filters: {
+        homeowner: true,
+        homeValueMin: true,
+        homeValueMax: true,
+        yearBuiltMin: true,
+        yearBuiltMax: true,
+        propertyTypes: true,
+        hhageMin: true,
+        hhageMax: true,
+        incomeMin: true,
+        loresMin: true,
+        loresMax: true,
+      },
+      purchase_records_max_qty: 5000,
+    }),
+  );
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
       pay_per_send_cents: 89,
       custom_design_fee_cents: 19900,
     }),
   );
-  await page.route("**/api/billing/payment-method", (route) =>
+  await page.route("**/api/billing/payment-method**", (route) =>
     json(route, {
       billing_type: "pay_per_send",
       currency: "usd",

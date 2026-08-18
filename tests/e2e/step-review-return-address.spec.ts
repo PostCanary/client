@@ -100,7 +100,7 @@ async function installMocks(
       custom_design_fee_cents: 19900,
     }),
   );
-  await page.route("**/api/billing/payment-method", (route) =>
+  await page.route("**/api/billing/payment-method**", (route) =>
     json(
       route,
       opts.invalidBillingSummary
