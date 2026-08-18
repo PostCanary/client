@@ -87,4 +87,32 @@ describe("canonical cost breakdown", () => {
       "$8.90",
     );
   });
+
+  it("does not multiply a server household quote by a legacy sequence length", () => {
+    const wrapper = mount(CostBreakdown, {
+      props: {
+        householdCount: 100,
+        sequenceLength: 3,
+        billingSummary: {
+          billing_type: "pay_per_send",
+          currency: "usd",
+          unit_rate_cents: 89,
+          plan_code: null,
+          required: true,
+          has_payment_method: true,
+          brand: "visa",
+          last4: "1881",
+          exp_month: 12,
+          exp_year: 2030,
+          label: "Visa ending in 1881",
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("100 physical postcards");
+    expect(wrapper.text()).not.toContain("300 physical postcards");
+    expect(wrapper.get('[data-testid="server-cost-total"]').text()).toContain(
+      "$89.00",
+    );
+  });
 });

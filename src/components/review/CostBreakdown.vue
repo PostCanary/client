@@ -13,7 +13,9 @@ const props = defineProps<{
   includeCustomDesignFee?: boolean;
 }>();
 const pricing = usePricing();
-const pieceCount = computed(() => props.householdCount * props.sequenceLength);
+// The server prices and fulfills one approved mailing at household_count.
+// sequenceLength can remain on a legacy draft, but must not multiply this quote.
+const pieceCount = computed(() => props.householdCount);
 
 const perCardRate = computed(() =>
   props.billingSummary ? props.billingSummary.unit_rate_cents / 100 : null,

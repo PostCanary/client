@@ -100,29 +100,23 @@ async function installApprovalFlowMocks(page: Page) {
   await page.route("**/api/config", (route) => json(route, { ok: true }));
   await page.route("**/api/billing/pricing", (route) =>
     json(route, {
-      pay_per_send_cents: 79,
-      subscription_rates_cents: {
-        INSIGHT: 79,
-        PERFORMANCE: 79,
-        PRECISION: 79,
-        ELITE: 79,
-      },
+      pay_per_send_cents: 89,
       custom_design_fee_cents: 19900,
     }),
   );
   await page.route("**/api/billing/payment-method", (route) =>
     json(route, {
-      billing_type: "subscription_included",
+      billing_type: "pay_per_send",
       currency: "usd",
-      unit_rate_cents: 79,
-      plan_code: "INSIGHT",
-      required: false,
-      has_payment_method: false,
-      brand: null,
-      last4: null,
-      exp_month: null,
-      exp_year: null,
-      label: null,
+      unit_rate_cents: 89,
+      plan_code: null,
+      required: true,
+      has_payment_method: true,
+      brand: "visa",
+      last4: "4242",
+      exp_month: 12,
+      exp_year: 2030,
+      label: "Visa ending in 4242",
     }),
   );
   await page.route("**/api/organizations/return-address", (route) =>
