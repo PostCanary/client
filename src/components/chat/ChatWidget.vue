@@ -40,10 +40,17 @@ function scrollToBottom() {
   }
 }
 
-function handleSend() {
-  if (!input.value.trim() || chat.loading) return;
-  chat.send(input.value);
+async function handleSend() {
+  if (!input.value.trim() || chat.loading || chat.retryAfter > 0) return;
+  const text = input.value;
   input.value = "";
+  const result = await chat.send(text);
+  // Gate errors (429/413/503/400) tell the visitor to send again or
+  // shorten the message — put the typed text back so they do not retype
+  // from the transcript bubble.
+  if (result !== "ok") {
+    input.value = text;
+  }
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -264,15 +271,17 @@ function requestHuman() {
             class="chat-panel__textarea"
             :placeholder="isAppRoute ? 'Ask about your account, data, or features...' : 'Ask about PostCanary, pricing, features...'"
             rows="1"
-            :disabled="chat.loading"
+            :disabled="chat.loading || chat.retryAfter > 0"
             @keydown="handleKeydown"
           />
           <button
             class="chat-panel__send"
-            :disabled="!input.trim() || chat.loading"
+            :disabled="!input.trim() || chat.loading || chat.retryAfter > 0"
+            :title="chat.retryAfter > 0 ? `Please wait ${chat.retryAfter}s` : undefined"
             @click="handleSend"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <span v-if="chat.retryAfter > 0" class="chat-panel__send-countdown">{{ chat.retryAfter }}s</span>
+            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4z" />
             </svg>
           </button>
@@ -648,6 +657,13 @@ function requestHuman() {
 .chat-panel__send:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.chat-panel__send-countdown {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
 }
 
 /* ---- Footer ---- */

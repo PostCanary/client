@@ -15,6 +15,7 @@ import {
   normalizeBusinessTargetingFilters,
   normalizeTargetingFilters,
   queryPlanMatchesTargetingState,
+  targetingCountQueryKey,
   targetingFiltersAreSupported,
 } from "@/utils/targetingCapabilities";
 import { HOUSEHOLD_COUNT_KEY } from "@/injection-keys";
@@ -138,6 +139,7 @@ const capabilitiesLoading = ref(false);
 const capabilitiesError = ref<string | null>(null);
 const lastTargetingValidity = ref<boolean | null>(null);
 const capabilitiesAbortController = new AbortController();
+let lastCountQueryKey: string | null = null;
 
 const filterCapabilities = computed(
   () => targetingCapabilities.value?.audienceFilters?.consumer ?? targetingCapabilities.value?.filters ?? null,
@@ -166,6 +168,7 @@ async function resolveTargetingCapabilities() {
   capabilitiesError.value = null;
   capabilitiesResolved.value = false;
   targetingCapabilities.value = null;
+  lastCountQueryKey = null;
   invalidateCount();
   setTargetingValidity(false);
   const result = await loadTargetingCapabilities(capabilitiesAbortController.signal);
@@ -280,6 +283,19 @@ watch(
   [allAreas, filters, audienceType, capabilitiesResolved, excludePastCustomers, excludeMailedWithinDays],
   () => {
     if (!capabilitiesResolved.value) return;
+    const nextKey = targetingCountQueryKey({
+      audienceType: audienceType.value,
+      areas: allAreas.value,
+      filters: filters.value,
+      suppressionPolicy: {
+        excludePastCustomers: excludePastCustomers.value,
+        excludeMailedWithinDays: excludeMailedWithinDays.value,
+      },
+    });
+    // POS-269: document mouseup / new array identity with the same
+    // geometry must not drop an attested count or block Next.
+    if (nextKey === lastCountQueryKey) return;
+    lastCountQueryKey = nextKey;
     invalidateCount();
     setTargetingValidity(false);
     fetchCount(allAreas.value, filters.value, {
@@ -521,6 +537,7 @@ function handleMethodChosen(method: "draw" | "zip" | "around_jobs") {
 
 function setAudienceType(value: 'consumer' | 'business') {
   if (value === audienceType.value || (value === 'business' && !businessEnabled.value)) return;
+  lastCountQueryKey = null;
   invalidateCount();
   setTargetingValidity(false);
   audienceType.value = value;
