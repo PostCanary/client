@@ -373,5 +373,7 @@ test("restaurant and dental still see HVAC cards while those packs have no asset
   const pack = page.getByTestId("industry-template-pack");
   await expect(pack).toHaveAttribute("data-pack-id", "fallback");
   await expect(page.getByTestId("design-library-template")).toHaveCount(3);
-  await expect(page.getByText("HVAC Neighborhood Offer")).toBeVisible();
+  await expect(
+    page.getByTestId("design-library-template").filter({ hasText: "HVAC Neighborhood Offer" }),
+  ).toHaveCount(1);
 });
