@@ -104,6 +104,35 @@ test("industry-only missing prefills the return address and does not overwrite i
   expect(state.requestLog.returnAddressUpdates).toEqual([]);
 });
 
+test("sign out from first-run lands on marketing home, not setup", async ({
+  page,
+}) => {
+  await boot(page, (s) => {
+    s.profile.industry = "Roofing";
+    s.profile.profile_complete = true;
+    s.profile.is_invited_user = false;
+    s.brandKit.data = {
+      ...(s.brandKit.data ?? {}),
+      location: "Atlanta, GA",
+      industry: "roofing",
+    };
+    s.returnAddress = null;
+  });
+
+  await page.goto("/app/home");
+  await expect(page).toHaveURL(/\/app\/setup$/);
+  await expect(page.getByTestId("first-run-sign-out")).toBeVisible();
+
+  await page.getByTestId("first-run-sign-out").click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Get Started/i })).toBeVisible();
+
+  await page.goto("/login");
+  await expect(page).not.toHaveURL(/\/app\/setup/);
+  await expect(page.getByTestId("first-run-setup")).toHaveCount(0);
+});
+
 test("owner with industry and brand location but no return address lands on setup", async ({
   page,
 }) => {

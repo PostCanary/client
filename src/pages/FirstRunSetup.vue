@@ -42,6 +42,7 @@ const zip = ref("");
 const loadedAddress = ref<OrgReturnAddress | null>(null);
 const loading = ref(true);
 const saving = ref(false);
+const signingOut = ref(false);
 const error = ref<string | null>(null);
 
 const industrySelection = computed(() => parseIndustrySelection(industry.value));
@@ -224,12 +225,32 @@ async function onSubmit() {
     saving.value = false;
   }
 }
+
+async function onSignOut() {
+  if (signingOut.value) return;
+  signingOut.value = true;
+  try {
+    await auth.logout();
+  } finally {
+    // Hard redirect so first-run cannot bounce a stale session back to setup.
+    window.location.href = "/";
+  }
+}
 </script>
 
 <template>
   <div class="first-run" data-testid="first-run-setup">
     <header class="first-run-header">
       <img :src="landingLogo" :alt="`${BRAND.name} logo`" class="first-run-logo" />
+      <button
+        type="button"
+        class="first-run-sign-out"
+        data-testid="first-run-sign-out"
+        :disabled="signingOut"
+        @click="onSignOut"
+      >
+        {{ signingOut ? "Signing out…" : "Sign out" }}
+      </button>
     </header>
 
     <main class="first-run-main">
@@ -354,7 +375,31 @@ async function onSubmit() {
 }
 
 .first-run-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 20px 24px 0;
+}
+
+.first-run-sign-out {
+  background: none;
+  border: none;
+  padding: 6px 0;
+  color: #52677b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.first-run-sign-out:hover:not(:disabled) {
+  color: #0b2d50;
+  text-decoration: underline;
+}
+
+.first-run-sign-out:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .first-run-logo {
