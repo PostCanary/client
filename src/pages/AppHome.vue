@@ -190,7 +190,8 @@ onMounted(() => {
 .home-card:focus-visible {
   background: var(--app-teal-hover, #3aa893);
   border-color: var(--app-teal-hover, #3aa893);
-  color: #fff;
+  /* POS-265: navy on the teal hover fill = 7.9:1 (white was 2.92:1) */
+  color: var(--app-navy, #0b2d50);
   transform: scale(1.02);
   box-shadow: 0 10px 28px rgba(71, 191, 169, 0.35);
 }
@@ -218,7 +219,7 @@ onMounted(() => {
 .home-card:hover .home-card-icon,
 .home-card:focus-visible .home-card-icon {
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: var(--app-navy, #0b2d50);
 }
 
 .home-card-icon :deep(svg) {
@@ -239,7 +240,7 @@ onMounted(() => {
 
 .home-card:hover .home-card-subtitle,
 .home-card:focus-visible .home-card-subtitle {
-  color: #ffffff;
+  color: var(--app-navy, #0b2d50);
 }
 
 @media (prefers-reduced-motion: reduce) {

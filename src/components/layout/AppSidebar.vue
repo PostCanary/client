@@ -357,7 +357,8 @@ async function onSignOut() {
   height: 40px;
   /* POS-265: match header "+ Send Postcards" (#47bfa9), not dark emerald */
   background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  /* POS-265: navy on brand teal = 6.17:1 (white was 2.26:1, failed WCAG AA) */
+  color: var(--app-navy, #0b2d50);
   font-weight: 600;
   font-size: 14px;
   border: none;
@@ -378,7 +379,8 @@ async function onSignOut() {
   height: 40px;
   margin: 0 auto;
   background: var(--app-teal, #47bfa9);
-  color: #ffffff;
+  /* POS-265: navy on brand teal = 6.17:1 */
+  color: var(--app-navy, #0b2d50);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -490,7 +492,9 @@ async function onSignOut() {
 /* Active state */
 .sidebar-item.active {
   background: var(--sidebar-item-active-bg, rgba(71, 191, 169, 0.08));
-  color: var(--app-teal, #47bfa9);
+  /* POS-265: teal label on the tint measured 2.2:1; navy passes AA.
+   * Teal identity stays in the tint and the indicator bar. */
+  color: var(--app-navy, #0b2d50);
   font-weight: 600;
 }
 
