@@ -109,7 +109,9 @@ test("/login opens the in-app modal and surfaces SSO errors", async ({
   });
 
   await page.goto("/login?error=access_denied");
-  await expect(page.getByText("Sign in")).toBeVisible();
+  await expect(
+    page.getByRole("paragraph").filter({ hasText: "Sign in" }),
+  ).toBeVisible();
   await expect(page.getByText(/cancelled or denied/i)).toBeVisible();
   await expect(page).toHaveURL(/\/login/);
 });

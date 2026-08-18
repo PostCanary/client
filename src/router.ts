@@ -34,6 +34,7 @@ const appQaRoutes: RouteRecordRaw[] = qaRoutesEnabled
           title: "Step Review Approval Flow (dev)",
           navbarTitle: "Review",
           requiresFeature: "postcards",
+          skipFirstRunGuard: true,
         },
       },
     ]
@@ -45,25 +46,41 @@ const qaRoutes: RouteRecordRaw[] = qaRoutesEnabled
         path: "/dev/sttl-step2-preview",
         name: "DevSttLStep2Preview",
         component: () => import("@/pages/dev/SttLStep2Preview.vue"),
-        meta: { title: "SttL Step 2 Preview (dev)", marketing: false },
+        meta: {
+          title: "SttL Step 2 Preview (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/step-review-approval-flow",
         name: "DevStepReviewApprovalFlow",
         component: () => import("@/pages/dev/StepReviewApprovalFlow.vue"),
-        meta: { title: "Step Review Approval Flow (dev)", marketing: false },
+        meta: {
+          title: "Step Review Approval Flow (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/step-design-fold",
         name: "DevStepDesignFold",
         component: () => import("@/pages/dev/StepDesignFold.vue"),
-        meta: { title: "Step Design Fold (dev)", marketing: false },
+        meta: {
+          title: "Step Design Fold (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
       {
         path: "/dev/wizard-shell-strips",
         name: "DevWizardShellStrips",
         component: () => import("@/pages/dev/WizardShellStrips.vue"),
-        meta: { title: "Wizard Shell Strips (dev)", marketing: false },
+        meta: {
+          title: "Wizard Shell Strips (dev)",
+          marketing: false,
+          skipFirstRunGuard: true,
+        },
       },
     ]
   : [];
@@ -389,16 +406,17 @@ router.beforeEach(async (to, _from, next) => {
     if (auth.isAuthenticated) {
       return next({ name: "AppHome" });
     }
-    const rawError = to.query.error;
-    const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
-    if (typeof errorCode === "string" && errorCode.trim()) {
-      auth.loginError = humanizeAuth0LoginError(errorCode);
-    }
     const nextPath =
       typeof to.query.next === "string" && to.query.next
         ? to.query.next
         : "/app/home";
     auth.openLoginModal(nextPath, "login");
+    // openLoginModal clears loginError — apply the Auth0 query after.
+    const rawError = to.query.error;
+    const errorCode = Array.isArray(rawError) ? rawError[0] : rawError;
+    if (typeof errorCode === "string" && errorCode.trim()) {
+      auth.loginError = humanizeAuth0LoginError(errorCode);
+    }
     return next();
   }
 
@@ -415,7 +433,10 @@ router.beforeEach(async (to, _from, next) => {
 
   // Collect industry + return address once, before any other app surface.
   // Skip when both are already set (invited teammates, QA fixtures).
-  const skipFirstRun = to.matched.some((r) => r.meta?.skipFirstRunGuard);
+  // /dev/* harnesses are not a first-run surface.
+  const skipFirstRun =
+    to.matched.some((r) => r.meta?.skipFirstRunGuard) ||
+    to.path.includes("/dev/");
   if (!skipFirstRun) {
     const needed = await auth.needsFirstRunSetup();
     if (needed) {
