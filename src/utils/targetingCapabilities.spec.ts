@@ -119,9 +119,6 @@ describe('targeting capability filter normalization', () => {
       'length of residence',
       'home square footage',
       'email availability',
-      'dog owner',
-      'cat owner',
-      'other pet owner',
     ])
   })
 
