@@ -167,8 +167,8 @@ async function onSignOut() {
       </li>
     </ul>
 
-    <!-- "+ Send Postcards" button (hidden until the org has postcards access, S85) -->
-    <div v-if="auth.hasPostcards" class="sidebar-cta">
+    <!-- "+ Send Postcards" button -->
+    <div class="sidebar-cta">
       <button
         v-if="isCollapsed"
         class="cta-collapsed"
@@ -189,8 +189,7 @@ async function onSignOut() {
       </button>
     </div>
 
-    <!-- Postcard destinations retain their existing organization feature gate. -->
-    <ul v-if="auth.hasPostcards" class="nav-section">
+    <ul class="nav-section">
       <li v-for="item in sendItems" :key="item.routeName">
         <button
           class="sidebar-item"

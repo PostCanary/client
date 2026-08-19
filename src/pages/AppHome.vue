@@ -24,21 +24,17 @@ interface HomeCard {
   subtitle: string
   to: string
   icon: any
-  /* Postcard-flow entries are hidden until the org has postcards access
-   * (S85 gate) — same rule as the sidebar's SEND MAIL section. */
-  requiresPostcards?: boolean
 }
 
 /* Dashboard Flow v2 (Tyler wireframe, 2026-07-17): four entry points,
  * titles and subtitles verbatim from the wireframe. */
-const allCards: HomeCard[] = [
+const cards: HomeCard[] = [
   {
     key: 'send_postcards',
     title: 'Send Postcards',
     subtitle: 'Launch a new campaign',
     to: '/app/send',
     icon: PaperPlaneOutline,
-    requiresPostcards: true,
   },
   {
     key: 'browse_designs',
@@ -46,7 +42,6 @@ const allCards: HomeCard[] = [
     subtitle: 'View your uploads',
     to: '/app/designs',
     icon: ColorPaletteOutline,
-    requiresPostcards: true,
   },
   {
     key: 'campaigns',
@@ -54,7 +49,6 @@ const allCards: HomeCard[] = [
     subtitle: 'Track your previous mail sends',
     to: '/app/campaigns',
     icon: DocumentTextOutline,
-    requiresPostcards: true,
   },
   {
     key: 'analytics',
@@ -64,10 +58,6 @@ const allCards: HomeCard[] = [
     icon: BarChartOutline,
   },
 ]
-
-const cards = computed(() =>
-  allCards.filter((c) => !c.requiresPostcards || auth.hasPostcards),
-)
 
 const firstName = computed(() => auth.userName.split(' ')[0])
 const isFirstSession = computed(() => isFirstSessionProfile(auth.profile))
@@ -101,7 +91,7 @@ onMounted(() => {
           {{ tagline }}
         </p>
       </header>
-      <div class="home-grid" :class="{ single: cards.length === 1 }">
+      <div class="home-grid">
         <button
           v-for="(card, i) in cards"
           :key="card.key"
@@ -158,10 +148,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
-}
-
-.home-grid.single {
-  grid-template-columns: minmax(220px, 440px);
 }
 
 .home-card {
@@ -276,8 +262,7 @@ onMounted(() => {
     padding-top: 24px;
   }
 
-  .home-grid,
-  .home-grid.single {
+  .home-grid {
     grid-template-columns: 1fr;
   }
 

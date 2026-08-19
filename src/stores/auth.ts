@@ -110,11 +110,13 @@ export const useAuthStore = defineStore("auth", {
       return !!this.billing?.needs_paywall;
     },
 
-    /** Org-level feature access from /auth/me (S85 postcards early access). */
+    /** Org-level feature access from /auth/me. */
     features: (state): string[] =>
       state.me?.authenticated === true ? state.me.features ?? [] : [],
 
-    /** Designs + mail sending are limited to approved orgs until GA. */
+    /** Used by scrape / AI helpers. Campaigns, Designs, and Send are
+     * always reachable for signed-in orgs (POS-292) even when this is
+     * false — /auth/me may omit "postcards" until the server GA ships. */
     hasPostcards(): boolean {
       return this.features.includes("postcards");
     },
