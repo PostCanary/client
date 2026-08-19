@@ -4,6 +4,7 @@ import type { TargetingFilters } from "@/types/campaign";
 import type { TargetingFilterKey, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import { unsupportedTargetingFilterLabels } from "@/utils/targetingCapabilities";
 import { countActiveConsumerFilters } from "@/utils/targetingFilterCount";
+import { emptyTargetingFilters } from "@/utils/emptyTargetingFilters";
 import { applyHomeServicesPreset } from "@/utils/targetingPresets";
 import ExclusionToggles from "./ExclusionToggles.vue";
 
@@ -63,6 +64,10 @@ function applyPreset() {
   filters.value = applyHomeServicesPreset(filters.value);
 }
 
+function resetFilters() {
+  filters.value = emptyTargetingFilters();
+}
+
 function togglePropertyType(pt: string) {
   const idx = filters.value.propertyTypes.indexOf(pt);
   if (idx >= 0) {
@@ -94,9 +99,19 @@ defineExpose({ activeFilterCount });
   <div class="space-y-5 p-4">
     <div class="flex items-center justify-between">
       <h4 class="text-sm font-semibold text-[#0b2d50]">Filters</h4>
-      <span v-if="activeFilterCount > 0" class="text-xs text-[#47bfa9] font-medium">
-        {{ activeFilterCount }} applied
-      </span>
+      <div v-if="activeFilterCount > 0" class="flex items-center gap-3">
+        <span class="text-xs text-[#47bfa9] font-medium">
+          {{ activeFilterCount }} applied
+        </span>
+        <button
+          type="button"
+          data-testid="reset-filters"
+          class="text-sm text-[#47bfa9]"
+          @click="resetFilters"
+        >
+          Reset filters
+        </button>
+      </div>
     </div>
 
     <button

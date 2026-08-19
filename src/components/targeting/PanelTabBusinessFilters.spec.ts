@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import type { TargetingFilters } from '@/types/campaign'
 import type { BusinessTargetingFilterSupport } from '@/types/targeting'
+import { emptyTargetingFilters } from '@/utils/emptyTargetingFilters'
 import PanelTabBusinessFilters from './PanelTabBusinessFilters.vue'
 
 const FILTERS: TargetingFilters = {
@@ -72,5 +73,41 @@ describe('PanelTabBusinessFilters', () => {
     })
 
     expect(wrapper.get('[data-testid="filter-business-sales-min"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows Reset filters when active and clears filters without touching exclusions', async () => {
+    const wrapper = mount(PanelTabBusinessFilters, {
+      props: {
+        filters: structuredClone(FILTERS),
+        filterCapabilities: SUPPORT,
+        excludePastCustomers: true,
+        excludeMailedWithinDays: 60,
+        doNotMailCount: 0,
+      },
+    })
+
+    expect(wrapper.get('[data-testid="reset-filters"]').text()).toBe('Reset filters')
+    await wrapper.get('[data-testid="reset-filters"]').trigger('click')
+
+    const emitted = wrapper.emitted('update:filters') ?? []
+    expect(emitted.length).toBeGreaterThan(0)
+    const cleared = (emitted[emitted.length - 1] ?? [])[0] as TargetingFilters
+    expect(cleared).toEqual(emptyTargetingFilters())
+    expect(wrapper.emitted('update:excludePastCustomers')).toBeUndefined()
+    expect(wrapper.emitted('update:excludeMailedWithinDays')).toBeUndefined()
+  })
+
+  it('hides Reset filters when no filters are active', () => {
+    const wrapper = mount(PanelTabBusinessFilters, {
+      props: {
+        filters: emptyTargetingFilters(),
+        filterCapabilities: SUPPORT,
+        excludePastCustomers: true,
+        excludeMailedWithinDays: 60,
+        doNotMailCount: 0,
+      },
+    })
+
+    expect(wrapper.find('[data-testid="reset-filters"]').exists()).toBe(false)
   })
 })
