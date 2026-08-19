@@ -362,7 +362,7 @@ test("submitting a valid design request enables Next and posts the brief", async
   expect(request.full_name).toBeTruthy();
 });
 
-test("restaurant and dental still see HVAC cards while those packs have no assets", async ({
+test("upload step does not offer industry template cards until a real library exists", async ({
   page,
 }) => {
   await gotoStep3(page, (mock) => {
@@ -370,10 +370,7 @@ test("restaurant and dental still see HVAC cards while those packs have no asset
     mock.brandKit.data.industry = "restaurant";
   });
 
-  const pack = page.getByTestId("industry-template-pack");
-  await expect(pack).toHaveAttribute("data-pack-id", "fallback");
-  await expect(page.getByTestId("design-library-template")).toHaveCount(3);
-  await expect(
-    page.getByTestId("design-library-template").filter({ hasText: "HVAC Neighborhood Offer" }),
-  ).toHaveCount(1);
+  await expect(page.getByTestId("industry-template-pack")).toHaveCount(0);
+  await expect(page.getByTestId("design-library-template")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Postcard templates" })).toHaveCount(0);
 });
