@@ -40,6 +40,9 @@ export function countActiveConsumerFilters(
   )
     count++;
   if (supports("hasEmail") && (filters.hasEmail ?? null) !== null) count++;
+  if (supports("dogOwner") && filters.dogOwner === true) count++;
+  if (supports("catOwner") && filters.catOwner === true) count++;
+  if (supports("otherPetOwner") && filters.otherPetOwner === true) count++;
   return count;
 }
 

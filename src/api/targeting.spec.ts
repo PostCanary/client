@@ -25,6 +25,9 @@ const DATA_RETRIEVER_CAPABILITIES = {
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
+    dogOwner: false,
+    catOwner: false,
+    otherPetOwner: false,
   },
 } as const
 
@@ -46,6 +49,9 @@ const LEADGEN_CAPABILITIES = {
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
+    dogOwner: false,
+    catOwner: false,
+    otherPetOwner: false,
   },
 } as const
 

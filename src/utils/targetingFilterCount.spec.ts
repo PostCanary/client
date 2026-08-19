@@ -46,6 +46,9 @@ const FULL_SUPPORT: TargetingFilterSupport = {
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 describe('countActiveConsumerFilters', () => {

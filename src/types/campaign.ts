@@ -192,6 +192,12 @@ export interface TargetingFilters {
   squareFootageMin?: number | null
   squareFootageMax?: number | null
   hasEmail?: boolean | null
+  /** Melissa Consumer DogOwnerInd — true requires dog owner; null = any */
+  dogOwner?: boolean | null
+  /** Melissa Consumer CatOwnerInd */
+  catOwner?: boolean | null
+  /** Melissa Consumer OtherPetOnwerInd (Melissa spelling) */
+  otherPetOwner?: boolean | null
   businessSicCodes?: string[]
   businessNaicsCodes?: string[]
   businessJobTitles?: string[]

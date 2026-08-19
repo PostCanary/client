@@ -302,7 +302,7 @@ function commitEddmTargeting() {
     areas: [],
     method: 'draw',
     audienceType: 'consumer',
-    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null },
+    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null, dogOwner: null, catOwner: null, otherPetOwner: null },
     jobsUsed: null,
     jobRadiusMiles: null,
     excludePastCustomers: false,

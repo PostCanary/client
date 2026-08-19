@@ -32,6 +32,9 @@ const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
   squareFootageMin: false,
   squareFootageMax: false,
   hasEmail: false,
+  dogOwner: false,
+  catOwner: false,
+  otherPetOwner: false,
 }
 
 const LEADGEN_FILTERS: TargetingFilterSupport = {
@@ -49,6 +52,9 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 const HVAC_FILTERS: TargetingFilters = {
@@ -66,6 +72,9 @@ const HVAC_FILTERS: TargetingFilters = {
   squareFootageMin: null,
   squareFootageMax: null,
   hasEmail: null,
+  dogOwner: null,
+  catOwner: null,
+  otherPetOwner: null,
 }
 
 describe('targeting capability filter normalization', () => {
@@ -87,6 +96,9 @@ describe('targeting capability filter normalization', () => {
       squareFootageMin: null,
       squareFootageMax: null,
       hasEmail: null,
+      dogOwner: null,
+      catOwner: null,
+      otherPetOwner: null,
     })
     expect(HVAC_FILTERS.homeowner).toBe('homeowner')
     expect(targetingFiltersAreSupported(normalized, DATA_RETRIEVER_FILTERS)).toBe(true)
@@ -99,6 +111,9 @@ describe('targeting capability filter normalization', () => {
       'length of residence',
       'home square footage',
       'email availability',
+      'dog owner',
+      'cat owner',
+      'other pet owner',
     ])
   })
 
