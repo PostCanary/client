@@ -16,6 +16,8 @@ const FILTERS: TargetingFilters = {
   incomeMin: 'C',
   loresMin: 2,
   loresMax: 10,
+  kidsMin: null,
+  kidsMax: null,
   squareFootageMin: 1500,
   squareFootageMax: 3000,
   hasEmail: true,
@@ -33,6 +35,8 @@ const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
   incomeMin: false,
   loresMin: false,
   loresMax: false,
+  kidsMin: false,
+  kidsMax: false,
   squareFootageMin: false,
   squareFootageMax: false,
   hasEmail: false,
@@ -50,6 +54,8 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  kidsMin: true,
+  kidsMax: true,
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
@@ -58,6 +64,7 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
 function mountFilters(
   filterCapabilities: TargetingFilterSupport | null,
   targetingProvider: 'leadgen' | 'data_retriever' | 'planner',
+  industry: string | null = 'hvac',
 ) {
   return mount(PanelTabFilters, {
     props: {
@@ -67,6 +74,7 @@ function mountFilters(
       doNotMailCount: 0,
       filterCapabilities,
       targetingProvider,
+      industry,
     },
   })
 }
@@ -120,11 +128,12 @@ describe('PanelTabFilters provider capabilities', () => {
   })
 })
 
-describe('PanelTabFilters home-services preset (POS-213)', () => {
-  it('offers the preset chip when property filters are supported and applies it on click', async () => {
-    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner')
+describe('PanelTabFilters industry preset (POS-293)', () => {
+  it('offers the home-services chip for HVAC and applies it on click', async () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'hvac')
 
-    const chip = wrapper.get('[data-testid="home-services-preset"]')
+    const chip = wrapper.get('[data-testid="industry-filter-preset"]')
+    expect(chip.text()).toContain('home services')
     await chip.trigger('click')
 
     const emitted = wrapper.emitted('update:filters') ?? []
@@ -137,13 +146,49 @@ describe('PanelTabFilters home-services preset (POS-213)', () => {
     expect(applied.propertyTypes).toEqual(['Single Family'])
   })
 
+  it('labels the chip from the industry pack (dental → health)', () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'dental')
+    expect(wrapper.get('[data-testid="industry-filter-preset"]').text()).toContain(
+      'health',
+    )
+  })
+
+  it('applies the professional pack for legal (income + higher value)', async () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'legal')
+    await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
+    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    expect(applied.incomeMin).toBe('E')
+    expect(applied.homeValueMin).toBe(250000)
+  })
+
+  it('applies the property pack with recent-mover lores for mortgage', async () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'mortgage')
+    await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
+    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    expect(applied.loresMin).toBe(0)
+    expect(applied.loresMax).toBe(3)
+  })
+
+  it('applies kidsMin for health industries', async () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'dental')
+    await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
+    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    expect(applied.kidsMin).toBe(1)
+  })
+
+  it('exposes children-in-household controls for LeadGen', () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'hvac')
+    expect(wrapper.find('[data-testid="filter-kids"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="filter-control-kids-min"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('hides the preset chip when the provider cannot take property filters', () => {
     const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
-    expect(wrapper.find('[data-testid="home-services-preset"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="industry-filter-preset"]').exists()).toBe(false)
   })
 
   it('hides the preset chip while capabilities are unresolved (fail closed)', () => {
     const wrapper = mountFilters(null, 'planner')
-    expect(wrapper.find('[data-testid="home-services-preset"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="industry-filter-preset"]').exists()).toBe(false)
   })
 })

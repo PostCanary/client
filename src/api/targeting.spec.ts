@@ -22,6 +22,8 @@ const DATA_RETRIEVER_CAPABILITIES = {
     incomeMin: false,
     loresMin: false,
     loresMax: false,
+    kidsMin: false,
+    kidsMax: false,
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
@@ -43,6 +45,8 @@ const LEADGEN_CAPABILITIES = {
     incomeMin: true,
     loresMin: true,
     loresMax: true,
+    kidsMin: true,
+    kidsMax: true,
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
@@ -187,6 +191,8 @@ describe('targeting API contracts', () => {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
+      kidsMin: null,
+      kidsMax: null,
       }),
     ).resolves.toMatchObject({ source: 'melissa_data_retriever' })
   })
@@ -211,6 +217,8 @@ describe('targeting API contracts', () => {
       incomeMin: null,
       loresMin: null,
       loresMax: null,
+      kidsMin: null,
+      kidsMax: null,
       businessSicCodes: ['171102'],
     }
 

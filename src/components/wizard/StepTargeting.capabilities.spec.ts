@@ -90,6 +90,8 @@ const CONSUMER_SUPPORT = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  kidsMin: true,
+  kidsMax: true,
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,

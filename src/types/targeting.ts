@@ -21,6 +21,8 @@ export interface TargetingFilterSupport {
   incomeMin: boolean
   loresMin: boolean
   loresMax: boolean
+  kidsMin: boolean
+  kidsMax: boolean
   squareFootageMin?: boolean
   squareFootageMax?: boolean
   hasEmail?: boolean

@@ -4,7 +4,12 @@ import type { TargetingFilters } from "@/types/campaign";
 import type { TargetingFilterKey, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import { unsupportedTargetingFilterLabels } from "@/utils/targetingCapabilities";
 import { countActiveConsumerFilters } from "@/utils/targetingFilterCount";
-import { applyHomeServicesPreset } from "@/utils/targetingPresets";
+import {
+  applyIndustryFilterPreset,
+  industryFilterPresetAvailable,
+  industryFilterPresetChipLabel,
+  resolveIndustryFilterPreset,
+} from "@/utils/targetingPresets";
 import ExclusionToggles from "./ExclusionToggles.vue";
 
 const filters = defineModel<TargetingFilters>("filters", {
@@ -21,6 +26,8 @@ const props = defineProps<{
   hasNonZipAreas?: boolean;
   filterCapabilities: TargetingFilterSupport | null;
   targetingProvider: TargetingProvider | null;
+  /** Brand-kit / setup industry slug — drives suggested filter pack (POS-293). */
+  industry?: string | null;
 }>();
 
 const PROPERTY_TYPES = [
@@ -52,15 +59,23 @@ const activeFilterCount = computed(() =>
   countActiveConsumerFilters(filters.value, props.filterCapabilities),
 );
 
-// POS-213: the old always-on HVAC demo defaults, now applied only on click.
-// Only offered when the provider supports property filters — applying them
-// on a Data Retriever-only capability set would strip every field anyway.
-const presetAvailable = computed(
-  () => supportsFilter("homeValueMin") && supportsFilter("propertyTypes"),
+// POS-293: industry LeadGen/property pack — opt-in chip only (never auto-apply).
+const industryPreset = computed(() =>
+  resolveIndustryFilterPreset(props.industry),
+);
+const presetChipLabel = computed(() =>
+  industryFilterPresetChipLabel(industryPreset.value),
+);
+const presetAvailable = computed(() =>
+  industryFilterPresetAvailable(props.filterCapabilities),
 );
 
 function applyPreset() {
-  filters.value = applyHomeServicesPreset(filters.value);
+  filters.value = applyIndustryFilterPreset(
+    filters.value,
+    props.industry,
+    props.filterCapabilities,
+  );
 }
 
 function togglePropertyType(pt: string) {
@@ -102,12 +117,12 @@ defineExpose({ activeFilterCount });
     <button
       v-if="presetAvailable"
       type="button"
-      data-testid="home-services-preset"
+      data-testid="industry-filter-preset"
       class="inline-flex items-center gap-1.5 rounded-full border border-[#47bfa9]/40 bg-[#47bfa9]/5 px-3 py-1.5 text-xs font-medium text-[#2b8d7c] hover:bg-[#47bfa9]/10 transition-colors"
       @click="applyPreset"
     >
       <span aria-hidden="true">+</span>
-      Suggested filters for home services
+      {{ presetChipLabel }}
     </button>
 
     <div
@@ -231,6 +246,50 @@ defineExpose({ activeFilterCount });
           <option value="15">&gt; 14 years</option>
         </select>
       </div>
+    </div>
+
+    <!-- Children in household (provider kids, brackets 1-8) -->
+    <div data-testid="filter-kids" :class="{ 'opacity-60': !supportsFilter('kidsMin') || !supportsFilter('kidsMax') }">
+      <label class="text-xs text-gray-500">Children in household</label>
+      <div class="flex gap-2 mt-1">
+        <select
+          data-testid="filter-control-kids-min"
+          :value="filters.kidsMin ?? ''"
+          :disabled="!supportsFilter('kidsMin')"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.kidsMin = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Min children</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8+</option>
+        </select>
+        <select
+          data-testid="filter-control-kids-max"
+          :value="filters.kidsMax ?? ''"
+          :disabled="!supportsFilter('kidsMax')"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.kidsMax = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Max children</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8+</option>
+        </select>
+      </div>
+      <p class="mt-1 text-[11px] text-gray-400">
+        Set min to 1 for any household with children. Melissa has no “zero children” code.
+      </p>
     </div>
 
     <!-- Household income (minimum bracket) -->

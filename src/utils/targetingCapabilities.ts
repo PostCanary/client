@@ -20,6 +20,8 @@ export const TARGETING_FILTER_LABELS: Record<TargetingFilterKey, string> = {
   incomeMin: 'household income',
   loresMin: 'length of residence',
   loresMax: 'length of residence',
+  kidsMin: 'children in household',
+  kidsMax: 'children in household',
   squareFootageMin: 'home square footage',
   squareFootageMax: 'home square footage',
   hasEmail: 'email availability',
@@ -44,6 +46,8 @@ export function normalizeTargetingFilters(
     incomeMin: support.incomeMin ? filters.incomeMin : null,
     loresMin: support.loresMin ? filters.loresMin : null,
     loresMax: support.loresMax ? filters.loresMax : null,
+    kidsMin: support.kidsMin ? filters.kidsMin : null,
+    kidsMax: support.kidsMax ? filters.kidsMax : null,
     squareFootageMin: support.squareFootageMin ? (filters.squareFootageMin ?? null) : null,
     squareFootageMax: support.squareFootageMax ? (filters.squareFootageMax ?? null) : null,
     hasEmail: support.hasEmail ? (filters.hasEmail ?? null) : null,
@@ -107,6 +111,8 @@ const CONSUMER_FILTER_KEYS: Array<keyof TargetingFilters> = [
   'incomeMin',
   'loresMin',
   'loresMax',
+  'kidsMin',
+  'kidsMax',
   'hasEmail',
 ]
 
@@ -256,7 +262,9 @@ export function targetingFiltersAreSupported(
     (support.hhageMax || filters.hhageMax === null) &&
     (support.incomeMin || filters.incomeMin === null) &&
     (support.loresMin || filters.loresMin === null) &&
-    (support.loresMax || filters.loresMax === null)
+    (support.loresMax || filters.loresMax === null) &&
+    (support.kidsMin || filters.kidsMin === null) &&
+    (support.kidsMax || filters.kidsMax === null)
     && (support.squareFootageMin || (filters.squareFootageMin ?? null) === null)
     && (support.squareFootageMax || (filters.squareFootageMax ?? null) === null)
     && (support.hasEmail || (filters.hasEmail ?? null) === null)

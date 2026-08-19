@@ -35,6 +35,11 @@ export function countActiveConsumerFilters(
   )
     count++;
   if (
+    (supports("kidsMin") && filters.kidsMin !== null) ||
+    (supports("kidsMax") && filters.kidsMax !== null)
+  )
+    count++;
+  if (
     (supports("squareFootageMin") && (filters.squareFootageMin ?? null) !== null) ||
     (supports("squareFootageMax") && (filters.squareFootageMax ?? null) !== null)
   )
