@@ -248,14 +248,17 @@ defineExpose({ activeFilterCount });
       </div>
     </div>
 
-    <!-- Children in household (provider kids, brackets 1-8) -->
-    <div data-testid="filter-kids" :class="{ 'opacity-60': !supportsFilter('kidsMin') || !supportsFilter('kidsMax') }">
+    <!-- Children in household (provider kids, brackets 1-8). Only show when
+         LeadGen Property entitles the filter — never as a disabled stub. -->
+    <div
+      v-if="supportsFilter('kidsMin') && supportsFilter('kidsMax')"
+      data-testid="filter-kids"
+    >
       <label class="text-xs text-gray-500">Children in household</label>
       <div class="flex gap-2 mt-1">
         <select
           data-testid="filter-control-kids-min"
           :value="filters.kidsMin ?? ''"
-          :disabled="!supportsFilter('kidsMin')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.kidsMin = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >
@@ -272,7 +275,6 @@ defineExpose({ activeFilterCount });
         <select
           data-testid="filter-control-kids-max"
           :value="filters.kidsMax ?? ''"
-          :disabled="!supportsFilter('kidsMax')"
           class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
           @change="filters.kidsMax = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
         >

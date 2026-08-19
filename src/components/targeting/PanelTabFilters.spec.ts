@@ -182,6 +182,12 @@ describe('PanelTabFilters industry preset (POS-293)', () => {
     expect(wrapper.get('[data-testid="filter-control-kids-min"]').attributes('disabled')).toBeUndefined()
   })
 
+  it('hides children-in-household when the provider does not support kids', () => {
+    const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
+    expect(wrapper.find('[data-testid="filter-kids"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('children in household')
+  })
+
   it('hides the preset chip when the provider cannot take property filters', () => {
     const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
     expect(wrapper.find('[data-testid="industry-filter-preset"]').exists()).toBe(false)

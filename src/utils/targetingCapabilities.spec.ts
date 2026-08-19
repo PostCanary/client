@@ -105,7 +105,6 @@ describe('targeting capability filter normalization', () => {
       'property type',
       'household income',
       'length of residence',
-      'children in household',
       'home square footage',
       'email availability',
     ])

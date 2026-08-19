@@ -274,7 +274,11 @@ export function targetingFiltersAreSupported(
 export function unsupportedTargetingFilterLabels(
   support: TargetingFilterSupport,
 ): string[] {
+  // Kids controls are hidden until entitled (same idea as future Consumer Inds).
+  // Do not list them in the amber notice — that reads as a broken feature.
+  const hiddenWhenUnsupported: TargetingFilterKey[] = ['kidsMin', 'kidsMax']
   return [...new Set((Object.keys(TARGETING_FILTER_LABELS) as TargetingFilterKey[])
     .filter((key) => !support[key])
+    .filter((key) => !hiddenWhenUnsupported.includes(key))
     .map((key) => TARGETING_FILTER_LABELS[key]))]
 }
