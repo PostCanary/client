@@ -219,8 +219,6 @@ describe('targeting API contracts', () => {
       loresMax: null,
       kidsMin: null,
       kidsMax: null,
-      kidsMin: null,
-      kidsMax: null,
       businessSicCodes: ['171102'],
     }
 
