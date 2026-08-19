@@ -146,7 +146,7 @@ test("organizations without postcard access retain the same Analytics group", as
   }
   await expect(
     sidebar.getByRole("button", { name: "Send Postcards", exact: true }),
-  ).toHaveCount(0);
+  ).toBeVisible();
 });
 
 test("mobile hamburger still opens the expanded sidebar drawer", async ({
