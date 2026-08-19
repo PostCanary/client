@@ -288,7 +288,7 @@ defineExpose({ activeFilterCount });
         </select>
       </div>
       <p class="mt-1 text-[11px] text-gray-400">
-        Set min to 1 for any household with children. Melissa has no “zero children” code.
+        Melissa has no “zero children” code. Min 1 = has children. A max with no min still requires at least one child.
       </p>
     </div>
 

@@ -156,7 +156,7 @@ describe('PanelTabFilters industry preset (POS-293)', () => {
   it('applies the professional pack for legal (income + higher value)', async () => {
     const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'legal')
     await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
-    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    const applied = (wrapper.emitted('update:filters') ?? []).slice(-1)[0]?.[0] as TargetingFilters
     expect(applied.incomeMin).toBe('E')
     expect(applied.homeValueMin).toBe(250000)
   })
@@ -164,7 +164,7 @@ describe('PanelTabFilters industry preset (POS-293)', () => {
   it('applies the property pack with recent-mover lores for mortgage', async () => {
     const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'mortgage')
     await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
-    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    const applied = (wrapper.emitted('update:filters') ?? []).slice(-1)[0]?.[0] as TargetingFilters
     expect(applied.loresMin).toBe(0)
     expect(applied.loresMax).toBe(3)
   })
@@ -172,7 +172,7 @@ describe('PanelTabFilters industry preset (POS-293)', () => {
   it('applies kidsMin for health industries', async () => {
     const wrapper = mountFilters(LEADGEN_FILTERS, 'planner', 'dental')
     await wrapper.get('[data-testid="industry-filter-preset"]').trigger('click')
-    const applied = (wrapper.emitted('update:filters')?.at(-1) ?? [])[0] as TargetingFilters
+    const applied = (wrapper.emitted('update:filters') ?? []).slice(-1)[0]?.[0] as TargetingFilters
     expect(applied.kidsMin).toBe(1)
   })
 

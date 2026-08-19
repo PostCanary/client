@@ -162,7 +162,8 @@ function clonePresetFilters(
 
 /**
  * Merge a preset into current filters. Never clears user-set fields the
- * preset does not define. Skips keys the capability registry marks false.
+ * preset does not define. When capabilities are provided, only apply keys
+ * the registry marks true — absent keys are skipped (fail closed).
  */
 export function applyIndustryFilterPreset(
   filters: TargetingFilters,
@@ -177,18 +178,64 @@ export function applyIndustryFilterPreset(
     [keyof TargetingFilters, TargetingFilters[keyof TargetingFilters]]
   >) {
     if (value === undefined) continue;
-    if (
-      capabilities &&
-      key in capabilities &&
-      !(capabilities as Record<string, boolean | undefined>)[key as string]
-    ) {
-      continue;
+    if (capabilities) {
+      const allowed = capabilities[key as keyof TargetingFilterSupport];
+      // Absent or false → skip. Never fail-open on unknown keys.
+      if (allowed !== true) continue;
     }
     if (key === "propertyTypes" && Array.isArray(value)) {
       next.propertyTypes = [...value];
       continue;
     }
-    (next as Record<string, unknown>)[key] = value;
+    switch (key) {
+      case "homeowner":
+        next.homeowner = value as TargetingFilters["homeowner"];
+        break;
+      case "homeValueMin":
+        next.homeValueMin = value as number | null;
+        break;
+      case "homeValueMax":
+        next.homeValueMax = value as number | null;
+        break;
+      case "yearBuiltMin":
+        next.yearBuiltMin = value as number | null;
+        break;
+      case "yearBuiltMax":
+        next.yearBuiltMax = value as number | null;
+        break;
+      case "hhageMin":
+        next.hhageMin = value as number | null;
+        break;
+      case "hhageMax":
+        next.hhageMax = value as number | null;
+        break;
+      case "incomeMin":
+        next.incomeMin = value as string | null;
+        break;
+      case "loresMin":
+        next.loresMin = value as number | null;
+        break;
+      case "loresMax":
+        next.loresMax = value as number | null;
+        break;
+      case "kidsMin":
+        next.kidsMin = value as number | null;
+        break;
+      case "kidsMax":
+        next.kidsMax = value as number | null;
+        break;
+      case "squareFootageMin":
+        next.squareFootageMin = value as number | null;
+        break;
+      case "squareFootageMax":
+        next.squareFootageMax = value as number | null;
+        break;
+      case "hasEmail":
+        next.hasEmail = value as boolean | null;
+        break;
+      default:
+        break;
+    }
   }
 
   return next;

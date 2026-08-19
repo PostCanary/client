@@ -53,6 +53,8 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     'incomeMin',
     'loresMin',
     'loresMax',
+    'kidsMin',
+    'kidsMax',
   ]
   if (!legacyKeys.every((key) => typeof filters[key] === 'boolean')) return null
   const plannerKeys = ['squareFootageMin', 'squareFootageMax', 'hasEmail']

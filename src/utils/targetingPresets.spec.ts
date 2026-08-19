@@ -122,6 +122,17 @@ describe('applyIndustryFilterPreset', () => {
     expect(result.homeValueMin).toBe(250000)
   })
 
+  it('skips keys absent from the capability map (fail closed)', () => {
+    const { kidsMin: _k, kidsMax: _m, ...withoutKids } = FULL_SUPPORT
+    const result = applyIndustryFilterPreset(
+      EMPTY,
+      'dental',
+      withoutKids as typeof FULL_SUPPORT,
+    )
+    expect(result.homeowner).toBe('homeowner')
+    expect(result.kidsMin).toBeNull()
+  })
+
   it('returns a fresh propertyTypes array', () => {
     const a = applyIndustryFilterPreset(EMPTY, 'dental', FULL_SUPPORT)
     const b = applyIndustryFilterPreset(EMPTY, 'dental', FULL_SUPPORT)

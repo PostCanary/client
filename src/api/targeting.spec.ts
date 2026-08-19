@@ -191,8 +191,8 @@ describe('targeting API contracts', () => {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
-      kidsMin: null,
-      kidsMax: null,
+        kidsMin: null,
+        kidsMax: null,
       }),
     ).resolves.toMatchObject({ source: 'melissa_data_retriever' })
   })
@@ -217,6 +217,8 @@ describe('targeting API contracts', () => {
       incomeMin: null,
       loresMin: null,
       loresMax: null,
+      kidsMin: null,
+      kidsMax: null,
       kidsMin: null,
       kidsMax: null,
       businessSicCodes: ['171102'],
