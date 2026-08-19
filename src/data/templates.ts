@@ -6,6 +6,12 @@ import type {
   CampaignGoalType,
   Industry,
 } from "@/types/campaign";
+import {
+  FALLBACK_TEMPLATE_PACK_ID,
+  catalogEntriesForPack,
+  resolveTemplatePack,
+  type TemplatePackId,
+} from "@/data/industryTemplatePacks";
 
 export type TemplateStatus = "draft" | "visible" | "retired";
 export type TemplateSource = "curated";
@@ -16,6 +22,7 @@ export interface DesignLibraryTemplate extends TemplateDefinition {
   status: TemplateStatus;
   source: TemplateSource;
   industry: Industry;
+  packId: TemplatePackId;
   goalTypes: CampaignGoalType[];
   cardPositions: CardPurpose[];
   renderTemplateId: string;
@@ -176,6 +183,9 @@ function makeLibraryTemplate(
     status: "visible",
     source: "curated",
     industry: "hvac",
+    // Today's HVAC launch cards are the fallback set until Creative pack
+    // assets (neighborhood_coupons, fridge_menu, …) land in this catalog.
+    packId: FALLBACK_TEMPLATE_PACK_ID,
     goalTypes: ["neighbor_marketing", "send_to_list", "seasonal_tuneup"],
     cardPositions: [cardPosition],
     renderTemplateId: "hac-1000-front-v1",
@@ -214,16 +224,35 @@ export const visibleDesignLibraryTemplates = DESIGN_LIBRARY_TEMPLATES.filter(
   (template) => template.status === "visible",
 );
 
+function templatesForResolvedPack(
+  industry?: string | null,
+): DesignLibraryTemplate[] {
+  const packId = resolveTemplatePack(industry, DESIGN_LIBRARY_TEMPLATES);
+  const packTemplates = catalogEntriesForPack(
+    packId,
+    DESIGN_LIBRARY_TEMPLATES,
+  ) as DesignLibraryTemplate[];
+  if (packTemplates.length > 0) return packTemplates;
+
+  const fallback = catalogEntriesForPack(
+    FALLBACK_TEMPLATE_PACK_ID,
+    DESIGN_LIBRARY_TEMPLATES,
+  ) as DesignLibraryTemplate[];
+  return fallback.length > 0 ? fallback : visibleDesignLibraryTemplates;
+}
+
 export function getVisibleDesignLibraryTemplates(
   goalType?: CampaignGoalType,
+  industry?: string | null,
 ): DesignLibraryTemplate[] {
-  if (!goalType) return visibleDesignLibraryTemplates;
+  const packTemplates = templatesForResolvedPack(industry);
+  if (!goalType) return packTemplates;
 
-  const matches = visibleDesignLibraryTemplates.filter((template) =>
+  const matches = packTemplates.filter((template) =>
     template.goalTypes.includes(goalType),
   );
 
-  return matches.length > 0 ? matches : visibleDesignLibraryTemplates;
+  return matches.length > 0 ? matches : packTemplates;
 }
 
 export function getDesignLibraryTemplate(
@@ -326,7 +355,7 @@ export function getRecommendedTemplateSet(
   const layout = resolveRecommendedLayout(goalType, industry);
   return POSITIONS.map(
     (pos) =>
-      getVisibleDesignLibraryTemplates(goalType).find(
+      getVisibleDesignLibraryTemplates(goalType, industry).find(
         (t) => t.layoutType === layout && t.cardPosition === pos,
       ) ??
       ALL_TEMPLATES.find(
@@ -343,7 +372,10 @@ export function getTemplateSetsForGoal(
   industry?: string | null,
 ): { layout: TemplateLayoutType; name: string; desc: string; templates: TemplateDefinition[]; recommended: boolean }[] {
   const recommended = resolveRecommendedLayout(goalType, industry);
-  const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(goalType);
+  const visibleLibraryTemplates = getVisibleDesignLibraryTemplates(
+    goalType,
+    industry,
+  );
   // D-02: filter to DEMO_VISIBLE_LAYOUTS before mapping — keeps unbuilt
   // layouts in ALL_TEMPLATES (so code that references them still works)
   // but hides them from the customer browser.

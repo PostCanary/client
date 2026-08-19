@@ -11,18 +11,17 @@ import {
 } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import { captureEvent } from "@/composables/usePostHog";
-import {
-  visibleDesignLibraryTemplates,
-  type DesignLibraryTemplate,
-} from "@/data/templates";
+import { useIndustryTemplatePack } from "@/composables/useIndustryTemplatePack";
+import type { DesignLibraryTemplate } from "@/data/templates";
 
 type TemplateWithAsset = DesignLibraryTemplate & { pdfUrl?: string };
 
 const message = useMessage();
 const router = useRouter();
 const designs = ref<DesignLibraryEntry[]>([]);
+const { templates: packTemplates, packId } = useIndustryTemplatePack();
 const templates = computed(
-  () => visibleDesignLibraryTemplates as TemplateWithAsset[],
+  () => packTemplates.value as TemplateWithAsset[],
 );
 const selected = ref<DesignLibraryEntry | null>(null);
 const loading = ref(true);
@@ -172,7 +171,11 @@ function downloadPdf(template: TemplateWithAsset) {
         <h2>Postcard templates</h2>
         <p>Start a new campaign from an approved launch template.</p>
       </header>
-      <div class="template-grid">
+      <div
+        class="template-grid"
+        data-testid="industry-template-pack"
+        :data-pack-id="packId"
+      >
         <article
           v-for="template in templates"
           :key="template.id"
