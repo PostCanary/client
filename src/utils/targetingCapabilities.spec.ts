@@ -29,9 +29,14 @@ const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
   incomeMin: false,
   loresMin: false,
   loresMax: false,
+  kidsMin: false,
+  kidsMax: false,
   squareFootageMin: false,
   squareFootageMax: false,
   hasEmail: false,
+  dogOwner: false,
+  catOwner: false,
+  otherPetOwner: false,
 }
 
 const LEADGEN_FILTERS: TargetingFilterSupport = {
@@ -46,9 +51,14 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  kidsMin: true,
+  kidsMax: true,
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 const HVAC_FILTERS: TargetingFilters = {
@@ -63,9 +73,14 @@ const HVAC_FILTERS: TargetingFilters = {
   incomeMin: 'C',
   loresMin: 2,
   loresMax: 10,
+  kidsMin: null,
+  kidsMax: null,
   squareFootageMin: null,
   squareFootageMax: null,
   hasEmail: null,
+  dogOwner: null,
+  catOwner: null,
+  otherPetOwner: null,
 }
 
 describe('targeting capability filter normalization', () => {
@@ -84,9 +99,14 @@ describe('targeting capability filter normalization', () => {
       incomeMin: null,
       loresMin: null,
       loresMax: null,
+      kidsMin: null,
+      kidsMax: null,
       squareFootageMin: null,
       squareFootageMax: null,
       hasEmail: null,
+      dogOwner: null,
+      catOwner: null,
+      otherPetOwner: null,
     })
     expect(HVAC_FILTERS.homeowner).toBe('homeowner')
     expect(targetingFiltersAreSupported(normalized, DATA_RETRIEVER_FILTERS)).toBe(true)
@@ -248,6 +268,8 @@ describe('targeting count query identity (POS-269)', () => {
     incomeMin: null,
     loresMin: null,
     loresMax: null,
+    kidsMin: null,
+    kidsMax: null,
     squareFootageMin: null,
     squareFootageMax: null,
     hasEmail: null,

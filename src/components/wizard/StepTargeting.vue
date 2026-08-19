@@ -84,7 +84,7 @@ const zips = ref<string[]>(
 // POS-213: fresh drafts start with NO filters. Geo-only targeting routes
 // to Data Retriever Consumer (real household counts); the old S69 HVAC
 // demo stack is now an explicit opt-in chip in the Filter tab (see
-// HOME_SERVICES_PRESET in @/utils/targetingPresets). Stored draft filters
+// industry packs in @/utils/targetingPresets). Stored draft filters
 // always win — only genuinely untouched drafts see the empty default.
 const EMPTY_FILTERS: TargetingFilters = {
   homeowner: null,
@@ -98,9 +98,14 @@ const EMPTY_FILTERS: TargetingFilters = {
   incomeMin: null,
   loresMin: null,
   loresMax: null,
+  kidsMin: null,
+  kidsMax: null,
   squareFootageMin: null,
   squareFootageMax: null,
   hasEmail: null,
+  dogOwner: null,
+  catOwner: null,
+  otherPetOwner: null,
   businessSicCodes: [],
   businessNaicsCodes: [],
   businessJobTitles: [],
@@ -341,7 +346,7 @@ function commitEddmTargeting() {
     areas: [],
     method: 'draw',
     audienceType: 'consumer',
-    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null },
+    filters: { homeowner: null, homeValueMin: null, homeValueMax: null, yearBuiltMin: null, yearBuiltMax: null, propertyTypes: [], hhageMin: null, hhageMax: null, incomeMin: null, loresMin: null, loresMax: null, kidsMin: null, kidsMax: null, squareFootageMin: null, squareFootageMax: null, hasEmail: null, dogOwner: null, catOwner: null, otherPetOwner: null },
     jobsUsed: null,
     jobRadiusMiles: null,
     excludePastCustomers: false,
@@ -655,6 +660,7 @@ onBeforeUnmount(() => {
       :exclude-mailed-within-days="excludeMailedWithinDays"
       :do-not-mail-count="doNotMailCount"
       :has-non-zip-areas="hasNonZipAreas"
+      :industry="brandKitStore.brandKit?.industry ?? null"
       :excluded-past-customers="excludedPast"
       :excluded-recently-mailed="excludedRecent"
       :excluded-do-not-mail="doNotMailCount"

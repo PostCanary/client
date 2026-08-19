@@ -16,6 +16,8 @@ const EMPTY: TargetingFilters = {
   incomeMin: null,
   loresMin: null,
   loresMax: null,
+  kidsMin: null,
+  kidsMax: null,
   squareFootageMin: null,
   squareFootageMax: null,
   hasEmail: null,
@@ -43,9 +45,14 @@ const FULL_SUPPORT: TargetingFilterSupport = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  kidsMin: true,
+  kidsMax: true,
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 describe('countActiveConsumerFilters', () => {

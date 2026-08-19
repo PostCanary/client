@@ -4,7 +4,12 @@ import type { TargetingFilters } from "@/types/campaign";
 import type { TargetingFilterKey, TargetingFilterSupport, TargetingProvider } from "@/types/targeting";
 import { unsupportedTargetingFilterLabels } from "@/utils/targetingCapabilities";
 import { countActiveConsumerFilters } from "@/utils/targetingFilterCount";
-import { applyHomeServicesPreset } from "@/utils/targetingPresets";
+import {
+  applyIndustryFilterPreset,
+  industryFilterPresetAvailable,
+  industryFilterPresetChipLabel,
+  resolveIndustryFilterPreset,
+} from "@/utils/targetingPresets";
 import ExclusionToggles from "./ExclusionToggles.vue";
 
 const filters = defineModel<TargetingFilters>("filters", {
@@ -21,6 +26,8 @@ const props = defineProps<{
   hasNonZipAreas?: boolean;
   filterCapabilities: TargetingFilterSupport | null;
   targetingProvider: TargetingProvider | null;
+  /** Brand-kit / setup industry slug — drives suggested filter pack (POS-293). */
+  industry?: string | null;
 }>();
 
 const PROPERTY_TYPES = [
@@ -41,26 +48,32 @@ const unavailableFilters = computed(() =>
     : [],
 );
 const providerLabel = computed(() =>
-  props.targetingProvider === "planner"
-    ? "The Melissa audience planner"
-    : props.targetingProvider === "data_retriever"
-      ? "Data Retriever"
-      : "The current audience provider",
+  props.targetingProvider === "planner" || props.targetingProvider === "data_retriever"
+    ? "Audience targeting"
+    : "The current audience provider",
 );
 
 const activeFilterCount = computed(() =>
   countActiveConsumerFilters(filters.value, props.filterCapabilities),
 );
 
-// POS-213: the old always-on HVAC demo defaults, now applied only on click.
-// Only offered when the provider supports property filters — applying them
-// on a Data Retriever-only capability set would strip every field anyway.
-const presetAvailable = computed(
-  () => supportsFilter("homeValueMin") && supportsFilter("propertyTypes"),
+// POS-293: industry LeadGen/property pack — opt-in chip only (never auto-apply).
+const industryPreset = computed(() =>
+  resolveIndustryFilterPreset(props.industry),
+);
+const presetChipLabel = computed(() =>
+  industryFilterPresetChipLabel(industryPreset.value),
+);
+const presetAvailable = computed(() =>
+  industryFilterPresetAvailable(props.filterCapabilities),
 );
 
 function applyPreset() {
-  filters.value = applyHomeServicesPreset(filters.value);
+  filters.value = applyIndustryFilterPreset(
+    filters.value,
+    props.industry,
+    props.filterCapabilities,
+  );
 }
 
 function togglePropertyType(pt: string) {
@@ -102,12 +115,12 @@ defineExpose({ activeFilterCount });
     <button
       v-if="presetAvailable"
       type="button"
-      data-testid="home-services-preset"
+      data-testid="industry-filter-preset"
       class="inline-flex items-center gap-1.5 rounded-full border border-[#47bfa9]/40 bg-[#47bfa9]/5 px-3 py-1.5 text-xs font-medium text-[#2b8d7c] hover:bg-[#47bfa9]/10 transition-colors"
       @click="applyPreset"
     >
       <span aria-hidden="true">+</span>
-      Suggested filters for home services
+      {{ presetChipLabel }}
     </button>
 
     <div
@@ -231,6 +244,52 @@ defineExpose({ activeFilterCount });
           <option value="15">&gt; 14 years</option>
         </select>
       </div>
+    </div>
+
+    <!-- Children in household (provider kids, brackets 1-8). Only show when
+         LeadGen Property entitles the filter — never as a disabled stub. -->
+    <div
+      v-if="supportsFilter('kidsMin') && supportsFilter('kidsMax')"
+      data-testid="filter-kids"
+    >
+      <label class="text-xs text-gray-500">Children in household</label>
+      <div class="flex gap-2 mt-1">
+        <select
+          data-testid="filter-control-kids-min"
+          :value="filters.kidsMin ?? ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.kidsMin = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Min children</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8+</option>
+        </select>
+        <select
+          data-testid="filter-control-kids-max"
+          :value="filters.kidsMax ?? ''"
+          class="w-1/2 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          @change="filters.kidsMax = (($event.target as HTMLSelectElement).value ? parseInt(($event.target as HTMLSelectElement).value) : null)"
+        >
+          <option value="">Max children</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8+</option>
+        </select>
+      </div>
+      <p class="mt-1 text-[11px] text-gray-400">
+        Min 1 means households with children. A max with no min still requires at least one child.
+      </p>
     </div>
 
     <!-- Household income (minimum bracket) -->
@@ -357,6 +416,63 @@ defineExpose({ activeFilterCount });
         <option value="false">No email</option>
       </select>
       <p class="mt-1 text-[11px] text-gray-400">This narrows the mailing audience. Email addresses are not sent to the print partner.</p>
+    </div>
+
+    <!-- Melissa Consumer pet Inds — separate filters; combining them ANDs. -->
+    <div
+      v-if="supportsFilter('dogOwner') || supportsFilter('catOwner') || supportsFilter('otherPetOwner')"
+      data-testid="filter-pet-owners"
+      class="space-y-2"
+    >
+      <label class="text-xs text-gray-500">Pet ownership</label>
+      <div class="space-y-1.5">
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('dogOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-dog-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('dogOwner')"
+            :checked="filters.dogOwner === true"
+            @change="filters.dogOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Dog owner
+        </label>
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('catOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-cat-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('catOwner')"
+            :checked="filters.catOwner === true"
+            @change="filters.catOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Cat owner
+        </label>
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('otherPetOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-other-pet-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('otherPetOwner')"
+            :checked="filters.otherPetOwner === true"
+            @change="filters.otherPetOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Other pet owner
+        </label>
+      </div>
+      <p class="text-[11px] text-gray-400">
+        Each box is a separate Melissa filter. Selecting more than one requires all selected types (AND), not any pet.
+        Cannot combine with property filters.
+      </p>
     </div>
 
     <!-- Property type -->

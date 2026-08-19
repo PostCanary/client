@@ -257,6 +257,8 @@ export function useHouseholdCount() {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
+        kidsMin: null,
+        kidsMax: null,
       }, undefined, true, lastSuppressionPolicy, lastAudienceType)
       totalCount.value = result.totalCount ?? result.filteredCount
       totalFetchedForAreas = areasKey

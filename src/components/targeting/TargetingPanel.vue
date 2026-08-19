@@ -27,6 +27,8 @@ const props = defineProps<{
   excludeMailedWithinDays: number | null;
   doNotMailCount: number;
   hasNonZipAreas?: boolean;
+  /** Brand-kit industry slug for suggested filter packs (POS-293). */
+  industry?: string | null;
   excludedPastCustomers: number;
   excludedRecentlyMailed: number;
   excludedDoNotMail: number;
@@ -149,6 +151,7 @@ const tabs = [
         :filters="filters"
         :filter-capabilities="filterCapabilities"
         :targeting-provider="targetingProvider"
+        :industry="industry"
         :exclude-past-customers="excludePastCustomers"
         :exclude-mailed-within-days="excludeMailedWithinDays"
         :do-not-mail-count="doNotMailCount"

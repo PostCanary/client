@@ -167,6 +167,8 @@ draftStore.draft = emptyDraft
           incomeMin: null,
           loresMin: null,
           loresMax: null,
+        kidsMin: null,
+        kidsMax: null,
         },
         jobsUsed: null,
         jobRadiusMiles: null,

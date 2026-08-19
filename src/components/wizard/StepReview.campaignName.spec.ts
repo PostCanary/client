@@ -201,6 +201,8 @@ async function mountReview(draft: CampaignDraft) {
         incomeMin: true,
         loresMin: true,
         loresMax: true,
+      kidsMin: true,
+      kidsMax: true,
       },
       purchase_records_max_qty: 13,
     },

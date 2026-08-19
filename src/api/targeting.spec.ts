@@ -22,9 +22,14 @@ const DATA_RETRIEVER_CAPABILITIES = {
     incomeMin: false,
     loresMin: false,
     loresMax: false,
+    kidsMin: false,
+    kidsMax: false,
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
+    dogOwner: false,
+    catOwner: false,
+    otherPetOwner: false,
   },
 } as const
 
@@ -43,9 +48,14 @@ const LEADGEN_CAPABILITIES = {
     incomeMin: true,
     loresMin: true,
     loresMax: true,
+    kidsMin: true,
+    kidsMax: true,
     squareFootageMin: false,
     squareFootageMax: false,
     hasEmail: false,
+    dogOwner: false,
+    catOwner: false,
+    otherPetOwner: false,
   },
 } as const
 
@@ -68,6 +78,22 @@ describe('targeting API contracts', () => {
 
     await expect(getTargetingCapabilities()).resolves.toEqual(LEADGEN_CAPABILITIES)
     expect(get).toHaveBeenCalledWith('/api/targeting/capabilities', undefined)
+  })
+
+  it('defaults missing kids capabilities to false (older API / client-first preview)', async () => {
+    const { kidsMin: _a, kidsMax: _b, ...filtersWithoutKids } = DATA_RETRIEVER_CAPABILITIES.filters
+    vi.mocked(get).mockResolvedValue({
+      ...DATA_RETRIEVER_CAPABILITIES,
+      filters: filtersWithoutKids,
+    })
+
+    await expect(getTargetingCapabilities()).resolves.toMatchObject({
+      filters: {
+        ...filtersWithoutKids,
+        kidsMin: false,
+        kidsMax: false,
+      },
+    })
   })
 
   it('threads purchase_records_max_qty from the capabilities response', async () => {
@@ -187,6 +213,8 @@ describe('targeting API contracts', () => {
         incomeMin: null,
         loresMin: null,
         loresMax: null,
+        kidsMin: null,
+        kidsMax: null,
       }),
     ).resolves.toMatchObject({ source: 'melissa_data_retriever' })
   })
@@ -211,6 +239,8 @@ describe('targeting API contracts', () => {
       incomeMin: null,
       loresMin: null,
       loresMax: null,
+      kidsMin: null,
+      kidsMax: null,
       businessSicCodes: ['171102'],
     }
 

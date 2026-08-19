@@ -54,9 +54,14 @@ const CONSUMER_SUPPORT = {
   incomeMin: true,
   loresMin: true,
   loresMax: true,
+  kidsMin: true,
+  kidsMax: true,
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 vi.mock('@/composables/useTargetingCapabilities', () => ({
@@ -108,6 +113,8 @@ function activeConsumerValues(f: TargetingFilters): unknown[] {
     f.incomeMin,
     f.loresMin,
     f.loresMax,
+    f.kidsMin,
+    f.kidsMax,
     f.squareFootageMin ?? null,
     f.squareFootageMax ?? null,
     f.hasEmail ?? null,

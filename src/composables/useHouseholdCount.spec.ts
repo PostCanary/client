@@ -30,6 +30,8 @@ const NO_FILTERS: TargetingFilters = {
   incomeMin: null,
   loresMin: null,
   loresMax: null,
+  kidsMin: null,
+  kidsMax: null,
 }
 
 function circle(radiusMiles: number): TargetingArea {

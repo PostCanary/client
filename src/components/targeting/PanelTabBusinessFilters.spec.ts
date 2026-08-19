@@ -16,6 +16,8 @@ const FILTERS: TargetingFilters = {
   incomeMin: null,
   loresMin: null,
   loresMax: null,
+  kidsMin: null,
+  kidsMax: null,
   businessSicCodes: ['171102'],
   businessNaicsCodes: [],
   businessJobTitles: ['Owner'],
