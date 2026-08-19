@@ -74,6 +74,22 @@ describe('targeting API contracts', () => {
     expect(get).toHaveBeenCalledWith('/api/targeting/capabilities', undefined)
   })
 
+  it('defaults missing kids capabilities to false (older API / client-first preview)', async () => {
+    const { kidsMin: _a, kidsMax: _b, ...filtersWithoutKids } = DATA_RETRIEVER_CAPABILITIES.filters
+    vi.mocked(get).mockResolvedValue({
+      ...DATA_RETRIEVER_CAPABILITIES,
+      filters: filtersWithoutKids,
+    })
+
+    await expect(getTargetingCapabilities()).resolves.toMatchObject({
+      filters: {
+        ...filtersWithoutKids,
+        kidsMin: false,
+        kidsMax: false,
+      },
+    })
+  })
+
   it('threads purchase_records_max_qty from the capabilities response', async () => {
     const purchaseRecordsMaxQty = 17
     vi.mocked(get).mockResolvedValue({

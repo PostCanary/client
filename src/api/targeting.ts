@@ -41,6 +41,8 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
   if (!response.filters || typeof response.filters !== 'object') return null
 
   const filters = response.filters as Record<string, unknown>
+  // Hard-required on every provider. Do not put rollout keys here — a
+  // preview client against an older API must still parse capabilities.
   const legacyKeys = [
     'homeowner',
     'homeValueMin',
@@ -53,10 +55,16 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     'incomeMin',
     'loresMin',
     'loresMax',
-    'kidsMin',
-    'kidsMax',
   ]
   if (!legacyKeys.every((key) => typeof filters[key] === 'boolean')) return null
+  // Present-or-default keys. Absent → false (fail closed for that filter only).
+  const optionalFilterKeys = [
+    'squareFootageMin',
+    'squareFootageMax',
+    'hasEmail',
+    'kidsMin',
+    'kidsMax',
+  ] as const
   const plannerKeys = ['squareFootageMin', 'squareFootageMax', 'hasEmail']
   if (
     response.provider === 'planner' &&
@@ -118,15 +126,30 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     response.purchase_records_max_qty,
   )
 
+  const normalizedFilters = {
+    ...(filters as unknown as TargetingCapabilities['filters']),
+  }
+  for (const key of optionalFilterKeys) {
+    normalizedFilters[key] = filters[key] === true
+  }
+
   const parsed: TargetingCapabilities = {
     ...(response as unknown as TargetingCapabilities),
-    filters: {
-      ...(filters as unknown as TargetingCapabilities['filters']),
-      squareFootageMin: filters.squareFootageMin === true,
-      squareFootageMax: filters.squareFootageMax === true,
-      hasEmail: filters.hasEmail === true,
-    },
+    filters: normalizedFilters,
   }
+
+  if (parsed.audienceFilters?.consumer) {
+    const source = parsed.audienceFilters.consumer
+    const consumer = { ...source }
+    for (const key of optionalFilterKeys) {
+      consumer[key] = (source as unknown as Record<string, unknown>)[key] === true
+    }
+    parsed.audienceFilters = {
+      ...parsed.audienceFilters,
+      consumer,
+    }
+  }
+
   if (purchaseRecordsMaxQty != null) {
     parsed.purchase_records_max_qty = purchaseRecordsMaxQty
   } else {
