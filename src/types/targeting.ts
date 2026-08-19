@@ -26,6 +26,9 @@ export interface TargetingFilterSupport {
   squareFootageMin?: boolean
   squareFootageMax?: boolean
   hasEmail?: boolean
+  dogOwner?: boolean
+  catOwner?: boolean
+  otherPetOwner?: boolean
 }
 
 export type TargetingFilterKey = keyof TargetingFilterSupport

@@ -64,6 +64,9 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     'hasEmail',
     'kidsMin',
     'kidsMax',
+    'dogOwner',
+    'catOwner',
+    'otherPetOwner',
   ] as const
   const plannerKeys = ['squareFootageMin', 'squareFootageMax', 'hasEmail']
   if (

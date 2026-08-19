@@ -418,6 +418,63 @@ defineExpose({ activeFilterCount });
       <p class="mt-1 text-[11px] text-gray-400">This narrows the mailing audience. Email addresses are not sent to the print partner.</p>
     </div>
 
+    <!-- Melissa Consumer pet Inds — separate filters; combining them ANDs. -->
+    <div
+      v-if="supportsFilter('dogOwner') || supportsFilter('catOwner') || supportsFilter('otherPetOwner')"
+      data-testid="filter-pet-owners"
+      class="space-y-2"
+    >
+      <label class="text-xs text-gray-500">Pet ownership</label>
+      <div class="space-y-1.5">
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('dogOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-dog-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('dogOwner')"
+            :checked="filters.dogOwner === true"
+            @change="filters.dogOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Dog owner
+        </label>
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('catOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-cat-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('catOwner')"
+            :checked="filters.catOwner === true"
+            @change="filters.catOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Cat owner
+        </label>
+        <label
+          class="flex items-center gap-2 text-sm"
+          :class="supportsFilter('otherPetOwner') ? 'cursor-pointer' : 'opacity-60'"
+        >
+          <input
+            data-testid="filter-control-other-pet-owner"
+            type="checkbox"
+            class="accent-[#47bfa9]"
+            :disabled="!supportsFilter('otherPetOwner')"
+            :checked="filters.otherPetOwner === true"
+            @change="filters.otherPetOwner = ($event.target as HTMLInputElement).checked ? true : null"
+          />
+          Other pet owner
+        </label>
+      </div>
+      <p class="text-[11px] text-gray-400">
+        Each box is a separate Melissa filter. Selecting more than one requires all selected types (AND), not any pet.
+        Cannot combine with property filters.
+      </p>
+    </div>
+
     <!-- Property type -->
     <div data-testid="filter-property-types" :class="{ 'opacity-60': !supportsFilter('propertyTypes') }">
       <label class="text-xs text-gray-500">Property type</label>

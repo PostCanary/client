@@ -25,6 +25,9 @@ export const TARGETING_FILTER_LABELS: Record<TargetingFilterKey, string> = {
   squareFootageMin: 'home square footage',
   squareFootageMax: 'home square footage',
   hasEmail: 'email availability',
+  dogOwner: 'dog owner',
+  catOwner: 'cat owner',
+  otherPetOwner: 'other pet owner',
 }
 
 export function normalizeTargetingFilters(
@@ -51,6 +54,9 @@ export function normalizeTargetingFilters(
     squareFootageMin: support.squareFootageMin ? (filters.squareFootageMin ?? null) : null,
     squareFootageMax: support.squareFootageMax ? (filters.squareFootageMax ?? null) : null,
     hasEmail: support.hasEmail ? (filters.hasEmail ?? null) : null,
+    dogOwner: support.dogOwner ? (filters.dogOwner ?? null) : null,
+    catOwner: support.catOwner ? (filters.catOwner ?? null) : null,
+    otherPetOwner: support.otherPetOwner ? (filters.otherPetOwner ?? null) : null,
   }
 }
 
@@ -114,6 +120,9 @@ const CONSUMER_FILTER_KEYS: Array<keyof TargetingFilters> = [
   'kidsMin',
   'kidsMax',
   'hasEmail',
+  'dogOwner',
+  'catOwner',
+  'otherPetOwner',
 ]
 
 const BUSINESS_FILTER_KEYS: Array<keyof TargetingFilters> = [
@@ -129,7 +138,10 @@ const BUSINESS_FILTER_KEYS: Array<keyof TargetingFilters> = [
   'businessWorkAtHome',
 ]
 
-function isActivePlanValue(value: unknown): boolean {
+function isActivePlanValue(key: keyof TargetingFilters, value: unknown): boolean {
+  if (key === 'dogOwner' || key === 'catOwner' || key === 'otherPetOwner') {
+    return value === true
+  }
   return value !== null && value !== undefined && value !== '' && value !== 'all' &&
     (!Array.isArray(value) || value.length > 0)
 }
@@ -141,7 +153,7 @@ function activeFilterSnapshot(
   const keys = audienceType === 'business' ? BUSINESS_FILTER_KEYS : CONSUMER_FILTER_KEYS
   return Object.fromEntries(
     keys
-      .filter((key) => isActivePlanValue(filters[key]))
+      .filter((key) => isActivePlanValue(key, filters[key]))
       .map((key) => [key, filters[key]]),
   )
 }
@@ -268,15 +280,23 @@ export function targetingFiltersAreSupported(
     && (support.squareFootageMin || (filters.squareFootageMin ?? null) === null)
     && (support.squareFootageMax || (filters.squareFootageMax ?? null) === null)
     && (support.hasEmail || (filters.hasEmail ?? null) === null)
+    && (support.dogOwner || (filters.dogOwner ?? null) === null)
+    && (support.catOwner || (filters.catOwner ?? null) === null)
+    && (support.otherPetOwner || (filters.otherPetOwner ?? null) === null)
   )
 }
 
 export function unsupportedTargetingFilterLabels(
   support: TargetingFilterSupport,
 ): string[] {
-  // Kids controls are hidden until entitled (same idea as future Consumer Inds).
-  // Do not list them in the amber notice — that reads as a broken feature.
-  const hiddenWhenUnsupported: TargetingFilterKey[] = ['kidsMin', 'kidsMax']
+  // Hide until entitled. Do not list them in the amber notice — that reads as a broken feature.
+  const hiddenWhenUnsupported: TargetingFilterKey[] = [
+    'kidsMin',
+    'kidsMax',
+    'dogOwner',
+    'catOwner',
+    'otherPetOwner',
+  ]
   return [...new Set((Object.keys(TARGETING_FILTER_LABELS) as TargetingFilterKey[])
     .filter((key) => !support[key])
     .filter((key) => !hiddenWhenUnsupported.includes(key))

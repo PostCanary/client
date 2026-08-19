@@ -95,6 +95,9 @@ const CONSUMER_SUPPORT = {
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 const BUSINESS_SUPPORT = {
