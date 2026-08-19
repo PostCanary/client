@@ -57,7 +57,7 @@ const activeFilterCount = computed(() => countActiveBusinessFilters(filters.valu
         placeholder="171102, 176109"
         @change="filters.businessSicCodes = parseList(($event.target as HTMLInputElement).value)"
       />
-      <p class="mt-1 text-[11px] text-gray-400">Use comma-separated Melissa SIC codes.</p>
+      <p class="mt-1 text-[11px] text-gray-400">Use comma-separated SIC codes.</p>
     </div>
 
     <div>
@@ -94,7 +94,7 @@ const activeFilterCount = computed(() => countActiveBusinessFilters(filters.valu
         placeholder="C-Level"
         @change="filters.businessManagementLevels = parseList(($event.target as HTMLInputElement).value)"
       />
-      <p class="mt-1 text-[11px] text-gray-400">Use comma-separated Melissa management-level labels.</p>
+      <p class="mt-1 text-[11px] text-gray-400">Use comma-separated management-level labels.</p>
     </div>
 
     <div>

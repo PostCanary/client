@@ -48,11 +48,9 @@ const unavailableFilters = computed(() =>
     : [],
 );
 const providerLabel = computed(() =>
-  props.targetingProvider === "planner"
-    ? "The Melissa audience planner"
-    : props.targetingProvider === "data_retriever"
-      ? "Data Retriever"
-      : "The current audience provider",
+  props.targetingProvider === "planner" || props.targetingProvider === "data_retriever"
+    ? "Audience targeting"
+    : "The current audience provider",
 );
 
 const activeFilterCount = computed(() =>
@@ -290,7 +288,7 @@ defineExpose({ activeFilterCount });
         </select>
       </div>
       <p class="mt-1 text-[11px] text-gray-400">
-        Melissa has no “zero children” code. Min 1 = has children. A max with no min still requires at least one child.
+        Min 1 means households with children. A max with no min still requires at least one child.
       </p>
     </div>
 

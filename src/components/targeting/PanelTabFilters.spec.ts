@@ -95,7 +95,7 @@ describe('PanelTabFilters provider capabilities', () => {
   it('disables unsupported Data Retriever controls and leaves household age enabled', () => {
     const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
 
-    expect(wrapper.get('[data-testid="targeting-capability-notice"]').text()).toContain('Data Retriever')
+    expect(wrapper.get('[data-testid="targeting-capability-notice"]').text()).toContain('Audience targeting')
     expect(wrapper.get('[data-testid="filter-control-homeowner"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="filter-control-home-value-min"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="filter-control-home-value-max"]').attributes('disabled')).toBeDefined()
