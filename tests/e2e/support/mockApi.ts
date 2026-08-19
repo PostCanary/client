@@ -250,9 +250,8 @@ export function createMockAppState(): MockAppState {
       org_name: ORG_ALPHA.name,
       org_role: ORG_ALPHA.role,
       orgs: [clone(ORG_ALPHA), clone(ORG_BETA)],
-      // S85 feature gate: e2e org is approved so designs/send flows stay
-      // reachable. The gated (feature-less) experience is covered by
-      // feature-gate.spec.ts, which overrides this.
+      // Default e2e org includes "postcards" (server GA). Specs that
+      // omit the flag (feature-gate.spec.ts) still reach designs/send.
       features: ["postcards"],
     },
     profile: {

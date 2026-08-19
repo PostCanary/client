@@ -92,11 +92,11 @@ test.describe("AI scrape triggers — wizard entry (Fix B/D)", () => {
     state.brandKit.scrape_status = "pending";
     await installMockApi(page, state);
 
-    // Gated orgs are redirected off /app/send entirely (existing S85 gate,
-    // feature-gate.spec.ts) — which alone guarantees zero scan calls since
-    // the wizard never mounts. Confirm both halves hold together.
+    // POS-292: missing "postcards" no longer redirects off /app/send.
+    // Scrape helpers still skip until /auth/me includes the flag (server GA).
     await page.goto("/app/send");
-    await expect(page).toHaveURL(/postcards-early-access/);
+    await expect(page).toHaveURL(/\/app\/send/);
+    await expect(page.getByTestId("choose-target-area")).toBeVisible();
     expect(state.requestLog.scrapeRequests).toHaveLength(0);
     await expect(page.getByTestId("scrape-progress-strip")).toHaveCount(0);
   });

@@ -1,8 +1,8 @@
 // tests/e2e/home-quad-cards.spec.ts
 // Dashboard Flow v2 (POS-145): the app homepage is four entry-point cards —
 // Send Postcards / Browse Designs / Campaigns / Analytics — with wireframe
-// copy, each navigating to its section. Postcard-flow cards honor the S85
-// feature gate; Analytics is always available.
+// copy, each navigating to its section. POS-292: all four cards show for
+// every signed-in org, including orgs whose /auth/me omits "postcards".
 import { expect, test, type Page } from "@playwright/test";
 import { createMockAppState, installMockApi } from "./support/mockApi";
 
@@ -46,15 +46,15 @@ test.describe("home quad cards — approved org", () => {
   });
 });
 
-test.describe("home quad cards — ungated org", () => {
-  test("hides postcard-flow cards, keeps Analytics", async ({ page }) => {
+test.describe("home quad cards — org without features.postcards", () => {
+  test("still shows all four postcard-flow cards", async ({ page }) => {
     await bootWithFeatures(page, []);
     await page.goto("/app/home");
     const grid = page.locator(".home-grid");
+    await expect(grid.getByText("Send Postcards")).toBeVisible();
+    await expect(grid.getByText("Browse Designs")).toBeVisible();
+    await expect(grid.getByText("Campaigns")).toBeVisible();
     await expect(grid.getByText("Analytics")).toBeVisible();
-    await expect(grid.locator(".home-card")).toHaveCount(1);
-    await expect(grid.getByText("Send Postcards")).toHaveCount(0);
-    await expect(grid.getByText("Browse Designs")).toHaveCount(0);
-    await expect(grid.getByText("Track your previous mail sends")).toHaveCount(0);
+    await expect(grid.locator(".home-card")).toHaveCount(4);
   });
 });

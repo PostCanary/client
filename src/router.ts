@@ -34,7 +34,6 @@ const appQaRoutes: RouteRecordRaw[] = qaRoutesEnabled
         meta: {
           title: "Step Review Approval Flow (dev)",
           navbarTitle: "Review",
-          requiresFeature: "postcards",
           skipFirstRunGuard: true,
         },
       },
@@ -258,35 +257,27 @@ const routes: RouteRecordRaw[] = [
         path: "campaigns",
         name: "Campaigns",
         component: () => import("@/pages/Campaigns.vue"),
-        meta: { title: `Campaigns • ${BRAND.name}`, navbarTitle: "Campaigns", requiresFeature: "postcards" },
+        meta: { title: `Campaigns • ${BRAND.name}`, navbarTitle: "Campaigns" },
       },
       {
         path: "campaigns/:id",
         name: "CampaignDetail",
         component: () => import("@/pages/CampaignDetail.vue"),
-        meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign", requiresFeature: "postcards" },
+        meta: { title: `Campaign Detail • ${BRAND.name}`, navbarTitle: "Campaign" },
       },
       ...appQaRoutes,
       {
         path: "print-jobs/:id",
         name: "PrintJobStatus",
         component: () => import("@/pages/PrintJobStatus.vue"),
-        meta: { title: `Print Job • ${BRAND.name}`, navbarTitle: "Print Job", requiresFeature: "postcards" },
-      },
-
-      // Postcards early access — where feature-gated routes land (S85)
-      {
-        path: "postcards-early-access",
-        name: "PostcardsEarlyAccess",
-        component: () => import("@/pages/PostcardsEarlyAccess.vue"),
-        meta: { title: `Postcards Early Access • ${BRAND.name}`, navbarTitle: "Postcards" },
+        meta: { title: `Print Job • ${BRAND.name}`, navbarTitle: "Print Job" },
       },
       // Designs page
       {
         path: "designs",
         name: "Designs",
         component: () => import("@/pages/Designs.vue"),
-        meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs", requiresFeature: "postcards" },
+        meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
       },
       // /app -> /app/home
       { path: "", redirect: { name: "AppHome" } },
@@ -304,7 +295,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/SttLStep2Route.vue"),
       },
     ],
-    meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
+    meta: { title: `Send to a List • ${BRAND.name}` },
   },
   {
     path: "/app/send/:draftId/sttl-step-2",
@@ -316,7 +307,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/SttLStep2Route.vue"),
       },
     ],
-    meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
+    meta: { title: `Send to a List • ${BRAND.name}` },
   },
   {
     path: "/app/send/sttl-step-2",
@@ -328,7 +319,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/SttLStep2Route.vue"),
       },
     ],
-    meta: { title: `Send to a List • ${BRAND.name}`, requiresFeature: "postcards" },
+    meta: { title: `Send to a List • ${BRAND.name}` },
   },
 
   // ── Campaign wizard (uses WizardLayout, NOT MainLayout — no sidebar) ──
@@ -342,7 +333,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/SendWizard.vue"),
       },
     ],
-    meta: { title: `Send Postcards • ${BRAND.name}`, requiresFeature: "postcards" },
+    meta: { title: `Send Postcards • ${BRAND.name}` },
   },
 
   // ── Invitation accept page (marketing layout, no auth check initially) ──
@@ -471,17 +462,6 @@ router.beforeEach(async (to, _from, next) => {
     if (!needed) {
       return next({ name: "AppHome" });
     }
-  }
-
-  // Feature gate (S85): postcards surfaces are early-access. Checked via
-  // to.matched so a parent route's meta (e.g. the SendWizard layout)
-  // covers its children. Server enforces the same gate with 403s — this
-  // guard is UX, not security.
-  const requiredFeature = to.matched
-    .map((r) => r.meta?.requiresFeature as string | undefined)
-    .find(Boolean);
-  if (requiredFeature && !auth.features.includes(requiredFeature)) {
-    return next({ name: "PostcardsEarlyAccess" });
   }
 
   return next();
