@@ -37,6 +37,9 @@ const DATA_RETRIEVER_FILTERS: TargetingFilterSupport = {
   squareFootageMin: false,
   squareFootageMax: false,
   hasEmail: false,
+  dogOwner: false,
+  catOwner: false,
+  otherPetOwner: false,
 }
 
 const LEADGEN_FILTERS: TargetingFilterSupport = {
@@ -54,6 +57,9 @@ const LEADGEN_FILTERS: TargetingFilterSupport = {
   squareFootageMin: true,
   squareFootageMax: true,
   hasEmail: true,
+  dogOwner: true,
+  catOwner: true,
+  otherPetOwner: true,
 }
 
 function mountFilters(
@@ -118,6 +124,21 @@ describe('PanelTabFilters provider capabilities', () => {
     expect(wrapper.get('[data-testid="filter-control-square-footage-min"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.get('[data-testid="filter-control-email-availability"]').text()).toContain('Has email')
     expect(wrapper.text()).toContain('Email addresses are not sent to the print partner')
+  })
+
+  it('exposes three separate pet-owner checkboxes for Consumer Inds', () => {
+    const wrapper = mountFilters(LEADGEN_FILTERS, 'planner')
+
+    expect(wrapper.find('[data-testid="filter-pet-owners"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="filter-control-dog-owner"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="filter-control-cat-owner"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="filter-control-other-pet-owner"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.text()).toContain('Selecting more than one requires all selected types')
+  })
+
+  it('hides pet ownership when Consumer Inds are unsupported', () => {
+    const wrapper = mountFilters(DATA_RETRIEVER_FILTERS, 'data_retriever')
+    expect(wrapper.find('[data-testid="filter-pet-owners"]').exists()).toBe(false)
   })
 })
 

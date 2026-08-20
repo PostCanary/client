@@ -7,6 +7,9 @@ describe('emptyTargetingFilters', () => {
     const b = emptyTargetingFilters()
 
     expect(a.homeowner).toBeNull()
+    expect(a.dogOwner).toBeNull()
+    expect(a.catOwner).toBeNull()
+    expect(a.otherPetOwner).toBeNull()
     expect(a.propertyTypes).toEqual([])
     expect(a.businessSicCodes).toEqual([])
     expect(a.businessNaicsCodes).toEqual([])

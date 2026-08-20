@@ -55,7 +55,14 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
     'loresMax',
   ]
   if (!legacyKeys.every((key) => typeof filters[key] === 'boolean')) return null
-  const plannerKeys = ['squareFootageMin', 'squareFootageMax', 'hasEmail']
+  const plannerKeys = [
+    'squareFootageMin',
+    'squareFootageMax',
+    'hasEmail',
+    'dogOwner',
+    'catOwner',
+    'otherPetOwner',
+  ]
   if (
     response.provider === 'planner' &&
     !plannerKeys.every((key) => typeof filters[key] === 'boolean')
@@ -123,6 +130,9 @@ function parseTargetingCapabilities(value: unknown): TargetingCapabilities | nul
       squareFootageMin: filters.squareFootageMin === true,
       squareFootageMax: filters.squareFootageMax === true,
       hasEmail: filters.hasEmail === true,
+      dogOwner: filters.dogOwner === true,
+      catOwner: filters.catOwner === true,
+      otherPetOwner: filters.otherPetOwner === true,
     },
   }
   if (purchaseRecordsMaxQty != null) {
