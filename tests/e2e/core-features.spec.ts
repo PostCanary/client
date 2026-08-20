@@ -26,7 +26,7 @@ test("dashboard upload-and-match flow hydrates KPI results", async ({ page }) =>
 
   await page.goto("/dashboard");
 
-  await expect(page.getByText("Upload Files")).toBeVisible();
+  await expect(page.getByText("Refresh proof")).toBeVisible();
 
   await page.locator("#mailCsv").setInputFiles(
     csvFile("mail.csv", "Address,City,State,ZIP,Sent Date\n123 Peachtree St,Atlanta,GA,30309,2024-02-01\n"),
@@ -42,7 +42,7 @@ test("dashboard upload-and-match flow hydrates KPI results", async ({ page }) =>
   await page.getByRole("button", { name: "No thanks" }).click();
 
   await expect.poll(() => state.requestLog.normalizeCalls.length).toBe(2);
-  await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("42");
+  await expect(page.locator(".match-strip .pipe-node", { has: page.getByText("Matched jobs") })).toContainText("42");
   await expect(page.locator(".adv-stat", { has: page.getByText("Total Mail") })).toContainText("2,500");
 });
 
