@@ -120,31 +120,37 @@ function recClass(rec: string): string {
 
 <style scoped>
 .table-card {
-  background: var(--app-card-bg, #fff);
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
   border-radius: var(--app-card-radius, 2px);
-  box-shadow: var(--app-card-shadow);
+  box-shadow: none;
   overflow: hidden;
 }
 
 .table-navy-header {
-  background: var(--app-navy, #0b2d50);
-  padding: 14px 20px;
+  background: var(--pc-navy, #1c2430);
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 3px solid var(--pc-canary, #facf41);
 }
 
 .table-navy-header h3 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
   font-size: 15px;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: #fff;
 }
 
 .table-sub {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
   font-weight: 400;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 /* Desktop Table */
@@ -154,58 +160,59 @@ function recClass(rec: string): string {
   text-align: left;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--app-text-muted, #94a3b8);
+  letter-spacing: 0.06em;
+  color: var(--app-text-muted, #8a97a8);
   padding: 12px 14px;
-  border-bottom: 2px solid var(--app-bg, #f0f2f5);
-  font-weight: 600;
-  background: var(--app-card-bg, #fff);
+  border-bottom: 1px solid var(--app-border, #c8d0db);
+  font-weight: 700;
+  background: #fff;
 }
 
 .resp-table tbody td {
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  border-bottom: 1px solid var(--app-border, #c8d0db);
   font-size: 13px;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
+  background: #fff;
 }
 
 .resp-table tbody tr:last-child td { border-bottom: none; }
 .resp-table tbody tr { transition: background 0.15s ease; }
-.resp-table tbody tr:hover { background: rgba(71, 191, 169, 0.04); }
-.resp-table td strong { color: var(--app-text, #0c2d50); font-weight: 600; }
+.resp-table tbody tr:hover td { background: rgba(250, 207, 65, 0.08); }
+.resp-table td strong { color: var(--app-text, #1c2430); font-weight: 600; }
 
-/* Strength badges */
 .strength-badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.strength-badge.strong { background: rgba(16, 185, 129, 0.1); color: #059669; }
-.strength-badge.above-avg { background: rgba(16, 185, 129, 0.06); color: #34d399; }
-.strength-badge.average { background: rgba(148, 163, 184, 0.1); color: var(--app-text-muted, #94a3b8); }
-.strength-badge.below-avg { background: rgba(245, 158, 11, 0.1); color: #d97706; }
-.strength-badge.weak { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
-.strength-badge.low-conf { background: rgba(148, 163, 184, 0.08); color: var(--app-text-muted, #94a3b8); font-style: italic; }
+.strength-badge.strong { background: rgba(250, 207, 65, 0.22); color: var(--pc-navy, #1c2430); }
+.strength-badge.above-avg { background: rgba(250, 207, 65, 0.12); color: var(--pc-navy, #1c2430); }
+.strength-badge.average { background: rgba(28, 36, 48, 0.06); color: var(--app-text-muted, #8a97a8); }
+.strength-badge.below-avg { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+.strength-badge.weak { background: #fff1f2; color: #9f1239; }
+.strength-badge.low-conf { background: rgba(28, 36, 48, 0.05); color: var(--app-text-muted, #8a97a8); font-style: italic; text-transform: none; }
 
-/* Recommendation badges */
 .badge {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.badge.increase { background: rgba(71, 191, 169, 0.1); color: var(--app-teal, var(--pc-canary, #facf41)); }
-.badge.keep { background: rgba(148, 163, 184, 0.1); color: var(--app-text-muted, #94a3b8); }
-.badge.decrease { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+.badge.increase { background: rgba(250, 207, 65, 0.22); color: var(--pc-navy, #1c2430); }
+.badge.keep { background: rgba(28, 36, 48, 0.06); color: var(--app-text-muted, #8a97a8); }
+.badge.decrease { background: #fff1f2; color: #9f1239; }
 
 .muted { color: var(--app-text-muted, #94a3b8); }
 
@@ -228,7 +235,7 @@ function recClass(rec: string): string {
 
 .mobile-card-header strong {
   font-size: 14px;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
 }
 
 .mobile-card-stats {

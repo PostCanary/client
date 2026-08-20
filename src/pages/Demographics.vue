@@ -87,11 +87,11 @@ const showPreviewUpgradeBanner = computed(() => {
   />
 
   <div class="demo-page" :class="{ 'demo-blurred': shouldBlur }">
-    <!-- Page Header + View Toggle -->
     <div class="page-header">
       <div>
-        <h1>Demographic Insights</h1>
-        <p>See who's converting from your mailers and where to focus your budget</p>
+        <p class="page-eyebrow">Audience</p>
+        <h1>Who Converted</h1>
+        <p>See who converted from your mailers and where to focus budget.</p>
       </div>
       <DemoViewToggle v-model="view" />
     </div>
@@ -265,31 +265,43 @@ const showPreviewUpgradeBanner = computed(() => {
   user-select: none;
 }
 
-/* Page Header */
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.page-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pc-canary-deep, #e5b820);
 }
 
 .page-header h1 {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: clamp(26px, 3.5vw, 32px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
 }
 
-.page-header p {
-  color: var(--app-text-secondary, #64748b);
-  font-size: 13px;
-  margin-top: 2px;
+.page-header p:not(.page-eyebrow) {
+  color: var(--app-text-secondary, #5a6b7d);
+  font-size: 14px;
+  margin: 6px 0 0;
   font-weight: 400;
 }
 
-/* Chart Grid */
 .chart-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 14px;
   transition: opacity 0.3s ease;
 }
 
@@ -302,31 +314,31 @@ const showPreviewUpgradeBanner = computed(() => {
   pointer-events: none;
 }
 
-/* Data Note */
 .data-note {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 14px 20px;
-  background: var(--app-card-bg, #fff);
+  padding: 14px 18px;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
   border-radius: var(--app-card-radius, 2px);
-  box-shadow: var(--app-card-shadow);
+  box-shadow: none;
 }
 
 .data-note svg {
   flex-shrink: 0;
   margin-top: 1px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .data-note p {
+  margin: 0;
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   line-height: 1.5;
   font-weight: 400;
 }
 
-/* Loading State */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -338,14 +350,14 @@ const showPreviewUpgradeBanner = computed(() => {
 
 .loading-state p {
   font-size: 14px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--app-border, #e2e8f0);
-  border-top-color: var(--app-teal, var(--pc-canary, #facf41));
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--app-border, #c8d0db);
+  border-top-color: var(--pc-canary, #facf41);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -366,27 +378,30 @@ const showPreviewUpgradeBanner = computed(() => {
 }
 
 .error-hint {
-  color: var(--app-text-muted, #94a3b8) !important;
+  color: var(--app-text-muted, #8a97a8) !important;
   margin-top: 8px;
   font-size: 13px !important;
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
-  padding: 80px 20px;
+  padding: 48px 20px;
+  border: 1px solid var(--app-border, #c8d0db);
+  background: var(--app-card-bg, #f7f9fb);
+  border-radius: var(--app-card-radius, 2px);
 }
 
 .empty-state h2 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
-  margin-bottom: 8px;
+  color: var(--app-text, #1c2430);
+  margin: 0 0 8px;
 }
 
 .empty-state p {
+  margin: 0;
   font-size: 14px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 /* Responsive */

@@ -16,12 +16,15 @@ const options: { label: string; value: DemographicView }[] = [
 </script>
 
 <template>
-  <div class="toggle-group">
+  <div class="toggle-group" role="tablist" aria-label="Demographic view">
     <button
       v-for="opt in options"
       :key="opt.value"
+      type="button"
+      role="tab"
       class="toggle-btn"
       :class="{ active: props.modelValue === opt.value }"
+      :aria-selected="props.modelValue === opt.value"
       @click="emit('update:modelValue', opt.value)"
     >
       {{ opt.label }}
@@ -32,32 +35,38 @@ const options: { label: string; value: DemographicView }[] = [
 <style scoped>
 .toggle-group {
   display: inline-flex;
-  background: var(--app-card-bg, #fff);
+  gap: 0;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
   border-radius: var(--app-card-radius, 2px);
-  padding: 4px;
-  box-shadow: var(--app-card-shadow);
+  padding: 3px;
+  box-shadow: none;
 }
 
 .toggle-btn {
-  padding: 8px 18px;
+  padding: 8px 16px;
   border: none;
   background: none;
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
   border-radius: var(--app-card-radius, 2px);
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   font-family: inherit;
-  transition: all 0.18s ease-out;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .toggle-btn.active {
-  background: var(--app-navy, #0b2d50);
+  background: var(--app-navy, #1c2430);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(11, 45, 80, 0.25);
 }
 
 .toggle-btn:not(.active):hover {
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text, #1c2430);
+}
+
+.toggle-btn:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #1c2430);
+  outline-offset: 2px;
 }
 </style>

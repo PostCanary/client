@@ -72,7 +72,7 @@ test("demographics supports audience toggles", async ({ page }) => {
 
   await page.goto("/demographics");
 
-  await expect(page.getByRole("heading", { name: "Demographic Insights" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Who Converted" })).toBeVisible();
   await expect(
     page.getByText("Matched-household demographics are based on 42 verified conversions from the latest run."),
   ).toBeVisible();

@@ -41,7 +41,7 @@ defineProps<{
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 20px;
+  padding: 14px 18px;
   border-radius: var(--app-card-radius, 2px);
   font-size: 13px;
   line-height: 1.5;
@@ -53,23 +53,23 @@ defineProps<{
 }
 
 .confidence-banner.insufficient {
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #b91c1c;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
 }
 
 .confidence-banner.insufficient svg {
-  color: #ef4444;
+  color: #e11d48;
 }
 
 .confidence-banner.low {
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  color: #92400e;
+  background: rgba(250, 207, 65, 0.18);
+  border: 1px solid rgba(250, 207, 65, 0.45);
+  color: var(--pc-navy, #1c2430);
 }
 
 .confidence-banner.low svg {
-  color: #f59e0b;
+  color: var(--pc-navy, #1c2430);
 }
 
 .banner-text strong {
@@ -79,7 +79,7 @@ defineProps<{
 @media (max-width: 640px) {
   .confidence-banner {
     font-size: 14px;
-    padding: 12px 16px;
+    padding: 12px 14px;
   }
 }
 </style>

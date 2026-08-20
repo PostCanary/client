@@ -11,3 +11,4 @@ ts	phase	decision	why	evidence	result
 2026-08-20T22:10:24Z	gate	Expanded token gate roots to match lever scope plus white-on-canary patterns	Audit found gate blind spots vs restyle coverage	scripts/check-match-strip-tokens.cjs	fixed
 2026-08-20T22:10:24Z	open	DoNotMail still uses Naive UI theme tokens the lever cannot rewrite	Regex lever only hits Tailwind and CSS literals	src/pages/DoNotMail.vue	open
 2026-08-20T22:10:24Z	open	No browser or screenshot proof for Match Strip pages yet	Static gate is not visual proof	preview	open
+2026-08-20T22:15:00Z	demographics	Restyled Demographics to Match Strip ink charts and canary KPI panels	User flagged page as weak; fixed Chart.js CSS-var color bug too	src/pages/Demographics.vue	landed

@@ -12,9 +12,10 @@ const props = defineProps<{
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let chart: Chart<"doughnut", number[], string> | null = null;
 
-const navy = "#0b2d50";
-const teal = "var(--pc-canary, #facf41)";
-const slate = "#94a3b8";
+const NAVY = "#1c2430";
+const CANARY = "#facf41";
+const SLATE = "#8a97a8";
+const LIGHT = "#c8d0db";
 
 function buildChart() {
   if (!canvasEl.value) return;
@@ -26,10 +27,10 @@ function buildChart() {
       datasets: [
         {
           data: props.values,
-          backgroundColor: [navy, teal, slate, "#cbd5e1"],
+          backgroundColor: [CANARY, "rgba(250, 207, 65, 0.45)", SLATE, LIGHT],
           borderWidth: 0,
-          spacing: 3,
-          borderRadius: 4,
+          spacing: 2,
+          borderRadius: 2,
         },
       ],
     },
@@ -43,21 +44,21 @@ function buildChart() {
           labels: {
             padding: 16,
             usePointStyle: true,
-            pointStyle: "rectRounded",
-            font: { size: 13 },
-            color: "#475569",
+            pointStyle: "rect",
+            font: { size: 13, family: "Instrument Sans, sans-serif" },
+            color: "rgba(255,255,255,0.75)",
           },
         },
         tooltip: {
-          backgroundColor: navy,
+          backgroundColor: NAVY,
           titleColor: "#fff",
           bodyColor: "rgba(255,255,255,0.85)",
-          borderColor: teal,
+          borderColor: CANARY,
           borderWidth: 1,
-          cornerRadius: 8,
+          cornerRadius: 2,
           padding: 12,
-          titleFont: { size: 13, weight: "bold" },
-          bodyFont: { size: 12 },
+          titleFont: { size: 13, weight: "bold", family: "Instrument Sans, sans-serif" },
+          bodyFont: { size: 12, family: "Instrument Sans, sans-serif" },
         },
       },
     },
@@ -93,16 +94,39 @@ watch(() => [props.labels, props.values], rebuild);
 
 <style scoped>
 .chart-card {
-  background: var(--app-card-bg, #fff);
+  background: var(--pc-navy, #1c2430);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--app-card-radius, 2px);
-  box-shadow: var(--app-card-shadow);
+  box-shadow: none;
   overflow: hidden;
 }
 
-.chart-card-header { padding: 16px 20px 0; }
-.chart-card-header h3 { font-size: 15px; font-weight: 600; color: var(--app-text, #0c2d50); }
-.chart-sub { font-size: 12px; color: var(--app-text-muted, #94a3b8); margin-top: 2px; }
+.chart-card-header {
+  padding: 16px 20px 0;
+}
 
-.chart-card-body { padding: 8px 16px 16px; }
-.chart-card-body canvas { width: 100% !important; height: 260px !important; }
+.chart-card-header h3 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.chart-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+
+.chart-card-body {
+  padding: 8px 16px 16px;
+}
+
+.chart-card-body canvas {
+  width: 100% !important;
+  height: 260px !important;
+}
 </style>
