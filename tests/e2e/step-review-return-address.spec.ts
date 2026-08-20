@@ -48,6 +48,11 @@ async function installMocks(
       org_id: "22222222-2222-4222-8222-222222222222",
       org_name: "Alpha HVAC",
       org_role: "owner",
+      permissions: {
+        can_purchase: true,
+        manage_org: true,
+        manage_billing: true,
+      },
       orgs: [
         {
           id: "22222222-2222-4222-8222-222222222222",

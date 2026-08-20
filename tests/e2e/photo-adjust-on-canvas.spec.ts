@@ -33,6 +33,11 @@ async function mockHarness(page: import("@playwright/test").Page) {
         org_id: "org-alpha",
         org_name: "Alpha Roofing",
         org_role: "owner",
+        permissions: {
+          can_purchase: true,
+          manage_org: true,
+          manage_billing: true,
+        },
         orgs: [{ id: "org-alpha", name: "Alpha Roofing", slug: "alpha-roofing", role: "owner" }],
         billing: { is_subscribed: true, needs_paywall: false, plan_code: "INSIGHT" },
       }),

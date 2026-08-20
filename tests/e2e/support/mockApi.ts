@@ -103,12 +103,22 @@ function activeOrg(state: MockAppState): JsonMap {
   return state.orgs.find((org) => org.id === activeOrgId(state)) ?? state.orgs[0];
 }
 
+function permissionsForRole(role: unknown) {
+  const canManage = role === "owner" || role === "admin";
+  return {
+    can_purchase: canManage,
+    manage_org: canManage,
+    manage_billing: canManage,
+  };
+}
+
 function syncSession(state: MockAppState) {
   if (!state.authMe.authenticated) return;
   const current = activeOrg(state);
   state.authMe.org_id = current.id;
   state.authMe.org_name = current.name;
   state.authMe.org_role = current.role;
+  state.authMe.permissions = permissionsForRole(current.role);
   state.authMe.orgs = state.orgs.map(({ id, name, slug, role }) => ({
     id,
     name,
@@ -249,6 +259,7 @@ export function createMockAppState(): MockAppState {
       org_id: ORG_ALPHA.id,
       org_name: ORG_ALPHA.name,
       org_role: ORG_ALPHA.role,
+      permissions: permissionsForRole(ORG_ALPHA.role),
       orgs: [clone(ORG_ALPHA), clone(ORG_BETA)],
       // Default e2e org includes "postcards" (server GA). Specs that
       // omit the flag (feature-gate.spec.ts) still reach designs/send.
