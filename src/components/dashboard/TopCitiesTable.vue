@@ -40,7 +40,7 @@
         :key="i"
         class="row"
       >
-        <span class="cell city">{{ r.city }}</span>
+        <span class="cell city">{{ titleCase(r.city) }}</span>
         <span class="cell total">{{ r.total.toLocaleString() }}</span>
         <span class="cell rate">
           <span class="rate-bar">
@@ -64,6 +64,14 @@ const props = defineProps<{ rows?: Row[] }>();
 
 const sortKey = ref<SortKey | null>(null);
 const sortDirection = ref<"asc" | "desc">("desc");
+
+function titleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
 
 const rowsToShow = computed<Row[]>(() => props.rows ?? []);
 
