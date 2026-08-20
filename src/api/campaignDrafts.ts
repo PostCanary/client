@@ -42,6 +42,7 @@ function toDraft(r: DraftResponse): CampaignDraft {
   return {
     id: r.id,
     orgId: r.org_id,
+    createdBy: r.created_by,
     currentStep: (r.current_step || 1) as 1 | 2 | 3 | 4,
     completedSteps: (r.completed_steps || []) as (1 | 2 | 3 | 4)[],
     needsReviewSteps: (r.needs_review_steps || []) as (1 | 2 | 3 | 4)[],

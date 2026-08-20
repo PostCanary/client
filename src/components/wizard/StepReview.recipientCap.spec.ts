@@ -101,13 +101,16 @@ vi.mock("@/components/review/CostBreakdown.vue", () => ({
 import StepReview from "./StepReview.vue"
 import { loadTargetingCapabilities } from "@/composables/useTargetingCapabilities"
 import { purchaseCampaignRecords } from "@/api/mailCampaigns"
+import { saveDraft } from "@/api/campaignDrafts"
 import { useCampaignDraftStore } from "@/stores/useCampaignDraftStore"
+import { useAuthStore } from "@/stores/auth"
 
 function draftWithHouseholds(finalHouseholdCount: number): CampaignDraft {
   const now = "2026-08-16T00:00:00Z"
   return {
     id: "draft-1",
     orgId: "org-1",
+    createdBy: "user-1",
     currentStep: 4,
     completedSteps: [1, 2, 3],
     needsReviewSteps: [],
@@ -250,6 +253,15 @@ describe("StepReview stale over-cap draft (POS-262)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
+    useAuthStore().me = {
+      authenticated: true,
+      user_id: "user-1",
+      permissions: {
+        can_purchase: true,
+        manage_org: false,
+        manage_billing: false,
+      },
+    }
   })
 
   it("shows the cap warning and blocks Approve when a loaded draft is over the live cap", async () => {
@@ -296,5 +308,33 @@ describe("StepReview stale over-cap draft (POS-262)", () => {
     await flushPromises()
     expect(store.error).toMatch(/could not be safely confirmed/)
     expect(store.error).toMatch(/do not approve or retry/)
+  })
+
+  it("saves a complete draft without purchasing when permission is missing", async () => {
+    useAuthStore().me = {
+      authenticated: true,
+      user_id: "user-1",
+      permissions: {
+        can_purchase: false,
+        manage_org: false,
+        manage_billing: false,
+      },
+    }
+    const { wrapper, store } = await mountReview(mockedCap)
+
+    expect(wrapper.find('[data-testid="review-approve"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="review-save-for-admin"]').text()).toBe(
+      "Save for admin approval",
+    )
+    expect(
+      wrapper.get('[data-testid="review-purchase-permission-copy"]').text(),
+    ).toContain("Purchasing permission is for admin only.")
+
+    await wrapper.get('[data-testid="review-save-for-admin"]').trigger("click")
+    await flushPromises()
+
+    expect(store.draft!.completedSteps).toContain(4)
+    expect(saveDraft).toHaveBeenCalled()
+    expect(purchaseCampaignRecords).not.toHaveBeenCalled()
   })
 })

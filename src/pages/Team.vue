@@ -4,6 +4,7 @@ import { onMounted, ref, computed } from "vue";
 import { useMessage } from "naive-ui";
 import { useAuthStore } from "@/stores/auth";
 import { useOrgStore } from "@/stores/org";
+import { usePermissions } from "@/composables/usePermissions";
 
 const auth = useAuthStore();
 const orgStore = useOrgStore();
@@ -16,9 +17,10 @@ const inviteRole = ref("member");
 const inviteBusy = ref(false);
 
 const roleChangeBusy = ref<string | null>(null);
+const capabilityChangeBusy = ref<string | null>(null);
 const removeBusy = ref<string | null>(null);
 
-const isAdmin = computed(() => orgStore.isAdmin);
+const { manageOrg } = usePermissions();
 const isOwner = computed(() => orgStore.isOwner);
 const currentUserId = computed(() =>
   auth.me?.authenticated ? auth.me.user_id : null,
@@ -102,6 +104,24 @@ async function onChangeRole(userId: string, newRole: string) {
   }
 }
 
+async function onChangePurchaseCapability(userId: string, canPurchase: boolean) {
+  const orgId = auth.orgId;
+  if (!orgId || !manageOrg.value) return;
+
+  capabilityChangeBusy.value = userId;
+  try {
+    await orgStore.updatePurchaseCapability(orgId, userId, canPurchase);
+    message.success(
+      canPurchase ? "Purchasing permission granted." : "Purchasing permission removed.",
+    );
+  } catch (err: any) {
+    console.error("[Team] updatePurchaseCapability failed", err);
+    message.error(err?.message || "Failed to update purchasing permission.");
+  } finally {
+    capabilityChangeBusy.value = null;
+  }
+}
+
 async function onRemoveMember(userId: string, memberName: string) {
   const orgId = auth.orgId;
   if (!orgId) return;
@@ -143,7 +163,7 @@ function displayRole(role: string): string {
         </div>
 
         <button
-          v-if="isAdmin"
+          v-if="manageOrg"
           type="button"
           class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer"
           @click="openInviteModal"
@@ -193,6 +213,39 @@ function displayRole(role: string): string {
               </div>
 
               <div class="flex items-center gap-3">
+                <label
+                  v-if="manageOrg"
+                  class="flex items-center gap-2 text-xs text-slate-600"
+                  :title="
+                    member.role === 'owner' || member.role === 'admin'
+                      ? 'Purchasing permission is included with this role.'
+                      : 'Allow this member to complete campaign purchases.'
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    class="accent-[#47bfa9]"
+                    :checked="
+                      member.role === 'owner' ||
+                      member.role === 'admin' ||
+                      member.can_purchase
+                    "
+                    :disabled="
+                      member.role === 'owner' ||
+                      member.role === 'admin' ||
+                      capabilityChangeBusy === member.user_id
+                    "
+                    :aria-label="`Purchasing permission for ${member.full_name || member.email}`"
+                    @change="
+                      onChangePurchaseCapability(
+                        member.user_id,
+                        ($event.target as HTMLInputElement).checked,
+                      )
+                    "
+                  />
+                  Purchase
+                </label>
+
                 <!-- Role display / selector -->
                 <template
                   v-if="
@@ -214,6 +267,7 @@ function displayRole(role: string): string {
                   >
                     <option value="admin">Admin</option>
                     <option value="member">Member</option>
+                    <option value="viewer">Viewer</option>
                   </select>
                 </template>
                 <span
@@ -233,7 +287,7 @@ function displayRole(role: string): string {
                 <!-- Remove button -->
                 <button
                   v-if="
-                    isAdmin &&
+                    manageOrg &&
                     member.user_id !== currentUserId &&
                     member.role !== 'owner'
                   "
@@ -364,10 +418,11 @@ function displayRole(role: string): string {
                 >
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
+                  <option value="viewer">Viewer</option>
                 </select>
                 <p class="mt-1 text-xs text-slate-400">
                   Admins can manage team members and settings. Members have
-                  standard access.
+                  standard access. Viewers have read-only access.
                 </p>
               </div>
 

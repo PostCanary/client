@@ -136,6 +136,7 @@ draftStore.draft = emptyDraft
   : ({
       id: "11111111-1111-4111-8111-111111111111",
       orgId: "22222222-2222-4222-8222-222222222222",
+      createdBy: null,
       currentStep: 4,
       completedSteps: [1, 2, 3],
       needsReviewSteps: [],

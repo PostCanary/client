@@ -188,6 +188,7 @@ describe("POS-166 — Step 3 persistence boundary", () => {
     vi.mocked(loadDraft).mockResolvedValue({
       id: "legacy-draft",
       orgId: "org-1",
+      createdBy: null,
       currentStep: 2,
       completedSteps: [1, 2],
       needsReviewSteps: [],

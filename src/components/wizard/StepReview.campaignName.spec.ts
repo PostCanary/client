@@ -179,6 +179,7 @@ function listDraft(overrides: Partial<CampaignDraft> = {}): CampaignDraft {
     updatedAt: now,
     schemaVersion: 1,
     ...overrides,
+    createdBy: overrides.createdBy ?? null,
   };
 }
 

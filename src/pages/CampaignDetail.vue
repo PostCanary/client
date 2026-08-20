@@ -12,7 +12,7 @@ import {
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 import { extractOverRecipientCapError, formatOverRecipientCapPurchaseError } from "@/utils/recipientCap";
-import { useAuthStore } from "@/stores/auth";
+import { usePermissions } from "@/composables/usePermissions";
 import {
   campaignDesignPreviewUrl,
   campaignOrderNeedsAttention,
@@ -22,7 +22,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const auth = useAuthStore();
+const { canPurchase } = usePermissions();
 const brandKitStore = useBrandKitStore();
 const campaignId = route.params.id as string;
 const { campaign, loading, error, fetch, pause, resume } =
@@ -68,7 +68,7 @@ const isUploadedDesign = computed(
 const showRetryPrintSubmission = computed(
   () =>
     !retryRecoveryBlocked.value &&
-    (auth.orgRole === "owner" || auth.orgRole === "admin") &&
+    canPurchase.value &&
     campaign.value?.order?.recovery_action === "retry_purchase" &&
     hasDesign.value,
 );
@@ -271,7 +271,7 @@ onMounted(() => {
       class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
       data-testid="campaign-recovery-retry"
     >
-      Fulfillment did not start. An organization owner or admin can safely
+      Fulfillment did not start. A user with purchasing permission can safely
       retry this same order; the server will reuse its existing authority.
     </div>
     <div
