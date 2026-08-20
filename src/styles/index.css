@@ -101,16 +101,21 @@
   --app-on-teal: var(--app-navy);
   --app-focus-ring: var(--app-navy);
 
-  /* ── Sidebar + Top Bar ──────────────────────────────────── */
+  /* ── Sidebar + Top Bar (Match Strip shell) ─────────────── */
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
   --topbar-height: 56px;
-  --sidebar-border: var(--app-border);
-  --sidebar-section-text: var(--app-text-muted);
-  --sidebar-item-hover: #edf1f5;
-  --sidebar-item-active-bg: rgba(250, 207, 65, 0.16);
-  --sidebar-item-active-text: var(--pc-navy);
+  --sidebar-bg: var(--pc-navy);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-section-text: #6d7a8a;
+  --sidebar-item-text: #aeb8c4;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-item-active-bg: rgba(250, 207, 65, 0.14);
+  --sidebar-item-active-text: var(--pc-canary);
+  --sidebar-icon: #8a96a8;
+  --sidebar-icon-active: var(--pc-canary);
   --sidebar-transition: 0.2s ease-out;
+  --topbar-bg: var(--app-card-bg);
 }
 
 /* Give the page a little reserved space for the scrollbar */
