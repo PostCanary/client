@@ -353,122 +353,87 @@ function onReplayTour() {
 </script>
 
 <template>
-  <div class="min-h-dvh px-4 py-6 sm:px-6">
-    <div class="mx-auto w-full max-w-3xl space-y-6">
-      <header
-        class="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4"
-      >
+  <div class="settings-page">
+    <div class="settings-inner">
+      <header class="settings-header">
         <div>
-          <h1 class="text-2xl font-semibold text-slate-900">
-            Account settings
-          </h1>
-          <p class="text-sm text-slate-500">
-            Update your profile, CRM/mail settings, and billing preferences.
+          <p class="settings-eyebrow">Account</p>
+          <h1>Settings</h1>
+          <p class="settings-lede">
+            Profile, mailing address, organization, and billing.
           </p>
         </div>
 
         <span
           v-if="profileBadgeReady"
-          class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium"
+          class="profile-badge"
           data-testid="settings-profile-badge"
-          :class="
-            isAccountComplete
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-              : 'border-amber-300 bg-amber-50 text-amber-700'
-          "
+          :class="isAccountComplete ? 'is-complete' : 'is-incomplete'"
         >
-          <span
-            class="h-2 w-2 rounded-full"
-            :class="isAccountComplete ? 'bg-emerald-500' : 'bg-amber-500'"
-          />
+          <span class="profile-badge-dot" />
           <span>
             {{ isAccountComplete ? "Profile complete" : "Profile incomplete" }}
           </span>
         </span>
       </header>
 
-      <form
-        class="w-full space-y-6 rounded-[2px] border border-slate-200 bg-white p-4 sm:p-6"
-        @submit.prevent="onSubmit"
-      >
-        <fieldset :disabled="loading || saving" class="space-y-4">
-          <div>
-            <label
-              for="settings-full-name"
-              class="block text-sm font-medium text-slate-700"
-            >
-              Full name
-            </label>
+      <form class="settings-panel" @submit.prevent="onSubmit">
+        <div class="panel-head">
+          <h2>Profile</h2>
+          <p>Identity and tools used with your mail program.</p>
+        </div>
+
+        <fieldset :disabled="loading || saving" class="field-stack">
+          <div class="field">
+            <label for="settings-full-name">Full name</label>
             <input
               id="settings-full-name"
               v-model="form.full_name"
               type="text"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="name"
             />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700">
-              Email
-            </label>
+          <div class="field">
+            <label>Email</label>
             <input
               :value="profile?.email || ''"
               type="email"
-              class="mt-1 block w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500"
               disabled
             />
           </div>
 
-          <div>
-            <label
-              for="settings-business-name"
-              class="block text-sm font-medium text-slate-700"
-            >
-              Business name
-            </label>
+          <div class="field">
+            <label for="settings-business-name">Business name</label>
             <input
               id="settings-business-name"
               v-model="bizName"
               type="text"
               placeholder="Your business name"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="organization"
             />
-            <p class="mt-1 text-xs text-slate-500">
-              Prints on every card. A website scan never overwrites this
-              once it's set.
+            <p class="field-hint">
+              Prints on every card. A website scan never overwrites this once
+              it's set.
             </p>
           </div>
 
-          <div>
-            <label
-              for="settings-website"
-              class="block text-sm font-medium text-slate-700"
-            >
-              Website
-            </label>
+          <div class="field">
+            <label for="settings-website">Website</label>
             <input
               id="settings-website"
               v-model="form.website_url"
               type="text"
               placeholder="example.com"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="url"
             />
-            <p class="mt-1 text-xs text-slate-500">
-              Used to build your brand kit — changing it rescans your
-              website.
+            <p class="field-hint">
+              Used to build your brand kit — changing it rescans your website.
             </p>
           </div>
 
-          <div>
-            <label
-              for="settings-industry"
-              class="block text-sm font-medium text-slate-700"
-            >
-              Industry
-            </label>
+          <div class="field">
+            <label for="settings-industry">Industry</label>
             <IndustryPicker
               id="settings-industry"
               v-model="form.industry"
@@ -476,47 +441,39 @@ function onReplayTour() {
             />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700">
-              CRM
-            </label>
+          <div class="field">
+            <label>CRM</label>
             <input
               v-model="form.crm"
               type="text"
               placeholder="ServiceTitan, HubSpot…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
             />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-700">
-              Mail provider
-            </label>
+          <div class="field">
+            <label>Mail provider</label>
             <input
               v-model="form.mail_provider"
               type="text"
               placeholder="Lob, USPS EDDM, in-house…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
             />
           </div>
         </fieldset>
 
-        <p v-if="error" class="text-sm text-red-600">
-          {{ error }}
-        </p>
+        <p v-if="error" class="msg-error">{{ error }}</p>
         <p
           v-if="brandKitError"
-          class="text-sm text-amber-600"
+          class="msg-warn"
           data-testid="settings-brand-kit-error"
         >
           {{ brandKitError }}
         </p>
 
-        <div class="flex items-center justify-end gap-3">
-          <span v-if="saving" class="text-xs text-slate-500">Saving…</span>
+        <div class="panel-actions">
+          <span v-if="saving" class="muted">Saving…</span>
           <button
             type="submit"
-            class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            class="btn-primary"
             :disabled="saving || loading"
           >
             Save changes
@@ -524,332 +481,237 @@ function onReplayTour() {
         </div>
       </form>
 
-      <section
-        v-if="auth.orgId"
-        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
-      >
-        <div class="space-y-4">
-          <div>
-            <h2 class="text-sm font-semibold text-slate-900">Organization</h2>
-            <p class="mt-1 text-xs text-slate-500">
-              Manage your organization settings and team.
-            </p>
-          </div>
+      <section v-if="auth.orgId" class="settings-panel">
+        <div class="panel-head">
+          <h2>Organization</h2>
+          <p>Manage your organization settings and team.</p>
+        </div>
 
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-[200px]">
-              <label
-                for="settings-org-name"
-                class="block text-sm font-medium text-slate-700"
-              >
-                Organization name
-              </label>
-              <input
-                id="settings-org-name"
-                v-model="orgName"
-                type="text"
-                :disabled="!manageOrg || orgNameSaving"
-                class="mt-1 block w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                :class="
-                  manageOrg
-                    ? 'border-slate-300 focus:border-[var(--pc-navy,#1c2430)] focus:ring-[var(--pc-navy,#1c2430)]'
-                    : 'border-slate-200 bg-slate-50 text-slate-500'
-                "
-              />
-            </div>
-            <button
-              v-if="manageOrg"
-              type="button"
-              class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              :disabled="orgNameSaving"
-              @click="onSaveOrgName"
-            >
-              {{ orgNameSaving ? "Saving..." : "Save" }}
-            </button>
+        <div class="org-row">
+          <div class="field grow">
+            <label for="settings-org-name">Organization name</label>
+            <input
+              id="settings-org-name"
+              v-model="orgName"
+              type="text"
+              :disabled="!manageOrg || orgNameSaving"
+              :class="{ 'is-readonly': !manageOrg }"
+            />
           </div>
+          <button
+            v-if="manageOrg"
+            type="button"
+            class="btn-primary"
+            :disabled="orgNameSaving"
+            @click="onSaveOrgName"
+          >
+            {{ orgNameSaving ? "Saving..." : "Save" }}
+          </button>
+        </div>
 
-          <div class="flex items-center justify-between pt-1">
-            <p class="text-xs text-slate-500">
-              Manage team members, roles, and invitations.
-            </p>
-            <button
-              type="button"
-              class="inline-flex items-center rounded-[2px] bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
-              @click="router.push('/team')"
-            >
-              Manage team
-            </button>
-          </div>
+        <div class="panel-split">
+          <p class="muted">Manage team members, roles, and invitations.</p>
+          <button
+            type="button"
+            class="btn-secondary"
+            @click="router.push('/team')"
+          >
+            Manage team
+          </button>
         </div>
       </section>
 
       <section
         v-if="auth.orgId"
-        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
+        class="settings-panel"
         data-testid="settings-return-address"
       >
-        <div class="space-y-4">
-          <div>
-            <h2 class="text-sm font-semibold text-slate-900">
-              Business mailing address
-            </h2>
-            <p class="mt-1 text-xs text-slate-500">
-              Required return address printed on every postcard. Campaigns can
-              override this at review time.
-            </p>
-          </div>
-
-          <fieldset
-            :disabled="returnAddressLoading || returnAddressSaving || !canWriteReturnAddress"
-            class="space-y-3"
-          >
-            <div>
-              <label
-                for="settings-return-name"
-                class="block text-sm font-medium text-slate-700"
-              >
-                Name
-                <span class="font-normal text-slate-400">(optional)</span>
-              </label>
-              <input
-                id="settings-return-name"
-                v-model="returnAddressForm.name"
-                type="text"
-                autocomplete="organization"
-                data-testid="settings-return-name"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-              />
-            </div>
-
-            <div>
-              <label
-                for="settings-return-address"
-                class="block text-sm font-medium text-slate-700"
-              >
-                Street address
-              </label>
-              <input
-                id="settings-return-address"
-                v-model="returnAddressForm.address"
-                type="text"
-                autocomplete="address-line1"
-                data-testid="settings-return-address"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-              />
-            </div>
-
-            <div>
-              <label
-                for="settings-return-address2"
-                class="block text-sm font-medium text-slate-700"
-              >
-                Apt/Suite
-                <span class="font-normal text-slate-400">(optional)</span>
-              </label>
-              <input
-                id="settings-return-address2"
-                v-model="returnAddressForm.address2"
-                type="text"
-                autocomplete="address-line2"
-                data-testid="settings-return-address2"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-              />
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div class="sm:col-span-1">
-                <label
-                  for="settings-return-city"
-                  class="block text-sm font-medium text-slate-700"
-                >
-                  City
-                </label>
-                <input
-                  id="settings-return-city"
-                  v-model="returnAddressForm.city"
-                  type="text"
-                  autocomplete="address-level2"
-                  data-testid="settings-return-city"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
-              <div>
-                <label
-                  for="settings-return-state"
-                  class="block text-sm font-medium text-slate-700"
-                >
-                  State
-                </label>
-                <input
-                  id="settings-return-state"
-                  v-model="returnAddressForm.state"
-                  type="text"
-                  maxlength="2"
-                  autocomplete="address-level1"
-                  data-testid="settings-return-state"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
-              <div>
-                <label
-                  for="settings-return-zip"
-                  class="block text-sm font-medium text-slate-700"
-                >
-                  ZIP
-                </label>
-                <input
-                  id="settings-return-zip"
-                  v-model="returnAddressForm.zip"
-                  type="text"
-                  inputmode="numeric"
-                  autocomplete="postal-code"
-                  data-testid="settings-return-zip"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          <p
-            v-if="!canWriteReturnAddress"
-            class="text-xs text-slate-500"
-            data-testid="settings-return-address-role-note"
-          >
-            Only organization owners and admins can update the business mailing
-            address.
+        <div class="panel-head">
+          <h2>Business mailing address</h2>
+          <p>
+            Required return address printed on every postcard. Campaigns can
+            override this at review time.
           </p>
+        </div>
 
-          <div class="flex items-center justify-end gap-3">
-            <span
-              v-if="returnAddressLoading"
-              class="text-xs text-slate-500"
-            >
-              Loading…
-            </span>
-            <span
-              v-else-if="returnAddressSaving"
-              class="text-xs text-slate-500"
-            >
-              Saving…
-            </span>
-            <button
-              v-if="canWriteReturnAddress"
-              type="button"
-              class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              :disabled="returnAddressLoading || returnAddressSaving"
-              data-testid="settings-return-address-save"
-              @click="onSaveReturnAddress"
-            >
-              {{ returnAddressSaving ? "Saving..." : "Save address" }}
-            </button>
+        <fieldset
+          :disabled="returnAddressLoading || returnAddressSaving || !canWriteReturnAddress"
+          class="field-stack"
+        >
+          <div class="field">
+            <label for="settings-return-name">
+              Name <span class="optional">(optional)</span>
+            </label>
+            <input
+              id="settings-return-name"
+              v-model="returnAddressForm.name"
+              type="text"
+              autocomplete="organization"
+              data-testid="settings-return-name"
+            />
           </div>
+
+          <div class="field">
+            <label for="settings-return-address">Street address</label>
+            <input
+              id="settings-return-address"
+              v-model="returnAddressForm.address"
+              type="text"
+              autocomplete="address-line1"
+              data-testid="settings-return-address"
+            />
+          </div>
+
+          <div class="field">
+            <label for="settings-return-address2">
+              Apt/Suite <span class="optional">(optional)</span>
+            </label>
+            <input
+              id="settings-return-address2"
+              v-model="returnAddressForm.address2"
+              type="text"
+              autocomplete="address-line2"
+              data-testid="settings-return-address2"
+            />
+          </div>
+
+          <div class="address-grid">
+            <div class="field">
+              <label for="settings-return-city">City</label>
+              <input
+                id="settings-return-city"
+                v-model="returnAddressForm.city"
+                type="text"
+                autocomplete="address-level2"
+                data-testid="settings-return-city"
+              />
+            </div>
+            <div class="field">
+              <label for="settings-return-state">State</label>
+              <input
+                id="settings-return-state"
+                v-model="returnAddressForm.state"
+                type="text"
+                maxlength="2"
+                autocomplete="address-level1"
+                data-testid="settings-return-state"
+                class="is-upper"
+              />
+            </div>
+            <div class="field">
+              <label for="settings-return-zip">ZIP</label>
+              <input
+                id="settings-return-zip"
+                v-model="returnAddressForm.zip"
+                type="text"
+                inputmode="numeric"
+                autocomplete="postal-code"
+                data-testid="settings-return-zip"
+              />
+            </div>
+          </div>
+        </fieldset>
+
+        <p
+          v-if="!canWriteReturnAddress"
+          class="muted"
+          data-testid="settings-return-address-role-note"
+        >
+          Only organization owners and admins can update the business mailing
+          address.
+        </p>
+
+        <div class="panel-actions">
+          <span v-if="returnAddressLoading" class="muted">Loading…</span>
+          <span v-else-if="returnAddressSaving" class="muted">Saving…</span>
+          <button
+            v-if="canWriteReturnAddress"
+            type="button"
+            class="btn-primary"
+            :disabled="returnAddressLoading || returnAddressSaving"
+            data-testid="settings-return-address-save"
+            @click="onSaveReturnAddress"
+          >
+            {{ returnAddressSaving ? "Saving..." : "Save address" }}
+          </button>
         </div>
       </section>
 
-      <!-- Billing. The subscription fee is $0 and every physical postcard is
-           a pay-as-you-go line item. Rates come
-           from GET /api/billing/pricing so this can never drift from
-           checkout — never hardcode them. -->
-      <section
-        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
-        data-testid="settings-billing"
-      >
-        <div class="space-y-4">
-          <div>
-            <h2 class="text-sm font-semibold text-slate-900">Billing</h2>
-            <p class="mt-1 text-xs text-slate-500">
-              $0 subscription fee. Every physical postcard is billed
-              pay as you go when you send.
-            </p>
-          </div>
-
-          <div class="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
-            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Per postcard
-            </p>
-            <ul class="mt-2 space-y-1" data-testid="settings-rate-tiers">
-              <li
-                v-for="tier in payPerSendTiers.list"
-                :key="tier.min_cards"
-                class="flex items-baseline justify-between gap-4 text-sm"
-              >
-                <span class="text-slate-600">{{ formatTierRange(tier) }}</span>
-                <span class="font-semibold text-slate-900">
-                  {{ formatRate(tier.rate_cents) }}
-                </span>
-              </li>
-            </ul>
-            <p class="mt-2 text-xs text-slate-500">
-              One rate per campaign — the size of the whole campaign sets the
-              rate, and every postcard in it bills at that rate.
-            </p>
-          </div>
-
-          <div class="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
-            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Payment method
-            </p>
-            <p
-              class="mt-1 text-sm font-medium text-slate-900"
-              data-testid="settings-payment-method"
-            >
-              <template v-if="paymentMethodLoading">Loading…</template>
-              <template v-else-if="paymentMethod?.label">
-                {{ paymentMethod.label }}
-              </template>
-              <template v-else>No card on file</template>
-            </p>
-            <p
-              v-if="!paymentMethodLoading && !paymentMethod?.has_payment_method"
-              class="mt-1 text-xs text-slate-500"
-            >
-              A card is required before a campaign can be sent.
-            </p>
-          </div>
-
-          <p
-            v-if="!canManageBilling"
-            class="text-xs text-slate-500"
-            data-testid="settings-billing-role-note"
-          >
-            Only organization owners and admins can manage the payment method.
+      <section class="settings-panel" data-testid="settings-billing">
+        <div class="panel-head">
+          <h2>Billing</h2>
+          <p>
+            $0 subscription fee. Every physical postcard is billed pay as you
+            go when you send.
           </p>
+        </div>
 
-          <div
-            v-else
-            class="flex flex-wrap gap-3"
-            data-testid="settings-billing-actions"
+        <div class="info-card">
+          <p class="info-label">Per postcard</p>
+          <ul class="rate-list" data-testid="settings-rate-tiers">
+            <li v-for="tier in payPerSendTiers.list" :key="tier.min_cards">
+              <span>{{ formatTierRange(tier) }}</span>
+              <strong>{{ formatRate(tier.rate_cents) }}</strong>
+            </li>
+          </ul>
+          <p class="field-hint">
+            One rate per campaign — the size of the whole campaign sets the
+            rate, and every postcard in it bills at that rate.
+          </p>
+        </div>
+
+        <div class="info-card">
+          <p class="info-label">Payment method</p>
+          <p class="payment-value" data-testid="settings-payment-method">
+            <template v-if="paymentMethodLoading">Loading…</template>
+            <template v-else-if="paymentMethod?.label">
+              {{ paymentMethod.label }}
+            </template>
+            <template v-else>No card on file</template>
+          </p>
+          <p
+            v-if="!paymentMethodLoading && !paymentMethod?.has_payment_method"
+            class="field-hint"
           >
-            <button
-              type="button"
-              class="inline-flex items-center rounded-[2px] border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="billingBusy || paymentMethodLoading"
-              data-testid="settings-manage-billing"
-              @click="onManageBilling"
-            >
-              {{ paymentMethodActionLabel }}
-            </button>
-          </div>
+            A card is required before a campaign can be sent.
+          </p>
+        </div>
+
+        <p
+          v-if="!canManageBilling"
+          class="muted"
+          data-testid="settings-billing-role-note"
+        >
+          Only organization owners and admins can manage the payment method.
+        </p>
+
+        <div
+          v-else
+          class="panel-actions start"
+          data-testid="settings-billing-actions"
+        >
+          <button
+            type="button"
+            class="btn-secondary"
+            :disabled="billingBusy || paymentMethodLoading"
+            data-testid="settings-manage-billing"
+            @click="onManageBilling"
+          >
+            {{ paymentMethodActionLabel }}
+          </button>
         </div>
       </section>
 
-      <section
-        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
-      >
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-sm font-semibold text-slate-900">Guided tour</h2>
-            <p class="mt-1 text-xs text-slate-500">
+      <section class="settings-panel">
+        <div class="panel-split">
+          <div class="panel-head tight">
+            <h2>Guided tour</h2>
+            <p>
               Walk through the main features of {{ BRAND.name }} with an
               interactive step-by-step tour.
             </p>
           </div>
-
-          <button
-            type="button"
-            class="inline-flex items-center rounded-[2px] bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
-            @click="onReplayTour"
-          >
+          <button type="button" class="btn-secondary" @click="onReplayTour">
             Replay tour
           </button>
         </div>
@@ -858,4 +720,333 @@ function onReplayTour() {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.settings-page {
+  padding: 24px 16px 48px;
+}
+
+.settings-inner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--app-border, #c8d0db);
+}
+
+.settings-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pc-canary-deep, #e5b820);
+}
+
+.settings-header h1 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: clamp(26px, 3.5vw, 32px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
+}
+
+.settings-lede {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--app-text-secondary, #5a6b7d);
+}
+
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--app-card-radius, 2px);
+  border: 1px solid var(--app-border, #c8d0db);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
+  background: var(--app-card-bg, #f7f9fb);
+}
+
+.profile-badge.is-complete {
+  border-color: rgba(250, 207, 65, 0.55);
+  background: rgba(250, 207, 65, 0.16);
+}
+
+.profile-badge.is-incomplete {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.profile-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.profile-badge.is-complete .profile-badge-dot {
+  background: var(--pc-navy, #1c2430);
+}
+
+.settings-panel {
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  border-left: 3px solid var(--pc-canary, #facf41);
+  padding: 20px 22px;
+  box-shadow: none;
+}
+
+.panel-head {
+  margin-bottom: 16px;
+}
+
+.panel-head.tight {
+  margin-bottom: 0;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
+}
+
+.panel-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text-body, #3d4a5c);
+}
+
+.field .optional {
+  font-weight: 400;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.field input {
+  margin-top: 6px;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  background: #fff;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--app-text, #1c2430);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.field input:focus {
+  border-color: var(--pc-navy, #1c2430);
+  box-shadow: 0 0 0 1px var(--pc-navy, #1c2430);
+}
+
+.field input:disabled,
+.field input.is-readonly {
+  border-color: var(--app-border, #c8d0db);
+  background: #eef2f6;
+  color: var(--app-text-muted, #8a97a8);
+  box-shadow: none;
+}
+
+.field input.is-upper {
+  text-transform: uppercase;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.address-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .address-grid {
+    grid-template-columns: 1.4fr 0.7fr 0.9fr;
+  }
+}
+
+.org-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.org-row .grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.panel-actions.start {
+  justify-content: flex-start;
+}
+
+.panel-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.info-card {
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  background: #fff;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.info-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.rate-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rate-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--app-text-body, #3d4a5c);
+}
+
+.rate-list strong {
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--app-text, #1c2430);
+}
+
+.payment-value {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--app-card-radius, 2px);
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary {
+  border: none;
+  background: var(--app-btn-bg, #1c2430);
+  color: var(--app-btn-fg, #ffffff);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--app-btn-bg-hover, #2a3544);
+}
+
+.btn-secondary {
+  border: 1px solid var(--app-border, #c8d0db);
+  background: #fff;
+  color: var(--app-text, #1c2430);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--pc-navy, #1c2430);
+  background: #fff;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.msg-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #9f1239;
+}
+
+.msg-warn {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #92400e;
+}
+</style>
