@@ -88,11 +88,12 @@ function formatDateRange(dr: DataContext["date_range"]): string {
 
 <style scoped>
 .summary-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
-  padding: 24px;
-  border-left: 4px solid var(--app-teal, #47bfa9);
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
+  padding: 22px 24px;
+  border-left: 3px solid var(--pc-canary, #facf41);
 }
 
 .summary-header {
@@ -103,11 +104,11 @@ function formatDateRange(dr: DataContext["date_range"]): string {
 }
 
 .summary-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: rgba(71, 191, 169, 0.1);
-  color: var(--app-teal, #47bfa9);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--app-card-radius, 2px);
+  background: rgba(250, 207, 65, 0.16);
+  color: var(--pc-navy, #1c2430);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,21 +116,23 @@ function formatDateRange(dr: DataContext["date_range"]): string {
 }
 
 .summary-header h3 {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
   margin: 0;
 }
 
 .summary-date {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .summary-text {
   font-size: 15px;
   line-height: 1.7;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   margin: 0;
 }
 
@@ -140,9 +143,9 @@ function formatDateRange(dr: DataContext["date_range"]): string {
   gap: 6px 16px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--app-border, #e2e8f0);
+  border-top: 1px solid var(--app-border, #c8d0db);
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .data-context span {
@@ -152,7 +155,7 @@ function formatDateRange(dr: DataContext["date_range"]): string {
 .data-context span:not(:last-child)::after {
   content: "|";
   margin-left: 16px;
-  color: var(--app-border, #e2e8f0);
+  color: var(--app-border, #c8d0db);
 }
 
 /* Sufficiency banners */
@@ -161,16 +164,16 @@ function formatDateRange(dr: DataContext["date_range"]): string {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 16px;
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   margin-bottom: 12px;
   font-size: 13px;
   line-height: 1.5;
 }
 
 .sufficiency-banner.limited {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: rgba(250, 207, 65, 0.18);
+  color: var(--pc-navy, #1c2430);
+  border: 1px solid rgba(250, 207, 65, 0.45);
 }
 
 .sufficiency-banner svg {
@@ -184,8 +187,7 @@ function formatDateRange(dr: DataContext["date_range"]): string {
 
 .sufficiency-note {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   margin-bottom: 8px;
-  font-style: italic;
 }
 </style>

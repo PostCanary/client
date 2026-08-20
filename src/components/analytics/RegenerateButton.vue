@@ -60,20 +60,22 @@ const emit = defineEmits<{
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
-  border-radius: 999px;
-  border: 1px solid var(--app-border, #e2e8f0);
-  background: var(--app-card-bg, #fff);
-  color: var(--app-text-secondary, #64748b);
+  padding: 10px 16px;
+  border-radius: var(--app-card-radius, 2px);
+  border: 1px solid var(--app-border, #c8d0db);
+  background: var(--app-card-bg, #f7f9fb);
+  color: var(--app-text-secondary, #5a6b7d);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  font-family: inherit;
 }
 
 .regen-btn:hover:not(:disabled) {
-  border-color: var(--app-teal, #47bfa9);
-  color: var(--app-teal, #47bfa9);
+  border-color: var(--pc-navy, #1c2430);
+  color: var(--pc-navy, #1c2430);
+  background: #fff;
 }
 
 .regen-btn:disabled {

@@ -64,9 +64,10 @@ function priorityClass(p: string): string {
 
 <style scoped>
 .rec-panel {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -74,82 +75,88 @@ function priorityClass(p: string): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--app-border, #c8d0db);
 }
 
 .rec-panel-header h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
   margin: 0;
 }
 
 .rec-count {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .rec-list {
-  padding: 0 24px 20px;
+  padding: 14px 22px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .rec-item {
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  background: #fff;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .rec-item:hover {
-  border-color: var(--app-border-medium, #dde3ea);
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.04);
+  border-color: var(--pc-navy, #1c2430);
+  background: #fff;
 }
 
 .rec-item-main {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 12px 14px;
 }
 
 .priority-badge {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
+  padding: 2px 8px;
+  border-radius: var(--app-card-radius, 2px);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   flex-shrink: 0;
 }
 
 .priority-high {
-  background: rgba(71, 191, 169, 0.1);
-  color: var(--app-teal, #47bfa9);
+  background: rgba(250, 207, 65, 0.22);
+  color: var(--pc-navy, #1c2430);
 }
 
 .priority-medium {
-  background: rgba(148, 163, 184, 0.1);
-  color: var(--app-text-muted, #94a3b8);
+  background: rgba(28, 36, 48, 0.08);
+  color: var(--app-text-secondary, #5a6b7d);
 }
 
 .priority-low {
-  background: rgba(203, 213, 225, 0.2);
-  color: #94a3b8;
+  background: rgba(200, 208, 219, 0.45);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .rec-action {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
 }
 
 .rec-chevron {
   flex-shrink: 0;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   transition: transform 0.15s ease;
 }
 
@@ -158,12 +165,12 @@ function priorityClass(p: string): string {
 }
 
 .rec-rationale {
-  padding: 0 16px 14px;
+  padding: 0 14px 14px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--app-text-body, #475569);
-  border-top: 1px solid var(--app-border, #e2e8f0);
+  color: var(--app-text-body, #3d4a5c);
+  border-top: 1px solid var(--app-border, #c8d0db);
   padding-top: 12px;
-  margin: 0 16px;
+  margin: 0 14px;
 }
 </style>
