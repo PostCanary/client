@@ -333,27 +333,28 @@ function requestHuman() {
   bottom: 24px;
   right: 24px;
   z-index: 9999;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--app-card-radius, 2px);
   border: none;
-  background: var(--app-navy, #0b2d50);
+  background: var(--pc-navy, #1c2430);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(11, 45, 80, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  box-shadow: 0 8px 24px rgba(28, 36, 48, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .chat-fab:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 24px rgba(11, 45, 80, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(28, 36, 48, 0.4);
 }
 
 .chat-fab--open {
-  background: var(--app-teal, #47bfa9);
+  background: var(--pc-canary, #facf41);
+  color: var(--pc-navy, #1c2430);
 }
 
 /* FAB icon transition */

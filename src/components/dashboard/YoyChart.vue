@@ -335,17 +335,17 @@ function buildChart() {
         ticks: {
           callback: (_v, i) => formatTick(i as number),
           maxRotation: 0,
-          color: "#94a3b8",
-          font: { size: 12 },
+          color: "#8a96a8",
+          font: { size: 12, family: "Instrument Sans, system-ui, sans-serif" },
         },
       },
       y: {
-        grid: { color: "rgba(12,45,80,0.04)" },
+        grid: { color: "rgba(255,255,255,0.06)" },
         border: { display: false },
         ticks: {
           precision: 0,
-          color: "#94a3b8",
-          font: { size: 12 },
+          color: "#8a96a8",
+          font: { size: 12, family: "Instrument Sans, system-ui, sans-serif" },
         },
         suggestedMin: 0,
         suggestedMax: maxNow || undefined,
@@ -465,11 +465,26 @@ watch(
 
 <style scoped>
 .chart-card {
-  background: var(--app-card-bg, #f7f9fb);
-  border: 1px solid var(--app-border, #c8d0db);
+  position: relative;
+  background: var(--pc-navy, #1c2430);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--app-card-radius, 2px);
   box-shadow: none;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.chart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 50% 80% at 70% 40%,
+    rgba(250, 207, 65, 0.1),
+    transparent 70%
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
 .chart-header {
@@ -477,7 +492,7 @@ watch(
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
-  padding: 16px 20px 8px;
+  padding: 18px 20px 8px;
 }
 
 .chart-heading {
@@ -494,7 +509,7 @@ watch(
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--app-text, #1c2430);
+  color: var(--pc-canary, #facf41);
 }
 
 .chart-toggle {
@@ -505,9 +520,9 @@ watch(
 }
 
 .toggle-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  color: #aeb8c4;
 }
 
 /* Legend */
@@ -526,18 +541,18 @@ watch(
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--app-text-body, #475569);
+  color: #aeb8c4;
 }
 
 .legend-item-note {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: #6d7a8a;
 }
 
 .legend-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 1px;
   flex-shrink: 0;
 }
 
@@ -545,17 +560,21 @@ watch(
   display: inline-block;
   width: 16px;
   height: 0;
-  border-top: 2px dashed var(--app-text-muted, #94a3b8);
+  border-top: 2px dashed #6d7a8a;
 }
 
 /* Chart body */
 .chart-body {
-  padding: 4px 16px 16px;
+  padding: 4px 16px 18px;
 }
 
 .chart-canvas-wrap {
   position: relative;
-  height: 320px;
+  height: 300px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--app-card-radius, 2px);
+  padding: 8px 4px 4px;
 }
 
 :deep(.chartjs-html-tooltip) {
@@ -641,7 +660,7 @@ watch(
 .switch__track {
   position: absolute;
   inset: 0;
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.18);
   border-radius: inherit;
   transition: background 160ms ease;
 }
@@ -654,11 +673,15 @@ watch(
   transform: translateY(-50%);
   background: #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: left 160ms ease;
   pointer-events: none;
 }
 .switch.is-on .switch__track {
+  background: var(--pc-canary, #facf41);
+}
+.switch.is-on .switch__thumb {
+  left: 20px;
   background: var(--pc-navy, #1c2430);
 }
 .switch.is-on .switch__thumb {
