@@ -67,8 +67,8 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   width: 280px;
-  background: var(--app-card-bg, #ffffff);
-  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
+  background: var(--sidebar-bg, var(--pc-navy, #1c2430));
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.28);
   overflow-y: auto;
 }
 

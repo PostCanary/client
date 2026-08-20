@@ -256,12 +256,11 @@ function onToggleClick() {
   align-items: center;
   gap: 12px;
   height: var(--topbar-height, 56px);
-  padding: 0 16px;
-  background: var(--app-card-bg, #ffffff);
-  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  padding: 0 20px;
+  background: var(--topbar-bg, var(--app-card-bg, #f7f9fb));
+  border-bottom: 1px solid var(--app-border, #c8d0db);
 }
 
-/* ── Toggle button ────────────────────────────────────── */
 .topbar-toggle {
   display: flex;
   align-items: center;
@@ -271,13 +270,19 @@ function onToggleClick() {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 6px;
-  color: var(--app-text-secondary, #64748b);
-  transition: background 0.12s ease;
+  border-radius: var(--app-card-radius, 2px);
+  color: var(--app-text-secondary, #5a6b7d);
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .topbar-toggle:hover {
-  background: var(--sidebar-item-hover, #f4f5f7);
+  background: rgba(28, 36, 48, 0.06);
+  color: var(--app-text, #1c2430);
+}
+
+.topbar-toggle:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #1c2430);
+  outline-offset: 2px;
 }
 
 .toggle-icon {
@@ -285,62 +290,62 @@ function onToggleClick() {
   height: 20px;
 }
 
-/* ── Page title ───────────────────────────────────────── */
 .topbar-title {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
   font-size: 18px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
-  margin: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
   white-space: nowrap;
 }
 
-/* ── Campaign filter ──────────────────────────────────── */
 .campaign-filter {
   align-items: center;
   margin-left: 8px;
 }
 
 .campaign-select {
-  height: 36px;
+  height: 34px;
   padding: 0 32px 0 12px;
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
-  background: var(--app-card-bg, #ffffff);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  background: var(--app-card-bg, #f7f9fb);
   font-size: 13px;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%235a6b7d' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
 }
 
 .campaign-select:focus {
-  outline: 2px solid var(--app-focus-ring, #0b2d50);
+  outline: 2px solid var(--app-focus-ring, #1c2430);
   outline-offset: -1px;
 }
 
 .campaign-input {
-  height: 36px;
+  height: 34px;
   padding: 0 12px;
-  border: 1px solid var(--app-teal, #47bfa9);
-  border-radius: 8px;
+  border: 1px solid var(--pc-canary, #facf41);
+  border-radius: var(--app-card-radius, 2px);
   font-size: 13px;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
   width: 200px;
+  background: #fff;
 }
 
 .campaign-input:focus {
-  outline: 2px solid var(--app-focus-ring, #0b2d50);
+  outline: 2px solid var(--app-focus-ring, #1c2430);
   outline-offset: -1px;
 }
 
-/* ── Spacer ───────────────────────────────────────────── */
 .topbar-spacer {
   flex: 1;
 }
 
-/* ── Icon buttons ─────────────────────────────────────── */
 .topbar-icon-btn {
   position: relative;
   display: flex;
@@ -351,13 +356,19 @@ function onToggleClick() {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 8px;
-  color: var(--app-text-secondary, #64748b);
-  transition: background 0.12s ease;
+  border-radius: var(--app-card-radius, 2px);
+  color: var(--app-text-secondary, #5a6b7d);
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .topbar-icon-btn:hover {
-  background: var(--sidebar-item-hover, #f4f5f7);
+  background: rgba(28, 36, 48, 0.06);
+  color: var(--app-text, #1c2430);
+}
+
+.topbar-icon-btn:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #1c2430);
+  outline-offset: 2px;
 }
 
 .topbar-icon {
@@ -381,7 +392,6 @@ function onToggleClick() {
   border-radius: 999px;
 }
 
-/* ── Avatar ───────────────────────────────────────────── */
 .avatar-wrap {
   position: relative;
 }
@@ -394,12 +404,17 @@ function onToggleClick() {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: var(--app-card-radius, 2px);
   transition: background 0.12s ease;
 }
 
 .avatar-btn:hover {
-  background: var(--sidebar-item-hover, #f4f5f7);
+  background: rgba(28, 36, 48, 0.06);
+}
+
+.avatar-btn:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #1c2430);
+  outline-offset: 2px;
 }
 
 .avatar-img {
@@ -416,30 +431,28 @@ function onToggleClick() {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--app-teal, #47bfa9);
-  /* POS-265: navy on brand teal = 6.17:1 */
-  color: var(--app-navy, #0b2d50);
+  background: var(--pc-canary, #facf41);
+  color: var(--pc-navy, #1c2430);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .avatar-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
   white-space: nowrap;
 }
 
-/* ── Avatar dropdown ──────────────────────────────────── */
 .avatar-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
   min-width: 180px;
-  background: var(--app-card-bg, #ffffff);
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(12, 45, 80, 0.12);
+  background: #fff;
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: 0 8px 24px rgba(28, 36, 48, 0.12);
   padding: 4px;
   z-index: 200;
 }
@@ -453,24 +466,24 @@ function onToggleClick() {
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 14px;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
   text-align: left;
   transition: background 0.12s ease;
+  font-family: inherit;
 }
 
 .dropdown-item:hover {
-  background: var(--sidebar-item-hover, #f4f5f7);
+  background: rgba(28, 36, 48, 0.05);
 }
 
 .dropdown-icon {
   width: 16px;
   height: 16px;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary, #5a6b7d);
 }
 
-/* ── Mobile adjustments ───────────────────────────────── */
 @media (max-width: 639px) {
   .topbar {
     padding: 0 12px;
