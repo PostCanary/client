@@ -72,7 +72,7 @@ test("org switcher reloads the app in the selected organization context", async 
 
   if (isMobileViewport(page)) {
     await page.keyboard.press("Escape");
-    await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("18");
+    await expect(page.locator(".match-strip .pipe-node", { has: page.getByText("Matched jobs") })).toContainText("18");
   } else {
     await expect(page.getByTestId("campaign-select")).toContainText("West Region Launch");
     await expect(page.getByTestId("campaign-select")).not.toContainText("Spring Reactivation");

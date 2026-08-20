@@ -41,7 +41,7 @@ test("Upload & Match clicked during in-flight uploads still commits", async ({ p
   });
 
   await page.goto("/dashboard");
-  await expect(page.getByText("Upload Files")).toBeVisible();
+  await expect(page.getByText("Refresh proof")).toBeVisible();
 
   await page.locator("#mailCsv").setInputFiles(
     csvFile("mail.csv", "Address,City,State,ZIP,Sent Date\n123 Peachtree St,Atlanta,GA,30309,2024-02-01\n"),
