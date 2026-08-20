@@ -33,32 +33,38 @@ const options: { label: string; value: TopAreaRanking }[] = [
 <style scoped>
 .toggle-group {
   display: inline-flex;
-  background: var(--app-card-bg, #fff);
-  border-radius: 10px;
-  padding: 4px;
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04));
+  background: #fff;
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  padding: 3px;
+  box-shadow: none;
 }
 
 .toggle-btn {
-  padding: 8px 16px;
+  padding: 7px 12px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  border-radius: 8px;
-  color: var(--app-text-muted, #94a3b8);
+  border-radius: var(--app-card-radius, 2px);
+  color: var(--app-text-muted, #8a97a8);
   font-family: inherit;
-  transition: all 0.18s ease-out;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .toggle-btn.active {
-  background: var(--app-navy, #0b2d50);
+  background: var(--app-navy, #1c2430);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(11, 45, 80, 0.25);
+  box-shadow: none;
 }
 
 .toggle-btn:not(.active):hover {
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text, #1c2430);
+}
+
+.toggle-btn:focus-visible {
+  outline: 2px solid var(--app-focus-ring, #1c2430);
+  outline-offset: 1px;
 }
 </style>

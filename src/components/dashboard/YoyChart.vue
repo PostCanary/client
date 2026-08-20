@@ -31,9 +31,9 @@ let chart: Chart<"line", number[], string> | null = null;
 const TOOLTIP_CLASS = "chartjs-html-tooltip";
 
 // colors
-const cMail = "#0b2d50";
-const cCrm = "#47bfa9";
-const cMatch = "#94a3b8";
+const cMail = "#7a8899";
+const cCrm = "#26afa3";
+const cMatch = "#facf41";
 
 // ---------- helpers ----------
 
@@ -407,39 +407,42 @@ watch(
 <template>
   <section class="chart-card">
     <header class="chart-header">
-      <div class="chart-toggle">
-        <span class="toggle-label">Show YoY Overlay</span>
+      <div class="chart-heading">
+        <h3 class="chart-title">Mail · CRM · Match over time</h3>
+        <div class="chart-toggle">
+          <span class="toggle-label">Show YoY Overlay</span>
 
-        <button
-          type="button"
-          class="switch"
-          :class="{
-            'is-on': showYoy && hasPrevData,
-            'is-disabled': !hasPrevData,
-          }"
-          role="switch"
-          :aria-pressed="showYoy && hasPrevData"
-          :aria-disabled="!hasPrevData"
-          :disabled="!hasPrevData"
-          @click="hasPrevData && (showYoy = !showYoy)"
-          aria-label="Toggle YoY overlay"
-        >
-          <span class="switch__track"></span>
-          <span class="switch__thumb"></span>
-        </button>
+          <button
+            type="button"
+            class="switch"
+            :class="{
+              'is-on': showYoy && hasPrevData,
+              'is-disabled': !hasPrevData,
+            }"
+            role="switch"
+            :aria-pressed="showYoy && hasPrevData"
+            :aria-disabled="!hasPrevData"
+            :disabled="!hasPrevData"
+            @click="hasPrevData && (showYoy = !showYoy)"
+            aria-label="Toggle YoY overlay"
+          >
+            <span class="switch__track"></span>
+            <span class="switch__thumb"></span>
+          </button>
+        </div>
       </div>
 
       <ul class="chart-legend">
         <li class="legend-item">
-          <span class="legend-dot" style="background: #0b2d50"></span>
+          <span class="legend-dot" style="background: #7a8899"></span>
           <span>Mail Volume</span>
         </li>
         <li class="legend-item">
-          <span class="legend-dot" style="background: #47bfa9"></span>
+          <span class="legend-dot" style="background: #26afa3"></span>
           <span>CRM Jobs</span>
         </li>
         <li class="legend-item">
-          <span class="legend-dot" style="background: #94a3b8"></span>
+          <span class="legend-dot" style="background: #facf41"></span>
           <span>Matches</span>
         </li>
         <li v-if="hasPrevData" class="legend-item legend-item-note">
@@ -462,19 +465,36 @@ watch(
 
 <style scoped>
 .chart-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
 }
 
 .chart-header {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 16px 20px 8px;
+}
+
+.chart-heading {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px 8px;
   flex-wrap: wrap;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
 }
 
 .chart-toggle {
@@ -639,7 +659,7 @@ watch(
   pointer-events: none;
 }
 .switch.is-on .switch__track {
-  background: var(--app-teal, #47bfa9);
+  background: var(--pc-navy, #1c2430);
 }
 .switch.is-on .switch__thumb {
   left: calc(100% - 20px);

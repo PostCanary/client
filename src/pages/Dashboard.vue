@@ -347,14 +347,17 @@ async function onDashboardDateRangeApply(payload: { start?: string; end?: string
 
 .top-ranking-title {
   margin: 0;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .top-ranking-subtitle {
   margin: 0;
-  color: var(--app-text-muted, #64748b);
+  color: var(--app-text-muted, #8a97a8);
   font-size: 14px;
 }
 

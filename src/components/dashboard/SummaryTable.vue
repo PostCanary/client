@@ -93,24 +93,27 @@ function formatJobValue(v: number | null): string {
 
 <style scoped>
 .summary-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
 }
 
 .summary-head {
-  background: var(--app-navy, #0b2d50);
-  padding: 12px 20px;
+  background: transparent;
+  padding: 16px 20px 8px;
 }
 
 .summary-title {
   margin: 0;
-  font-weight: 600;
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   line-height: 1.4;
-  color: #fff;
+  color: var(--app-text, #1c2430);
 }
 
 /* Header row */
