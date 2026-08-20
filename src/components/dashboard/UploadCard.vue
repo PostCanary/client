@@ -696,7 +696,7 @@ function browseCrm() {
 }
 
 .btn {
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 13px;
   font-weight: 600;
   padding: 8px 20px;
