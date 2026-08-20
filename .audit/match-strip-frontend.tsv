@@ -7,3 +7,4 @@ ts	phase	decision	why	evidence	result
 2026-08-20T22:08:01Z	unit	Ran lever across 75 app files about 582 replacements	Mechanical teal-to-navy/canary/2px sweep	scripts/match-strip-restyle.cjs	applied
 2026-08-20T22:08:01Z	unit	Chat and account pages polished by delegates then rebased onto design branch	Agents forked branches; reattached to dustin/design-system-match-strip	6542033 63f3ad1	merged
 2026-08-20T22:08:01Z	verify	typecheck palette gate all green after sweep	Prove it works on real checks	typecheck+palette+gate	VERIFIED
+2026-08-20T22:08:38Z	verify	Pushed sweep to PR 180; no live browser proof this turn	Prove-it-works gap: gate is static not visual	https://github.com/PostCanary/client/pull/180	INCONCLUSIVE-visual
