@@ -25,6 +25,7 @@ import {
   isOverRecipientCap,
   parsePurchaseRecordsMaxQty,
 } from "@/utils/recipientCap";
+import { emptyTargetingFilters } from "@/utils/emptyTargetingFilters";
 
 const emit = defineEmits<{
   (e: "targeting-validity", valid: boolean): void;
@@ -86,50 +87,10 @@ const zips = ref<string[]>(
 // demo stack is now an explicit opt-in chip in the Filter tab (see
 // HOME_SERVICES_PRESET in @/utils/targetingPresets). Stored draft filters
 // always win — only genuinely untouched drafts see the empty default.
-const EMPTY_FILTERS: TargetingFilters = {
-  homeowner: null,
-  homeValueMin: null,
-  homeValueMax: null,
-  yearBuiltMin: null,
-  yearBuiltMax: null,
-  propertyTypes: [],
-  hhageMin: null,
-  hhageMax: null,
-  incomeMin: null,
-  loresMin: null,
-  loresMax: null,
-  squareFootageMin: null,
-  squareFootageMax: null,
-  hasEmail: null,
-  businessSicCodes: [],
-  businessNaicsCodes: [],
-  businessJobTitles: [],
-  businessManagementLevels: [],
-  businessEmployeeMin: null,
-  businessEmployeeMax: null,
-  businessSalesMin: null,
-  businessSalesMax: null,
-  businessHasEmail: null,
-  businessWorkAtHome: null,
-};
-
-// Fresh copy so array fields are never shared with the module-level const
-// (togglePropertyType mutates in place).
-function emptyFilters(): TargetingFilters {
-  return {
-    ...EMPTY_FILTERS,
-    propertyTypes: [],
-    businessSicCodes: [],
-    businessNaicsCodes: [],
-    businessJobTitles: [],
-    businessManagementLevels: [],
-  };
-}
-
 // Spread over the empty base so partial filter objects from older drafts
 // gain the newer keys as nulls instead of undefined.
 const filters = ref<TargetingFilters>({
-  ...emptyFilters(),
+  ...emptyTargetingFilters(),
   ...(draftStore.draft?.targeting?.filters ?? {}),
 });
 
@@ -191,7 +152,7 @@ async function resolveTargetingCapabilities() {
       if (!businessProductEnabled || !support) {
         audienceType.value = 'consumer';
         filters.value = normalizeTargetingFilters(
-          emptyFilters(),
+          emptyTargetingFilters(),
           result.capabilities.audienceFilters?.consumer ?? result.capabilities.filters,
         );
       } else {
@@ -543,12 +504,12 @@ function setAudienceType(value: 'consumer' | 'business') {
   audienceType.value = value;
   if (value === 'business') {
     filters.value = businessFilterCapabilities.value
-      ? normalizeBusinessTargetingFilters(emptyFilters(), businessFilterCapabilities.value)
-      : emptyFilters();
+      ? normalizeBusinessTargetingFilters(emptyTargetingFilters(), businessFilterCapabilities.value)
+      : emptyTargetingFilters();
   } else {
     filters.value = filterCapabilities.value
-      ? normalizeTargetingFilters(emptyFilters(), filterCapabilities.value)
-      : emptyFilters();
+      ? normalizeTargetingFilters(emptyTargetingFilters(), filterCapabilities.value)
+      : emptyTargetingFilters();
   }
 }
 

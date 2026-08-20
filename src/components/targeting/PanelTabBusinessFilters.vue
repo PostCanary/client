@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { TargetingFilters } from '@/types/campaign'
 import type { BusinessTargetingFilterSupport } from '@/types/targeting'
 import { countActiveBusinessFilters } from '@/utils/targetingFilterCount'
+import { emptyTargetingFilters } from '@/utils/emptyTargetingFilters'
 import ExclusionToggles from './ExclusionToggles.vue'
 
 const filters = defineModel<TargetingFilters>('filters', { required: true })
@@ -35,6 +36,10 @@ function setNumber(
 }
 
 const activeFilterCount = computed(() => countActiveBusinessFilters(filters.value))
+
+function resetFilters() {
+  filters.value = emptyTargetingFilters()
+}
 </script>
 
 <template>
@@ -44,7 +49,17 @@ const activeFilterCount = computed(() => countActiveBusinessFilters(filters.valu
         <h4 class="text-sm font-semibold text-[#0b2d50]">Business filters</h4>
         <p class="mt-1 text-[11px] text-gray-400">Targets business locations. Contact email and phone values are not purchased.</p>
       </div>
-      <span v-if="activeFilterCount" class="text-xs font-medium text-[#47bfa9]">{{ activeFilterCount }} applied</span>
+      <div v-if="activeFilterCount > 0" class="flex items-center gap-3">
+        <span class="text-xs font-medium text-[#47bfa9]">{{ activeFilterCount }} applied</span>
+        <button
+          type="button"
+          data-testid="reset-filters"
+          class="text-sm text-[#47bfa9]"
+          @click="resetFilters"
+        >
+          Reset filters
+        </button>
+      </div>
     </div>
 
     <div>
