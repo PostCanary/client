@@ -1,4 +1,5 @@
 // src/api/analytics.ts
+import type { AxiosRequestConfig } from "axios";
 import { get, postJson } from "@/api/http";
 
 // --- Insight Section ---
@@ -58,9 +59,10 @@ export async function getAnalyticsInsights(
 
 export async function regenerateInsights(
   campaignId?: string | null,
+  cfg?: AxiosRequestConfig,
 ): Promise<AnalyticsResponse> {
   const url = campaignId
     ? `/api/analytics/regenerate?campaign_id=${campaignId}`
     : "/api/analytics/regenerate";
-  return postJson<AnalyticsResponse>(url);
+  return postJson<AnalyticsResponse>(url, {}, cfg);
 }

@@ -191,6 +191,13 @@ const showResultsScreen = computed(() => hasMatchData.value);
 
         <RecommendationsPanel :recommendations="recommendations" />
 
+        <div v-if="analyticsError" class="error-state compact">
+          <p>{{ analyticsError }}</p>
+          <p class="error-hint">
+            Previous insights are still shown. You can try regenerating again.
+          </p>
+        </div>
+
         <RegenerateButton
           :regenerating="regenerating"
           @regenerate="regenerate"
@@ -220,16 +227,6 @@ const showResultsScreen = computed(() => hasMatchData.value);
         </div>
       </section>
 
-      <section v-else-if="analyticsError" class="ai-insights-section">
-        <h2 class="ai-insights-heading">AI Insights</h2>
-        <div class="error-state">
-          <p>{{ analyticsError }}</p>
-          <p class="error-hint">
-            Make sure you have completed at least one matching run.
-          </p>
-        </div>
-      </section>
-
       <section
         v-else-if="!hasInsightsData && !analyticsLoading"
         class="ai-insights-section"
@@ -238,12 +235,18 @@ const showResultsScreen = computed(() => hasMatchData.value);
         <div class="empty-state">
           <h3>No analytics available yet</h3>
           <p>Generate AI-powered insights from your existing match data.</p>
+          <div v-if="analyticsError" class="error-state compact">
+            <p>{{ analyticsError }}</p>
+            <p class="error-hint">
+              Make sure you have completed at least one matching run.
+            </p>
+          </div>
           <button
             class="generate-btn"
             :disabled="regenerating"
             @click="regenerate"
           >
-            Generate Insights
+            {{ analyticsError ? "Try Again" : "Generate Insights" }}
           </button>
         </div>
       </section>
@@ -454,6 +457,11 @@ const showResultsScreen = computed(() => hasMatchData.value);
 .error-state {
   text-align: center;
   padding: 40px 20px;
+}
+
+.error-state.compact {
+  padding: 16px 12px;
+  margin-bottom: 8px;
 }
 
 .error-state p {
