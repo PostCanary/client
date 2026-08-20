@@ -309,7 +309,7 @@ async function onSignOut() {
         data-testid="first-run-loading"
       >
         <div
-          class="w-6 h-6 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
+          class="w-6 h-6 border-2 border-[var(--pc-canary,#facf41)] border-t-transparent rounded-full animate-spin"
         />
       </div>
 
@@ -351,7 +351,7 @@ async function onSignOut() {
                   type="text"
                   autocomplete="off"
                   data-testid="first-run-street"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                 />
               </div>
               <div class="grid gap-3 sm:grid-cols-3">
@@ -365,7 +365,7 @@ async function onSignOut() {
                     type="text"
                     autocomplete="off"
                     data-testid="first-run-city"
-                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                   />
                 </div>
                 <div>
@@ -379,7 +379,7 @@ async function onSignOut() {
                     maxlength="2"
                     autocomplete="off"
                     data-testid="first-run-state"
-                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                   />
                 </div>
                 <div>
@@ -393,7 +393,7 @@ async function onSignOut() {
                     inputmode="numeric"
                     autocomplete="off"
                     data-testid="first-run-zip"
-                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                   />
                 </div>
               </div>
@@ -416,7 +416,7 @@ async function onSignOut() {
 
         <button
           type="submit"
-          class="mt-6 inline-flex items-center rounded-lg bg-[#47bfa9] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#3aa893] disabled:cursor-not-allowed disabled:opacity-60"
+          class="mt-6 inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="!canSave || saving"
           data-testid="first-run-continue"
         >
@@ -511,9 +511,8 @@ async function onSignOut() {
   max-width: 560px;
   background: #fff8e8;
   border: 1px solid #f3e0a8;
-  border-radius: 16px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 28px 24px 24px;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.06);
 }
 
 .first-run-title {

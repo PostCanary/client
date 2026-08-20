@@ -170,7 +170,7 @@ async function handleRefreshDashboard() {
         </div>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+          class="inline-flex items-center gap-2 rounded-[2px] bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
           :disabled="refreshingDashboard"
           @click="handleRefreshDashboard"
         >
@@ -221,7 +221,7 @@ async function handleRefreshDashboard() {
 
       <div
         v-else-if="isEmpty"
-        class="rounded-xl border border-slate-200 bg-white p-12 text-center shadow-sm"
+        class="rounded-[2px] border border-slate-200 bg-white p-12 text-center"
       >
         <p class="text-slate-500">No files uploaded yet.</p>
       </div>
@@ -231,7 +231,7 @@ async function handleRefreshDashboard() {
           v-for="batch in batches"
           :key="batch.id"
           :data-testid="`history-batch-${batch.id}`"
-          class="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+          class="flex items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-white p-4"
         >
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
@@ -290,7 +290,7 @@ async function handleRefreshDashboard() {
 
           <button
             type="button"
-            class="inline-flex items-center rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+            class="inline-flex items-center rounded-[2px] bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
             :disabled="deletingIds.has(batch.id)"
             @click="handleDelete(batch)"
           >
