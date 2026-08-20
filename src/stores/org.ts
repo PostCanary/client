@@ -8,6 +8,7 @@ import {
   sendInvite as apiSendInvite,
   removeMember as apiRemoveMember,
   updateMemberRole as apiUpdateRole,
+  updateMemberCapabilities as apiUpdateCapabilities,
   switchOrg as apiSwitchOrg,
 } from "@/api/orgs";
 import { useAuthStore } from "@/stores/auth";
@@ -86,6 +87,20 @@ export const useOrgStore = defineStore("org", {
       await apiUpdateRole(orgId, userId, role);
       const member = this.members.find((m) => m.user_id === userId);
       if (member) member.role = role;
+    },
+
+    async updatePurchaseCapability(
+      orgId: string,
+      userId: string,
+      canPurchase: boolean,
+    ) {
+      const permissions = await apiUpdateCapabilities(
+        orgId,
+        userId,
+        canPurchase,
+      );
+      const member = this.members.find((m) => m.user_id === userId);
+      if (member) member.can_purchase = permissions.can_purchase;
     },
 
     async switchOrg(orgId: string) {

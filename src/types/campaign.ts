@@ -582,6 +582,7 @@ export interface AudienceWizardState {
 export interface CampaignDraft {
   id: string                           // UUID
   orgId: string
+  createdBy: string | null
   currentStep: WizardStep
   completedSteps: WizardStep[]         // steps that have valid data
   needsReviewSteps: WizardStep[]       // steps flagged for re-review after goal change

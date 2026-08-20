@@ -64,6 +64,12 @@ export type SessionUser = Pick<
   "id" | "email" | "full_name" | "role" | "avatar_url"
 >;
 
+export interface AuthPermissions {
+  can_purchase: boolean;
+  manage_org: boolean;
+  manage_billing: boolean;
+}
+
 export type AuthMeResponse =
   | {
       authenticated: false;
@@ -80,6 +86,7 @@ export type AuthMeResponse =
       org_name?: string;
       org_role?: string;
       orgs?: Array<{ id: string; name: string; slug: string; role: string }>;
+      permissions?: AuthPermissions;
       // Org-level feature access (S85). "postcards" gates designs + sending.
       features?: string[];
     };

@@ -11,8 +11,8 @@ import {
   type PaymentMethodSummary,
 } from "@/api/billing";
 import { useAuthStore } from "@/stores/auth";
-import { useOrgStore } from "@/stores/org";
 import { useBrandKitStore } from "@/stores/useBrandKitStore";
+import { usePermissions } from "@/composables/usePermissions";
 import { useTour } from "@/composables/useTour";
 import { BRAND } from "@/config/brand";
 import { formatTierRange, usePayPerSendTiers } from "@/composables/usePricing";
@@ -58,8 +58,8 @@ function formatRate(cents: number): string {
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
-const orgStore = useOrgStore();
 const brandKitStore = useBrandKitStore();
+const { manageOrg, manageBilling } = usePermissions();
 const { startTour } = useTour();
 const message = useMessage();
 
@@ -78,7 +78,6 @@ function syncBizNameFromKit() {
 // Org name editing
 const orgName = ref(auth.orgName || "");
 const orgNameSaving = ref(false);
-const isOrgAdmin = computed(() => orgStore.isAdmin);
 const canWriteReturnAddress = computed(() =>
   canEditOrgReturnAddress({
     isInvitedUser:
@@ -205,7 +204,7 @@ async function onSaveReturnAddress() {
     returnAddressSaving.value = false;
   }
 }
-const canManageBilling = computed(() => !!auth.orgId && isOrgAdmin.value);
+const canManageBilling = computed(() => !!auth.orgId && manageBilling.value);
 const paymentMethodActionLabel = computed(() =>
   paymentMethod.value?.has_payment_method
     ? "Change payment method"
@@ -549,17 +548,17 @@ function onReplayTour() {
                 id="settings-org-name"
                 v-model="orgName"
                 type="text"
-                :disabled="!isOrgAdmin || orgNameSaving"
+                :disabled="!manageOrg || orgNameSaving"
                 class="mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
                 :class="
-                  isOrgAdmin
+                  manageOrg
                     ? 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500'
                     : 'border-slate-200 bg-slate-50 text-slate-500'
                 "
               />
             </div>
             <button
-              v-if="isOrgAdmin"
+              v-if="manageOrg"
               type="button"
               class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="orgNameSaving"

@@ -16,6 +16,7 @@ export interface OrgMember {
   email: string;
   full_name: string | null;
   role: string;
+  can_purchase: boolean;
   status: string;
   accepted_at: string | null;
 }
@@ -115,6 +116,22 @@ export async function updateMemberRole(
     data: { role },
     headers: { "Content-Type": "application/json" },
   });
+}
+
+export async function updateMemberCapabilities(
+  orgId: string,
+  userId: string,
+  canPurchase: boolean,
+): Promise<{ can_purchase: boolean }> {
+  const res = await api<{
+    ok: boolean;
+    permissions: { can_purchase: boolean };
+  }>(`/api/orgs/${orgId}/members/${userId}/capabilities`, {
+    method: "PATCH",
+    data: { can_purchase: canPurchase },
+    headers: { "Content-Type": "application/json" },
+  });
+  return res.permissions;
 }
 
 export async function getInvitationDetails(

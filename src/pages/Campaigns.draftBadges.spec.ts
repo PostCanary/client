@@ -47,8 +47,9 @@ import { useAuthStore } from "@/stores/auth";
 function draft(id: string, currentStep: number) {
   return {
     id,
+    createdBy: id === "returned-to-step-2" ? "user-1" : "user-2",
     currentStep,
-    completedSteps: [],
+    completedSteps: currentStep === 4 ? [1, 2, 3, 4] : [1],
     needsReviewSteps: currentStep === 4 ? [3, 4] : [],
     goal: { goalLabel: id },
   } as any;
@@ -64,8 +65,14 @@ describe("POS-170 campaign draft badges", () => {
     const auth = useAuthStore();
     auth.me = {
       authenticated: true,
+      user_id: "user-1",
       org_id: "org-1",
       features: ["postcards"],
+      permissions: {
+        can_purchase: false,
+        manage_org: false,
+        manage_billing: false,
+      },
     } as any;
 
     deleteDraftMock.mockReset().mockResolvedValue(undefined);
@@ -103,6 +110,11 @@ describe("POS-170 campaign draft badges", () => {
     expect(
       wrapper.get('button[aria-label="Campaigns, 2 campaign drafts"]').attributes("title"),
     ).toBe("Campaigns, 2 campaign drafts");
+    expect(wrapper.findAll('[data-testid="draft-created-by"]').map((node) => node.text()))
+      .toEqual(["Created by you", "Created by user-2"]);
+    expect(
+      wrapper.get('[data-testid="draft-awaiting-admin-purchase"]').text(),
+    ).toBe("Awaiting admin purchase");
 
     const deleteButton = wrapper
       .findAll("button")

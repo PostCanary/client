@@ -72,6 +72,7 @@ const sidebarItems: SidebarItem[] = [
   { to: '/app/history', routeName: 'History', label: 'Upload History', component: TimeOutline, section: 'analytics' },
 
   { to: '/app/audience/do-not-mail', routeName: 'DoNotMail', label: 'Do Not Mail', component: BanOutline, section: 'account' },
+  { to: '/app/team', routeName: 'Team', label: 'Team', component: PeopleOutline, section: 'account' },
   { to: '/app/settings', routeName: 'Settings', label: 'Settings', component: SettingsOutline, section: 'account' },
 ]
 

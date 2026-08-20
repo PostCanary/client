@@ -54,11 +54,13 @@ import {
   parsePurchaseRecordsMaxQty,
 } from "@/utils/recipientCap";
 import { resolveCampaignName } from "@/utils/defaultCampaignName";
+import { usePermissions } from "@/composables/usePermissions";
 
 const router = useRouter();
 const route = useRoute();
 const draftStore = useCampaignDraftStore();
 const brandKitStore = useBrandKitStore();
+const { canPurchase } = usePermissions();
 
 // Phase 4D task 29: print-ready PDF preview at the final review step.
 // Customer clicks "View Print Proof" to see the actual rendered output
@@ -77,6 +79,7 @@ async function handleGenerateProof() {
 }
 
 const approving = ref(false);
+const savingForAdminApproval = ref(false);
 const approved = ref(false);
 const approvedCampaign = ref<MailCampaign | null>(null);
 const approvedOrder = ref<MailCampaignOrder | null>(null);
@@ -512,9 +515,8 @@ async function loadOrgReturnAddress() {
 // Approve at "0 households / $0.00" (S82 QA fleet — 2 of 7 walks hit it
 // independently). A campaign to nobody is never approvable; the free
 // send-to-yourself copy alone doesn't make it one.
-const canApprove = computed(
+const campaignReadyForApproval = computed(
   () =>
-    !approving.value &&
     Boolean(draftStore.draft?.id) &&
     campaignName.value.trim() &&
     hasSingleMailingIntent.value &&
@@ -526,11 +528,23 @@ const canApprove = computed(
     !overRecipientCap.value &&
     effectiveReturnAddress.value !== null &&
     acknowledgedAccuracy.value &&
-    paymentReady.value &&
     !isCustomDesignRequest.value &&
     !scheduleAvailability.loading.value &&
     !scheduleAvailability.error.value &&
     selectedMailingDateValid.value,
+);
+const canApprove = computed(
+  () =>
+    canPurchase.value &&
+    !approving.value &&
+    campaignReadyForApproval.value &&
+    paymentReady.value,
+);
+const canSaveForAdminApproval = computed(
+  () =>
+    !canPurchase.value &&
+    !savingForAdminApproval.value &&
+    campaignReadyForApproval.value,
 );
 
 const isCustomerSuppliedDesign = computed(
@@ -561,12 +575,8 @@ const staleMultiMailingDraft = computed(() => {
   );
 });
 
-async function approve() {
-  if (!canApprove.value || approving.value) return;
-  approving.value = true;
-  draftStore.error = null;
-
-  const review: ReviewSelection = {
+function buildReviewSelection(): ReviewSelection {
+  return {
     campaignName: campaignName.value.trim(),
     campaignNameIsCustom: campaignNameIsCustom.value,
     schedules: schedules.value,
@@ -577,6 +587,31 @@ async function approve() {
     paymentMethodLabel: paymentMethod.value?.label ?? null,
     agreedToTerms: acknowledgedAccuracy.value,
   };
+}
+
+async function saveForAdminApproval() {
+  if (!canSaveForAdminApproval.value || savingForAdminApproval.value) return;
+  savingForAdminApproval.value = true;
+  draftStore.error = null;
+  try {
+    draftStore.setReview(buildReviewSelection());
+    await draftStore.saveNow(true);
+    await router.push("/app/campaigns");
+  } catch {
+    if (!draftStore.error) {
+      draftStore.error = "Unable to save. Please try again.";
+    }
+  } finally {
+    savingForAdminApproval.value = false;
+  }
+}
+
+async function approve() {
+  if (!canPurchase.value || !canApprove.value || approving.value) return;
+  approving.value = true;
+  draftStore.error = null;
+
+  const review = buildReviewSelection();
 
   try {
     // Create MailCampaign from draft once; the server deletes the draft on success,
@@ -1319,8 +1354,31 @@ async function approve() {
         {{ draftStore.error }}
       </p>
 
-      <!-- Approve button -->
+      <p
+        v-if="!canPurchase"
+        class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+        data-testid="review-purchase-permission-copy"
+      >
+        Purchasing permission is for admin only. They can give you that permission
+        or they'll have to log in to complete the campaign order.
+      </p>
+
       <button
+        v-if="!canPurchase"
+        data-testid="review-save-for-admin"
+        class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
+        :disabled="!canSaveForAdminApproval"
+        @click="saveForAdminApproval"
+      >
+        {{
+          savingForAdminApproval
+            ? "Saving..."
+            : "Save for admin approval"
+        }}
+      </button>
+
+      <button
+        v-else
         data-testid="review-approve"
         class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
         :disabled="!canApprove"
@@ -1337,7 +1395,7 @@ async function approve() {
         </template>
         <template v-else> Approve & Send Mailing </template>
       </button>
-      <p class="text-xs text-gray-400 text-center mt-2">
+      <p v-if="canPurchase" class="text-xs text-gray-400 text-center mt-2">
         You can cancel within 1 hour.
       </p>
     </div>

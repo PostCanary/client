@@ -186,6 +186,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
       this.draft = {
         id: "",
         orgId,
+        createdBy: null,
         currentStep: 1,
         completedSteps: [],
         needsReviewSteps: [],
@@ -267,6 +268,7 @@ export const useCampaignDraftStore = defineStore("campaignDraft", {
             ...latest,
             id: created.id,
             orgId: created.orgId,
+            createdBy: created.createdBy,
             currentStep: 3,
             createdAt: created.createdAt,
             updatedAt: created.updatedAt,

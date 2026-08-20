@@ -9,9 +9,13 @@ import { pauseMailCampaign, resumeMailCampaign, getMailCampaign } from "@/api/ma
 import { deleteDraft } from "@/api/campaignDrafts";
 import type { MailCampaign } from "@/types/campaign";
 import { draftListDisplayName } from "@/utils/defaultCampaignName";
+import { useAuthStore } from "@/stores/auth";
+import { usePermissions } from "@/composables/usePermissions";
 
 const router = useRouter();
 const route = useRoute();
+const auth = useAuthStore();
+const { canPurchase } = usePermissions();
 const {
   drafts,
   loading,
@@ -83,6 +87,12 @@ async function handleDeleteDraft(draftId: string) {
 
 function resumeDraft(draftId: string) {
   router.push(`/app/send/${draftId}`);
+}
+
+function draftCreatorLabel(createdBy: string): string {
+  return auth.me?.authenticated === true && createdBy === auth.me.user_id
+    ? "Created by you"
+    : `Created by ${createdBy}`;
 }
 
 const emptyMessages: Record<CampaignTab, string> = {
@@ -192,6 +202,20 @@ const emptyMessages: Record<CampaignTab, string> = {
               <p class="text-sm text-gray-500">
                 Draft (Step {{ draft.currentStep }} of 4)
               </p>
+              <p
+                v-if="draft.createdBy"
+                class="mt-1 text-xs text-gray-400"
+                data-testid="draft-created-by"
+              >
+                {{ draftCreatorLabel(draft.createdBy) }}
+              </p>
+              <span
+                v-if="draft.completedSteps.includes(4) && !canPurchase"
+                class="mt-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"
+                data-testid="draft-awaiting-admin-purchase"
+              >
+                Awaiting admin purchase
+              </span>
               <div class="flex gap-1 mt-2">
                 <span
                   v-for="s in 4"
