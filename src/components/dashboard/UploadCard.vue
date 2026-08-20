@@ -377,7 +377,7 @@ function browseCrm() {
         <!-- File selected chip -->
         <div v-else class="file-chip">
           <svg class="file-chip-icon" viewBox="0 0 16 16" fill="none">
-            <path d="M4 8l3 3 5-6" stroke="#47bfa9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 8l3 3 5-6" stroke="var(--pc-canary, #facf41)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span class="file-chip-name">{{ lastMailFile }}</span>
           <button class="file-chip-x" @click.stop="clearMail" title="Remove file">&times;</button>
@@ -421,7 +421,7 @@ function browseCrm() {
         <!-- File selected chip -->
         <div v-else class="file-chip">
           <svg class="file-chip-icon" viewBox="0 0 16 16" fill="none">
-            <path d="M4 8l3 3 5-6" stroke="#47bfa9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 8l3 3 5-6" stroke="var(--pc-canary, #facf41)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           <span class="file-chip-name">{{ lastCrmFile }}</span>
           <button class="file-chip-x" @click.stop="clearCrm" title="Remove file">&times;</button>
@@ -625,7 +625,7 @@ function browseCrm() {
 }
 
 .drop-link {
-  color: var(--app-teal, #47bfa9);
+  color: var(--app-teal, var(--pc-canary, #facf41));
   font-weight: 500;
 }
 

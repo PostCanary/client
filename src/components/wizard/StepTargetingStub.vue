@@ -61,7 +61,7 @@ function apply() {
 
 <template>
   <div class="max-w-lg mx-auto py-8 px-4">
-    <h2 class="text-xl font-semibold text-[#0b2d50] mb-4">
+    <h2 class="text-xl font-semibold text-[var(--pc-navy,#1c2430)] mb-4">
       Pick Your Neighborhood
     </h2>
     <p class="text-sm text-gray-500 mb-6">
@@ -85,7 +85,7 @@ function apply() {
     </div>
 
     <button
-      class="bg-[#47bfa9] text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-[#3aa893] transition-colors w-full"
+      class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-6 py-2.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors w-full"
       @click="apply"
     >
       Set Targeting

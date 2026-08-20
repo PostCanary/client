@@ -109,14 +109,14 @@ onBeforeUnmount(() => {
     v-if="isMobile"
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
-        <h2 class="text-lg font-semibold text-[#0b2d50] mb-2">
+        <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)] mb-2">
       Screen too small
     </h2>
     <p class="text-sm text-gray-500 mb-6">
       Please rotate your device to landscape or use a larger screen to access the campaign builder.
     </p>
     <button
-      class="text-sm text-[#47bfa9] font-medium hover:underline"
+      class="text-sm text-[var(--pc-navy,#1c2430)] font-medium hover:underline"
       @click="router.push('/app/dashboard')"
     >
       ← Go back to dashboard
@@ -130,7 +130,7 @@ onBeforeUnmount(() => {
   >
     <div class="text-center">
       <div
-        class="w-8 h-8 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin mx-auto mb-3"
+        class="w-8 h-8 border-2 border-[var(--pc-canary,#facf41)] border-t-transparent rounded-full animate-spin mx-auto mb-3"
       />
       <p class="text-sm text-gray-400">Setting up your campaign...</p>
     </div>
@@ -141,14 +141,14 @@ onBeforeUnmount(() => {
     v-else-if="initError"
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
-    <h2 class="text-lg font-semibold text-[#0b2d50] mb-2">
+    <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)] mb-2">
       Something went wrong
     </h2>
     <p class="text-sm text-gray-500 mb-4">
       We couldn't load your campaign. Please try again.
     </p>
     <button
-      class="bg-[#47bfa9] text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-[#3aa893] transition-colors"
+      class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-6 py-2.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
       @click="router.go(0)"
     >
       Try Again

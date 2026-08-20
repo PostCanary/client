@@ -325,7 +325,7 @@ onBeforeUnmount(() => {
         :disabled="disabled"
         placeholder="e.g. Pool service"
         data-testid="industry-other-text"
-        class="mt-1 block w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50"
+        class="mt-1 block w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50"
         @input="setOtherText(($event.target as HTMLInputElement).value)"
       />
     </div>

@@ -9,7 +9,7 @@
       >
         <div class="absolute inset-0 bg-black/40" aria-hidden="true" @click="close" />
         <div
-          class="relative w-[min(560px,92vw)] rounded-2xl bg-white p-6 shadow-xl sm:p-8"
+          class="relative w-[min(560px,92vw)] rounded-[2px] bg-white p-6 sm:p-8"
           role="dialog"
           aria-modal="true"
           aria-labelledby="paywall-title"

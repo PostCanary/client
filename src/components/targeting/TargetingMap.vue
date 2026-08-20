@@ -63,8 +63,8 @@ defineExpose({
       class="absolute top-[10px] left-[50px] z-[500] flex flex-col gap-1"
     >
       <button
-        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md text-sm font-medium text-[#0b2d50] hover:bg-gray-50 border transition-colors"
-        :class="activeDrawTool === 'circle' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200'"
+        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:bg-gray-50 border transition-colors"
+        :class="activeDrawTool === 'circle' ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]' : 'border-gray-200'"
         @click="startDrawing('circle')"
       >
         <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -73,8 +73,8 @@ defineExpose({
         Draw Circle
       </button>
       <button
-        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md text-sm font-medium text-[#0b2d50] hover:bg-gray-50 border transition-colors"
-        :class="activeDrawTool === 'rectangle' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200'"
+        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:bg-gray-50 border transition-colors"
+        :class="activeDrawTool === 'rectangle' ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]' : 'border-gray-200'"
         @click="startDrawing('rectangle')"
       >
         <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -83,8 +83,8 @@ defineExpose({
         Draw Rectangle
       </button>
       <button
-        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md text-sm font-medium text-[#0b2d50] hover:bg-gray-50 border transition-colors"
-        :class="activeDrawTool === 'polygon' ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200'"
+        class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:bg-gray-50 border transition-colors"
+        :class="activeDrawTool === 'polygon' ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]' : 'border-gray-200'"
         @click="startDrawing('polygon')"
       >
         <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -101,8 +101,8 @@ defineExpose({
       :class="{ 'opacity-0': introFading }"
       @click.self="dismissIntro('draw')"
     >
-      <div class="bg-white rounded-2xl shadow-xl p-6 max-w-sm text-center">
-        <h3 class="text-lg font-semibold text-[#0b2d50] mb-2">
+      <div class="bg-white rounded-[2px] p-6 max-w-sm text-center">
+        <h3 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)] mb-2">
           How would you like to target?
         </h3>
         <p class="text-sm text-gray-500 mb-5">
@@ -111,19 +111,19 @@ defineExpose({
         <div class="space-y-2">
           <button
             v-if="AROUND_MY_JOBS"
-            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
+            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:border-[var(--pc-canary,#facf41)] hover:bg-[rgba(250,207,65,0.10)] transition-all"
             @click="dismissIntro('around_jobs')"
           >
             Around My Jobs
           </button>
           <button
-            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
+            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:border-[var(--pc-canary,#facf41)] hover:bg-[rgba(250,207,65,0.10)] transition-all"
             @click="dismissIntro('draw')"
           >
             I'll Draw on the Map
           </button>
           <button
-            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[#0b2d50] hover:border-[#47bfa9] hover:bg-[#47bfa9]/5 transition-all"
+            class="w-full py-2.5 px-4 rounded-lg border border-gray-200 text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:border-[var(--pc-canary,#facf41)] hover:bg-[rgba(250,207,65,0.10)] transition-all"
             @click="dismissIntro('zip')"
           >
             Enter ZIP Codes

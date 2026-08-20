@@ -22,7 +22,7 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
 <template>
   <div class="bg-[#f8fafb] border-t border-gray-200 px-4 py-3 shrink-0">
     <template v-if="hc.loading.value">
-      <div class="text-sm font-semibold text-[#0b2d50] animate-pulse">
+      <div class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] animate-pulse">
         Counting {{ audienceType === 'business' ? 'businesses' : 'households' }}...
       </div>
     </template>
@@ -35,7 +35,7 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
     </template>
     <template v-else-if="hasTargeting">
       <div class="flex items-center gap-1.5">
-        <div class="text-sm font-semibold text-[#0b2d50]">
+        <div class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">
           {{ formatNumber(finalHouseholdCount) }} {{ audienceType === 'business' ? 'businesses' : 'households' }}
         </div>
         <span
@@ -45,7 +45,7 @@ const hasTargeting = computed(() => props.finalHouseholdCount > 0 || hc.loading.
         <span
           v-if="(props.activeFilterCount ?? 0) > 0"
           data-testid="summary-filter-badge"
-          class="text-[10px] bg-[#47bfa9]/10 text-[#2b8d7c] px-1.5 py-0.5 rounded font-medium"
+          class="text-[10px] bg-[rgba(250,207,65,0.16)] text-[#2b8d7c] px-1.5 py-0.5 rounded font-medium"
         >{{ props.activeFilterCount }} {{ props.activeFilterCount === 1 ? 'filter' : 'filters' }}</span>
       </div>
       <div class="text-xs text-gray-500 mt-0.5">

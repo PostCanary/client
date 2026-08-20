@@ -1464,8 +1464,8 @@ watch(
             data-testid="toolbar-photo"
             class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
             :class="drawerTab === 'photo'
-              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+              ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
+              : 'border-gray-200 text-gray-700 hover:border-[var(--pc-canary,#facf41)] hover:text-[var(--pc-navy,#1c2430)]'"
             @click="openDrawer('photo')"
           >
             Photo
@@ -1475,8 +1475,8 @@ watch(
             data-testid="toolbar-colors"
             class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
             :class="drawerTab === 'colors'
-              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+              ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
+              : 'border-gray-200 text-gray-700 hover:border-[var(--pc-canary,#facf41)] hover:text-[var(--pc-navy,#1c2430)]'"
             @click="openDrawer('colors')"
           >
             Colors
@@ -1486,8 +1486,8 @@ watch(
             data-testid="toolbar-business"
             class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
             :class="drawerTab === 'business'
-              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+              ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
+              : 'border-gray-200 text-gray-700 hover:border-[var(--pc-canary,#facf41)] hover:text-[var(--pc-navy,#1c2430)]'"
             @click="openDrawer('business')"
           >
             Business
@@ -1498,8 +1498,8 @@ watch(
             data-testid="toolbar-back-style"
             class="px-2.5 py-1.5 rounded-lg border text-sm font-medium transition-colors"
             :class="drawerTab === 'back-style'
-              ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
-              : 'border-gray-200 text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50]'"
+              ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
+              : 'border-gray-200 text-gray-700 hover:border-[var(--pc-canary,#facf41)] hover:text-[var(--pc-navy,#1c2430)]'"
             @click="openDrawer('back-style')"
           >
             Back Style
@@ -1513,7 +1513,7 @@ watch(
           v-if="auth.hasPostcards"
           type="button"
           data-testid="ai-generate-btn"
-          class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           :disabled="aiGenerateBusy"
           @click="handleAiGenerateClick"
         >
@@ -1527,14 +1527,14 @@ watch(
         <button
           type="button"
           data-testid="toolbar-try-template"
-          class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#47bfa9] hover:text-[#0b2d50] transition-colors"
+          class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[var(--pc-canary,#facf41)] hover:text-[var(--pc-navy,#1c2430)] transition-colors"
           @click="showTemplateBrowser = true"
         >
           Try Different Template
         </button>
         <button
           type="button"
-          class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           :disabled="
             renderPhase === 'starting' ||
             renderPhase === 'queued' ||
@@ -1638,7 +1638,7 @@ watch(
               @click="openZone(zone)"
             >
               <span
-                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[rgba(250,207,65,0.8)] group-hover:bg-[rgba(250,207,65,0.16)]"
               />
               <span
                 class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
@@ -1649,7 +1649,7 @@ watch(
           </div>
           <div v-else-if="backPreviewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Back preview unavailable.
-            <button class="ml-2 text-[#47bfa9] underline" @click="refreshBackPreview">Retry</button>
+            <button class="ml-2 text-[var(--pc-navy,#1c2430)] underline" @click="refreshBackPreview">Retry</button>
           </div>
           <div v-else class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
             Loading back…
@@ -1666,7 +1666,7 @@ watch(
                S62 rehearsal fix. -->
           <div v-if="!cardsReady" class="w-full max-w-lg aspect-[3/2] bg-white border border-gray-200 rounded flex items-center justify-center">
             <div class="text-center space-y-3 px-6">
-              <span class="inline-block w-8 h-8 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin" />
+              <span class="inline-block w-8 h-8 border-2 border-[var(--pc-canary,#facf41)] border-t-transparent rounded-full animate-spin" />
               <div class="text-sm text-gray-700 font-medium">Designing your postcards…</div>
               <div class="text-xs text-gray-500">This usually takes about a minute.</div>
             </div>
@@ -1751,7 +1751,7 @@ watch(
               @click="openZone(zone)"
             >
               <span
-                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[#47bfa9]/80 group-hover:bg-[#47bfa9]/10"
+                class="absolute inset-0 rounded border-2 border-transparent transition-[border-color,background-color] duration-150 group-hover:border-[rgba(250,207,65,0.8)] group-hover:bg-[rgba(250,207,65,0.16)]"
               />
               <span
                 class="absolute top-1.5 left-1.5 hidden group-hover:inline-block text-[10px] font-medium bg-[#0b2d50]/85 text-white px-1.5 py-0.5 rounded pointer-events-none"
@@ -1776,13 +1776,13 @@ watch(
               }"
             >
               <span
-                class="font-bold text-[#0b2d50] leading-tight break-words px-[6%] py-[5%]"
+                class="font-bold text-[var(--pc-navy,#1c2430)] leading-tight break-words px-[6%] py-[5%]"
                 :class="liveOverlay.zone === 'headline' ? 'text-[1.6vw] min-[1400px]:text-xl' : 'text-[1.2vw] min-[1400px]:text-base text-center'"
               >
                 {{ liveOverlay.text }}
               </span>
               <span
-                class="absolute bottom-1.5 right-1.5 text-[9px] font-medium bg-[#47bfa9] text-white px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                class="absolute bottom-1.5 right-1.5 text-[9px] font-medium bg-[var(--app-btn-bg,#1c2430)] text-white px-1.5 py-0.5 rounded inline-flex items-center gap-1"
               >
                 <span class="inline-block w-2 h-2 border border-white border-t-transparent rounded-full animate-spin" />
                 Syncing…
@@ -1791,7 +1791,7 @@ watch(
           </div>
           <div v-else-if="previewError" class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-500">
             Preview unavailable.
-            <button class="ml-2 text-[#47bfa9] underline" @click="refreshPreview">Retry</button>
+            <button class="ml-2 text-[var(--pc-navy,#1c2430)] underline" @click="refreshPreview">Retry</button>
           </div>
           <div v-else class="w-full max-w-lg aspect-[3/2] bg-gray-100 rounded flex items-center justify-center text-sm text-gray-400">
             Waiting for card data…
@@ -1927,7 +1927,7 @@ watch(
       data-testid="proof-overlay"
       @click.self="showProofPanel = false"
     >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div class="bg-white rounded-[2px] w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 py-3">
           <div class="text-sm text-gray-500 min-w-0 flex-1">
             <template v-if="renderPhase === 'starting' || renderPhase === 'queued'">
@@ -1960,14 +1960,14 @@ watch(
         <div class="px-6 py-4">
       <div v-if="proofImages.length > 0" class="space-y-3">
         <div class="flex items-center justify-between">
-          <div class="text-sm font-semibold text-[#0b2d50]">
+          <div class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">
             Print-ready proof ({{ proofImages.length }} card{{ proofImages.length > 1 ? "s" : "" }})
           </div>
           <a
             v-if="renderPhase === 'done' && renderedCards.length > 0"
             :href="mediaSrc(renderedCards[0]?.downloadUrl ?? '')"
             target="_blank"
-            class="text-sm text-[#47bfa9] underline"
+            class="text-sm text-[var(--pc-navy,#1c2430)] underline"
           >Download PDF</a>
         </div>
         <div
@@ -1996,7 +1996,7 @@ watch(
               <a
                 :href="mediaSrc(renderedCards[idx]?.downloadUrl ?? '')"
                 target="_blank"
-                class="text-xs font-medium text-[#47bfa9] underline"
+                class="text-xs font-medium text-[var(--pc-navy,#1c2430)] underline"
                 :data-testid="`proof-pdf-link-${idx + 1}`"
               >
                 Open Card {{ idx + 1 }} PDF
@@ -2008,7 +2008,7 @@ watch(
       <div v-else-if="renderPhase === 'failed'" class="text-sm text-red-600">
         {{ renderError?.message }}
         <button
-          class="ml-2 text-[#47bfa9] underline"
+          class="ml-2 text-[var(--pc-navy,#1c2430)] underline"
           @click="handleGenerateProof"
         >
           Retry
@@ -2038,8 +2038,8 @@ watch(
       data-testid="ai-generate-website-modal"
       @click.self="cancelAiWebsiteModal"
     >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
-        <h2 class="text-lg font-semibold text-[#0b2d50]">Design from your website</h2>
+      <div class="bg-white rounded-[2px] w-full max-w-sm p-6">
+        <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)]">Design from your website</h2>
         <p class="mt-1 text-sm text-gray-500">
           We'll scan it for your logo, colors, and photos, then build your postcard.
         </p>
@@ -2065,7 +2065,7 @@ watch(
           <button
             type="button"
             data-testid="ai-generate-website-submit"
-            class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             :disabled="aiSavingWebsite"
             @click="submitAiWebsiteModal"
           >
@@ -2083,8 +2083,8 @@ watch(
       data-testid="ai-generate-confirm"
       @click.self="cancelAiConfirm"
     >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
-        <h2 class="text-lg font-semibold text-[#0b2d50]">Replace your card copy?</h2>
+      <div class="bg-white rounded-[2px] w-full max-w-sm p-6">
+        <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)]">Replace your card copy?</h2>
         <p class="mt-1 text-sm text-gray-500">
           This rewrites your card copy with fresh AI content — your manual edits will be replaced.
         </p>
@@ -2099,7 +2099,7 @@ watch(
           </button>
           <button
             type="button"
-            class="bg-[#47bfa9] text-white text-sm font-semibold px-3 py-1.5 rounded-lg hover:bg-[#3aa893] transition-colors"
+            class="bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold px-3 py-1.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
             @click="confirmAiRegenerate"
           >
             Continue

@@ -727,7 +727,7 @@ function confirm() {
   width: min(1100px, 96vw);
   max-height: 90vh;
   background: var(--app-card-bg);
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
     0 10px 24px rgba(12, 45, 80, 0.16);
   border: 1px solid var(--app-border-medium);
@@ -748,7 +748,7 @@ function confirm() {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #5eead4 0%, #47bfa9 55%, #0f766e 100%);
+  background: linear-gradient(180deg, #5eead4 0%, var(--pc-canary, #facf41) 55%, var(--pc-navy, #1c2430) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 0 0 2px rgba(71, 191, 169, 0.25);
 }
@@ -777,7 +777,7 @@ function confirm() {
   color: var(--app-text-body);
   background: #f0fdfa;
   border: 1px solid rgba(71, 191, 169, 0.25);
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 10px 14px;
 }
 
@@ -803,7 +803,7 @@ function confirm() {
 .spreadsheet-wrapper {
   overflow-x: auto;
   border: 1px solid var(--app-border-medium);
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
 }
 
 .spreadsheet {
@@ -971,7 +971,7 @@ function confirm() {
 
 .btn {
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   font-weight: 700;
   font-size: 14px;
   border: 1px solid transparent;

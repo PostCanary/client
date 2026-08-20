@@ -37,12 +37,12 @@ function previewUrl(card: MailCampaignCard): string | null {
 
 <template>
   <div class="space-y-6">
-    <h3 class="text-sm font-semibold text-[#0b2d50]">Sequence Progress</h3>
+    <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Sequence Progress</h3>
 
     <!-- Under Review banner — shown when campaign is pending content moderation -->
     <div
       v-if="campaignStatus === 'pending_moderation'"
-      class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"
+      class="flex items-start gap-3 rounded-[2px] border border-amber-200 bg-amber-50 p-4"
       role="status"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-amber-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -57,7 +57,7 @@ function previewUrl(card: MailCampaignCard): string | null {
     <div
       v-for="card in cards"
       :key="card.cardNumber"
-      class="flex items-start gap-4 bg-white rounded-xl border border-gray-200 p-4"
+      class="flex items-start gap-4 bg-white rounded-[2px] border border-gray-200 p-4"
     >
       <!-- Thumbnail -->
       <div class="shrink-0 w-20">
@@ -85,7 +85,7 @@ function previewUrl(card: MailCampaignCard): string | null {
       <!-- Status progression -->
       <div class="flex-1">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-semibold text-[#0b2d50]">
+          <span class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">
             Card {{ card.cardNumber }}
           </span>
           <span class="text-xs text-gray-400">
@@ -105,7 +105,7 @@ function previewUrl(card: MailCampaignCard): string | null {
               class="h-2 flex-1 rounded-full transition-colors"
               :class="
                 stepIndex(card.status) >= idx
-                  ? 'bg-[#47bfa9]'
+                  ? 'bg-[var(--app-btn-bg,#1c2430)]'
                   : 'bg-gray-200'
               "
             />
@@ -118,7 +118,7 @@ function previewUrl(card: MailCampaignCard): string | null {
             class="text-[10px]"
             :class="
               stepIndex(card.status) >= stepIndex(step)
-                ? 'text-[#47bfa9] font-medium'
+                ? 'text-[var(--pc-navy,#1c2430)] font-medium'
                 : 'text-gray-300'
             "
           >

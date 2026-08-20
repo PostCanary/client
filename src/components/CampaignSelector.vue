@@ -53,7 +53,7 @@ function onChange(event: Event) {
   font-family: "Instrument Sans", system-ui, sans-serif;
   font-size: 11px;
   font-weight: 600;
-  color: #47bfa9;
+  color: var(--pc-canary, #facf41);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -62,7 +62,7 @@ function onChange(event: Event) {
 .selector-select {
   width: 100%;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e0e0e0;
   background: #fafafa;
   font-family: "Instrument Sans", system-ui, sans-serif;
@@ -75,12 +75,12 @@ function onChange(event: Event) {
 }
 
 .selector-select:hover {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .selector-select:focus {
   outline: none;
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 </style>

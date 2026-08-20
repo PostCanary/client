@@ -31,7 +31,7 @@ const suppressionParts = computed(() => {
 <template>
   <div class="flex flex-wrap items-center gap-1.5 text-sm text-slate-600 py-2 px-3 bg-slate-50 rounded-lg border border-slate-200">
     <!-- Uploaded count -->
-    <span class="font-medium text-[#0b2d50]">{{ uploaded.toLocaleString() }} uploaded</span>
+    <span class="font-medium text-[var(--pc-navy,#1c2430)]">{{ uploaded.toLocaleString() }} uploaded</span>
 
     <span class="text-slate-400">→</span>
 
@@ -49,6 +49,6 @@ const suppressionParts = computed(() => {
     <span class="text-slate-400">→</span>
 
     <!-- Deliverable -->
-    <span class="font-semibold text-[#47bfa9]">{{ deliverable.toLocaleString() }} deliverable</span>
+    <span class="font-semibold text-[var(--pc-navy,#1c2430)]">{{ deliverable.toLocaleString() }} deliverable</span>
   </div>
 </template>

@@ -583,14 +583,14 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       data-testid="upload-design-content"
       :class="showDesignRequestModal ? 'upload-design-content--blurred' : ''"
     >
-      <h1 class="text-xl font-semibold text-[#0b2d50] mb-1">Upload Your Design</h1>
+      <h1 class="text-xl font-semibold text-[var(--pc-navy,#1c2430)] mb-1">Upload Your Design</h1>
       <p class="text-sm text-gray-500 mb-6">
         Upload print-ready artwork for your postcard, or have our team design one for you.
       </p>
 
       <button
         type="button"
-        class="w-full mb-5 rounded-xl border border-[#47bfa9] bg-[#47bfa9]/5 px-4 py-3 text-sm font-semibold text-[#178e7c] hover:bg-[#47bfa9]/10"
+        class="w-full mb-5 rounded-[2px] border border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)] px-4 py-3 text-sm font-semibold text-[var(--pc-navy, #1c2430)] hover:bg-[rgba(250,207,65,0.16)]"
         data-testid="open-design-library"
         @click="openDesignLibrary"
       >
@@ -600,11 +600,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <!-- Front dropzone (required) -->
       <div class="mb-5">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-[#0b2d50]">Front design</span>
+          <span class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">Front design</span>
           <span class="text-xs text-gray-400">Required</span>
         </div>
 
-        <div v-if="frontFile" class="border border-gray-200 rounded-xl p-4 flex items-center gap-4" data-testid="upload-front-preview">
+        <div v-if="frontFile" class="border border-gray-200 rounded-[2px] p-4 flex items-center gap-4" data-testid="upload-front-preview">
           <img
             v-if="frontFile.previewUrl && frontFile.mimeType.startsWith('image/')"
             :src="frontFile.previewUrl"
@@ -625,14 +625,14 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             Preview unavailable
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-[#0b2d50] truncate">{{ frontFile.fileName }}</p>
+            <p class="text-sm font-medium text-[var(--pc-navy,#1c2430)] truncate">{{ frontFile.fileName }}</p>
             <p class="text-xs text-gray-400">
               {{ frontFile.widthPx && frontFile.heightPx ? `${frontFile.widthPx}x${frontFile.heightPx}px` : 'PDF file' }}
             </p>
           </div>
           <button
             type="button"
-            class="text-sm font-semibold text-[#47bfa9] hover:text-[#3aa893] shrink-0"
+            class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] hover:text-[var(--pc-navy,#1c2430)] shrink-0"
             data-testid="upload-front-replace"
             @click="replaceFront"
           >
@@ -642,9 +642,9 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 
         <label
           v-else
-          class="block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+          class="block border-2 border-dashed rounded-[2px] p-6 text-center cursor-pointer transition-colors"
           :class="[
-            frontDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300',
+            frontDragging ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]' : 'border-gray-200 hover:border-gray-300',
             frontProcessing ? 'pointer-events-none opacity-70' : '',
           ]"
           data-testid="upload-front-dropzone"
@@ -672,11 +672,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <!-- Back dropzone (optional) -->
       <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm font-medium text-[#0b2d50]">Back design</span>
+          <span class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">Back design</span>
           <span class="text-xs text-gray-400">Optional</span>
         </div>
 
-        <div v-if="backFile" class="border border-gray-200 rounded-xl p-4 flex items-center gap-4" data-testid="upload-back-preview">
+        <div v-if="backFile" class="border border-gray-200 rounded-[2px] p-4 flex items-center gap-4" data-testid="upload-back-preview">
           <img
             v-if="backFile.previewUrl && backFile.mimeType.startsWith('image/')"
             :src="backFile.previewUrl"
@@ -697,14 +697,14 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             Preview unavailable
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-[#0b2d50] truncate">{{ backFile.fileName }}</p>
+            <p class="text-sm font-medium text-[var(--pc-navy,#1c2430)] truncate">{{ backFile.fileName }}</p>
             <p class="text-xs text-gray-400">
               {{ backFile.widthPx && backFile.heightPx ? `${backFile.widthPx}x${backFile.heightPx}px` : '' }}
             </p>
           </div>
           <button
             type="button"
-            class="text-sm font-semibold text-[#47bfa9] hover:text-[#3aa893] shrink-0"
+            class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] hover:text-[var(--pc-navy,#1c2430)] shrink-0"
             data-testid="upload-back-replace"
             @click="replaceBack"
           >
@@ -714,9 +714,9 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 
         <label
           v-else
-          class="block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+          class="block border-2 border-dashed rounded-[2px] p-6 text-center cursor-pointer transition-colors"
           :class="[
-            backDragging ? 'border-[#47bfa9] bg-[#47bfa9]/5' : 'border-gray-200 hover:border-gray-300',
+            backDragging ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]' : 'border-gray-200 hover:border-gray-300',
             backProcessing ? 'pointer-events-none opacity-70' : '',
           ]"
           data-testid="upload-back-dropzone"
@@ -744,10 +744,10 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <!-- Requested-design summary -->
       <div
         v-if="designSource === 'requested' && designRequestSummary"
-        class="mb-4 rounded-xl border border-[#47bfa9]/30 bg-[#47bfa9]/5 p-4"
+        class="mb-4 rounded-[2px] border border-[rgba(250,207,65,0.45)] bg-[rgba(250,207,65,0.10)] p-4"
         data-testid="design-request-summary"
       >
-        <p class="text-sm font-semibold text-[#0b2d50]">Design request submitted</p>
+        <p class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Design request submitted</p>
         <p class="text-xs text-gray-500 mt-1">
           Our team will reach out to {{ designRequestSummary.email }} to design your postcard (Template {{ designRequestSummary.template }}).
         </p>
@@ -756,7 +756,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <div class="text-center pt-2 border-t border-gray-100">
         <button
           type="button"
-          class="text-sm text-gray-500 hover:text-[#47bfa9] transition-colors mt-4"
+          class="text-sm text-gray-500 hover:text-[var(--pc-navy,#1c2430)] transition-colors mt-4"
           data-testid="buy-design-link"
           @click="openDesignRequestModal"
         >
@@ -782,7 +782,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <section class="design-library-modal">
         <header class="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-[#0b2d50]">Choose from Designs</h2>
+            <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)]">Choose from Designs</h2>
             <p class="text-xs text-gray-500 mt-1">Reuse saved artwork without uploading it again.</p>
           </div>
           <button type="button" aria-label="Close" @click="showDesignLibrary = false">✕</button>
@@ -838,7 +838,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
       <div class="design-request-modal">
         <div class="flex items-start justify-between mb-4">
           <div>
-            <h2 class="text-lg font-semibold text-[#0b2d50]">Postcard Design Request</h2>
+            <h2 class="text-lg font-semibold text-[var(--pc-navy,#1c2430)]">Postcard Design Request</h2>
             <p class="text-xs text-gray-500 mt-1">${{ pricing.customDesignFee }} — our team designs your postcard for you.</p>
           </div>
           <button
@@ -971,7 +971,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
   gap: 5px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   background: white;
   padding: 0 0 10px;
   color: #64748b;
@@ -1061,7 +1061,7 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 
 .field input,
 .field textarea {
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   padding: 10px 12px;
   font-size: 14px;
@@ -1072,13 +1072,13 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 .field input:focus,
 .field textarea:focus {
   outline: none;
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
 .template-btn {
   padding: 10px 8px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #fff;
   font-size: 13px;
@@ -1090,11 +1090,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
 }
 
 .template-btn:hover {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .template-btn--active {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   background: rgba(71, 191, 169, 0.08);
   color: #0f172a;
 }

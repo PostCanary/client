@@ -40,10 +40,10 @@ function handleClick(step: WizardStep) {
       <button
         class="flex items-center gap-1.5 text-sm transition-colors"
         :class="{
-          'text-[#47bfa9] font-semibold': step.num === currentStep,
-          'text-[#47bfa9]': isCompleted(step.num) && step.num !== currentStep,
+          'text-[var(--pc-navy,#1c2430)] font-semibold': step.num === currentStep,
+          'text-[var(--pc-navy,#1c2430)]': isCompleted(step.num) && step.num !== currentStep,
           'text-gray-400': !isCompleted(step.num) && step.num !== currentStep,
-          'cursor-pointer hover:text-[#3aa893]': isClickable(step.num),
+          'cursor-pointer hover:text-[var(--pc-navy,#1c2430)]': isClickable(step.num),
           'cursor-default': !isClickable(step.num),
         }"
         :disabled="!isClickable(step.num)"
@@ -53,8 +53,8 @@ function handleClick(step: WizardStep) {
         <span
           class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0"
           :class="{
-            'bg-[#47bfa9] text-white': step.num === currentStep,
-            'bg-[#47bfa9]/20 text-[#47bfa9]': isCompleted(step.num) && step.num !== currentStep,
+            'bg-[var(--app-btn-bg,#1c2430)] text-white': step.num === currentStep,
+            'bg-[rgba(250,207,65,0.22)] text-[var(--pc-navy,#1c2430)]': isCompleted(step.num) && step.num !== currentStep,
             'bg-gray-100 text-gray-400': !isCompleted(step.num) && step.num !== currentStep,
           }"
         >
@@ -89,7 +89,7 @@ function handleClick(step: WizardStep) {
       <div
         v-if="idx < steps.length - 1"
         class="flex-1 h-0.5 min-w-[16px] mx-1"
-        :class="isCompleted(step.num) ? 'bg-[#47bfa9]' : 'bg-gray-200'"
+        :class="isCompleted(step.num) ? 'bg-[var(--app-btn-bg,#1c2430)]' : 'bg-gray-200'"
       />
     </template>
 

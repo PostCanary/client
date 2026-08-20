@@ -51,8 +51,8 @@ const grandTotal = computed(() => {
     <!-- Mailing cost row (always shown) -->
     <div class="px-4 py-3 bg-white">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-[#0b2d50]">Postcard mailing</span>
-        <span v-if="costPreview" class="text-sm font-semibold text-[#0b2d50]">
+        <span class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">Postcard mailing</span>
+        <span v-if="costPreview" class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">
           {{ perCardSubtotal }}
           <span class="text-xs font-normal text-slate-400 ml-1">
             ({{ costPreview.deliverable_count.toLocaleString() }} × {{ perCardRate }})
@@ -83,8 +83,8 @@ const grandTotal = computed(() => {
 
     <!-- Grand total (only shown when costPreview available) -->
     <div v-if="costPreview" class="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between">
-      <span class="text-sm font-semibold text-[#0b2d50]">Total estimate</span>
-      <span class="text-base font-bold text-[#47bfa9]">{{ grandTotal }}</span>
+      <span class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Total estimate</span>
+      <span class="text-base font-bold text-[var(--pc-navy,#1c2430)]">{{ grandTotal }}</span>
     </div>
   </div>
 </template>

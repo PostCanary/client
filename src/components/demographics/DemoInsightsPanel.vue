@@ -28,7 +28,7 @@ const safeText = computed(() => sanitizeHtml(props.message?.text ?? ""));
 <style scoped>
 .insights-panel {
   background: linear-gradient(135deg, var(--app-navy, #0b2d50) 0%, #163b69 100%);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow);
   padding: 24px;
   color: #fff;
@@ -45,9 +45,9 @@ const safeText = computed(() => sanitizeHtml(props.message?.text ?? ""));
 
 .insight-body {
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 18px;
-  border-left: 3px solid var(--app-teal, #47bfa9);
+  border-left: 3px solid var(--app-teal, var(--pc-canary, #facf41));
 }
 
 .insight-text {
@@ -59,7 +59,7 @@ const safeText = computed(() => sanitizeHtml(props.message?.text ?? ""));
 
 .insight-text :deep(strong) {
   font-weight: 700;
-  color: var(--app-teal, #47bfa9);
+  color: var(--app-teal, var(--pc-canary, #facf41));
 }
 
 .insight-qualifier {

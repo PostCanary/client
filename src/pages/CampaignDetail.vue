@@ -200,7 +200,7 @@ onMounted(() => {
   <!-- Loading -->
   <div v-if="loading" class="flex justify-center py-20">
     <div
-      class="w-8 h-8 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
+      class="w-8 h-8 border-2 border-[var(--pc-canary,#facf41)] border-t-transparent rounded-full animate-spin"
     />
   </div>
 
@@ -211,7 +211,7 @@ onMounted(() => {
   >
     <p class="text-gray-500">{{ error ?? "Campaign not found" }}</p>
     <button
-      class="mt-3 text-sm text-[#47bfa9] font-medium hover:underline"
+      class="mt-3 text-sm text-[var(--pc-navy,#1c2430)] font-medium hover:underline"
       @click="router.push('/app/campaigns')"
     >
       ← All Campaigns
@@ -234,7 +234,7 @@ onMounted(() => {
     <!-- Header: name + status always present -->
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3 flex-wrap">
-        <h1 class="text-2xl font-bold text-[#0b2d50]" data-testid="campaign-detail-name">
+        <h1 class="text-2xl font-bold text-[var(--pc-navy,#1c2430)]" data-testid="campaign-detail-name">
           {{ campaign.name }}
         </h1>
         <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
@@ -243,7 +243,7 @@ onMounted(() => {
         <button
           v-if="showRetryPrintSubmission"
           type="button"
-          class="bg-[#47bfa9] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#3aa893] transition-colors disabled:opacity-50"
+          class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-4 py-2 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors disabled:opacity-50"
           :disabled="retryingPrint"
           data-testid="retry-print-submission"
           @click="retryPrintSubmission"
@@ -290,19 +290,19 @@ onMounted(() => {
     >
       <div>
         <span class="text-gray-500">Created:</span>
-        <span class="ml-2 text-[#0b2d50] font-medium">
+        <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium">
           {{ formatCreatedAt(campaign.createdAt) }}
         </span>
       </div>
       <div v-if="hasRecipientCount">
         <span class="text-gray-500">Recipients:</span>
-        <span class="ml-2 text-[#0b2d50] font-medium" data-testid="campaign-detail-recipients">
+        <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium" data-testid="campaign-detail-recipients">
           {{ recipientCount.toLocaleString() }}
         </span>
       </div>
       <div v-if="campaign.goalType">
         <span class="text-gray-500">Goal:</span>
-        <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+        <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium capitalize">
           {{ formatGoal(campaign.goalType) }}
         </span>
       </div>
@@ -311,10 +311,10 @@ onMounted(() => {
     <!-- Design preview: uploaded front artwork or first card thumbnail -->
     <div
       v-if="designPreviewUrl || isUploadedDesign"
-      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8"
       data-testid="campaign-detail-design"
     >
-      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Design</h3>
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-3">Design</h3>
       <div
         class="w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
         style="aspect-ratio: 3 / 2;"
@@ -342,14 +342,14 @@ onMounted(() => {
 
     <div
       v-if="campaign.order"
-      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8"
       data-testid="campaign-order-reconciliation"
     >
-      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Order reconciliation</h3>
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-3">Order reconciliation</h3>
       <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm md:grid-cols-4">
         <div v-for="key in ['approved', 'requested', 'purchased', 'printable', 'billed', 'submitted', 'accepted', 'mailed', 'delivered', 'returned', 'failed', 'refunded']" :key="key">
           <dt class="text-gray-500 capitalize">{{ key }}</dt>
-          <dd class="font-semibold text-[#0b2d50]" :data-testid="`order-count-${key}`">
+          <dd class="font-semibold text-[var(--pc-navy,#1c2430)]" :data-testid="`order-count-${key}`">
             {{ campaign.order.counts[key as keyof typeof campaign.order.counts] ?? "—" }}
           </dd>
         </div>
@@ -357,19 +357,19 @@ onMounted(() => {
       <dl class="mt-5 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
         <div>
           <dt class="text-gray-500">Server quote</dt>
-          <dd class="font-semibold text-[#0b2d50]" data-testid="order-quoted-amount">
+          <dd class="font-semibold text-[var(--pc-navy,#1c2430)]" data-testid="order-quoted-amount">
             {{ formatOrderAmount(campaign.order.amounts.quoted_cents, campaign.order.amounts.currency) }}
           </dd>
         </div>
         <div>
           <dt class="text-gray-500">Charged</dt>
-          <dd class="font-semibold text-[#0b2d50]" data-testid="order-charged-amount">
+          <dd class="font-semibold text-[var(--pc-navy,#1c2430)]" data-testid="order-charged-amount">
             {{ formatOrderAmount(campaign.order.amounts.charged_cents, campaign.order.amounts.currency) }}
           </dd>
         </div>
         <div>
           <dt class="text-gray-500">Net after refunds</dt>
-          <dd class="font-semibold text-[#0b2d50]" data-testid="order-net-amount">
+          <dd class="font-semibold text-[var(--pc-navy,#1c2430)]" data-testid="order-net-amount">
             {{ formatOrderAmount(campaign.order.amounts.net_cents, campaign.order.amounts.currency) }}
           </dd>
         </div>
@@ -388,9 +388,9 @@ onMounted(() => {
     <!-- Targeting / stats summary — only when at least one field is present -->
     <div
       v-if="showTargetingSummary"
-      class="bg-white rounded-xl border border-gray-200 p-5 mb-8"
+      class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8"
     >
-      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-3">
         {{ campaign.targetingData ? "Targeting Summary" : "Campaign Summary" }}
       </h3>
       <div class="flex items-start gap-4">
@@ -404,25 +404,25 @@ onMounted(() => {
         <div class="space-y-2 text-sm">
           <div v-if="campaign.goalType">
             <span class="text-gray-500">Goal:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium capitalize">
+            <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium capitalize">
               {{ formatGoal(campaign.goalType) }}
             </span>
           </div>
           <div v-if="hasRecipientCount">
             <span class="text-gray-500">Recipients:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium">
+            <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium">
               {{ recipientCount.toLocaleString() }}
             </span>
           </div>
           <div v-if="typeof campaign.sequenceLength === 'number'">
             <span class="text-gray-500">Sequence:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium">
+            <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium">
               {{ campaign.sequenceLength }} card{{ campaign.sequenceLength > 1 ? "s" : "" }}
             </span>
           </div>
           <div v-if="campaign.order || campaign.orderContractPresent || typeof campaign.totalCost === 'number'">
             <span class="text-gray-500">Total cost:</span>
-            <span class="ml-2 text-[#0b2d50] font-medium">
+            <span class="ml-2 text-[var(--pc-navy,#1c2430)] font-medium">
               {{ campaign.order || campaign.orderContractPresent
                 ? formatOrderAmount(campaign.order?.amounts.quoted_cents, campaign.order?.amounts.currency)
                 : `$${campaign.totalCost!.toFixed(2)}` }}

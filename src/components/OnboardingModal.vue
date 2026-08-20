@@ -379,7 +379,7 @@ function openTerms() {
 
 .onboarding-error {
   background: #fef2f2;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 8px 10px;
   font-size: 13px;
   color: #b91c1c;
@@ -411,7 +411,7 @@ function openTerms() {
 }
 
 .field input {
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   padding: 10px 12px;
   font-size: 14px;
@@ -424,7 +424,7 @@ function openTerms() {
 
 .field input:focus {
   outline: none;
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
@@ -443,7 +443,7 @@ function openTerms() {
 
 .industry-btn {
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #fff;
   font-size: 14px;
@@ -455,11 +455,11 @@ function openTerms() {
 }
 
 .industry-btn:hover {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .industry-btn--active {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   background: rgba(71, 191, 169, 0.08);
   color: #0f172a;
 }
@@ -508,11 +508,11 @@ function openTerms() {
 }
 
 .dot--active {
-  background: #47bfa9;
+  background: var(--pc-canary, #facf41);
 }
 
 .dot--done {
-  background: #47bfa9;
+  background: var(--pc-canary, #facf41);
   opacity: 0.5;
 }
 
@@ -579,7 +579,7 @@ function openTerms() {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #47bfa9;
+  accent-color: var(--pc-canary, #facf41);
   flex-shrink: 0;
 }
 
@@ -589,7 +589,7 @@ function openTerms() {
 }
 
 .terms-link {
-  color: #47bfa9;
+  color: var(--pc-canary, #facf41);
   text-decoration: underline;
   background: none;
   border: none;
@@ -600,6 +600,6 @@ function openTerms() {
 }
 
 .terms-link:hover {
-  color: #3aa893;
+  color: var(--app-btn-bg-hover, #2a3544);
 }
 </style>

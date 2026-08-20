@@ -763,7 +763,7 @@ async function approve() {
     v-if="approved"
     class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center"
   >
-        <h2 class="text-2xl font-bold text-[#0b2d50] mb-2">
+        <h2 class="text-2xl font-bold text-[var(--pc-navy,#1c2430)] mb-2">
       {{ approvalOutcomeTitle }}
     </h2>
     <p class="text-gray-500 mb-6 max-w-md">
@@ -774,13 +774,13 @@ async function approve() {
     </p>
     <div class="flex gap-3">
       <button
-        class="bg-[#47bfa9] text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-[#3aa893] transition-colors"
+        class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-6 py-2.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
         @click="router.push('/app/campaigns')"
       >
         View Campaign
       </button>
       <button
-        class="border border-gray-200 text-[#0b2d50] font-semibold px-6 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+        class="border border-gray-200 text-[var(--pc-navy,#1c2430)] font-semibold px-6 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
         @click="router.push('/app/send')"
       >
         Send More Mail
@@ -834,7 +834,7 @@ async function approve() {
           </template>
         </div>
         <button
-          class="border border-[#47bfa9] text-[#47bfa9] font-semibold px-4 py-2 rounded-lg hover:bg-[#47bfa9] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="border border-[var(--pc-canary,#facf41)] text-[var(--pc-navy,#1c2430)] font-semibold px-4 py-2 rounded-[2px] hover:bg-[var(--app-btn-bg,#1c2430)] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           :disabled="
             renderPhase === 'starting' ||
             renderPhase === 'queued' ||
@@ -881,7 +881,7 @@ async function approve() {
         <div v-else-if="renderPhase === 'failed'" class="text-sm text-red-600">
           {{ renderError?.message }}
           <button
-            class="ml-2 text-[#47bfa9] underline"
+            class="ml-2 text-[var(--pc-navy,#1c2430)] underline"
             @click="handleGenerateProof"
           >
             Retry
@@ -905,9 +905,9 @@ async function approve() {
             id="review-campaign-name"
             v-model="campaignName"
             data-testid="review-campaign-name"
-            class="w-full text-lg font-semibold border-b border-gray-200 pb-1 pr-8 focus:border-[#47bfa9] outline-none"
+            class="w-full text-lg font-semibold border-b border-gray-200 pb-1 pr-8 focus:border-[var(--pc-navy,#1c2430)] outline-none"
             :class="
-              campaignNameIsCustom ? 'text-[#0b2d50]' : 'text-gray-400'
+              campaignNameIsCustom ? 'text-[var(--pc-navy,#1c2430)]' : 'text-gray-400'
             "
             aria-describedby="review-campaign-name-hint"
             @input="onCampaignNameInput"
@@ -925,7 +925,7 @@ async function approve() {
       <!-- Targeting summary -->
       <div class="mb-5 p-3 bg-white rounded-lg border border-gray-200">
         <div class="text-sm text-gray-500">Sending to</div>
-        <div class="text-lg font-semibold text-[#0b2d50]">
+        <div class="text-lg font-semibold text-[var(--pc-navy,#1c2430)]">
           {{ householdCount.toLocaleString() }} {{ audienceNoun }}
         </div>
         <div class="text-xs text-gray-400">
@@ -983,7 +983,7 @@ async function approve() {
         class="rounded-lg border border-amber-200 bg-amber-50 p-3"
         data-testid="professional-design-schedule-block"
       >
-        <h4 class="text-sm font-semibold text-[#0b2d50]">
+        <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">
           Final proof approval required
         </h4>
         <p class="mt-1 text-xs leading-relaxed text-amber-800">
@@ -1046,7 +1046,7 @@ async function approve() {
           id="seed"
           v-model="sendSeedCopy"
           type="checkbox"
-          class="accent-[#47bfa9]"
+          class="accent-[var(--pc-canary,#facf41)]"
         />
         <label for="seed" class="text-sm text-gray-500">
           Send a copy to yourself (free)
@@ -1068,7 +1068,7 @@ async function approve() {
           <button
             v-if="!editingReturnAddress"
             type="button"
-            class="text-xs text-[#47bfa9] hover:text-[#3aa893]"
+            class="text-xs text-[var(--pc-navy,#1c2430)] hover:text-[var(--pc-navy,#1c2430)]"
             data-testid="return-address-edit"
             @click="startEditReturnAddress"
           >
@@ -1091,7 +1091,7 @@ async function approve() {
           <p
             v-for="(line, i) in returnAddressLines"
             :key="i"
-            class="text-sm text-[#0b2d50] leading-snug"
+            class="text-sm text-[var(--pc-navy,#1c2430)] leading-snug"
           >
             {{ line }}
           </p>
@@ -1142,7 +1142,7 @@ async function approve() {
               v-model="returnAddressForm.name"
               type="text"
               data-testid="review-return-name"
-              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
             />
           </div>
           <div>
@@ -1157,7 +1157,7 @@ async function approve() {
               v-model="returnAddressForm.address"
               type="text"
               data-testid="review-return-address"
-              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
             />
           </div>
           <div>
@@ -1172,7 +1172,7 @@ async function approve() {
               v-model="returnAddressForm.address2"
               type="text"
               data-testid="review-return-address2"
-              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+              class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
             />
           </div>
           <div class="grid grid-cols-3 gap-2">
@@ -1188,7 +1188,7 @@ async function approve() {
                 v-model="returnAddressForm.city"
                 type="text"
                 data-testid="review-return-city"
-                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
               />
             </div>
             <div>
@@ -1204,7 +1204,7 @@ async function approve() {
                 type="text"
                 maxlength="2"
                 data-testid="review-return-state"
-                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm uppercase text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm uppercase text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
               />
             </div>
             <div>
@@ -1219,7 +1219,7 @@ async function approve() {
                 v-model="returnAddressForm.zip"
                 type="text"
                 data-testid="review-return-zip"
-                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[#0b2d50] focus:border-[#47bfa9] outline-none"
+                class="mt-0.5 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-[var(--pc-navy,#1c2430)] focus:border-[var(--pc-navy,#1c2430)] outline-none"
               />
             </div>
           </div>
@@ -1241,7 +1241,7 @@ async function approve() {
             </button>
             <button
               type="button"
-              class="text-xs font-semibold text-white bg-[#47bfa9] hover:bg-[#3aa893] rounded-md px-3 py-1.5"
+              class="text-xs font-semibold text-white bg-[var(--app-btn-bg,#1c2430)] hover:bg-[var(--app-btn-bg-hover,#2a3544)] rounded-md px-3 py-1.5"
               data-testid="return-address-save"
               @click="saveReturnAddressOverride"
             >
@@ -1265,14 +1265,14 @@ async function approve() {
         </div>
         <div
           v-else-if="paymentMethod?.has_payment_method"
-          class="text-sm text-[#0b2d50]"
+          class="text-sm text-[var(--pc-navy,#1c2430)]"
           data-testid="payment-method-label"
         >
           {{ paymentMethod.label || "Card on file" }}
         </div>
         <div
           v-else-if="paymentMethod && !paymentMethod.required"
-          class="text-sm text-[#0b2d50]"
+          class="text-sm text-[var(--pc-navy,#1c2430)]"
           data-testid="payment-method-covered"
         >
           Covered by an explicit internal credit
@@ -1286,7 +1286,7 @@ async function approve() {
         </div>
         <button
           type="button"
-          class="text-xs text-[#47bfa9] mt-1 disabled:opacity-50"
+          class="text-xs text-[var(--pc-navy,#1c2430)] mt-1 disabled:opacity-50"
           data-testid="payment-method-change"
           :disabled="paymentMethodBusy"
           @click="managePaymentMethod"
@@ -1335,9 +1335,9 @@ async function approve() {
             id="accuracy-ack"
             v-model="acknowledgedAccuracy"
             type="checkbox"
-            class="accent-[#47bfa9] mt-0.5 flex-shrink-0"
+            class="accent-[var(--pc-canary,#facf41)] mt-0.5 flex-shrink-0"
           />
-          <span class="text-xs text-[#0b2d50] leading-snug">
+          <span class="text-xs text-[var(--pc-navy,#1c2430)] leading-snug">
             I confirm all information on this postcard is accurate and
             I have the rights to use the photos, logos, and reviews
             shown. PostCanary is not responsible for the accuracy of
@@ -1366,7 +1366,7 @@ async function approve() {
       <button
         v-if="!canPurchase"
         data-testid="review-save-for-admin"
-        class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
+        class="mt-3 w-full py-3 bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
         :disabled="!canSaveForAdminApproval"
         @click="saveForAdminApproval"
       >
@@ -1380,7 +1380,7 @@ async function approve() {
       <button
         v-else
         data-testid="review-approve"
-        class="mt-3 w-full py-3 bg-[#47bfa9] text-white font-semibold rounded-xl hover:bg-[#3aa893] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
+        class="mt-3 w-full py-3 bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] disabled:opacity-50 disabled:cursor-not-allowed text-lg transition-colors"
         :disabled="!canApprove"
         @click="approve"
       >

@@ -121,7 +121,7 @@ function recClass(rec: string): string {
 <style scoped>
 .table-card {
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow);
   overflow: hidden;
 }
@@ -203,7 +203,7 @@ function recClass(rec: string): string {
   letter-spacing: 0.02em;
 }
 
-.badge.increase { background: rgba(71, 191, 169, 0.1); color: var(--app-teal, #47bfa9); }
+.badge.increase { background: rgba(71, 191, 169, 0.1); color: var(--app-teal, var(--pc-canary, #facf41)); }
 .badge.keep { background: rgba(148, 163, 184, 0.1); color: var(--app-text-muted, #94a3b8); }
 .badge.decrease { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
 

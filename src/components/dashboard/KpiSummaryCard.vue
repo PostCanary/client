@@ -223,7 +223,7 @@ watch(
 
 .hero-card {
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
   overflow: hidden;
   display: flex;

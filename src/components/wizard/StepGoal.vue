@@ -189,9 +189,9 @@ onMounted(async () => {
     <!-- Existing user missing fields -->
     <div
       v-if="needsSetup && !savingSetup && !syncingProfileLocation"
-      class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-8"
+      class="bg-amber-50 border border-amber-200 rounded-[2px] p-5 mb-8"
     >
-      <h3 class="text-base font-semibold text-[#0b2d50] mb-1">
+      <h3 class="text-base font-semibold text-[var(--pc-navy,#1c2430)] mb-1">
         To send postcards, we need a couple things first:
       </h3>
       <p class="text-sm text-gray-500 mb-4">
@@ -225,7 +225,7 @@ onMounted(async () => {
         </div>
 
         <button
-          class="bg-[#47bfa9] text-white font-semibold text-sm px-5 py-2 rounded-lg hover:bg-[#3aa893] transition-colors mt-2"
+          class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold text-sm px-5 py-2 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors mt-2"
           :disabled="!canCompleteSetup"
           @click="completeSetup"
         >
@@ -240,7 +240,7 @@ onMounted(async () => {
       class="flex items-center justify-center py-12"
     >
       <div
-        class="w-6 h-6 border-2 border-[#47bfa9] border-t-transparent rounded-full animate-spin"
+        class="w-6 h-6 border-2 border-[var(--pc-canary,#facf41)] border-t-transparent rounded-full animate-spin"
       />
     </div>
 
@@ -253,7 +253,7 @@ onMounted(async () => {
         type="button"
         class="flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all"
         :class="campaignType === 'targeted'
-          ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+          ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
           : 'border-gray-200 text-gray-500 hover:border-gray-300'"
         @click="selectCampaignType('targeted')"
       >
@@ -263,7 +263,7 @@ onMounted(async () => {
         type="button"
         class="flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all"
         :class="campaignType === 'eddm'
-          ? 'border-[#47bfa9] bg-[#47bfa9]/10 text-[#0b2d50]'
+          ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)]'
           : 'border-gray-200 text-gray-500 hover:border-gray-300'"
         @click="selectCampaignType('eddm')"
       >
@@ -310,7 +310,7 @@ onMounted(async () => {
   gap: 8px;
   min-height: 200px;
   padding: 32px 24px;
-  border-radius: 14px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e5e7eb;
   background: #fff;
   color: #0b2d50;

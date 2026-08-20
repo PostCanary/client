@@ -592,7 +592,7 @@ watch(
   max-width: 260px;
   padding: 12px 14px;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
   color: #0f172a;

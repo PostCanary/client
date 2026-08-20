@@ -12,7 +12,7 @@ const canvasEl = ref<HTMLCanvasElement | null>(null);
 let chart: Chart<"bar", number[], string> | null = null;
 
 const navy = "#0b2d50";
-const teal = "#47bfa9";
+const teal = "var(--pc-canary, #facf41)";
 
 function buildChart() {
   if (!canvasEl.value) return;
@@ -122,7 +122,7 @@ watch(() => [props.labels, props.mailed, props.matched], rebuild);
 <style scoped>
 .chart-full {
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow);
   overflow: hidden;
 }

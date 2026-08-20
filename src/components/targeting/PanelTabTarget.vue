@@ -37,8 +37,8 @@ const emit = defineEmits<{
     </template>
 
     <!-- Around My Jobs — coming soon tile (flag OFF) -->
-    <div v-if="isNeighborGoal && !AROUND_MY_JOBS" class="rounded-xl border border-dashed border-gray-200 p-4 text-center space-y-1">
-      <p class="text-sm font-medium text-[#0b2d50]">Around My Jobs</p>
+    <div v-if="isNeighborGoal && !AROUND_MY_JOBS" class="rounded-[2px] border border-dashed border-gray-200 p-4 text-center space-y-1">
+      <p class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">Around My Jobs</p>
       <p class="text-xs text-gray-400">Targeting by recent job locations is coming soon. Use the drawing tools or ZIP codes to target your area.</p>
     </div>
 
@@ -47,7 +47,7 @@ const emit = defineEmits<{
       <label class="text-sm text-gray-600">Show my jobs on map</label>
       <button
         class="relative w-9 h-5 rounded-full transition-colors"
-        :class="jobs.some(j => j.selected) ? 'bg-[#47bfa9]' : 'bg-gray-300'"
+        :class="jobs.some(j => j.selected) ? 'bg-[var(--app-btn-bg,#1c2430)]' : 'bg-gray-300'"
         @click="jobs.some(j => j.selected) ? emit('deselect-all-jobs') : emit('select-all-jobs')"
       >
         <span
@@ -59,7 +59,7 @@ const emit = defineEmits<{
 
     <!-- Draw on Map -->
     <div>
-      <h4 class="text-sm font-semibold text-[#0b2d50] mb-2">
+      <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-2">
         Draw on Map
       </h4>
       <p class="text-xs text-gray-500">
@@ -72,7 +72,7 @@ const emit = defineEmits<{
 
     <!-- Enter ZIP Codes -->
     <div>
-      <h4 class="text-sm font-semibold text-[#0b2d50] mb-2">
+      <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-2">
         Enter ZIP Codes
       </h4>
       <ZipInput

@@ -358,10 +358,10 @@ onBeforeRouteLeave(async () => {
 
       <button
         v-if="step < 4"
-        class="text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors"
+        class="text-sm font-semibold px-6 py-2.5 rounded-[2px] transition-colors"
         :class="
           canAdvance
-            ? 'bg-[#47bfa9] text-white hover:bg-[#3aa893]'
+            ? 'bg-[var(--app-btn-bg,#1c2430)] text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)]'
             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
         "
         :disabled="!canAdvance"

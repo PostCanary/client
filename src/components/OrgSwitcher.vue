@@ -115,7 +115,7 @@ onUnmounted(() => {
           <span class="truncate">{{ org.name }}</span>
           <svg
             v-if="org.id === currentOrgId"
-            class="h-4 w-4 shrink-0 text-[#47bfa9]"
+            class="h-4 w-4 shrink-0 text-[var(--pc-navy,#1c2430)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -145,7 +145,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   font-family: inherit;
@@ -158,7 +158,7 @@ onUnmounted(() => {
 }
 
 .org-switcher-btn:hover {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .org-switcher-dropdown {
@@ -167,7 +167,7 @@ onUnmounted(() => {
   left: 0;
   min-width: 200px;
   background: #fff;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(12, 45, 80, 0.12),
     0 4px 16px rgba(12, 45, 80, 0.08);

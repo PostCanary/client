@@ -271,7 +271,7 @@ function onClose() {
 
 .modal-card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 8px 32px rgba(12, 45, 80, 0.15);
   width: 100%;
   max-width: 540px;
@@ -457,7 +457,7 @@ function onClose() {
 .field input:focus {
   outline: 2px solid var(--app-focus-ring, #0b2d50);
   outline-offset: 1px;
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .field input[aria-invalid="true"] {
@@ -484,7 +484,7 @@ function onClose() {
   background: #fff;
   border: 1px solid #cbd5e1;
   color: #475569;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
 }
 
@@ -504,7 +504,7 @@ function onClose() {
   background: var(--app-btn-bg, #0b2d50);
   color: var(--app-btn-fg, #ffffff);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
 }
 

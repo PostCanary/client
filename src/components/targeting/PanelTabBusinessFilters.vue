@@ -46,15 +46,15 @@ function resetFilters() {
   <div class="space-y-5 p-4">
     <div class="flex items-center justify-between">
       <div>
-        <h4 class="text-sm font-semibold text-[#0b2d50]">Business filters</h4>
+        <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Business filters</h4>
         <p class="mt-1 text-[11px] text-gray-400">Targets business locations. Contact email and phone values are not purchased.</p>
       </div>
       <div v-if="activeFilterCount > 0" class="flex items-center gap-3">
-        <span class="text-xs font-medium text-[#47bfa9]">{{ activeFilterCount }} applied</span>
+        <span class="text-xs font-medium text-[var(--pc-navy,#1c2430)]">{{ activeFilterCount }} applied</span>
         <button
           type="button"
           data-testid="reset-filters"
-          class="text-sm text-[#47bfa9]"
+          class="text-sm text-[var(--pc-navy,#1c2430)]"
           @click="resetFilters"
         >
           Reset filters
@@ -170,7 +170,7 @@ function resetFilters() {
         :checked="filters.businessHasEmail === true"
         :disabled="!supported('businessHasEmail')"
         type="checkbox"
-        class="mt-0.5 accent-[#47bfa9]"
+        class="mt-0.5 accent-[var(--pc-canary,#facf41)]"
         @change="filters.businessHasEmail = ($event.target as HTMLInputElement).checked ? true : null"
       />
       <span>Require a deliverable business email <span class="block text-[11px] text-gray-400">Only availability is used. The address is not purchased.</span></span>

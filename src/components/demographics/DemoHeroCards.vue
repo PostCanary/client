@@ -102,7 +102,7 @@ function formatNumber(val: number): string {
 
 .hero-card {
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow);
   overflow: hidden;
 }

@@ -32,7 +32,7 @@ const hasExclusions = computed(() =>
 <template>
   <div class="space-y-4 p-4">
     <div class="flex items-center justify-between">
-      <h4 class="text-sm font-semibold text-[#0b2d50]">Count & Cost</h4>
+      <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Count & Cost</h4>
       <span
         v-if="hc.source.value === 'mock'"
         class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium"
@@ -62,7 +62,7 @@ const hasExclusions = computed(() =>
     <div v-else class="space-y-1.5 text-sm">
       <div class="flex justify-between">
         <span class="text-gray-500">Qualifying {{ audienceType === 'business' ? 'businesses' : 'households' }}</span>
-        <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
+        <span class="text-[var(--pc-navy,#1c2430)]">{{ formatNumber(finalHouseholdCount) }}</span>
       </div>
       <div v-if="excludedPastCustomers > 0" class="flex justify-between">
         <span class="text-gray-500">- Past customers</span>
@@ -79,8 +79,8 @@ const hasExclusions = computed(() =>
       <template v-if="hasExclusions">
         <hr class="border-gray-200" />
         <div class="flex justify-between font-semibold">
-          <span class="text-[#0b2d50]">Final count</span>
-          <span class="text-[#0b2d50]">{{ formatNumber(finalHouseholdCount) }}</span>
+          <span class="text-[var(--pc-navy,#1c2430)]">Final count</span>
+          <span class="text-[var(--pc-navy,#1c2430)]">{{ formatNumber(finalHouseholdCount) }}</span>
         </div>
       </template>
     </div>
@@ -96,19 +96,19 @@ const hasExclusions = computed(() =>
           Card {{ n }}: {{ formatNumber(finalHouseholdCount) }} &times;
           ${{ perCardRate.toFixed(2) }}
         </span>
-        <span class="text-[#0b2d50] font-medium">
+        <span class="text-[var(--pc-navy,#1c2430)] font-medium">
           {{ formatCurrency(perCardCost) }}
         </span>
       </div>
       <hr class="border-gray-200" />
       <div class="flex justify-between font-semibold text-sm">
-        <span class="text-[#0b2d50]">Total</span>
-        <span class="text-[#0b2d50]">{{ formatCurrency(totalCost) }}</span>
+        <span class="text-[var(--pc-navy,#1c2430)]">Total</span>
+        <span class="text-[var(--pc-navy,#1c2430)]">{{ formatCurrency(totalCost) }}</span>
       </div>
     </div>
 
     <!-- Small campaign encouragement -->
-    <p v-if="isSmall && finalHouseholdCount > 0 && !hc.loading.value" class="text-xs text-[#47bfa9]">
+    <p v-if="isSmall && finalHouseholdCount > 0 && !hc.loading.value" class="text-xs text-[var(--pc-navy,#1c2430)]">
       Great start! Even small campaigns drive results.
     </p>
   </div>

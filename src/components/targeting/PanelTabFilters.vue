@@ -98,15 +98,15 @@ defineExpose({ activeFilterCount });
 <template>
   <div class="space-y-5 p-4">
     <div class="flex items-center justify-between">
-      <h4 class="text-sm font-semibold text-[#0b2d50]">Filters</h4>
+      <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Filters</h4>
       <div v-if="activeFilterCount > 0" class="flex items-center gap-3">
-        <span class="text-xs text-[#47bfa9] font-medium">
+        <span class="text-xs text-[var(--pc-navy,#1c2430)] font-medium">
           {{ activeFilterCount }} applied
         </span>
         <button
           type="button"
           data-testid="reset-filters"
-          class="text-sm text-[#47bfa9]"
+          class="text-sm text-[var(--pc-navy,#1c2430)]"
           @click="resetFilters"
         >
           Reset filters
@@ -118,7 +118,7 @@ defineExpose({ activeFilterCount });
       v-if="presetAvailable"
       type="button"
       data-testid="home-services-preset"
-      class="inline-flex items-center gap-1.5 rounded-full border border-[#47bfa9]/40 bg-[#47bfa9]/5 px-3 py-1.5 text-xs font-medium text-[#2b8d7c] hover:bg-[#47bfa9]/10 transition-colors"
+      class="inline-flex items-center gap-1.5 rounded-full border border-[var(--pc-canary,#facf41)]/40 bg-[rgba(250,207,65,0.10)] px-3 py-1.5 text-xs font-medium text-[#2b8d7c] hover:bg-[rgba(250,207,65,0.16)] transition-colors"
       @click="applyPreset"
     >
       <span aria-hidden="true">+</span>
@@ -389,7 +389,7 @@ defineExpose({ activeFilterCount });
           <input
             data-testid="filter-control-dog-owner"
             type="checkbox"
-            class="accent-[#47bfa9]"
+            class="accent-[var(--pc-canary,#facf41)]"
             :disabled="!supportsFilter('dogOwner')"
             :checked="filters.dogOwner === true"
             @change="filters.dogOwner = ($event.target as HTMLInputElement).checked ? true : null"
@@ -403,7 +403,7 @@ defineExpose({ activeFilterCount });
           <input
             data-testid="filter-control-cat-owner"
             type="checkbox"
-            class="accent-[#47bfa9]"
+            class="accent-[var(--pc-canary,#facf41)]"
             :disabled="!supportsFilter('catOwner')"
             :checked="filters.catOwner === true"
             @change="filters.catOwner = ($event.target as HTMLInputElement).checked ? true : null"
@@ -417,7 +417,7 @@ defineExpose({ activeFilterCount });
           <input
             data-testid="filter-control-other-pet-owner"
             type="checkbox"
-            class="accent-[#47bfa9]"
+            class="accent-[var(--pc-canary,#facf41)]"
             :disabled="!supportsFilter('otherPetOwner')"
             :checked="filters.otherPetOwner === true"
             @change="filters.otherPetOwner = ($event.target as HTMLInputElement).checked ? true : null"
@@ -444,7 +444,7 @@ defineExpose({ activeFilterCount });
             type="checkbox"
             :disabled="!supportsFilter('propertyTypes')"
             :checked="filters.propertyTypes.includes(pt)"
-            class="accent-[#47bfa9]"
+            class="accent-[var(--pc-canary,#facf41)]"
             @change="togglePropertyType(pt)"
           />
           {{ pt }}

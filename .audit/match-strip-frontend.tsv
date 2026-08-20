@@ -1,0 +1,9 @@
+ts	phase	decision	why	evidence	result
+2026-08-20T22:02:14Z	frame	Scope authenticated app UI only skip marketing	Polish logged-in product first	inventory	framed
+2026-08-20T22:02:14Z	frame	Done equals no white-on-teal CTAs and soft teal cards on app pages	Checkable via token gate typecheck palette	palette.spec.ts	open
+2026-08-20T22:02:14Z	design	Skip arena Match Strip already settled on Dashboard	Second bakeoff over settled system is waste	Dashboard.vue	settled
+2026-08-20T22:02:14Z	design	Sequence lever then overlays then pages then wizard	Verifiable units shared first	planned	designed
+2026-08-20T22:08:01Z	harness	Added match-strip-restyle and check-match-strip-tokens levers	Build the lever so reviewers can re-run the rewrite and gate	scripts/match-strip-restyle.cjs	landed
+2026-08-20T22:08:01Z	unit	Ran lever across 75 app files about 582 replacements	Mechanical teal-to-navy/canary/2px sweep	scripts/match-strip-restyle.cjs	applied
+2026-08-20T22:08:01Z	unit	Chat and account pages polished by delegates then rebased onto design branch	Agents forked branches; reattached to dustin/design-system-match-strip	6542033 63f3ad1	merged
+2026-08-20T22:08:01Z	verify	typecheck palette gate all green after sweep	Prove it works on real checks	typecheck+palette+gate	VERIFIED

@@ -309,7 +309,7 @@ const showPreviewUpgradeBanner = computed(() => {
   gap: 8px;
   padding: 14px 20px;
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow);
 }
 
@@ -345,7 +345,7 @@ const showPreviewUpgradeBanner = computed(() => {
   width: 40px;
   height: 40px;
   border: 3px solid var(--app-border, #e2e8f0);
-  border-top-color: var(--app-teal, #47bfa9);
+  border-top-color: var(--app-teal, var(--pc-canary, #facf41));
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

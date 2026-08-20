@@ -42,7 +42,7 @@ defineProps<{
   align-items: flex-start;
   gap: 12px;
   padding: 14px 20px;
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   font-size: 13px;
   line-height: 1.5;
 }

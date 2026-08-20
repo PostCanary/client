@@ -135,20 +135,20 @@ onMounted(async () => {
     v-if="loadError"
     class="flex min-h-full flex-col items-center justify-center px-6 text-center"
   >
-    <h1 class="text-xl font-semibold text-[#0b2d50]">Something went wrong</h1>
+    <h1 class="text-xl font-semibold text-[var(--pc-navy,#1c2430)]">Something went wrong</h1>
     <p class="mt-2 text-sm text-slate-600">We couldn't load this campaign draft.</p>
   </div>
   <div v-else class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
-    <div class="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div class="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white">
       <div
         v-if="audienceSource === 'csv' && !selectedFile"
         class="space-y-4 p-6"
       >
         <div>
-          <p class="text-xs font-semibold uppercase tracking-wide text-[#47bfa9]">
+          <p class="text-xs font-semibold uppercase tracking-wide text-[var(--pc-navy,#1c2430)]">
             Send to a List
           </p>
-          <h1 class="mt-2 text-2xl font-semibold text-[#0b2d50]">
+          <h1 class="mt-2 text-2xl font-semibold text-[var(--pc-navy,#1c2430)]">
             Upload your audience CSV
           </h1>
           <p class="mt-2 max-w-2xl text-sm text-slate-600">
@@ -157,13 +157,13 @@ onMounted(async () => {
         </div>
 
         <label
-          class="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 text-center transition-colors hover:border-[#47bfa9] hover:bg-[#47bfa9]/5"
+          class="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 text-center transition-colors hover:border-[var(--pc-canary,#facf41)] hover:bg-[rgba(250,207,65,0.10)]"
           data-testid="sttl-upload-dropzone"
           @dragenter.prevent
           @dragover.prevent
           @drop.prevent="onFileDrop"
         >
-          <span class="text-sm font-medium text-[#0b2d50]">
+          <span class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">
             Drop CSV here or choose a file
           </span>
           <span class="mt-1 text-xs text-slate-500">CSV files only</span>

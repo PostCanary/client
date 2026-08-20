@@ -25,7 +25,7 @@ const sortBy = defineModel<string>("sortBy", { default: "newest" });
         v-model="searchQuery"
         type="text"
         placeholder="Search campaigns..."
-        class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#47bfa9] focus:outline-none"
+        class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none"
       />
     </div>
 

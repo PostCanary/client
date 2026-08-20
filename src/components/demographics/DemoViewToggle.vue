@@ -33,7 +33,7 @@ const options: { label: string; value: DemographicView }[] = [
 .toggle-group {
   display: inline-flex;
   background: var(--app-card-bg, #fff);
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 4px;
   box-shadow: var(--app-card-shadow);
 }
@@ -45,7 +45,7 @@ const options: { label: string; value: DemographicView }[] = [
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   color: var(--app-text-muted, #94a3b8);
   font-family: inherit;
   transition: all 0.18s ease-out;

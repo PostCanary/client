@@ -242,7 +242,7 @@ onMounted(runFlow)
       data-testid="loading-indicator"
     >
       <svg
-        class="animate-spin h-4 w-4 shrink-0 text-[#47bfa9]"
+        class="animate-spin h-4 w-4 shrink-0 text-[var(--pc-navy,#1c2430)]"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -326,7 +326,7 @@ onMounted(runFlow)
         class="px-6 py-2 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b2d50] focus-visible:ring-offset-2"
         :class="
           canApprove
-            ? 'bg-[#47bfa9] text-white hover:bg-[#3aad97]'
+            ? 'bg-[var(--app-btn-bg,#1c2430)] text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)]'
             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
         "
         data-testid="approve-btn"
