@@ -1,10 +1,12 @@
 <!-- src/pages/AppHome.vue -->
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { captureEvent } from '@/composables/usePostHog'
 import { useAuthStore } from '@/stores/auth'
 import { isFirstSessionProfile } from '@/utils/firstRunSetup'
+import { getLatestRunResult, type KPIs } from '@/api/runs'
+import RevenueChip from '@/components/app-home/RevenueChip.vue'
 
 /* Icons from @vicons/ionicons5 only — mixing icon sources caused the
  * teal-vs-navy inconsistency Drake caught in S69. */
@@ -66,19 +68,33 @@ const greeting = computed(() =>
     ? `Welcome, ${firstName.value}`
     : `Welcome back, ${firstName.value}`,
 )
-const tagline = computed(() =>
-  isFirstSession.value
-    ? 'Send your first campaign when you are ready.'
-    : 'Pick up where you left off, or start something new.',
-)
+
+const homeKpis = ref<KPIs | null>(null)
+const showRevenueChip = computed(() => homeKpis.value != null)
+
+const tagline = computed(() => {
+  if (isFirstSession.value) {
+    return 'Send your first campaign when you are ready.'
+  }
+  if (showRevenueChip.value) {
+    return 'Your mail is converting. Pick the next move.'
+  }
+  return 'Pick up where you left off, or start something new.'
+})
 
 function onCardClick(card: HomeCard) {
   captureEvent('home_card_clicked', { card: card.key })
   router.push(card.to)
 }
 
-onMounted(() => {
-  captureEvent('home_page_viewed', { layout: 'quad_cards' })
+onMounted(async () => {
+  captureEvent('home_page_viewed', { layout: 'quad_cards_revenue_chip' })
+  try {
+    const result = await getLatestRunResult('done')
+    homeKpis.value = result?.kpis ?? null
+  } catch {
+    homeKpis.value = null
+  }
 })
 </script>
 
@@ -91,6 +107,9 @@ onMounted(() => {
           {{ tagline }}
         </p>
       </header>
+
+      <RevenueChip v-if="homeKpis" :kpis="homeKpis" />
+
       <div class="home-grid">
         <button
           v-for="(card, i) in cards"
@@ -126,47 +145,49 @@ onMounted(() => {
 }
 
 .home-header {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
   text-align: left;
 }
 
 .home-greeting {
   margin: 0 0 6px;
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--app-text, #0c2d50);
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
 }
 
 .home-tagline {
   margin: 0;
   font-size: 1rem;
-  color: #52677b;
+  color: var(--app-text-secondary, #5a6b7d);
 }
 
 .home-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 14px;
 }
 
 .home-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 10px;
-  min-height: 210px;
-  padding: 32px 28px;
-  background: #fff;
-  border: 1px solid var(--app-border, #dfe4ec);
-  border-radius: 16px;
+  min-height: 148px;
+  padding: 22px 20px;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
-  color: var(--app-text, #0c2d50);
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.06);
+  color: var(--app-text, #1c2430);
+  text-align: left;
+  box-shadow: none;
   transition: transform 0.15s ease-out, background 0.15s ease-out,
-    color 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+    color 0.15s ease-out, border-color 0.15s ease-out;
   animation: card-enter 0.35s ease-out both;
   animation-delay: var(--enter-delay, 0ms);
 }
@@ -182,68 +203,59 @@ onMounted(() => {
   }
 }
 
-/* The wireframe asked for a fill on hover, and it was teal. That made a card
- * read as an action surface in the same colour buttons no longer use, so the
- * page carried two competing "actionable" colours (POS-279).
- *
- * A card is a surface you navigate into, not a control you press, so it gets
- * a card affordance: it stays light and gains a navy edge and lift. Text
- * holds 13.94:1 rather than the 4.78:1 the teal fill allowed. */
+/* Navy fill on hover — actionable navigation surface with AA contrast. */
 .home-card:hover,
 .home-card:focus-visible {
-  background: var(--app-card-bg, #ffffff);
-  border-color: var(--app-navy, #0b2d50);
-  color: var(--app-navy, #0b2d50);
-  transform: scale(1.02);
-  box-shadow: 0 0 0 1px var(--app-navy, #0b2d50), 0 12px 28px rgba(11, 45, 80, 0.16);
+  background: var(--app-navy, #1c2430);
+  border-color: var(--app-navy, #1c2430);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
-/* Navy, not teal: the teal ring measures 2.01:1 against --app-bg and fails
- * WCAG 1.4.11 (3:1). Navy holds 12.44:1 over the page. */
 .home-card:focus-visible {
-  outline: 2px solid var(--app-focus-ring, #0b2d50);
+  outline: 2px solid var(--app-focus-ring, #1c2430);
   outline-offset: 2px;
 }
 
 .home-card-icon {
-  width: 60px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgba(71, 191, 169, 0.12);
-  color: var(--app-teal, #47bfa9);
+  border-radius: var(--app-card-radius, 2px);
+  background: rgba(38, 175, 163, 0.12);
+  color: var(--app-teal, #26afa3);
   transition: background 0.15s ease-out, color 0.15s ease-out;
 }
 
-/* The card no longer fills, so a white wash would vanish. Tint toward navy
- * so the icon picks up the same emphasis as the border. */
 .home-card:hover .home-card-icon,
 .home-card:focus-visible .home-card-icon {
-  background: rgba(11, 45, 80, 0.08);
-  color: var(--app-navy, #0b2d50);
+  background: rgba(250, 207, 65, 0.18);
+  color: var(--pc-canary, #facf41);
 }
 
 .home-card-icon :deep(svg) {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
 }
 
 .home-card-title {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .home-card-subtitle {
-  font-size: 0.92rem;
-  color: #52677b;
+  font-size: 0.88rem;
+  color: var(--app-text-secondary, #5a6b7d);
+  line-height: 1.35;
   transition: color 0.15s ease-out;
 }
 
-/* The card keeps its light background on hover, so the subtitle keeps its
- * muted colour and the title/subtitle hierarchy survives. #52677b on white
- * is 5.86:1. It only needed overriding back when the card filled. */
+.home-card:hover .home-card-subtitle,
+.home-card:focus-visible .home-card-subtitle {
+  color: #aeb8c4;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .home-card {
@@ -267,12 +279,8 @@ onMounted(() => {
   }
 
   .home-card {
-    min-height: 150px;
-    padding: 24px 20px;
-  }
-
-  .home-greeting {
-    font-size: 1.4rem;
+    min-height: 120px;
+    padding: 20px 18px;
   }
 }
 </style>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PostCanary — Home exploration: Revenue chip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1c2430;
+      --ink-soft: #3d4a5c;
+      --muted: #5a6b7d;
+      --faint: #8a97a8;
+      --paper: #e4e9ef;
+      --paper-deep: #d5dde7;
+      --surface: #f7f9fb;
+      --white: #ffffff;
+      --canary: #facf41;
+      --teal: #26afa3;
+      --teal-ink: #1a7f76;
+      --border: #c8d0db;
+      --border-soft: #dce2ea;
+      --sidebar-w: 220px;
+      --radius: 2px;
+      --font-display: "Oswald", sans-serif;
+      --font-body: "Instrument Sans", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .explore-banner {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--canary);
+      color: var(--ink);
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    .explore-banner a {
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .state-toggle {
+      display: inline-flex;
+      gap: 4px;
+      background: rgba(28, 36, 48, 0.12);
+      padding: 3px;
+    }
+    .state-toggle button {
+      border: 0;
+      background: transparent;
+      padding: 6px 10px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    .state-toggle button.on {
+      background: var(--ink);
+      color: var(--canary);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: calc(100vh - 42px);
+    }
+
+    .sidebar {
+      background: var(--ink);
+      color: #c5ced8;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--canary);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 18px;
+      letter-spacing: 0.04em;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+    .nav-section { display: flex; flex-direction: column; gap: 2px; }
+    .nav-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #6d7a8a;
+      padding: 8px 10px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #aeb8c4;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active {
+      background: rgba(250, 207, 65, 0.12);
+      color: var(--canary);
+    }
+    .nav-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; opacity: 0.5;
+    }
+    .nav-item.active .nav-dot { opacity: 1; }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 28px 48px;
+    }
+    .home {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .greeting-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(26px, 3vw, 34px);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .greeting-sub {
+      margin: 6px 0 0;
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    /* Compact revenue chip — cousin of Match Strip */
+    .revenue-chip {
+      position: relative;
+      background: var(--ink);
+      color: var(--white);
+      padding: 22px 26px;
+      overflow: hidden;
+      isolation: isolate;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px 24px;
+      align-items: end;
+    }
+    .revenue-chip::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 50% 120% at 18% 50%, rgba(250,207,65,0.16), transparent 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    .chip-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--canary);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .chip-value {
+      font-family: var(--font-display);
+      font-size: clamp(40px, 5vw, 56px);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      color: var(--canary);
+    }
+    .chip-foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 22px;
+      margin-top: 14px;
+    }
+    .chip-stat {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+    }
+    .chip-stat strong {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--white);
+    }
+    .chip-stat span {
+      font-size: 11px;
+      color: #8a96a8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .chip-cta {
+      align-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 14px;
+      background: transparent;
+      border: 1px solid rgba(250, 207, 65, 0.45);
+      color: var(--canary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .chip-cta:hover {
+      background: rgba(250, 207, 65, 0.12);
+    }
+    .chip-cta svg { width: 14px; height: 14px; }
+
+    /* Action grid — live home cards, restyled */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .action-card {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 148px;
+      padding: 22px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: left;
+      color: var(--ink);
+      font-family: var(--font-body);
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+    }
+    .action-card:hover,
+    .action-card:focus-visible {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--white);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .action-icon {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      background: rgba(38, 175, 163, 0.12);
+      color: var(--teal);
+      transition: background 0.15s, color 0.15s;
+    }
+    .action-card:hover .action-icon,
+    .action-card:focus-visible .action-icon {
+      background: rgba(250, 207, 65, 0.18);
+      color: var(--canary);
+    }
+    .action-icon svg { width: 22px; height: 22px; }
+    .action-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .action-sub {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.35;
+      transition: color 0.15s;
+    }
+    .action-card:hover .action-sub,
+    .action-card:focus-visible .action-sub {
+      color: #aeb8c4;
+    }
+
+    /* Empty state — as-is: no strip */
+    body[data-state="empty"] .revenue-chip { display: none; }
+    body[data-state="empty"] .greeting-sub--has-data { display: none; }
+    body[data-state="has-data"] .greeting-sub--empty { display: none; }
+
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 12px;
+      border-left: 3px solid var(--canary);
+      background: var(--surface);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .action-card { transition: none; }
+      .action-card:hover { transform: none; }
+    }
+
+    @media (max-width: 960px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .revenue-chip { grid-template-columns: 1fr; }
+      .chip-cta { justify-self: start; }
+    }
+    @media (max-width: 640px) {
+      .action-grid { grid-template-columns: 1fr; }
+      .content { padding: 20px 16px 36px; align-items: flex-start; }
+      .action-card { min-height: 120px; }
+    }
+  </style>
+</head>
+<body data-state="has-data">
+  <div class="explore-banner">
+    <span>Exploration only — Home revenue chip for /app/home. Not production.</span>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="state-toggle" role="group" aria-label="Home state">
+        <button type="button" class="on" data-state-btn="has-data">Has results</button>
+        <button type="button" data-state-btn="empty">Empty (as-is)</button>
+      </div>
+      <a href="./dashboard-match-strip.html">Dashboard mock →</a>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="App navigation">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div class="brand-name">PostCanary</div>
+      </div>
+      <nav class="nav-section">
+        <div class="nav-label">Home</div>
+        <a class="nav-item active" href="#"><span class="nav-dot"></span>Home</a>
+      </nav>
+      <nav class="nav-section">
+        <div class="nav-label">Send</div>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Campaigns</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Designs</a>
+      </nav>
+      <nav class="nav-section">
+        <div class="nav-label">Analytics</div>
+        <a class="nav-item" href="./dashboard-match-strip.html"><span class="nav-dot"></span>Dashboard</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Map</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Analysis</a>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <div class="content">
+        <div class="home">
+          <header>
+            <h1 class="greeting-title">Welcome back, Dustin</h1>
+            <p class="greeting-sub greeting-sub--has-data">Your mail is converting. Pick the next move.</p>
+            <p class="greeting-sub greeting-sub--empty">Pick up where you left off, or start something new.</p>
+          </header>
+
+          <section class="revenue-chip" aria-label="Matched revenue summary">
+            <div>
+              <div class="chip-label">Revenue from mail</div>
+              <div class="chip-value">$148,290</div>
+              <div class="chip-foot">
+                <div class="chip-stat"><strong>7.6%</strong><span>Match rate</span></div>
+                <div class="chip-stat"><strong>19</strong><span>Days to convert</span></div>
+                <div class="chip-stat"><strong>1,847</strong><span>Matched jobs</span></div>
+              </div>
+            </div>
+            <a class="chip-cta" href="./dashboard-match-strip.html">
+              Open dashboard
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h9M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.6"/>
+              </svg>
+            </a>
+          </section>
+
+          <div class="action-grid">
+            <button class="action-card" type="button">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+              </span>
+              <span class="action-title">Send Postcards</span>
+              <span class="action-sub">Launch a new campaign</span>
+            </button>
+            <button class="action-card" type="button">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 21V9"/>
+                </svg>
+              </span>
+              <span class="action-title">Browse Designs</span>
+              <span class="action-sub">View your uploads</span>
+            </button>
+            <button class="action-card" type="button">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                </svg>
+              </span>
+              <span class="action-title">Campaigns</span>
+              <span class="action-sub">Track your previous mail sends</span>
+            </button>
+            <button class="action-card" type="button">
+              <span class="action-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+              </span>
+              <span class="action-title">Analytics</span>
+              <span class="action-sub">Break down mail and CRM data</span>
+            </button>
+          </div>
+
+          <p class="note">
+            Home shows a compact revenue chip. Dashboard owns the full Match Strip, upload, and top areas.
+            Empty state hides the chip (toggle above).
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll("[data-state-btn]");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const state = btn.getAttribute("data-state-btn");
+        document.body.setAttribute("data-state", state);
+        buttons.forEach((b) => b.classList.toggle("on", b === btn));
+      });
+    });
+  </script>
+</body>
+</html>

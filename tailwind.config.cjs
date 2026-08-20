@@ -15,8 +15,9 @@ module.exports = {
         "teal-brand": "#26AFA3",
       },
       fontFamily: {
-        // POS-220: Roboto is the product/UI face. Print pairings below are unchanged.
-        sans: ["Roboto", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        // App UI: Instrument Sans. Oswald is for display figures only.
+        sans: ['"Instrument Sans"', "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        display: ["Oswald", "system-ui", "sans-serif"],
 
         // --- Brief #6 Phase 2: Curated print font pairings ---
         // Draplin fix — replaces font extraction. We pick the closest pair

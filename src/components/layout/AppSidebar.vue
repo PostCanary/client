@@ -513,7 +513,7 @@ async function onSignOut() {
   top: 6px;
   bottom: 6px;
   width: 3px;
-  background: var(--app-teal, #47bfa9);
+  background: var(--pc-canary, #facf41);
   border-radius: 0 2px 2px 0;
 }
 

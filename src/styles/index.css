@@ -15,24 +15,28 @@
 
 @config "../../tailwind.config.cjs";
 
-/* POS-220 brand utilities (v4 @theme). Hex values match tailwind.config.cjs + --pc-* below. */
+/* POS-220 brand utilities (v4 @theme). Hex values match tailwind.config.cjs + --pc-* below.
+ * App UI face is Instrument Sans; Oswald is reserved for display numbers (Match Strip). */
 @theme {
   --color-navy: #1c2430;
   --color-canary: #facf41;
   --color-teal-brand: #26afa3;
-  --font-sans: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  --font-sans: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-display: "Oswald", system-ui, sans-serif;
 }
 
 :root {
-  font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
 
   /* ── Brand kit (POS-220) ────────────────────────────────── */
   --pc-navy: #1c2430;
   --pc-canary: #facf41;
   --pc-teal-brand: #26afa3;
   --pc-white: #ffffff;
+  --pc-font-body: "Instrument Sans", system-ui, sans-serif;
+  --pc-font-display: "Oswald", system-ui, sans-serif;
 
   /* ── Marketing (light) palette ──────────────────────────── */
   --mkt-bg: #ffffff;
@@ -65,42 +69,37 @@
   --pc-yellow: #f3d129;
   --pc-cyan: #00ffff;
 
-  /* ── App dashboard palette (unchanged) ──────────────────── */
-  --app-navy: #0b2d50;
-  --app-navy-light: #163b69;
-  --app-teal: #47bfa9;
-  --app-teal-hover: #3aa893;
-  --app-bg: #f0f2f5;
-  --app-card-bg: #ffffff;
-  --app-text: #0c2d50;
-  --app-text-secondary: #64748b;
-  --app-text-body: #475569;
-  --app-text-muted: #94a3b8;
-  --app-border: #e2e8f0;
-  --app-border-medium: #dde3ea;
-  --app-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
-  --app-card-radius: 12px;
+  /* ── App shell (Match Strip design system) ────────────────
+   * Cool paper field, brand navy/canary/teal, sharp corners.
+   * Display numbers use --pc-font-display (Oswald). */
+  --app-navy: var(--pc-navy);
+  --app-navy-light: #2a3544;
+  --app-teal: var(--pc-teal-brand);
+  --app-teal-hover: #1f9a8f;
+  --app-bg: #e4e9ef;
+  --app-card-bg: #f7f9fb;
+  --app-text: var(--pc-navy);
+  --app-text-secondary: #5a6b7d;
+  --app-text-body: #3d4a5c;
+  --app-text-muted: #8a97a8;
+  --app-border: #c8d0db;
+  --app-border-medium: #b8c2d0;
+  --app-card-shadow: none;
+  --app-card-radius: 2px;
 
   /* ── Interactive palette (POS-277 / POS-279) ────────────────
    * One source of truth for actionable surfaces. Every pairing
    * below is asserted in tests/e2e/release-accessibility.spec.ts
    * for the resting, hover AND focus states.
    *
-   *   button label on fill     13.95:1   (AA needs 4.5)
-   *   button label on hover    11.27:1   (AA needs 4.5)
-   *   focus ring vs page bg    12.44:1   (1.4.11 needs 3.0)
-   *
    * Teal is an ACCENT, not an action colour: white text on
-   * --app-teal is 2.26:1 and on --app-teal-hover 2.92:1, both
-   * far below AA. Teal fills may only carry --app-navy text
-   * (6.17:1). Teal focus rings are 2.01:1 against --app-bg and
-   * fail 1.4.11 — always ring with --app-focus-ring. */
-  --app-btn-bg: var(--app-navy, #0b2d50);
+   * teal fails AA. Teal fills may only carry --app-navy /
+   * --app-on-teal text. Always ring with --app-focus-ring. */
+  --app-btn-bg: var(--app-navy);
   --app-btn-fg: #ffffff;
-  --app-btn-bg-hover: var(--app-navy-light, #163b69);
-  /* Text colour for the teal accent surfaces (card hover, chips). */
-  --app-on-teal: var(--app-navy, #0b2d50);
-  --app-focus-ring: var(--app-navy, #0b2d50);
+  --app-btn-bg-hover: var(--app-navy-light);
+  --app-on-teal: var(--app-navy);
+  --app-focus-ring: var(--app-navy);
 
   /* ── Sidebar + Top Bar ──────────────────────────────────── */
   --sidebar-width: 240px;
@@ -108,9 +107,9 @@
   --topbar-height: 56px;
   --sidebar-border: var(--app-border);
   --sidebar-section-text: var(--app-text-muted);
-  --sidebar-item-hover: #f4f5f7;
-  --sidebar-item-active-bg: rgba(71, 191, 169, 0.08);
-  --sidebar-item-active-text: var(--app-teal);
+  --sidebar-item-hover: #edf1f5;
+  --sidebar-item-active-bg: rgba(250, 207, 65, 0.16);
+  --sidebar-item-active-text: var(--pc-navy);
   --sidebar-transition: 0.2s ease-out;
 }
 

@@ -121,13 +121,13 @@ watch(
             <circle
               cx="40" cy="40" r="36"
               fill="none"
-              stroke="#e2e8f0"
+              stroke="var(--app-border, #c8d0db)"
               stroke-width="5"
             />
             <circle
               cx="40" cy="40" r="36"
               fill="none"
-              stroke="#47bfa9"
+              stroke="var(--pc-canary, #facf41)"
               stroke-width="5"
               stroke-linecap="round"
               :stroke-dasharray="ringCircumference"
@@ -231,8 +231,8 @@ watch(
 }
 
 .hero-card-accent {
-  height: 4px;
-  background: linear-gradient(90deg, var(--app-navy, #0b2d50), var(--app-navy-light, #163b69));
+  height: 3px;
+  background: var(--pc-canary, #facf41);
 }
 
 .hero-card-body {
@@ -293,7 +293,7 @@ watch(
   background: var(--app-card-bg, #fff);
   border-radius: var(--app-card-radius, 12px);
   box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
-  border-left: 4px solid var(--app-navy, #0b2d50);
+  border-left: 3px solid var(--pc-canary, #facf41);
   overflow: hidden;
   transition: opacity 0.18s ease;
   height: 100%;
