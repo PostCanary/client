@@ -388,7 +388,7 @@ function onReplayTour() {
       </header>
 
       <form
-        class="w-full space-y-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        class="w-full space-y-6 rounded-[2px] border border-slate-200 bg-white p-4 sm:p-6"
         @submit.prevent="onSubmit"
       >
         <fieldset :disabled="loading || saving" class="space-y-4">
@@ -403,7 +403,7 @@ function onReplayTour() {
               id="settings-full-name"
               v-model="form.full_name"
               type="text"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="name"
             />
           </div>
@@ -432,7 +432,7 @@ function onReplayTour() {
               v-model="bizName"
               type="text"
               placeholder="Your business name"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="organization"
             />
             <p class="mt-1 text-xs text-slate-500">
@@ -453,7 +453,7 @@ function onReplayTour() {
               v-model="form.website_url"
               type="text"
               placeholder="example.com"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
               autocomplete="url"
             />
             <p class="mt-1 text-xs text-slate-500">
@@ -484,7 +484,7 @@ function onReplayTour() {
               v-model="form.crm"
               type="text"
               placeholder="ServiceTitan, HubSpot…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
             />
           </div>
 
@@ -496,7 +496,7 @@ function onReplayTour() {
               v-model="form.mail_provider"
               type="text"
               placeholder="Lob, USPS EDDM, in-house…"
-              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
             />
           </div>
         </fieldset>
@@ -516,7 +516,7 @@ function onReplayTour() {
           <span v-if="saving" class="text-xs text-slate-500">Saving…</span>
           <button
             type="submit"
-            class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="saving || loading"
           >
             Save changes
@@ -526,7 +526,7 @@ function onReplayTour() {
 
       <section
         v-if="auth.orgId"
-        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
       >
         <div class="space-y-4">
           <div>
@@ -549,10 +549,10 @@ function onReplayTour() {
                 v-model="orgName"
                 type="text"
                 :disabled="!manageOrg || orgNameSaving"
-                class="mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+                class="mt-1 block w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1"
                 :class="
                   manageOrg
-                    ? 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500'
+                    ? 'border-slate-300 focus:border-[var(--pc-navy,#1c2430)] focus:ring-[var(--pc-navy,#1c2430)]'
                     : 'border-slate-200 bg-slate-50 text-slate-500'
                 "
               />
@@ -560,7 +560,7 @@ function onReplayTour() {
             <button
               v-if="manageOrg"
               type="button"
-              class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="orgNameSaving"
               @click="onSaveOrgName"
             >
@@ -574,7 +574,7 @@ function onReplayTour() {
             </p>
             <button
               type="button"
-              class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+              class="inline-flex items-center rounded-[2px] bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
               @click="router.push('/team')"
             >
               Manage team
@@ -585,7 +585,7 @@ function onReplayTour() {
 
       <section
         v-if="auth.orgId"
-        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
         data-testid="settings-return-address"
       >
         <div class="space-y-4">
@@ -617,7 +617,7 @@ function onReplayTour() {
                 type="text"
                 autocomplete="organization"
                 data-testid="settings-return-name"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
 
@@ -634,7 +634,7 @@ function onReplayTour() {
                 type="text"
                 autocomplete="address-line1"
                 data-testid="settings-return-address"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
 
@@ -652,7 +652,7 @@ function onReplayTour() {
                 type="text"
                 autocomplete="address-line2"
                 data-testid="settings-return-address2"
-                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
               />
             </div>
 
@@ -670,7 +670,7 @@ function onReplayTour() {
                   type="text"
                   autocomplete="address-level2"
                   data-testid="settings-return-city"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
               <div>
@@ -687,7 +687,7 @@ function onReplayTour() {
                   maxlength="2"
                   autocomplete="address-level1"
                   data-testid="settings-return-state"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
               <div>
@@ -704,7 +704,7 @@ function onReplayTour() {
                   inputmode="numeric"
                   autocomplete="postal-code"
                   data-testid="settings-return-zip"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -735,7 +735,7 @@ function onReplayTour() {
             <button
               v-if="canWriteReturnAddress"
               type="button"
-              class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="returnAddressLoading || returnAddressSaving"
               data-testid="settings-return-address-save"
               @click="onSaveReturnAddress"
@@ -751,7 +751,7 @@ function onReplayTour() {
            from GET /api/billing/pricing so this can never drift from
            checkout — never hardcode them. -->
       <section
-        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
         data-testid="settings-billing"
       >
         <div class="space-y-4">
@@ -763,7 +763,7 @@ function onReplayTour() {
             </p>
           </div>
 
-          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
             <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
               Per postcard
             </p>
@@ -785,7 +785,7 @@ function onReplayTour() {
             </p>
           </div>
 
-          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
             <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
               Payment method
             </p>
@@ -822,7 +822,7 @@ function onReplayTour() {
           >
             <button
               type="button"
-              class="inline-flex items-center rounded-full border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              class="inline-flex items-center rounded-[2px] border border-slate-300 px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               :disabled="billingBusy || paymentMethodLoading"
               data-testid="settings-manage-billing"
               @click="onManageBilling"
@@ -834,7 +834,7 @@ function onReplayTour() {
       </section>
 
       <section
-        class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        class="w-full rounded-[2px] border border-slate-200 bg-white p-4 sm:p-5"
       >
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -847,7 +847,7 @@ function onReplayTour() {
 
           <button
             type="button"
-            class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+            class="inline-flex items-center rounded-[2px] bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
             @click="onReplayTour"
           >
             Replay tour
