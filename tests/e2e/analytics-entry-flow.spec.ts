@@ -26,29 +26,29 @@ test("analytics shows entry state (upload prompt) when no match data exists", as
 
   await page.goto("/analytics");
 
-  await expect(page.getByRole("heading", { name: "Upload your Customer List" })).toBeVisible();
-  await expect(page.getByText("See who's converting from your mail.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Prove who converted" })).toBeVisible();
+  await expect(page.getByText("Upload mail and CRM CSVs to see matched revenue and AI insights.")).toBeVisible();
   await expect(page.locator("#mailCsv")).toBeVisible();
   await expect(page.locator("#crmCsv")).toBeVisible();
 
   // Results screen content must not be present yet.
-  await expect(page.getByText("Match Rate")).toHaveCount(0);
+  await expect(page.locator(".match-strip")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "AI Insights" })).toHaveCount(0);
 });
 
-test("analytics shows results state with four stat cards and detail panel once matched", async ({ page }) => {
+test("analytics shows results state with Match Strip and detail panel once matched", async ({ page }) => {
   await setup(page);
 
   await page.goto("/analytics");
 
-  await expect(page.getByRole("heading", { name: "Upload your Customer List" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Prove who converted" })).toHaveCount(0);
 
-  // Hero stat cards.
-  await expect(page.locator(".hero-card", { has: page.getByText("Match Rate") })).toBeVisible();
-  await expect(page.locator(".hero-card", { has: page.getByText("Match Revenue") })).toBeVisible();
-  await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toBeVisible();
-  await expect(page.locator(".hero-card", { has: page.getByText("Days to Convert") })).toBeVisible();
-  await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("42");
+  // Match Strip (revenue-first pipeline).
+  await expect(page.locator(".match-strip")).toBeVisible();
+  await expect(page.locator(".match-strip")).toContainText("Revenue from mail");
+  await expect(page.locator(".match-strip .pipe-node", { has: page.getByText("Matched jobs") })).toContainText("42");
+  await expect(page.locator(".match-strip .foot-stat", { has: page.getByText("Match rate") })).toBeVisible();
+  await expect(page.locator(".match-strip .foot-stat", { has: page.getByText("Days to convert") })).toBeVisible();
 
   // Detail panel (advanced KPI variant).
   await expect(page.locator(".adv-stat", { has: page.getByText("Total Mail") })).toContainText("2,500");
@@ -64,7 +64,7 @@ test("analytics shows results state with four stat cards and detail panel once m
   await expect(page.getByRole("heading", { name: "AI Insights" })).toBeVisible();
 });
 
-test("analytics zero-state stat cards render 0.0% / $0.00 / 0 / 0 when kpis are all zero", async ({ page }) => {
+test("analytics zero-state Match Strip renders zeros when kpis are all zero", async ({ page }) => {
   await setup(page, (draft) => {
     draft.runStatusByOrg["org-alpha"] = {
       run_id: "run-alpha-zero",
@@ -94,8 +94,8 @@ test("analytics zero-state stat cards render 0.0% / $0.00 / 0 / 0 when kpis are 
 
   await page.goto("/analytics");
 
-  await expect(page.locator(".hero-card", { has: page.getByText("Match Rate") })).toContainText("0.0%");
-  await expect(page.locator(".hero-card", { has: page.getByText("Match Revenue") })).toContainText("$0.00");
-  await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("0");
-  await expect(page.locator(".hero-card", { has: page.getByText("Days to Convert") })).toContainText("0");
+  await expect(page.locator(".match-strip .foot-stat", { has: page.getByText("Match rate") })).toContainText("0%");
+  await expect(page.locator(".match-strip .pipe-node--money")).toContainText("$0");
+  await expect(page.locator(".match-strip .pipe-node", { has: page.getByText("Matched jobs") })).toContainText("0");
+  await expect(page.locator(".match-strip .foot-stat", { has: page.getByText("Days to convert") })).toContainText("0");
 });

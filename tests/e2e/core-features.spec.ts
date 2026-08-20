@@ -115,7 +115,7 @@ test("history deletes uploads and can refresh back to the dashboard", async ({ p
 
   await page.getByRole("button", { name: "Refresh Dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.locator(".hero-card", { has: page.getByText("Total Matches") })).toContainText("42");
+  await expect(page.locator(".match-strip .pipe-node", { has: page.getByText("Matched jobs") })).toContainText("42");
 });
 
 test("settings saves both profile and organization changes", async ({ page }) => {
