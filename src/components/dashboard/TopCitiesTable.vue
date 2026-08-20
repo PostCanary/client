@@ -109,24 +109,27 @@ const sortedRows = computed<Row[]>(() => {
 
 <style scoped>
 .table-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
 }
 
 .table-head {
-  background: var(--app-navy, #0b2d50);
-  padding: 12px 20px;
+  background: transparent;
+  padding: 16px 20px 8px;
 }
 
 .table-title {
   margin: 0;
-  font-weight: 600;
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   line-height: 1.4;
-  color: #fff;
+  color: var(--app-text, #1c2430);
 }
 
 .table-cols {
@@ -167,14 +170,14 @@ const sortedRows = computed<Row[]>(() => {
 
 .col-sortable:hover,
 .col-sortable:focus-visible {
-  color: var(--app-teal, #47bfa9);
+  color: var(--pc-canary-deep, #e5b820);
   outline: none;
 }
 
 .sort-indicator {
   font-size: 8px;
   line-height: 1;
-  color: var(--app-teal, #47bfa9);
+  color: var(--pc-canary, #facf41);
 }
 
 /* body */
@@ -214,13 +217,14 @@ const sortedRows = computed<Row[]>(() => {
 }
 
 .row:hover {
-  background: rgba(71, 191, 169, 0.04);
+  background: rgba(250, 207, 65, 0.06);
 }
 
 .total {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
 }
 
 .rate {
@@ -233,8 +237,8 @@ const sortedRows = computed<Row[]>(() => {
 .rate-bar {
   width: 40px;
   height: 4px;
-  background: var(--app-border, #e2e8f0);
-  border-radius: 2px;
+  background: var(--app-border, #c8d0db);
+  border-radius: 1px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -242,8 +246,8 @@ const sortedRows = computed<Row[]>(() => {
 .rate-fill {
   display: block;
   height: 100%;
-  background: var(--app-teal, #47bfa9);
-  border-radius: 2px;
+  background: var(--pc-canary, #facf41);
+  border-radius: 1px;
   transition: width 0.3s ease;
 }
 

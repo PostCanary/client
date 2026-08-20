@@ -347,7 +347,8 @@ function browseCrm() {
 <template>
   <section class="upload-card">
     <div class="upload-header">
-      <span class="upload-title">Upload Files</span>
+      <span class="upload-title">Refresh proof</span>
+      <p class="upload-subtitle">Upload new CSVs to re-run matching</p>
     </div>
 
     <div class="drop-zones">
@@ -504,9 +505,10 @@ function browseCrm() {
 
 <style scoped>
 .upload-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   padding: 0;
   overflow: hidden;
   height: 100%;
@@ -515,13 +517,22 @@ function browseCrm() {
 }
 
 .upload-header {
-  padding: 14px 20px 10px;
+  padding: 16px 20px 8px;
 }
 
 .upload-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
+}
+
+.upload-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--app-text-secondary, #5a6b7d);
 }
 
 /* Drop zones container */
@@ -557,8 +568,9 @@ function browseCrm() {
 }
 
 .drop-zone {
-  border: 2px dashed rgba(12, 45, 80, 0.15);
-  border-radius: 10px;
+  border: 1.5px dashed var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  background: #fff;
   min-height: 72px;
   padding: 14px 12px;
   display: flex;
@@ -572,13 +584,13 @@ function browseCrm() {
 }
 
 .drop-zone:hover {
-  border-color: rgba(12, 45, 80, 0.25);
-  background: rgba(12, 45, 80, 0.02);
+  border-color: var(--app-teal, #26afa3);
+  background: rgba(38, 175, 163, 0.04);
 }
 
 .drop-zone.is-drag {
-  border-color: var(--app-teal, #47bfa9);
-  background: rgba(71, 191, 169, 0.06);
+  border-color: var(--pc-canary, #facf41);
+  background: rgba(250, 207, 65, 0.08);
 }
 
 .drop-zone-disabled {
@@ -622,9 +634,9 @@ function browseCrm() {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(71, 191, 169, 0.08);
-  border: 1px solid rgba(71, 191, 169, 0.2);
-  border-radius: 8px;
+  background: rgba(38, 175, 163, 0.08);
+  border: 1px solid rgba(38, 175, 163, 0.22);
+  border-radius: var(--app-card-radius, 2px);
   padding: 10px 12px;
   flex: 1;
   min-width: 0;
@@ -675,8 +687,8 @@ function browseCrm() {
 
 .progress-fill {
   height: 100%;
-  background: var(--app-teal, #47bfa9);
-  border-radius: 2px;
+  background: var(--pc-canary, #facf41);
+  border-radius: 1px;
   transition: width 0.3s ease;
 }
 
@@ -723,8 +735,13 @@ function browseCrm() {
 }
 
 .btn-secondary {
-  background: #e4e7eb;
-  color: #243b53;
+  background: transparent;
+  color: var(--app-text, #1c2430);
+  border: 1px solid var(--app-border, #c8d0db);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(28, 36, 48, 0.04);
 }
 
 .btn-secondary:disabled {
