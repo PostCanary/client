@@ -110,6 +110,7 @@ function draftWithHouseholds(finalHouseholdCount: number): CampaignDraft {
   return {
     id: "draft-1",
     orgId: "org-1",
+    createdBy: "user-1",
     currentStep: 4,
     completedSteps: [1, 2, 3],
     needsReviewSteps: [],

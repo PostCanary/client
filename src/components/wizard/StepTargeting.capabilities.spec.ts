@@ -182,6 +182,7 @@ describe('StepTargeting capability gate', () => {
     store.draft = {
       id: '',
       orgId: 'org-1',
+      createdBy: null,
       currentStep: 2,
       completedSteps: [1],
       needsReviewSteps: [],
@@ -270,6 +271,7 @@ describe('StepTargeting capability gate', () => {
     store.draft = {
       id: '',
       orgId: 'org-1',
+      createdBy: null,
       currentStep: 2,
       completedSteps: [1],
       needsReviewSteps: [],
@@ -332,6 +334,7 @@ describe('StepTargeting capability gate', () => {
     store.draft = {
       id: '',
       orgId: 'org-1',
+      createdBy: null,
       currentStep: 2,
       completedSteps: [1],
       needsReviewSteps: [],
@@ -390,6 +393,7 @@ describe('StepTargeting capability gate', () => {
     store.draft = {
       id: 'draft-1',
       orgId: 'org-1',
+      createdBy: null,
       currentStep: 2,
       completedSteps: [1],
       needsReviewSteps: [],
