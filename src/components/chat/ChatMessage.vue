@@ -51,11 +51,9 @@ function formatTime(ts: number): string {
 .chat-msg__avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  background: var(--app-teal, #47bfa9);
-  /* Accent surface, not a button: teal fill only ever carries navy text
-   * (6.17:1). White on teal is 2.26:1 and fails AA. */
-  color: var(--app-on-teal, #0b2d50);
+  border-radius: var(--app-card-radius, 2px);
+  background: var(--pc-canary, #facf41);
+  color: var(--pc-navy, #1c2430);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,7 +72,7 @@ function formatTime(ts: number): string {
 
 .chat-msg__bubble {
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 14px;
   line-height: 1.5;
   word-break: break-word;
@@ -84,17 +82,15 @@ function formatTime(ts: number): string {
 .chat-msg--assistant .chat-msg__bubble {
   background: #f0f2f5;
   color: #1e293b;
-  border-bottom-left-radius: 4px;
 }
 
 .chat-msg--user .chat-msg__bubble {
-  background: var(--app-navy, #0b2d50);
-  color: #ffffff;
-  border-bottom-right-radius: 4px;
+  background: var(--app-btn-bg, #1c2430);
+  color: var(--app-btn-fg, #ffffff);
 }
 
 .chat-msg__bubble--streaming {
-  border: 1px solid var(--app-teal, #47bfa9);
+  border: 1px solid var(--pc-canary, #facf41);
 }
 
 .chat-msg__time {
