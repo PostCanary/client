@@ -684,9 +684,6 @@ watch(
   left: 20px;
   background: var(--pc-navy, #1c2430);
 }
-.switch.is-on .switch__thumb {
-  left: calc(100% - 20px);
-}
 .switch.is-disabled {
   cursor: not-allowed;
   opacity: 0.5;
