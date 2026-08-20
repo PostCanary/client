@@ -122,27 +122,22 @@ const isEmpty = computed(() => !loading.value && batches.value.length === 0);
 async function handleRefreshDashboard() {
   refreshingDashboard.value = true;
   try {
-    // First refresh to get latest status
     await refreshRunData();
-    
-    // Check if there's a run in progress and wait for it to complete
+
     const finalStatus = await pollUntilTerminal({
-      maxTicks: 120, // Wait up to 2 minutes
+      maxTicks: 120,
       intervalMs: 1000,
-      showLoader: false, // Don't show the main loader, we have our own button
+      showLoader: false,
     });
-    
+
     if (finalStatus) {
-      // Run completed, refresh data one more time to get final results
       await refreshRunData();
       message.success("Dashboard refreshed successfully.");
     } else {
-      // No active run or timeout, just refresh current data
       await refreshRunData();
       message.success("Dashboard refreshed.");
     }
-    
-    // Navigate to dashboard to show updated results
+
     router.push("/dashboard");
   } catch (err: any) {
     console.error("[History] Failed to refresh dashboard:", err);
@@ -154,54 +149,50 @@ async function handleRefreshDashboard() {
 </script>
 
 <template>
-  <div 
-    class="min-h-dvh px-4 py-6 sm:px-6"
-    :class="{ 'history-blurred': shouldBlur }"
-  >
-    <div class="mx-auto w-full max-w-3xl space-y-4">
-      <header
-        class="mb-2 flex items-center justify-between gap-4 border-b border-slate-200 pb-3"
-      >
+  <div class="history-page" :class="{ 'history-blurred': shouldBlur }">
+    <div class="history-inner">
+      <header class="history-header">
         <div>
-          <h1 class="text-xl font-semibold text-slate-900">Upload History</h1>
-          <p class="text-xs text-slate-500">
-            View and manage uploaded files
-          </p>
+          <p class="history-eyebrow">Proof</p>
+          <h1>Upload History</h1>
+          <p class="history-lede">Mail and CRM files that power your match run.</p>
         </div>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-[2px] bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+          class="btn-primary"
           :disabled="refreshingDashboard"
           @click="handleRefreshDashboard"
         >
           <svg
             v-if="refreshingDashboard"
-            class="h-4 w-4 animate-spin"
+            class="btn-icon spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <circle
-              class="opacity-25"
+              class="spin-track"
               cx="12"
               cy="12"
               r="10"
               stroke="currentColor"
               stroke-width="4"
-            ></circle>
+            />
             <path
-              class="opacity-75"
+              class="spin-head"
               fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
+            />
           </svg>
           <svg
             v-else
-            class="h-4 w-4"
+            class="btn-icon"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               stroke-linecap="round"
@@ -215,41 +206,32 @@ async function handleRefreshDashboard() {
         </button>
       </header>
 
-      <div v-if="loading" class="flex items-center justify-center py-12">
-        <div class="text-sm text-slate-500">Loading...</div>
+      <div v-if="loading" class="loading-state">Loading...</div>
+
+      <div v-else-if="isEmpty" class="empty-panel">
+        <h2>No files uploaded yet</h2>
+        <p>Upload mail and CRM CSVs from Dashboard or Analytics to build match proof.</p>
       </div>
 
-      <div
-        v-else-if="isEmpty"
-        class="rounded-[2px] border border-slate-200 bg-white p-12 text-center"
-      >
-        <p class="text-slate-500">No files uploaded yet.</p>
-      </div>
-
-      <div v-else class="space-y-3">
-        <div
+      <div v-else class="batch-list">
+        <article
           v-for="batch in batches"
           :key="batch.id"
           :data-testid="`history-batch-${batch.id}`"
-          class="flex items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-white p-4"
+          class="batch-card"
         >
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
+          <div class="batch-main">
+            <div class="batch-title-row">
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                :class="
-                  batch.source === 'mail'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-purple-100 text-purple-700'
-                "
+                class="source-badge"
+                :class="batch.source === 'mail' ? 'is-mail' : 'is-crm'"
               >
                 {{ batch.source }}
               </span>
-              <span class="text-sm font-medium text-slate-900">
-                {{ formatDisplayName(batch) }}
-              </span>
+              <span class="batch-name">{{ formatDisplayName(batch) }}</span>
             </div>
-            <div class="mt-1 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+
+            <div class="batch-meta">
               <span v-if="batch.filename">{{ batch.filename }}</span>
               <span
                 v-if="
@@ -265,22 +247,20 @@ async function handleRefreshDashboard() {
               </span>
               <span
                 v-if="batch.source === 'crm' && batch.deduped_count !== null"
-                class="text-slate-600"
+                class="meta-strong"
               >
                 {{ batch.deduped_count.toLocaleString() }} unique jobs
               </span>
               <span
                 v-if="crmDuplicateLabel(batch)"
-                class="text-amber-700"
+                class="meta-warn"
               >
                 {{ crmDuplicateLabel(batch) }}
               </span>
               <span
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+                class="status-badge"
                 :class="
-                  batch.status === 'normalized'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-amber-100 text-amber-700'
+                  batch.status === 'normalized' ? 'is-ready' : 'is-pending'
                 "
               >
                 {{ batch.status }}
@@ -290,25 +270,265 @@ async function handleRefreshDashboard() {
 
           <button
             type="button"
-            class="inline-flex items-center rounded-[2px] bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
+            class="btn-danger"
             :disabled="deletingIds.has(batch.id)"
             @click="handleDelete(batch)"
           >
             <span v-if="deletingIds.has(batch.id)">Deleting...</span>
             <span v-else>Delete</span>
           </button>
-        </div>
+        </article>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.history-page {
+  padding: 24px 16px 48px;
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
 .history-blurred {
-  filter: blur(3px);
-  opacity: 0.6;
+  filter: blur(10px);
+  opacity: 0.4;
   pointer-events: none;
   user-select: none;
-  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.history-inner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--app-border, #c8d0db);
+}
+
+.history-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pc-canary-deep, #e5b820);
+}
+
+.history-header h1 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: clamp(26px, 3.5vw, 32px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
+}
+
+.history-lede {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--app-text-secondary, #5a6b7d);
+}
+
+.loading-state {
+  padding: 48px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.empty-panel {
+  text-align: center;
+  padding: 48px 20px;
+  border: 1px solid var(--app-border, #c8d0db);
+  background: var(--app-card-bg, #f7f9fb);
+  border-radius: var(--app-card-radius, 2px);
+  border-left: 3px solid var(--pc-canary, #facf41);
+}
+
+.empty-panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
+}
+
+.empty-panel p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.batch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  border-left: 3px solid var(--pc-canary, #facf41);
+}
+
+.batch-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.batch-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.batch-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
+}
+
+.batch-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  font-size: 12px;
+  color: var(--app-text-muted, #8a97a8);
+}
+
+.meta-strong {
+  color: var(--app-text-body, #3d4a5c);
+  font-weight: 600;
+}
+
+.meta-warn {
+  color: #92400e;
+}
+
+.source-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--app-card-radius, 2px);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.source-badge.is-mail {
+  background: rgba(28, 36, 48, 0.08);
+  color: var(--pc-navy, #1c2430);
+}
+
+.source-badge.is-crm {
+  background: rgba(250, 207, 65, 0.22);
+  color: var(--pc-navy, #1c2430);
+}
+
+.status-badge.is-ready {
+  background: rgba(250, 207, 65, 0.18);
+  color: var(--pc-navy, #1c2430);
+}
+
+.status-badge.is-pending {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.btn-primary,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--app-card-radius, 2px);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  border: none;
+  background: var(--app-btn-bg, #1c2430);
+  color: var(--app-btn-fg, #ffffff);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--app-btn-bg-hover, #2a3544);
+}
+
+.btn-danger {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+
+.btn-primary:disabled,
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+.spin-track {
+  opacity: 0.25;
+}
+
+.spin-head {
+  opacity: 0.75;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .batch-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-danger {
+    width: 100%;
+  }
 }
 </style>
