@@ -85,9 +85,6 @@ const volumeTierNote = computed(() => {
               {{ formatCurrency(pricing.customDesignFee) }}
             </span>
           </div>
-          <p class="pricing-note">
-            A separate service line item, paid before design work starts.
-          </p>
         </article>
       </div>
     </div>
