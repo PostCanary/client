@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Gate: fail if authenticated app UI still uses white-on-teal CTAs
- * or white-on-canary fills that violate Match Strip / WCAG rules.
+ * Gate: fail if UI still uses white-on-teal CTAs or white-on-canary
+ * fills that violate Match Strip / WCAG rules.
  *
- * Roots must stay in sync with scripts/match-strip-restyle.cjs scope.
+ * Authenticated roots stay in sync with scripts/match-strip-restyle.cjs.
+ * Marketing + LoginModal are extra so the homepage cannot reintroduce
+ * the pairings the app already forbids.
  */
 const fs = require("fs");
 const path = require("path");
@@ -24,6 +26,18 @@ const patterns = [
   {
     name: "white-on-canary-css",
     re: /background:\s*var\(--pc-canary[^;]*;\s*\n?\s*color:\s*(#fff\b|#ffffff\b|white\b)/i,
+  },
+  {
+    name: "white-on-teal-brand-tailwind",
+    re: /bg-teal-brand[^\n]*text-white|text-white[^\n]*bg-teal-brand/,
+  },
+  {
+    name: "white-on-old-teal-hex",
+    re: /bg-\[#24b39b\][^\n]*text-white|text-white[^\n]*bg-\[#24b39b\]/,
+  },
+  {
+    name: "white-on-mkt-teal-token",
+    re: /bg-\[var\(--mkt-teal\)\][^\n]*text-white|text-white[^\n]*bg-\[var\(--mkt-teal\)\]/,
   },
 ];
 
@@ -55,6 +69,8 @@ const roots = [
   "src/components/OrgSwitcher.vue",
   "src/components/IndustryPicker.vue",
   "src/components/CampaignSelector.vue",
+  "src/components/LoginModal.vue",
+  "src/components/marketing",
 ];
 
 function walk(p, out = []) {

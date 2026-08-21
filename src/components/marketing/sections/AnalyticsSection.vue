@@ -3,7 +3,6 @@
 import { useAuthStore } from "@/stores/auth";
 import { captureEvent } from "@/composables/usePostHog";
 import CTAButton from "@/components/marketing/CTAButton.vue";
-import VideoPlaceholder from "@/components/marketing/VideoPlaceholder.vue";
 import SectionAccordion from "@/components/marketing/sections/SectionAccordion.vue";
 
 const auth = useAuthStore();
@@ -60,9 +59,6 @@ function onCta() {
           >
             Our analytics can track every campaign, conversion, attribution and other important KPIs to guide and report on your direct mail performance.
           </p>
-          <div class="mt-8">
-            <VideoPlaceholder label="Analytics video placeholder" />
-          </div>
         </div>
 
         <div>

@@ -38,7 +38,7 @@ export const BRAND = {
     white: "#ffffff",
     black: "#000000",
     textDark: "#1C2430",
-    textSecondary: "#5A6B7D",
+    textSecondary: "#55657A",
     textBody: "#3D4A5C",
     textMuted: "#8A97A8",
     borderLight: "#C8D0DB",

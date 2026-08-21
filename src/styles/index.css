@@ -1,10 +1,6 @@
 /* src\styles\index.css */
 
 @import "tailwindcss";
-@import "@fontsource/roboto/400.css";
-@import "@fontsource/roboto/500.css";
-@import "@fontsource/roboto/600.css";
-@import "@fontsource/roboto/700.css";
 @import "@fontsource/instrument-sans/400.css";
 @import "@fontsource/instrument-sans/500.css";
 @import "@fontsource/instrument-sans/600.css";
@@ -38,14 +34,16 @@
   --pc-font-body: "Instrument Sans", system-ui, sans-serif;
   --pc-font-display: "Oswald", system-ui, sans-serif;
 
-  /* ── Marketing (light) palette ──────────────────────────── */
-  --mkt-bg: #ffffff;
-  --mkt-bg-alt: #f4f6f9;
-  --mkt-card: #ffffff;
-  --mkt-border: #e2e8f0;
-  --mkt-text: #0c2d50;
-  --mkt-text-muted: #64748b;
-  --mkt-text-soft: #94a3b8;
+  /* ── Marketing surfaces (Match Strip) ─────────────────────
+   * Paper field, cool gray type, sharp corners. Same values as
+   * --app-* below so the homepage and /app share one language. */
+  --mkt-bg: #e4e9ef;
+  --mkt-bg-alt: #f7f9fb;
+  --mkt-card: #f7f9fb;
+  --mkt-border: #c8d0db;
+  --mkt-text: #1c2430;
+  --mkt-text-muted: #55657a;
+  --mkt-text-soft: #8a97a8;
   --mkt-nav-height: 4.75rem;
   /* Legacy marketing tokens — values aliased to the POS-220 brand kit.
      Prefer --pc-* / Tailwind brand utilities in new code. */
@@ -54,20 +52,9 @@
   --mkt-teal-hover: #1f9a8f;
   --mkt-yellow: var(--pc-canary);
   --mkt-cyan: #0891b2;
-  --mkt-card-shadow: 0 1px 3px rgba(12, 45, 80, 0.06), 0 8px 24px rgba(12, 45, 80, 0.04);
-  --mkt-card-shadow-lg: 0 4px 6px rgba(12, 45, 80, 0.04), 0 20px 50px rgba(12, 45, 80, 0.08);
-  --mkt-card-radius: 14px;
-
-  /* ── Deprecated marketing dark palette (remove after full migration) ── */
-  /* --pc-navy is the official brand navy above (#1C2430). */
-  --pc-navy-2: #243155;
-  --pc-card: #222e52;
-  --pc-border: #2a3560;
-  --pc-text: #f7f9ff;
-  --pc-text-muted: #b6c0dc;
-  --pc-text-soft: #8b96b5;
-  --pc-yellow: #f3d129;
-  --pc-cyan: #00ffff;
+  --mkt-card-shadow: none;
+  --mkt-card-shadow-lg: none;
+  --mkt-card-radius: 2px;
 
   /* ── App shell (Match Strip design system) ────────────────
    * Cool paper field, brand navy/canary/teal, sharp corners.
@@ -151,38 +138,38 @@ body,
 }
 
 .mkt-page::-webkit-scrollbar-track {
-  background: #f4f6f9;
+  background: var(--mkt-bg);
 }
 
 .mkt-page::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 999px;
-  border: 3px solid #f4f6f9;
+  background: var(--mkt-border);
+  border-radius: 2px;
+  border: 3px solid var(--mkt-bg);
 }
 
 .mkt-page {
   scrollbar-width: auto;
-  scrollbar-color: #cbd5e1 #f4f6f9;
+  scrollbar-color: var(--mkt-border) var(--mkt-bg);
 }
 
-/* ── Dashboard scrollbar (dark, existing) ─────────────────── */
+/* ── App page scrollbar (paper field) ─────────────────────── */
 .app-page::-webkit-scrollbar {
   width: 12px;
 }
 
 .app-page::-webkit-scrollbar-track {
-  background: var(--pc-navy-2);
+  background: var(--app-bg);
 }
 
 .app-page::-webkit-scrollbar-thumb {
-  background: var(--pc-border);
-  border-radius: 999px;
-  border: 3px solid var(--pc-navy-2);
+  background: var(--app-border);
+  border-radius: 2px;
+  border: 3px solid var(--app-bg);
 }
 
 .app-page {
   scrollbar-width: auto;
-  scrollbar-color: var(--pc-border) var(--pc-navy-2);
+  scrollbar-color: var(--app-border) var(--app-bg);
 }
 
 /* ── Neutral body defaults ────────────────────────────────── */

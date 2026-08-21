@@ -141,8 +141,10 @@ const volumeTierNote = computed(() => {
 }
 
 .pricing-flat-price {
+  font-family: var(--pc-font-display);
   font-size: 2.6rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--mkt-text);
 }
 
@@ -168,8 +170,10 @@ const volumeTierNote = computed(() => {
 }
 
 .pricing-tier-price {
-  font-weight: 700;
-  font-size: 1.15rem;
+  font-family: var(--pc-font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
   color: var(--mkt-text);
 }
 

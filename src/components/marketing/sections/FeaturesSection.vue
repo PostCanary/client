@@ -23,7 +23,7 @@ const cards = [
   },
 ] as const;
 
-// Teal treatment marks the card whose section is in view (plus hover/press).
+// Navy border + canary inset marks the card whose section is in view.
 const activeId = ref<(typeof cards)[number]["id"] | null>(null);
 let observer: IntersectionObserver | null = null;
 
@@ -97,11 +97,11 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
           v-for="card in cards"
           :key="card.id"
           type="button"
-          class="feature-card group flex flex-col rounded-[var(--mkt-card-radius)] border px-6 sm:px-7 pt-8 pb-7 text-left cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--pc-teal-brand)]"
+          class="feature-card group flex flex-col rounded-[var(--mkt-card-radius)] border px-6 sm:px-7 pt-8 pb-7 text-left cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--app-focus-ring)]"
           :class="
             activeId === card.id
-              ? 'is-active bg-teal-brand border-teal-brand text-white shadow-[var(--mkt-card-shadow-lg)]'
-              : 'bg-[var(--mkt-card)] border-[var(--mkt-border)] text-[var(--mkt-text)] shadow-[var(--mkt-card-shadow)] hover:bg-teal-brand hover:border-teal-brand hover:text-white hover:shadow-[var(--mkt-card-shadow-lg)]'
+              ? 'is-active bg-[var(--mkt-card)] border-[var(--pc-navy)] text-[var(--mkt-text)]'
+              : 'bg-[var(--mkt-card)] border-[var(--mkt-border)] text-[var(--mkt-text)] hover:border-[var(--pc-navy)]'
           "
           @click="scrollToSection($event, card.href, card.id)"
         >
@@ -109,12 +109,7 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
             {{ card.title }}
           </h3>
           <p
-            class="mt-2.5 text-[15px] sm:text-[16px] leading-relaxed"
-            :class="
-              activeId === card.id
-                ? 'text-white/90'
-                : 'text-[var(--mkt-text-muted)] group-hover:text-white/90'
-            "
+            class="mt-2.5 text-[15px] sm:text-[16px] leading-relaxed text-[var(--mkt-text-muted)]"
           >
             {{ card.body }}
           </p>
@@ -133,6 +128,10 @@ function scrollToSection(event: MouseEvent, href: string, id: (typeof cards)[num
   font-weight: 700;
   font-size: clamp(1rem, 2.4vw, 1.35rem);
   letter-spacing: 0.01em;
+}
+
+.feature-card.is-active {
+  box-shadow: inset 3px 0 0 var(--pc-canary);
 }
 
 @media (prefers-reduced-motion: reduce) {

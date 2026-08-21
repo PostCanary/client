@@ -32,7 +32,6 @@
   "dependencies": {
     "@fontsource/instrument-sans": "^5.3.0",
     "@fontsource/oswald": "^5.3.0",
-    "@fontsource/roboto": "^5.3.0",
     "@sentry/vue": "^8.55.2",
     "@vicons/ionicons5": "0.13.0",
     "@vueuse/core": "^11.0.0",

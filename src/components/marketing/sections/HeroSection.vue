@@ -9,21 +9,20 @@ import { captureEvent } from "@/composables/usePostHog";
 
 const auth = useAuthStore();
 
-// Exact pairs from the Website Flow mockup — both words cycle like a slot machine.
-const PAIRS: ReadonlyArray<readonly [string, string]> = [
-  ["PostCanary", "Everyone"],
-  ["PostCanary", "Roofers"],
-  ["PostCanary", "Restaurants"],
-  ["PostCanary", "Plumbers"],
-  ["EDDM", "Everyone"],
-  ["Targeted Mail", "Everyone"],
-  ["Analytics", "Everyone"],
-];
+const AUDIENCES = [
+  "Auto dealerships",
+  "Non-profits",
+  "Restaurants",
+  "Home service",
+  "Health clubs",
+] as const;
 
-const products = PAIRS.map(([p]) => p);
-const audiences = PAIRS.map(([, a]) => a);
+// Clone the first label at the end so the last → first step can roll
+// forward, then snap back with no reverse spin through the stack.
+const audienceReel = [...AUDIENCES, AUDIENCES[0]];
 
 const index = ref(0);
+const skipTransition = ref(false);
 const reduceMotion = ref(false);
 // Background loop stays off for reduced-motion and data-saver visitors; the
 // gradient + poster carry the hero on their own.
@@ -45,7 +44,8 @@ onMounted(() => {
 
   if (!reduceMotion.value) {
     timer = window.setInterval(() => {
-      index.value = (index.value + 1) % PAIRS.length;
+      if (skipTransition.value) return;
+      index.value += 1;
     }, 2600);
   }
 });
@@ -55,8 +55,21 @@ onBeforeUnmount(() => {
 });
 
 const reelStyle = computed(() => ({
-  transform: `translateY(calc(${-index.value} * var(--hero-line)))`,
+  transform: `translateY(${(-index.value / audienceReel.length) * 100}%)`,
 }));
+
+function onReelTransitionEnd(event: TransitionEvent) {
+  if (event.propertyName !== "transform") return;
+  if (event.target !== event.currentTarget) return;
+  if (index.value !== AUDIENCES.length) return;
+  skipTransition.value = true;
+  index.value = 0;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      skipTransition.value = false;
+    });
+  });
+}
 
 function getStarted() {
   captureEvent("marketing_cta_clicked", { cta: "get_started", section: "hero" });
@@ -95,30 +108,27 @@ function getStarted() {
       <div class="flex flex-col items-start">
         <h1 id="hero-heading" class="hero-headline">
           <!-- Static accessible name; the animated reels are decorative duplicates. -->
-          <span class="sr-only">PostCanary for Everyone</span>
+          <span class="sr-only">PostCanary for auto dealerships, non-profits, restaurants, home service, and health clubs</span>
+          <span class="hero-kicker" aria-hidden="true">
+            <span class="hero-brand">PostCanary</span>
+            <span class="hero-for">for</span>
+          </span>
           <span class="hero-reel" aria-hidden="true">
             <span
               class="hero-reel-track"
-              :class="{ 'hero-reel-static': reduceMotion }"
+              :class="{
+                'hero-reel-static': reduceMotion,
+                'hero-reel-jump': skipTransition,
+              }"
               :style="reduceMotion ? undefined : reelStyle"
+              @transitionend="onReelTransitionEnd"
             >
-              <span v-for="(word, i) in products" :key="i" class="hero-word">{{
-                word
-              }}</span>
-            </span>
-          </span>
-          <span class="hero-line-2" aria-hidden="true">
-            <span class="hero-for">for</span>
-            <span class="hero-reel">
               <span
-                class="hero-reel-track"
-                :class="{ 'hero-reel-static': reduceMotion }"
-                :style="reduceMotion ? undefined : reelStyle"
+                v-for="(word, i) in audienceReel"
+                :key="`${word}-${i}`"
+                class="hero-word"
+                >{{ word }}</span
               >
-                <span v-for="(word, i) in audiences" :key="i" class="hero-word">{{
-                  word
-                }}</span>
-              </span>
             </span>
           </span>
         </h1>
@@ -141,8 +151,9 @@ function getStarted() {
   overflow: hidden;
   background: var(--pc-navy);
   color: var(--pc-white);
-  /* One reel line; every slot metric derives from this. */
-  --hero-line: clamp(3.25rem, 9vw, 6.5rem);
+  /* Sized so the longest audience label ("Auto dealerships") fits the
+     column on one line. */
+  --hero-line: clamp(2.05rem, 6.2vw, 5.25rem);
 }
 
 .hero-media {
@@ -193,14 +204,23 @@ function getStarted() {
 .hero-headline {
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1;
+  /* Slot must beat true glyph ink (~1.25em). Extra room is the gutter
+     that hides the next/previous word so the mask never shows scraps. */
+  --hero-slot: 1.7em;
+  line-height: var(--hero-slot);
   font-size: var(--hero-line);
+  max-width: 100%;
 }
 
-.hero-line-2 {
+.hero-kicker {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35em;
+  column-gap: 0.35em;
+}
+
+.hero-brand {
+  color: var(--pc-canary);
 }
 
 .hero-for {
@@ -208,32 +228,41 @@ function getStarted() {
   font-weight: 400;
 }
 
-/* Slot-machine reel: fixed one-line mask, the track rolls vertically. */
+/* Vertical-only mask: overflow:hidden would also clip the long labels
+   on the x-axis (CSS treats mixed overflow as auto). clip-path with a
+   negative x inset keeps the slot tight on top/bottom only. */
 .hero-reel {
-  display: inline-block;
-  height: var(--hero-line);
-  max-width: 100%;
-  overflow: hidden;
-  vertical-align: bottom;
+  display: block;
+  height: var(--hero-slot);
+  overflow: visible;
+  isolation: isolate;
+  /* Inset the top/bottom so subpixel scraps from the next/previous
+     word never paint. Negative x keeps long labels unclipped. */
+  clip-path: inset(0 -100vw);
 }
 
 .hero-reel-track {
   display: flex;
   flex-direction: column;
   width: max-content;
-  transition: transform 620ms cubic-bezier(0.3, 1.25, 0.4, 1);
+  max-width: 100%;
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.hero-reel-static {
-  transform: none;
+.hero-reel-static,
+.hero-reel-jump {
+  transition: none;
 }
 
 .hero-word {
-  display: block;
-  height: var(--hero-line);
-  line-height: var(--hero-line);
+  display: flex;
+  align-items: center;
+  flex: 0 0 var(--hero-slot);
+  box-sizing: border-box;
+  height: var(--hero-slot);
   color: var(--pc-canary);
   white-space: nowrap;
+  line-height: 1.15;
 }
 
 .hero-cta {

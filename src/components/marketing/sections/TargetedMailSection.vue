@@ -3,7 +3,6 @@
 import { useAuthStore } from "@/stores/auth";
 import { captureEvent } from "@/composables/usePostHog";
 import CTAButton from "@/components/marketing/CTAButton.vue";
-import VideoPlaceholder from "@/components/marketing/VideoPlaceholder.vue";
 import SectionAccordion from "@/components/marketing/sections/SectionAccordion.vue";
 
 const auth = useAuthStore();
@@ -56,9 +55,6 @@ function onCta() {
           >
             This strategy is great for targeting residents who match your customer profile.
           </p>
-          <div class="mt-8">
-            <VideoPlaceholder label="Targeted Mail video placeholder" />
-          </div>
         </div>
 
         <div>
