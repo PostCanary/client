@@ -108,7 +108,8 @@
   --topbar-height: 56px;
   --sidebar-bg: var(--pc-navy);
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-section-text: #6d7a8a;
+  /* #8a96a4 ≥4.5:1 on --pc-navy; #6d7a8a was 3.57:1 and failed axe on .nav-label */
+  --sidebar-section-text: #8a96a4;
   --sidebar-item-text: #aeb8c4;
   --sidebar-item-hover: rgba(255, 255, 255, 0.06);
   --sidebar-item-active-bg: rgba(250, 207, 65, 0.14);

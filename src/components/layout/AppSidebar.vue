@@ -364,7 +364,7 @@ async function onSignOut() {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--sidebar-section-text, #6d7a8a);
+  color: var(--sidebar-section-text, #8a96a4);
 }
 
 .nav-label--account {
@@ -438,7 +438,7 @@ async function onSignOut() {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--sidebar-section-text, #6d7a8a);
+  color: var(--sidebar-section-text, #8a96a4);
   padding: 4px 12px 4px;
   white-space: nowrap;
 }
