@@ -35,7 +35,7 @@ const onCTA = () => {
       <div class="flex flex-col items-center text-center max-w-2xl mx-auto py-2 sm:py-4">
         <span
           v-if="badge"
-          class="inline-block rounded-full bg-[var(--mkt-teal)] px-4 py-1 text-[13px] font-semibold uppercase tracking-wider text-white mb-4"
+          class="inline-block rounded-[var(--app-card-radius)] bg-[var(--pc-canary)] px-4 py-1 text-[13px] font-semibold uppercase tracking-wider text-[var(--pc-navy)] mb-4"
         >
           {{ badge }}
         </span>

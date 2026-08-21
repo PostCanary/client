@@ -29,7 +29,7 @@ const resetEmailSent = computed(() => auth.resetEmailSent);
 const mode = computed(() => auth.loginMode || "login");
 const isSignup = computed(() => mode.value === "signup");
 
-const borderColor = "#0b2d4f";
+const borderColor = "#1c2430";
 
 const socialProviders = [
   {
@@ -136,7 +136,7 @@ const startSso = (connection: string) => {
       <div class="absolute inset-0" @click="close" />
 
       <div
-        class="relative z-10 w-full max-w-md rounded-2xl bg-white px-6 py-6 sm:px-8 sm:py-8 shadow-[0_24px_70px_rgba(11,45,80,0.18)]"
+        class="relative z-10 w-full max-w-md rounded-[var(--app-card-radius)] bg-[var(--app-card-bg)] px-6 py-6 sm:px-8 sm:py-8 border border-[var(--app-border)]"
       >
         <!-- Header: centered logo -->
         <div class="relative flex items-center justify-center">
@@ -145,7 +145,7 @@ const startSso = (connection: string) => {
 
         <!-- Title -->
         <div class="mt-5 flex w-full items-center justify-center">
-          <p class="text-[24px] font-semibold text-[#0b2d4f]">
+          <p class="text-[24px] font-semibold text-[var(--app-text)]">
             {{ isSignup ? "Create your account" : "Sign in" }}
           </p>
         </div>
@@ -157,7 +157,7 @@ const startSso = (connection: string) => {
               v-for="p in socialProviders"
               :key="p.id"
               type="button"
-              class="flex h-14 w-14 items-center justify-center rounded-full border-2 bg-white shadow-sm hover:bg-slate-50 cursor-pointer"
+              class="flex h-14 w-14 items-center justify-center rounded-full border-2 bg-[var(--app-card-bg)] hover:bg-[var(--app-bg)] cursor-pointer"
               :style="{ borderColor: borderColor }"
               @click="startSso(p.connection)"
             >
@@ -167,26 +167,26 @@ const startSso = (connection: string) => {
         </div>
 
         <!-- Divider -->
-        <div class="mt-5 flex items-center gap-3 text-xs text-slate-400">
-          <div class="h-px flex-1 bg-slate-200" />
+        <div class="mt-5 flex items-center gap-3 text-xs text-[var(--app-text-muted)]">
+          <div class="h-px flex-1 bg-[var(--app-border)]" />
           <span>OR</span>
-          <div class="h-px flex-1 bg-slate-200" />
+          <div class="h-px flex-1 bg-[var(--app-border)]" />
         </div>
 
         <!-- Reset email sent confirmation -->
         <div v-if="resetEmailSent" class="mt-6 text-center space-y-4">
-          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#24b39b]/10">
-            <svg class="h-6 w-6 text-[#24b39b]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--app-bg)]">
+            <svg class="h-6 w-6 text-[var(--app-teal)]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
           </div>
-          <p class="text-sm font-medium text-[#0b2d4f]">Check your email</p>
-          <p class="text-xs text-slate-500">
+          <p class="text-sm font-medium text-[var(--app-text)]">Check your email</p>
+          <p class="text-xs text-[var(--app-text-secondary)]">
             If an account exists for that email, we've sent a link to reset your password.
           </p>
           <button
             type="button"
-            class="mt-2 text-sm font-semibold text-[#24b39b] hover:text-[#1a8b78] cursor-pointer"
+            class="mt-2 text-sm font-semibold text-[var(--app-text)] hover:text-[var(--app-navy-light)] cursor-pointer"
             @click="backToSignIn"
           >
             Back to sign in
@@ -202,7 +202,7 @@ const startSso = (connection: string) => {
               type="email"
               autocomplete="email"
               required
-              class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-[#0b2d4f] shadow-sm placeholder:text-slate-400 focus:border-[#24b39b] focus:outline-none focus:ring-2 focus:ring-[#24b39b]/30"
+              class="mt-1.5 w-full rounded-[var(--app-card-radius)] border border-[var(--app-border)] bg-[var(--app-card-bg)] px-3 py-2.5 text-sm text-[var(--app-text)] placeholder:text-[var(--app-text-muted)] focus:border-[var(--app-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--app-focus-ring)]/20"
               placeholder="Email address"
               @blur="onEmailBlur"
             />
@@ -210,7 +210,7 @@ const startSso = (connection: string) => {
 
           <div>
             <div
-              class="mt-1.5 flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm focus-within:border-[#24b39b] focus-within:ring-2 focus-within:ring-[#24b39b]/30"
+              class="mt-1.5 flex items-center rounded-[var(--app-card-radius)] border border-[var(--app-border)] bg-[var(--app-card-bg)] px-3 py-2.5 focus-within:border-[var(--app-focus-ring)] focus-within:ring-2 focus-within:ring-[var(--app-focus-ring)]/20"
             >
               <input
                 id="login-password"
@@ -218,12 +218,12 @@ const startSso = (connection: string) => {
                 :type="showPassword ? 'text' : 'password'"
                 autocomplete="current-password"
                 required
-                class="flex-1 border-none bg-transparent text-sm text-[#0b2d4f] outline-none"
+                class="flex-1 border-none bg-transparent text-sm text-[var(--app-text)] outline-none"
                 placeholder="Password"
               />
               <button
                 type="button"
-                class="ml-2 text-xs font-medium text-[#24b39b] hover:text-[#1a8b78]"
+                class="ml-2 text-xs font-medium text-[var(--app-text)] hover:text-[var(--app-navy-light)]"
                 @click="showPassword = !showPassword"
               >
                 {{ showPassword ? "Hide" : "Show" }}
@@ -234,7 +234,7 @@ const startSso = (connection: string) => {
             <div v-if="!isSignup" class="mt-1.5 flex justify-end">
               <button
                 type="button"
-                class="text-xs text-[#24b39b] hover:text-[#1a8b78] cursor-pointer"
+                class="text-xs text-[var(--app-text)] hover:text-[var(--app-navy-light)] cursor-pointer"
                 @click="forgotPassword"
                 :disabled="loading"
               >
@@ -246,7 +246,7 @@ const startSso = (connection: string) => {
           <!-- Error -->
           <p
             v-if="localError"
-            class="text-xs text-[#b3261e] bg-[#fde7e7] border border-[#f7b1ac] rounded-md px-3 py-2"
+            class="text-xs text-[#b3261e] bg-[#fde7e7] border border-[#f7b1ac] rounded-[var(--app-card-radius)] px-3 py-2"
           >
             {{ localError }}
           </p>
@@ -254,7 +254,7 @@ const startSso = (connection: string) => {
           <!-- Submit -->
           <button
             type="submit"
-            class="mt-1 inline-flex w-full items-center justify-center rounded-lg bg-[#24b39b] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1a8b78] disabled:opacity-60 cursor-pointer"
+            class="mt-1 inline-flex w-full items-center justify-center rounded-[var(--app-card-radius)] bg-[var(--app-btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--app-btn-fg)] hover:bg-[var(--app-btn-bg-hover)] disabled:opacity-60 cursor-pointer"
             :disabled="loading"
           >
             <span v-if="!loading">
@@ -266,12 +266,12 @@ const startSso = (connection: string) => {
           </button>
 
           <!-- Mode switch link -->
-          <p class="mt-3 text-xs text-slate-500 text-center">
+          <p class="mt-3 text-xs text-[var(--app-text-secondary)] text-center">
             <span v-if="isSignup">
               Already have an account?
               <button
                 type="button"
-                class="ml-1 font-semibold text-[#24b39b] hover:text-[#1a8b78] underline cursor-pointer"
+                class="ml-1 font-semibold text-[var(--app-text)] hover:text-[var(--app-navy-light)] underline cursor-pointer"
                 @click="switchToLogin"
               >
                 Sign in
@@ -281,7 +281,7 @@ const startSso = (connection: string) => {
               New to {{ BRAND.name }}?
               <button
                 type="button"
-                class="ml-1 font-semibold text-[#24b39b] hover:text-[#1a8b78] underline cursor-pointer"
+                class="ml-1 font-semibold text-[var(--app-text)] hover:text-[var(--app-navy-light)] underline cursor-pointer"
                 @click="switchToSignup"
               >
                 Create an account
@@ -289,10 +289,10 @@ const startSso = (connection: string) => {
             </span>
           </p>
 
-          <p class="mt-2 text-[11px] text-slate-400">
+          <p class="mt-2 text-[11px] text-[var(--app-text-muted)]">
             By continuing, you agree to the {{ BRAND.name }}
-            <a href="/terms" target="_blank" class="underline hover:text-slate-600">Terms</a> and
-            <a href="/privacy" target="_blank" class="underline hover:text-slate-600">Privacy Policy</a>.
+            <a href="/terms" target="_blank" class="underline hover:text-[var(--app-text)]">Terms</a> and
+            <a href="/privacy" target="_blank" class="underline hover:text-[var(--app-text)]">Privacy Policy</a>.
           </p>
         </form>
       </div>

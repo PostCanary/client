@@ -17,19 +17,19 @@ defineEmits<{
 <template>
   <button
     type="button"
-    class="inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+    class="inline-flex items-center justify-center gap-2 font-semibold rounded-[var(--app-card-radius)] transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-focus-ring)]"
     :class="[
       // Size
       size === 'sm' && 'px-4 py-2 text-[14px]',
       size === 'md' && 'px-5 py-2.5 text-[15px]',
       size === 'lg' && 'px-6 sm:px-8 py-3 sm:py-3.5 text-[16px] sm:text-[17px]',
-      // Variant
+      // Variant — navy is the action fill (Match Strip). Teal is accent only.
       variant === 'primary' &&
-        'bg-teal-brand text-white shadow-sm hover:bg-teal-brand/90',
+        'bg-[var(--app-btn-bg)] text-[var(--app-btn-fg)] hover:bg-[var(--app-btn-bg-hover)]',
       variant === 'outline' &&
-        'border border-teal-brand text-teal-brand hover:bg-teal-brand hover:text-white',
+        'border border-[var(--app-btn-bg)] text-[var(--app-btn-bg)] hover:bg-[var(--app-btn-bg)] hover:text-[var(--app-btn-fg)]',
       variant === 'white' &&
-        'bg-white text-navy shadow-sm hover:bg-white/90',
+        'bg-white text-navy hover:bg-[var(--app-card-bg)]',
     ]"
     :disabled="disabled"
     @click="$emit('click', $event)"

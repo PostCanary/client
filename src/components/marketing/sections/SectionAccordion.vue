@@ -99,9 +99,9 @@ function toggle(index: number) {
 }
 
 .mkt-acc__trigger:focus-visible {
-  outline: 2px solid var(--pc-teal-brand);
+  outline: 2px solid var(--app-focus-ring);
   outline-offset: 4px;
-  border-radius: 4px;
+  border-radius: var(--app-card-radius);
 }
 
 .mkt-acc__chevron {

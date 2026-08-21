@@ -148,7 +148,7 @@ async function goToHash(hash: string) {
               v-if="featuresOpen"
               id="features-menu"
               role="menu"
-              class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl border border-white/10 bg-white py-2 shadow-[var(--mkt-card-shadow-lg)]"
+              class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-[var(--app-card-radius)] border border-[var(--app-border)] bg-[var(--app-card-bg)] py-2"
             >
               <a
                 v-for="link in featureLinks"
@@ -177,7 +177,7 @@ async function goToHash(hash: string) {
       <div class="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
-          class="whitespace-nowrap rounded-lg bg-canary px-4 md:px-5 py-1.5 md:py-2 text-[14px] md:text-[15px] font-semibold text-navy shadow-sm hover:bg-canary/90 transition-all cursor-pointer"
+          class="whitespace-nowrap rounded-[var(--app-card-radius)] bg-canary px-4 md:px-5 py-1.5 md:py-2 text-[14px] md:text-[15px] font-semibold text-navy hover:bg-canary/90 transition-colors cursor-pointer"
           @click="onAuthClick"
         >
           {{ auth.isAuthenticated ? "Dashboard" : "Log In" }}
