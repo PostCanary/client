@@ -17,8 +17,6 @@ const AUDIENCES = [
   "Health clubs",
 ] as const;
 
-// Clone the first label at the end so the last → first step can roll
-// forward, then snap back with no reverse spin through the stack.
 const audienceReel = [...AUDIENCES, AUDIENCES[0]];
 
 const index = ref(0);
@@ -151,8 +149,6 @@ function getStarted() {
   overflow: hidden;
   background: var(--pc-navy);
   color: var(--pc-white);
-  /* Sized so the longest audience label ("Auto dealerships") fits the
-     column on one line. */
   --hero-line: clamp(2.05rem, 6.2vw, 5.25rem);
 }
 
@@ -204,8 +200,6 @@ function getStarted() {
 .hero-headline {
   font-weight: 700;
   letter-spacing: -0.02em;
-  /* Slot must beat true glyph ink (~1.25em). Extra room is the gutter
-     that hides the next/previous word so the mask never shows scraps. */
   --hero-slot: 1.7em;
   line-height: var(--hero-slot);
   font-size: var(--hero-line);
@@ -228,16 +222,13 @@ function getStarted() {
   font-weight: 400;
 }
 
-/* Vertical-only mask: overflow:hidden would also clip the long labels
-   on the x-axis (CSS treats mixed overflow as auto). clip-path with a
-   negative x inset keeps the slot tight on top/bottom only. */
+/* Vertical-only mask. overflow:hidden on y would coerce overflow-x to
+   auto and clip long labels. Negative x inset keeps those labels whole. */
 .hero-reel {
   display: block;
   height: var(--hero-slot);
   overflow: visible;
   isolation: isolate;
-  /* Inset the top/bottom so subpixel scraps from the next/previous
-     word never paint. Negative x keeps long labels unclipped. */
   clip-path: inset(0 -100vw);
 }
 
