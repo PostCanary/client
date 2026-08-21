@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PostCanary — Dashboard exploration: Match Strip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #1c2430;
+      --ink-soft: #3d4a5c;
+      --muted: #5a6b7d;
+      --faint: #8a97a8;
+      --paper: #e4e9ef;
+      --paper-deep: #d5dde7;
+      --surface: #f7f9fb;
+      --white: #ffffff;
+      --canary: #facf41;
+      --canary-deep: #e5b820;
+      --teal: #26afa3;
+      --teal-ink: #1a7f76;
+      --border: #c8d0db;
+      --border-soft: #dce2ea;
+      --danger: #c45c5c;
+      --sidebar-w: 220px;
+      --radius: 2px;
+      --font-display: "Oswald", sans-serif;
+      --font-body: "Instrument Sans", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Shell ─────────────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--ink);
+      color: #c5ced8;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--canary);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .brand-name {
+      font-family: var(--font-display);
+      font-size: 18px;
+      letter-spacing: 0.04em;
+      color: var(--white);
+      text-transform: uppercase;
+    }
+    .nav-section { display: flex; flex-direction: column; gap: 2px; }
+    .nav-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #6d7a8a;
+      padding: 8px 10px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #aeb8c4;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-item.active {
+      background: rgba(250, 207, 65, 0.12);
+      color: var(--canary);
+    }
+    .nav-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; opacity: 0.5;
+    }
+    .nav-item.active .nav-dot { opacity: 1; }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ── Top bar ───────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .page-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .page-sub {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .period {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+    .period kbd {
+      font-family: var(--font-body);
+      font-size: 11px;
+      color: var(--faint);
+      border: 1px solid var(--border-soft);
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+
+    .content {
+      padding: 22px 28px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      max-width: 1180px;
+    }
+
+    /* ── Match Strip (signature) ───────────────────────── */
+    .match-strip {
+      position: relative;
+      background: var(--ink);
+      color: var(--white);
+      padding: 28px 32px 26px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .match-strip::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 55% 90% at 78% 45%, rgba(250,207,65,0.18), transparent 72%),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 47px,
+          rgba(255,255,255,0.025) 47px,
+          rgba(255,255,255,0.025) 48px
+        );
+      z-index: -1;
+      pointer-events: none;
+    }
+    .strip-eyebrow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .strip-eyebrow-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--canary);
+      font-weight: 600;
+    }
+    .strip-refreshed {
+      font-size: 12px;
+      color: #8a96a8;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 0.85fr) auto minmax(0, 1.6fr);
+      align-items: end;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .pipe-node {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .pipe-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8a96a8;
+      font-weight: 600;
+    }
+    .pipe-value {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(26px, 3vw, 36px);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      color: #b8c2d0;
+    }
+    .pipe-node--money {
+      position: relative;
+      padding: 4px 0 4px 4px;
+    }
+    .pipe-node--money .pipe-label {
+      color: var(--canary);
+    }
+    .pipe-node--money .pipe-value {
+      color: var(--canary);
+      font-size: clamp(44px, 5.4vw, 64px);
+      letter-spacing: 0.01em;
+    }
+    .pipe-node--money .pipe-sub {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #8a96a8;
+    }
+    .pipe-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-bottom: 14px;
+      color: #5a677a;
+      position: relative;
+      width: 48px;
+    }
+    .pipe-connector svg { width: 40px; height: 12px; }
+    .pipe-connector--hot { color: var(--canary); }
+    .pulse {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--canary);
+      left: 50%;
+      top: 42%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 0 rgba(250, 207, 65, 0.55);
+      animation: pulse 2.2s ease-out infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(250, 207, 65, 0.5); }
+      70% { box-shadow: 0 0 0 12px rgba(250, 207, 65, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(250, 207, 65, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pulse { animation: none; }
+    }
+
+    .strip-foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 28px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .foot-stat {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .foot-stat strong {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--white);
+    }
+    .foot-stat span {
+      font-size: 12px;
+      color: #8a96a8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Action row ────────────────────────────────────── */
+    .action-row {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 16px;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+    }
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .panel-hint {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .upload-zones {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .drop {
+      border: 1.5px dashed var(--border);
+      background: var(--white);
+      padding: 18px 12px;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop:hover {
+      border-color: var(--teal);
+      background: rgba(38, 175, 163, 0.04);
+    }
+    .drop strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .drop span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: var(--radius);
+      padding: 11px 16px;
+      font-family: var(--font-body);
+      font-size: 13.5px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .btn-primary {
+      width: 100%;
+      background: var(--teal);
+      color: var(--white);
+    }
+    .btn-primary:hover { background: var(--teal-ink); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink-soft);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .metric:nth-last-child(-n+2) { border-bottom: 0; }
+    .metric-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+    }
+
+    /* ── Chart ─────────────────────────────────────────── */
+    .chart-panel { padding: 18px 20px 12px; }
+    .chart {
+      height: 200px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      align-items: end;
+      gap: 8px;
+      padding: 12px 0 8px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    .bar-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2px;
+      align-items: end;
+      height: 100%;
+    }
+    .bar {
+      border-radius: 1px 1px 0 0;
+      min-height: 4px;
+    }
+    .bar-mail { background: #7a8899; }
+    .bar-crm { background: var(--teal); opacity: 0.7; }
+    .bar-match { background: var(--canary); }
+    .chart-legend {
+      display: flex;
+      gap: 18px;
+      padding-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .swatch {
+      width: 10px; height: 10px;
+      border-radius: 1px;
+    }
+
+    /* ── Areas ─────────────────────────────────────────── */
+    .areas-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .areas-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .areas-sub {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      background: var(--white);
+      padding: 3px;
+    }
+    .toggle button {
+      border: 0;
+      background: transparent;
+      padding: 7px 12px;
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .toggle button.on {
+      background: var(--ink);
+      color: var(--white);
+    }
+
+    .tables {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 650;
+      padding: 0 0 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    th:last-child, td:last-child { text-align: right; }
+    td {
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border-soft);
+      color: var(--ink-soft);
+    }
+    td strong { color: var(--ink); font-weight: 650; }
+    .rate-bar {
+      display: inline-block;
+      height: 4px;
+      width: 48px;
+      background: var(--paper-deep);
+      margin-right: 8px;
+      vertical-align: middle;
+      position: relative;
+    }
+    .rate-bar i {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      background: var(--canary);
+    }
+
+    /* ── Exploration notes ─────────────────────────────── */
+    .explore-banner {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--canary);
+      color: var(--ink);
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+    .explore-banner a {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    @media (max-width: 960px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .pipeline {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .pipe-connector { display: none; }
+      .action-row, .tables { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="explore-banner">
+    <span>Exploration only — Match Strip concept for /app/dashboard. Not production.</span>
+    <a href="./home-revenue-chip.html" style="color:#1c2430;font-weight:700">Home mock →</a>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="App navigation">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div class="brand-name">PostCanary</div>
+      </div>
+      <nav class="nav-section">
+        <div class="nav-label">Send</div>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Campaigns</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Designs</a>
+      </nav>
+      <nav class="nav-section">
+        <div class="nav-label">Analytics</div>
+        <a class="nav-item active" href="#"><span class="nav-dot"></span>Dashboard</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Map</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Analysis</a>
+        <a class="nav-item" href="#"><span class="nav-dot"></span>Audience</a>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub">Proof that your mail converted in CRM.</p>
+        </div>
+        <div class="period" title="Date range">
+          Jan 1 – Aug 20, 2026
+          <kbd>Apply</kbd>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Signature: Match Strip -->
+        <section class="match-strip" aria-label="Mail to revenue pipeline">
+          <div class="strip-eyebrow">
+            <span class="strip-eyebrow-label">Matched revenue</span>
+            <span class="strip-refreshed">Last run · today 09:14</span>
+          </div>
+
+          <div class="pipeline">
+            <div class="pipe-node">
+              <span class="pipe-label">Mail sent</span>
+              <span class="pipe-value">24,180</span>
+            </div>
+            <div class="pipe-connector" aria-hidden="true">
+              <svg viewBox="0 0 40 12" fill="none"><path d="M0 6h32M28 1l8 5-8 5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <div class="pipe-node">
+              <span class="pipe-label">Matched jobs</span>
+              <span class="pipe-value">1,847</span>
+            </div>
+            <div class="pipe-connector pipe-connector--hot" aria-hidden="true">
+              <span class="pulse"></span>
+              <svg viewBox="0 0 40 12" fill="none"><path d="M0 6h32M28 1l8 5-8 5" stroke="currentColor" stroke-width="1.5"/></svg>
+            </div>
+            <div class="pipe-node pipe-node--money">
+              <span class="pipe-label">Revenue from mail</span>
+              <span class="pipe-value">$148,290</span>
+              <span class="pipe-sub">Jobs that matched your mail list</span>
+            </div>
+          </div>
+
+          <div class="strip-foot">
+            <div class="foot-stat"><strong>7.6%</strong><span>Match rate</span></div>
+            <div class="foot-stat"><strong>19</strong><span>Days to convert</span></div>
+            <div class="foot-stat"><strong>$6.13</strong><span>Per mailer</span></div>
+            <div class="foot-stat"><strong>$80.23</strong><span>Avg ticket</span></div>
+          </div>
+        </section>
+
+        <!-- Upload + detailed metrics -->
+        <div class="action-row">
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Refresh proof</h2>
+              <p class="panel-hint">Upload new CSVs to re-run matching</p>
+            </div>
+            <div class="upload-zones">
+              <div class="drop">
+                <strong>Mail list</strong>
+                <span>Drop CSV</span>
+              </div>
+              <div class="drop">
+                <strong>CRM jobs</strong>
+                <span>Drop CSV</span>
+              </div>
+            </div>
+            <button class="btn btn-primary" type="button">Upload &amp; Match</button>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Volume context</h2>
+              <button class="btn btn-ghost" type="button">Edit mapping</button>
+            </div>
+            <div class="metric-grid">
+              <div class="metric">
+                <span class="metric-label">Unique addresses</span>
+                <span class="metric-value">22,641</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">CRM jobs</span>
+                <span class="metric-value">9,412</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">30-day convert</span>
+                <span class="metric-value">68%</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">60-day convert</span>
+                <span class="metric-value">81%</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Trend -->
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Mail · CRM · Match over time</h2>
+            <p class="panel-hint">YoY comparison stays in Analysis</p>
+          </div>
+          <div class="chart" aria-hidden="true">
+            <div class="bar-group"><div class="bar bar-mail" style="height:55%"></div><div class="bar bar-crm" style="height:40%"></div><div class="bar bar-match" style="height:18%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:62%"></div><div class="bar bar-crm" style="height:44%"></div><div class="bar bar-match" style="height:22%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:48%"></div><div class="bar bar-crm" style="height:52%"></div><div class="bar bar-match" style="height:28%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:70%"></div><div class="bar bar-crm" style="height:48%"></div><div class="bar bar-match" style="height:26%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:66%"></div><div class="bar bar-crm" style="height:58%"></div><div class="bar bar-match" style="height:34%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:78%"></div><div class="bar bar-crm" style="height:60%"></div><div class="bar bar-match" style="height:38%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:72%"></div><div class="bar bar-crm" style="height:55%"></div><div class="bar bar-match" style="height:31%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:84%"></div><div class="bar bar-crm" style="height:64%"></div><div class="bar bar-match" style="height:42%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:76%"></div><div class="bar bar-crm" style="height:70%"></div><div class="bar bar-match" style="height:48%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:90%"></div><div class="bar bar-crm" style="height:68%"></div><div class="bar bar-match" style="height:45%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:82%"></div><div class="bar bar-crm" style="height:72%"></div><div class="bar bar-match" style="height:52%"></div></div>
+            <div class="bar-group"><div class="bar bar-mail" style="height:88%"></div><div class="bar bar-crm" style="height:75%"></div><div class="bar bar-match" style="height:58%"></div></div>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><i class="swatch" style="background:#7a8899"></i>Mail</span>
+            <span class="legend-item"><i class="swatch" style="background:#26afa3"></i>CRM</span>
+            <span class="legend-item"><i class="swatch" style="background:#facf41"></i>Match</span>
+          </div>
+        </section>
+
+        <!-- Top areas -->
+        <div class="areas-head">
+          <div>
+            <h2 class="areas-title">Top areas</h2>
+            <p class="areas-sub">Where matched jobs concentrate.</p>
+          </div>
+          <div class="toggle" role="group" aria-label="Rank by">
+            <button type="button" class="on">Matches</button>
+            <button type="button">Match rate</button>
+          </div>
+        </div>
+
+        <div class="tables">
+          <section class="panel">
+            <h3 class="panel-title" style="margin-bottom:14px">Cities</h3>
+            <table>
+              <thead><tr><th>City</th><th>Matches</th><th>Rate</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Phoenix</strong></td><td>412</td><td><span class="rate-bar"><i style="width:72%"></i></span>8.4%</td></tr>
+                <tr><td><strong>Mesa</strong></td><td>287</td><td><span class="rate-bar"><i style="width:61%"></i></span>7.1%</td></tr>
+                <tr><td><strong>Scottsdale</strong></td><td>198</td><td><span class="rate-bar"><i style="width:80%"></i></span>9.2%</td></tr>
+                <tr><td><strong>Tempe</strong></td><td>164</td><td><span class="rate-bar"><i style="width:55%"></i></span>6.4%</td></tr>
+                <tr><td><strong>Chandler</strong></td><td>141</td><td><span class="rate-bar"><i style="width:66%"></i></span>7.6%</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="panel">
+            <h3 class="panel-title" style="margin-bottom:14px">ZIP codes</h3>
+            <table>
+              <thead><tr><th>ZIP</th><th>Matches</th><th>Rate</th></tr></thead>
+              <tbody>
+                <tr><td><strong>85016</strong></td><td>94</td><td><span class="rate-bar"><i style="width:78%"></i></span>9.0%</td></tr>
+                <tr><td><strong>85251</strong></td><td>81</td><td><span class="rate-bar"><i style="width:70%"></i></span>8.1%</td></tr>
+                <tr><td><strong>85254</strong></td><td>76</td><td><span class="rate-bar"><i style="width:84%"></i></span>9.7%</td></tr>
+                <tr><td><strong>85018</strong></td><td>68</td><td><span class="rate-bar"><i style="width:58%"></i></span>6.7%</td></tr>
+                <tr><td><strong>85260</strong></td><td>61</td><td><span class="rate-bar"><i style="width:63%"></i></span>7.3%</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

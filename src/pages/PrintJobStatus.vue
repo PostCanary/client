@@ -164,12 +164,12 @@ function retry() {
 
     <!-- Section 1: Status header -->
     <header class="mb-8">
-      <h1 class="text-2xl font-bold text-[#0b2d50] mb-2">Print job status</h1>
+      <h1 class="text-2xl font-bold text-[var(--pc-navy,#1c2430)] mb-2">Print job status</h1>
       <!--
         S365 U.6: role="status" + aria-live="polite" announce phase
         transitions to screen readers without interrupting active speech.
       -->
-      <p class="text-base text-[#0b2d50]" role="status" aria-live="polite">
+      <p class="text-base text-[var(--pc-navy,#1c2430)]" role="status" aria-live="polite">
         {{ displayPhaseCopy }}
       </p>
     </header>
@@ -187,7 +187,7 @@ function retry() {
           <span class="h-3 w-16 mt-2 bg-gray-200 rounded animate-pulse" />
         </div>
       </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+      <div class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8">
         <div class="h-4 w-24 bg-gray-200 rounded animate-pulse mb-3" />
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6">
           <div>
@@ -216,18 +216,18 @@ function retry() {
         <span
           class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors"
           :class="{
-            'bg-[#47bfa9] text-white': stepState(idx) === 'complete',
+            'bg-[var(--app-btn-bg,#1c2430)] text-white': stepState(idx) === 'complete',
             'bg-[#0b2d50] text-white animate-pulse': stepState(idx) === 'current',
             'bg-gray-200 text-gray-500': stepState(idx) === 'upcoming',
           }"
         >
           {{ idx + 1 }}
         </span>
-        <span class="text-xs mt-2 text-[#0b2d50]">{{ TIMELINE_LABELS[step] }}</span>
+        <span class="text-xs mt-2 text-[var(--pc-navy,#1c2430)]">{{ TIMELINE_LABELS[step] }}</span>
         <span
           v-if="idx < TIMELINE_STEPS.length - 1"
           class="absolute top-3.5 left-[calc(50%+0.875rem)] right-[calc(-50%+0.875rem)] h-0.5"
-          :class="stepState(idx) === 'complete' ? 'bg-[#47bfa9]' : 'bg-gray-200'"
+          :class="stepState(idx) === 'complete' ? 'bg-[var(--app-btn-bg,#1c2430)]' : 'bg-gray-200'"
         />
       </li>
     </ol>
@@ -239,7 +239,7 @@ function retry() {
          GET resolves. Codex thread 019dda8e (S368 HIGH conf-96). -->
     <div
       v-else-if="isTerminalError"
-      class="mb-8 rounded-lg border p-4 text-sm"
+      class="mb-8 rounded-[2px] border p-4 text-sm"
       :class="
         phase === 'cancelled'
           ? 'border-gray-200 bg-gray-50 text-gray-700'
@@ -255,20 +255,20 @@ function retry() {
     </div>
 
     <!-- Section 3: Order metadata (hidden during idle skeleton state, S365 U.6) -->
-    <section v-if="phase !== 'idle'" class="bg-white rounded-xl border border-gray-200 p-5 mb-8">
-      <h3 class="text-sm font-semibold text-[#0b2d50] mb-3">Order details</h3>
+    <section v-if="phase !== 'idle'" class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8">
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-3">Order details</h3>
       <dl class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm">
         <div>
           <dt class="text-gray-500">Job ID</dt>
-          <dd class="text-[#0b2d50] font-mono break-all">{{ jobId }}</dd>
+          <dd class="text-[var(--pc-navy,#1c2430)] font-mono break-all">{{ jobId }}</dd>
         </div>
         <div v-if="status">
           <dt class="text-gray-500">Server status</dt>
-          <dd class="text-[#0b2d50]">{{ status }}</dd>
+          <dd class="text-[var(--pc-navy,#1c2430)]">{{ status }}</dd>
         </div>
         <div v-if="partnerOrderId">
           <dt class="text-gray-500">Partner order ID</dt>
-          <dd class="text-[#0b2d50] font-mono break-all">{{ partnerOrderId }}</dd>
+          <dd class="text-[var(--pc-navy,#1c2430)] font-mono break-all">{{ partnerOrderId }}</dd>
         </div>
         <div v-if="error?.code">
           <dt class="text-gray-500">Error code</dt>
@@ -280,13 +280,13 @@ function retry() {
     <!-- Section 4: Terminal CTAs -->
     <div v-if="isTerminalError" class="flex gap-3">
       <button
-        class="px-4 py-2 rounded-lg bg-[#47bfa9] text-white text-sm font-semibold hover:bg-[#3aa68f]"
+        class="px-4 py-2 rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold hover:bg-[var(--app-btn-bg-hover,#2a3544)]"
         @click="retry"
       >
         {{ phase === "returned" ? "Update address and resubmit" : "Try again" }}
       </button>
       <button
-        class="px-4 py-2 rounded-lg border border-gray-300 text-[#0b2d50] text-sm font-semibold hover:bg-gray-50"
+        class="px-4 py-2 rounded-[2px] border border-gray-300 text-[var(--pc-navy,#1c2430)] text-sm font-semibold hover:bg-gray-50"
         @click="router.push(backHref)"
       >
         Cancel
@@ -298,7 +298,7 @@ function retry() {
     >
       <button
         data-testid="print-job-terminal-cta"
-        class="px-4 py-2 rounded-lg bg-[#47bfa9] text-white text-sm font-semibold hover:bg-[#3aa68f]"
+        class="px-4 py-2 rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-semibold hover:bg-[var(--app-btn-bg-hover,#2a3544)]"
         @click="router.push(backHref)"
       >
         {{ fromCampaignId ? "Back to campaign" : "All Campaigns" }}

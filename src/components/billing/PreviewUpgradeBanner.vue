@@ -52,7 +52,7 @@ defineEmits<{
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--pc-navy, #1c2430);
 }
 
 .preview-banner__title {

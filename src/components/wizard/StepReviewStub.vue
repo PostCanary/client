@@ -40,7 +40,7 @@ function approve() {
 
 <template>
   <div class="max-w-lg mx-auto py-8 px-4">
-    <h2 class="text-xl font-semibold text-[#0b2d50] mb-4">Review & Send</h2>
+    <h2 class="text-xl font-semibold text-[var(--pc-navy,#1c2430)] mb-4">Review & Send</h2>
     <p class="text-sm text-gray-500 mb-6">
       Stub — Terminal 3 replaces this with real review UI
     </p>
@@ -48,30 +48,30 @@ function approve() {
     <div class="bg-gray-50 rounded-lg p-4 space-y-2 mb-6 text-sm">
       <div class="flex justify-between">
         <span class="text-gray-500">Goal</span>
-        <span class="font-medium text-[#0b2d50]">
+        <span class="font-medium text-[var(--pc-navy,#1c2430)]">
           {{ draftStore.draft?.goal?.goalLabel ?? "—" }}
         </span>
       </div>
       <div class="flex justify-between">
         <span class="text-gray-500">Households</span>
-        <span class="font-medium text-[#0b2d50]">
+        <span class="font-medium text-[var(--pc-navy,#1c2430)]">
           {{ householdCount.toLocaleString() }}
         </span>
       </div>
       <div class="flex justify-between">
         <span class="text-gray-500">Cards</span>
-        <span class="font-medium text-[#0b2d50]">{{ seqLen }}</span>
+        <span class="font-medium text-[var(--pc-navy,#1c2430)]">{{ seqLen }}</span>
       </div>
       <div class="flex justify-between border-t pt-2">
         <span class="text-gray-500 font-semibold">Estimated total</span>
-        <span class="font-bold text-[#0b2d50]">
+        <span class="font-bold text-[var(--pc-navy,#1c2430)]">
           ${{ (perCardCost * seqLen).toFixed(2) }}
         </span>
       </div>
     </div>
 
     <button
-      class="bg-[#47bfa9] text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-[#3aa893] transition-colors w-full"
+      class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-6 py-2.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors w-full"
       @click="approve"
     >
       Approve & Send

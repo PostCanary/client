@@ -60,7 +60,7 @@ function onClick() {
         'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
         isDisabled
           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          : 'bg-[#47bfa9] text-white hover:bg-[#3aa893]',
+          : 'bg-[var(--app-btn-bg,#1c2430)] text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)]',
       ]"
       @click="onClick"
     >

@@ -246,7 +246,7 @@ async function downloadAudience() {
 
 .modal-card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 8px 32px rgba(12, 45, 80, 0.15);
   width: 100%;
   max-width: 520px;
@@ -299,7 +299,7 @@ async function downloadAudience() {
 .spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid #47bfa9;
+  border: 2px solid var(--pc-canary, #facf41);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -314,7 +314,7 @@ async function downloadAudience() {
 .preview-wrap {
   width: 100%;
   aspect-ratio: 3 / 2;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   overflow: hidden;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
@@ -375,7 +375,7 @@ async function downloadAudience() {
   font-size: 14px;
   padding: 10px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
   transition: background 0.12s ease;
 }
@@ -391,7 +391,7 @@ async function downloadAudience() {
   margin-top: 14px;
   background: none;
   border: none;
-  color: #47bfa9;
+  color: var(--pc-canary, #facf41);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;

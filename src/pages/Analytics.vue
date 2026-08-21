@@ -5,6 +5,7 @@ import { useAnalytics } from "@/composables/useAnalytics";
 import { useUploadAndMatch } from "@/composables/useUploadAndMatch";
 
 import UploadCard from "@/components/dashboard/UploadCard.vue";
+import MatchStrip from "@/components/dashboard/MatchStrip.vue";
 import KpiSummaryCard from "@/components/dashboard/KpiSummaryCard.vue";
 import MappingRequiredModal from "@/components/dashboard/MappingRequiredModal.vue";
 import MapperModal from "@/components/dashboard/MapperModal.vue";
@@ -117,8 +118,9 @@ const showResultsScreen = computed(() => hasMatchData.value);
     <!-- Screen 1 — Entry: upload customer list -->
     <div v-else-if="showEntryScreen" class="entry-screen">
       <div class="entry-header">
-        <h1>Upload your Customer List</h1>
-        <p>See who's converting from your mail.</p>
+        <p class="entry-eyebrow">Analysis</p>
+        <h1>Prove who converted</h1>
+        <p>Upload mail and CRM CSVs to see matched revenue and AI insights.</p>
       </div>
 
       <div class="entry-upload">
@@ -134,20 +136,18 @@ const showResultsScreen = computed(() => hasMatchData.value);
       </div>
     </div>
 
-    <!-- Screen 2 — Results: KPIs + re-upload + AI Insights -->
+    <!-- Screen 2 — Results: Match Strip + re-upload + AI Insights -->
     <template v-else-if="showResultsScreen">
       <div v-if="runDataError" class="run-error">
         {{ runDataError }}
       </div>
 
-      <!-- Hero KPI cards (Match Rate, Match Revenue, Total Matches, Days to Convert) -->
-      <KpiSummaryCard
-        variant="hero"
+      <MatchStrip
         :kpis="kpis"
         :loading="runResultLoading"
       />
 
-      <!-- Re-upload + advanced detail panel (mirrors Dashboard Row 2) -->
+      <!-- Re-upload + volume context (mirrors Dashboard) -->
       <div class="action-row">
         <UploadCard
           :reset-key="uploadResetKey"
@@ -171,7 +171,7 @@ const showResultsScreen = computed(() => hasMatchData.value);
         <div class="page-header">
           <div>
             <h2 class="ai-insights-heading">AI Insights</h2>
-            <p>AI-powered insights from your mail and CRM data</p>
+            <p>Patterns from your matched mail and CRM data</p>
           </div>
         </div>
 
@@ -321,7 +321,7 @@ const showResultsScreen = computed(() => hasMatchData.value);
   gap: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 16px 40px;
+  padding: 0 0 40px;
   transition: filter 0.18s ease, opacity 0.18s ease;
 }
 
@@ -348,17 +348,29 @@ const showResultsScreen = computed(() => hasMatchData.value);
   max-width: 480px;
 }
 
-.entry-header h1 {
-  margin: 0;
-  font-size: 24px;
+.entry-eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pc-canary-deep, #e5b820);
 }
 
-.entry-header p {
-  margin: 8px 0 0;
+.entry-header h1 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
+}
+
+.entry-header p:not(.entry-eyebrow) {
+  margin: 10px 0 0;
   font-size: 15px;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary, #5a6b7d);
   font-weight: 400;
 }
 
@@ -371,7 +383,7 @@ const showResultsScreen = computed(() => hasMatchData.value);
 .action-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
   align-items: stretch;
 }
 
@@ -379,10 +391,10 @@ const showResultsScreen = computed(() => hasMatchData.value);
 .ai-insights-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--app-border, #e2e8f0);
+  padding-top: 20px;
+  border-top: 1px solid var(--app-border, #c8d0db);
 }
 
 .page-header {
@@ -393,26 +405,29 @@ const showResultsScreen = computed(() => hasMatchData.value);
 
 .ai-insights-heading {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
 }
 
 .page-header p {
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary, #5a6b7d);
   font-size: 13px;
-  margin-top: 2px;
+  margin-top: 4px;
   font-weight: 400;
 }
 
 .sections-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 16px;
 }
 
 .run-error {
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #fecdd3;
   background: #fff1f2;
   padding: 10px 12px;
@@ -420,7 +435,6 @@ const showResultsScreen = computed(() => hasMatchData.value);
   color: #9f1239;
 }
 
-/* Loading / empty / error */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -436,14 +450,14 @@ const showResultsScreen = computed(() => hasMatchData.value);
 
 .loading-state p {
   font-size: 14px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--app-border, #e2e8f0);
-  border-top-color: var(--app-teal, #47bfa9);
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--app-border, #c8d0db);
+  border-top-color: var(--pc-canary, #facf41);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -466,11 +480,11 @@ const showResultsScreen = computed(() => hasMatchData.value);
 
 .error-state p {
   font-size: 14px;
-  color: #ef4444;
+  color: #c45c5c;
 }
 
 .error-hint {
-  color: var(--app-text-muted, #94a3b8) !important;
+  color: var(--app-text-muted, #8a97a8) !important;
   margin-top: 8px;
   font-size: 13px !important;
 }
@@ -478,18 +492,21 @@ const showResultsScreen = computed(() => hasMatchData.value);
 .empty-state {
   text-align: center;
   padding: 40px 20px;
+  border: 1px solid var(--app-border, #c8d0db);
+  background: var(--app-card-bg, #f7f9fb);
+  border-radius: var(--app-card-radius, 2px);
 }
 
 .empty-state h3 {
   font-size: 16px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
   margin: 0 0 8px;
 }
 
 .empty-state p {
   font-size: 14px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   margin: 0;
 }
 
@@ -498,19 +515,20 @@ const showResultsScreen = computed(() => hasMatchData.value);
   align-items: center;
   gap: 8px;
   margin-top: 20px;
-  padding: 12px 24px;
-  border-radius: 999px;
+  padding: 11px 18px;
+  border-radius: var(--app-card-radius, 2px);
   border: none;
-  background: var(--app-btn-bg, #0b2d50);
+  background: var(--app-btn-bg, #1c2430);
   color: var(--app-btn-fg, #ffffff);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
+  font-family: inherit;
 }
 
 .generate-btn:hover:not(:disabled) {
-  background: #3da897;
+  background: var(--app-btn-bg-hover, #2a3544);
 }
 
 .generate-btn:disabled {
@@ -533,10 +551,6 @@ const showResultsScreen = computed(() => hasMatchData.value);
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
-  }
-
-  .entry-header h1 {
-    font-size: 20px;
   }
 }
 </style>

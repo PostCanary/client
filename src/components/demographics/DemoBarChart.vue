@@ -12,12 +12,14 @@ const props = defineProps<{
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let chart: Chart<"bar", number[], string> | null = null;
 
-const navy = "#0b2d50";
-const teal = "#47bfa9";
+const NAVY = "#1c2430";
+const CANARY = "#facf41";
+const MUTED = "#8a97a8";
+const GRID = "rgba(255,255,255,0.08)";
 
 function highlightMax(data: number[]) {
   const max = Math.max(...data);
-  return data.map((v) => (v === max ? navy : teal));
+  return data.map((v) => (v === max ? CANARY : "rgba(250, 207, 65, 0.35)"));
 }
 
 function buildChart() {
@@ -31,7 +33,7 @@ function buildChart() {
         {
           data: props.values,
           backgroundColor: highlightMax(props.values),
-          borderRadius: 6,
+          borderRadius: 2,
           borderSkipped: false,
           maxBarThickness: 48,
         },
@@ -43,29 +45,32 @@ function buildChart() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: navy,
+          backgroundColor: NAVY,
           titleColor: "#fff",
           bodyColor: "rgba(255,255,255,0.85)",
-          borderColor: teal,
+          borderColor: CANARY,
           borderWidth: 1,
-          cornerRadius: 8,
+          cornerRadius: 2,
           padding: 12,
-          titleFont: { size: 13, weight: "bold" },
-          bodyFont: { size: 12 },
+          titleFont: { size: 13, weight: "bold", family: "Instrument Sans, sans-serif" },
+          bodyFont: { size: 12, family: "Instrument Sans, sans-serif" },
         },
       },
       scales: {
         x: {
           grid: { display: false },
           border: { display: false },
-          ticks: { font: { size: 12 }, color: "#94a3b8" },
+          ticks: {
+            font: { size: 12, family: "Instrument Sans, sans-serif" },
+            color: MUTED,
+          },
         },
         y: {
-          grid: { color: "rgba(12,45,80,0.04)" },
+          grid: { color: GRID },
           border: { display: false },
           ticks: {
-            font: { size: 12 },
-            color: "#94a3b8",
+            font: { size: 12, family: "Instrument Sans, sans-serif" },
+            color: MUTED,
             callback: (v) => `${v}%`,
           },
           beginAtZero: true,
@@ -104,16 +109,39 @@ watch(() => [props.labels, props.values], rebuild);
 
 <style scoped>
 .chart-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow);
+  background: var(--pc-navy, #1c2430);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
 }
 
-.chart-card-header { padding: 16px 20px 0; }
-.chart-card-header h3 { font-size: 15px; font-weight: 600; color: var(--app-text, #0c2d50); }
-.chart-sub { font-size: 12px; color: var(--app-text-muted, #94a3b8); margin-top: 2px; }
+.chart-card-header {
+  padding: 16px 20px 0;
+}
 
-.chart-card-body { padding: 8px 16px 16px; }
-.chart-card-body canvas { width: 100% !important; height: 260px !important; }
+.chart-card-header h3 {
+  margin: 0;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.chart-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+
+.chart-card-body {
+  padding: 8px 16px 16px;
+}
+
+.chart-card-body canvas {
+  width: 100% !important;
+  height: 260px !important;
+}
 </style>

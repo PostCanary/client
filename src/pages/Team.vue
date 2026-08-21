@@ -165,7 +165,7 @@ function displayRole(role: string): string {
         <button
           v-if="manageOrg"
           type="button"
-          class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer"
+          class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer"
           @click="openInviteModal"
         >
           Invite member
@@ -180,7 +180,7 @@ function displayRole(role: string): string {
       <template v-else>
         <!-- Active members -->
         <section
-          class="w-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+          class="w-full rounded-[2px] border border-slate-200 bg-white overflow-hidden"
         >
           <div class="px-4 py-3 sm:px-6 border-b border-slate-100">
             <h2 class="text-sm font-semibold text-slate-900">
@@ -224,7 +224,7 @@ function displayRole(role: string): string {
                 >
                   <input
                     type="checkbox"
-                    class="accent-[#47bfa9]"
+                    class="accent-[var(--pc-canary,#facf41)]"
                     :checked="
                       member.role === 'owner' ||
                       member.role === 'admin' ||
@@ -257,7 +257,7 @@ function displayRole(role: string): string {
                   <select
                     :value="member.role"
                     :disabled="roleChangeBusy === member.user_id"
-                    class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                     @change="
                       onChangeRole(
                         member.user_id,
@@ -331,7 +331,7 @@ function displayRole(role: string): string {
         <!-- Pending invitations -->
         <section
           v-if="pendingMembers.length > 0"
-          class="w-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+          class="w-full rounded-[2px] border border-slate-200 bg-white overflow-hidden"
         >
           <div class="px-4 py-3 sm:px-6 border-b border-slate-100">
             <h2 class="text-sm font-semibold text-slate-900">
@@ -377,7 +377,7 @@ function displayRole(role: string): string {
 
           <!-- Modal card -->
           <div
-            class="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
+            class="relative z-10 w-full max-w-md rounded-[2px] border border-slate-200 bg-white p-6"
           >
             <h2 class="text-lg font-semibold text-slate-900">
               Invite a team member
@@ -399,7 +399,7 @@ function displayRole(role: string): string {
                   type="email"
                   required
                   placeholder="colleague@example.com"
-                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                   :disabled="inviteBusy"
                 />
               </div>
@@ -413,7 +413,7 @@ function displayRole(role: string): string {
                 <select
                   id="invite-role"
                   v-model="inviteRole"
-                  class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-[var(--pc-navy,#1c2430)] focus:outline-none focus:ring-1 focus:ring-[var(--pc-navy,#1c2430)]"
                   :disabled="inviteBusy"
                 >
                   <option value="member">Member</option>
@@ -429,7 +429,7 @@ function displayRole(role: string): string {
               <div class="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  class="inline-flex items-center rounded-full bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+                  class="inline-flex items-center rounded-[2px] bg-[#e4e7eb] px-5 py-2 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
                   :disabled="inviteBusy"
                   @click="closeInviteModal"
                 >
@@ -437,7 +437,7 @@ function displayRole(role: string): string {
                 </button>
                 <button
                   type="submit"
-                  class="inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                  class="inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="inviteBusy"
                 >
                   {{ inviteBusy ? "Sending..." : "Send invitation" }}

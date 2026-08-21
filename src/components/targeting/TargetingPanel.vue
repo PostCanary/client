@@ -75,7 +75,7 @@ const tabs = [
   >
     <!-- Collapse toggle -->
     <button
-      class="absolute -left-8 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-l-lg px-1.5 py-3 text-gray-400 hover:text-gray-600 shadow-sm"
+      class="absolute -left-8 top-1/2 -translate-y-1/2 z-10 bg-white border border-gray-200 rounded-l-lg px-1.5 py-3 text-gray-400 hover:text-gray-600"
       @click="collapsed = !collapsed"
     >
       <svg
@@ -97,7 +97,7 @@ const tabs = [
       <button
         data-testid="audience-type-consumer"
         class="rounded-md px-2 py-1.5 text-xs font-medium"
-        :class="audienceType === 'consumer' ? 'bg-white text-[#0b2d50] shadow-sm' : 'text-gray-500'"
+        :class="audienceType === 'consumer' ? 'bg-white text-[var(--pc-navy,#1c2430)]' : 'text-gray-500'"
         @click="emit('update:audienceType', 'consumer')"
       >
         People & households
@@ -105,7 +105,7 @@ const tabs = [
       <button
         data-testid="audience-type-business"
         class="rounded-md px-2 py-1.5 text-xs font-medium"
-        :class="audienceType === 'business' ? 'bg-white text-[#0b2d50] shadow-sm' : 'text-gray-500'"
+        :class="audienceType === 'business' ? 'bg-white text-[var(--pc-navy,#1c2430)]' : 'text-gray-500'"
         @click="emit('update:audienceType', 'business')"
       >
         Businesses
@@ -120,7 +120,7 @@ const tabs = [
         class="flex-1 py-2.5 text-xs font-medium text-center transition-colors"
         :class="
           activeTab === tab.key
-            ? 'text-[#47bfa9] border-b-2 border-[#47bfa9]'
+            ? 'text-[var(--pc-navy,#1c2430)] border-b-2 border-[var(--pc-canary,#facf41)]'
             : 'text-gray-500 hover:text-gray-700'
         "
         @click="activeTab = tab.key"

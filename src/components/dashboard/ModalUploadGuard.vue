@@ -160,7 +160,7 @@ function onConfirm() {
 .guard-modal {
   width: min(440px, 94vw);
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
     0 10px 24px rgba(12, 45, 80, 0.16);
   border: 1px solid #dde3ea;
@@ -181,7 +181,7 @@ function onConfirm() {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #5eead4 0%, #47bfa9 55%, #0f766e 100%);
+  background: linear-gradient(180deg, #5eead4 0%, var(--pc-canary, #facf41) 55%, var(--pc-navy, #1c2430) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 0 0 2px rgba(71, 191, 169, 0.25);
 }
@@ -228,7 +228,7 @@ function onConfirm() {
 
 .hint strong {
   font-weight: 700;
-  color: #0f766e;
+  color: var(--pc-navy, #1c2430);
 }
 
 .guard-footer {
@@ -241,7 +241,7 @@ function onConfirm() {
 
 .btn {
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   font-weight: 700;
   font-size: 14px;
   border: 1px solid transparent;
@@ -253,7 +253,7 @@ function onConfirm() {
 .btn-primary {
   background: var(--app-btn-bg, #0b2d50);
   color: var(--app-btn-fg, #ffffff);
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .btn-primary:hover {

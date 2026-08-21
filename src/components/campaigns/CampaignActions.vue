@@ -39,14 +39,14 @@ function runAgain() {
     </button>
     <button
       v-if="isResumable"
-      class="px-4 py-2 text-sm font-medium bg-[#47bfa9] text-white rounded-lg hover:bg-[#3aa893] transition-colors"
+      class="px-4 py-2 text-sm font-medium bg-[var(--app-btn-bg,#1c2430)] text-white rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
       @click="emit('resume')"
     >
       Resume Campaign
     </button>
     <button
       v-if="isCompleted"
-      class="px-4 py-2 text-sm font-medium border border-gray-200 text-[#0b2d50] rounded-lg hover:bg-gray-50 transition-colors"
+      class="px-4 py-2 text-sm font-medium border border-gray-200 text-[var(--pc-navy,#1c2430)] rounded-lg hover:bg-gray-50 transition-colors"
       @click="runAgain"
     >
       Run Again

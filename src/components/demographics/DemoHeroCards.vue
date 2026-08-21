@@ -14,9 +14,7 @@ function formatNumber(val: number): string {
 
 <template>
   <div class="hero-grid">
-    <!-- Matches tab: Best Audience -->
     <div class="hero-card" v-if="view === 'matches'">
-      <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Your Best Audience</div>
         <template v-if="confidenceTier === 'insufficient'">
@@ -41,9 +39,7 @@ function formatNumber(val: number): string {
       </div>
     </div>
 
-    <!-- All Customers tab: Total Customers -->
     <div class="hero-card" v-if="view === 'all_customers'">
-      <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Total Customers</div>
         <div class="hero-value">{{ hero?.total_customers ? formatNumber(hero.total_customers) : "—" }}</div>
@@ -51,9 +47,7 @@ function formatNumber(val: number): string {
       </div>
     </div>
 
-    <!-- Top Home Value (both tabs) -->
     <div class="hero-card">
-      <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Top Home Value</div>
         <div class="hero-value small">{{ hero?.top_home_value?.label || "—" }}</div>
@@ -63,9 +57,7 @@ function formatNumber(val: number): string {
       </div>
     </div>
 
-    <!-- Top Income Range (both tabs) -->
     <div class="hero-card">
-      <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Top Income Range</div>
         <div class="hero-value small">{{ hero?.top_income_range?.label || "—" }}</div>
@@ -75,9 +67,7 @@ function formatNumber(val: number): string {
       </div>
     </div>
 
-    <!-- Homeowner Rate (both tabs, delta only on Matches) -->
     <div class="hero-card">
-      <div class="hero-card-accent"></div>
       <div class="hero-card-body">
         <div class="hero-label">Homeowner Rate</div>
         <div class="hero-value">{{ hero?.homeowner_rate?.value ?? "—" }}%</div>
@@ -97,49 +87,56 @@ function formatNumber(val: number): string {
 .hero-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .hero-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow);
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  border-left: 3px solid var(--pc-canary, #facf41);
+  box-shadow: none;
   overflow: hidden;
 }
 
-.hero-card-accent {
-  height: 4px;
-  background: linear-gradient(90deg, var(--app-navy, #0b2d50), #163b69);
+.hero-card-body {
+  padding: 16px 18px 14px;
 }
 
-.hero-card-body { padding: 20px 20px 18px; }
-
 .hero-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--app-text-secondary, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-secondary, #5a6b7d);
 }
 
 .hero-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--app-text, #0c2d50);
-  letter-spacing: -0.5px;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
+  letter-spacing: 0.02em;
   line-height: 1.1;
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
 }
 
-.hero-value.small { font-size: 20px; letter-spacing: 0; }
+.hero-value.small {
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
 
 .hero-value.muted {
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   font-weight: 500;
+  font-family: var(--pc-font-body, "Instrument Sans", sans-serif);
+  font-size: 15px;
 }
 
 .hero-sub {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
   margin-top: 4px;
   font-weight: 400;
 }
@@ -148,16 +145,26 @@ function formatNumber(val: number): string {
   font-size: 12px;
   font-weight: 600;
   margin-top: 6px;
+  color: var(--app-text-body, #3d4a5c);
 }
 
-.hero-change.up { color: #10b981; }
-.hero-change.down { color: #ef4444; }
+.hero-change.up {
+  color: var(--pc-navy, #1c2430);
+}
+
+.hero-change.down {
+  color: #9f1239;
+}
 
 @media (max-width: 1024px) {
-  .hero-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .hero-grid { grid-template-columns: 1fr; }
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

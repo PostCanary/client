@@ -56,7 +56,7 @@ function handleSecondary() {
 
       <!-- Modal panel -->
       <div
-        class="relative z-10 w-[min(480px,92vw)] rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900"
+        class="relative z-10 w-[min(480px,92vw)] rounded-[2px] bg-white p-6 dark:bg-neutral-900"
       >
         <!-- Icon / header -->
         <div class="mb-3 flex items-center gap-3">

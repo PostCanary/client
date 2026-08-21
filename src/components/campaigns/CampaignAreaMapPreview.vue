@@ -18,7 +18,7 @@ let map: L.Map | null = null
 let shapeLayer: L.LayerGroup | null = null
 
 const MILES_TO_METERS = 1609.34
-const TEAL = '#47bfa9'
+const TEAL = 'var(--pc-canary, #facf41)'
 
 const zipCodes = computed(() =>
   props.areas

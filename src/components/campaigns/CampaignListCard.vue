@@ -37,7 +37,7 @@ function formatDate(iso: string): string {
 
 <template>
   <div
-    class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col"
+    class="bg-white rounded-[2px] border border-gray-200 overflow-hidden transition-shadow cursor-pointer flex flex-col"
     @click="emit('open', campaign.id)"
   >
     <!-- Design preview — full card width, postcard aspect -->
@@ -60,7 +60,7 @@ function formatDate(iso: string): string {
 
     <div class="p-4 flex-1 flex flex-col gap-2">
       <div class="flex items-start justify-between gap-3">
-        <h3 class="font-semibold text-[#0b2d50] leading-snug">
+        <h3 class="font-semibold text-[var(--pc-navy,#1c2430)] leading-snug">
           {{ campaign.name }}
         </h3>
         <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" class="shrink-0" />
@@ -69,15 +69,15 @@ function formatDate(iso: string): string {
       <div class="text-sm text-gray-500 space-y-1">
         <div class="flex justify-between">
           <span>Campaign Date</span>
-          <span class="text-[#0b2d50] font-medium">{{ formatDate(campaign.createdAt) }}</span>
+          <span class="text-[var(--pc-navy,#1c2430)] font-medium">{{ formatDate(campaign.createdAt) }}</span>
         </div>
         <div class="flex justify-between">
           <span>Audience Type</span>
-          <span class="text-[#0b2d50] font-medium capitalize">{{ campaignAudienceType(campaign) }}</span>
+          <span class="text-[var(--pc-navy,#1c2430)] font-medium capitalize">{{ campaignAudienceType(campaign) }}</span>
         </div>
         <div class="flex justify-between">
           <span>Pieces Sent</span>
-          <span class="text-[#0b2d50] font-medium">
+          <span class="text-[var(--pc-navy,#1c2430)] font-medium">
             {{ campaignPiecesSent(campaign)?.toLocaleString() ?? "—" }}
           </span>
         </div>
@@ -98,7 +98,7 @@ function formatDate(iso: string): string {
         </button>
         <button
           v-if="isResumable"
-          class="text-sm font-medium text-[#47bfa9] hover:underline"
+          class="text-sm font-medium text-[var(--pc-navy,#1c2430)] hover:underline"
           @click="emit('resume', campaign.id)"
         >
           Resume

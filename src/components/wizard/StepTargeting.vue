@@ -587,11 +587,11 @@ onBeforeUnmount(() => {
       role="alert"
       data-testid="targeting-capabilities-error"
     >
-      <h3 class="text-sm font-semibold text-[#0b2d50]">Audience filters could not be verified</h3>
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Audience filters could not be verified</h3>
       <p class="mt-2 text-sm text-gray-600">{{ capabilitiesError }}</p>
       <button
         type="button"
-        class="mt-4 rounded-lg bg-[#47bfa9] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3aa893]"
+        class="mt-4 rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)]"
         data-testid="retry-targeting-capabilities"
         @click="resolveTargetingCapabilities"
       >

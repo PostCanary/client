@@ -29,7 +29,7 @@ function formatDate(iso: string): string {
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <h4 class="text-sm font-semibold text-[#0b2d50]">Around My Jobs</h4>
+      <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Around My Jobs</h4>
       <span class="text-xs text-gray-400">
         {{ selectedCount }} of {{ jobs.length }} selected
       </span>
@@ -46,14 +46,14 @@ function formatDate(iso: string): string {
         min="0.25"
         max="2"
         step="0.25"
-        class="w-full accent-[#47bfa9]"
+        class="w-full accent-[var(--pc-canary,#facf41)]"
         @input="emit('radius-change', parseFloat(($event.target as HTMLInputElement).value))"
       />
     </div>
 
     <!-- Select/Deselect all -->
     <div class="flex gap-2 text-xs">
-      <button class="text-[#47bfa9] hover:underline" @click="emit('select-all')">
+      <button class="text-[var(--pc-navy,#1c2430)] hover:underline" @click="emit('select-all')">
         Select All
       </button>
       <button class="text-gray-400 hover:underline" @click="emit('deselect-all')">
@@ -71,11 +71,11 @@ function formatDate(iso: string): string {
         <input
           type="checkbox"
           :checked="job.selected"
-          class="mt-0.5 accent-[#47bfa9]"
+          class="mt-0.5 accent-[var(--pc-canary,#facf41)]"
           @change="emit('toggle', job.id)"
         />
         <div class="flex-1 min-w-0">
-          <div class="text-[#0b2d50] truncate" :title="job.address">{{ job.address }}</div>
+          <div class="text-[var(--pc-navy,#1c2430)] truncate" :title="job.address">{{ job.address }}</div>
           <div class="text-xs text-gray-400">
             {{ job.serviceType }} · {{ formatDate(job.jobDate) }}
           </div>

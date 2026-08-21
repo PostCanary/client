@@ -167,7 +167,7 @@ function onEdit() {
 .mapping-modal {
   width: min(520px, 94vw);
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
     0 10px 24px rgba(12, 45, 80, 0.16);
   border: 1px solid #dde3ea;
@@ -188,7 +188,7 @@ function onEdit() {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #5eead4 0%, #47bfa9 55%, #0f766e 100%);
+  background: linear-gradient(180deg, #5eead4 0%, var(--pc-canary, #facf41) 55%, var(--pc-navy, #1c2430) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 0 0 2px rgba(71, 191, 169, 0.25);
 }
@@ -233,7 +233,7 @@ function onEdit() {
 }
 
 .needs-card {
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #f9fafb;
   padding: 8px 10px 10px;
@@ -295,7 +295,7 @@ function onEdit() {
 
 .btn {
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   font-weight: 700;
   font-size: 14px;
   border: 1px solid transparent;
@@ -307,7 +307,7 @@ function onEdit() {
 .btn-primary {
   background: var(--app-btn-bg, #0b2d50);
   color: var(--app-btn-fg, #ffffff);
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .btn-primary:hover {

@@ -13,14 +13,14 @@ const props = defineProps<{
 
 <template>
   <div class="space-y-3">
-    <h4 class="text-sm font-semibold text-[#0b2d50]">Exclusions</h4>
+    <h4 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Exclusions</h4>
 
     <!-- Past customers -->
     <label class="flex items-center gap-2 text-sm">
       <input
         v-model="excludePast"
         type="checkbox"
-        class="accent-[#47bfa9]"
+        class="accent-[var(--pc-canary,#facf41)]"
       />
       <span class="text-gray-700">Exclude past customers</span>
     </label>

@@ -51,10 +51,11 @@ const iconPaths: Record<string, string> = {
 
 <style scoped>
 .insight-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
-  padding: 24px;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
+  padding: 22px;
 }
 
 .insight-header {
@@ -67,9 +68,9 @@ const iconPaths: Record<string, string> = {
 .insight-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: rgba(12, 45, 80, 0.06);
-  color: var(--app-navy, #0b2d50);
+  border-radius: var(--app-card-radius, 2px);
+  background: rgba(250, 207, 65, 0.16);
+  color: var(--pc-navy, #1c2430);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,16 +78,17 @@ const iconPaths: Record<string, string> = {
 }
 
 .insight-header h4 {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--app-text, #0c2d50);
+  letter-spacing: 0.02em;
+  color: var(--app-text, #1c2430);
   margin: 0;
 }
 
 .insight-body {
   font-size: 14px;
   line-height: 1.65;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   margin: 0 0 16px;
 }
 
@@ -102,35 +104,36 @@ const iconPaths: Record<string, string> = {
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
 }
 
 .highlight svg {
-  color: var(--app-teal, #47bfa9);
+  color: var(--pc-canary-deep, #e5b820);
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .rec-callout {
-  background: rgba(71, 191, 169, 0.06);
-  border: 1px solid rgba(71, 191, 169, 0.15);
-  border-radius: 8px;
+  background: rgba(28, 36, 48, 0.04);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-left: 3px solid var(--pc-canary, #facf41);
+  border-radius: var(--app-card-radius, 2px);
   padding: 12px 16px;
 }
 
 .rec-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--app-teal, #47bfa9);
+  letter-spacing: 0.08em;
+  color: var(--pc-navy, #1c2430);
   margin-bottom: 4px;
 }
 
 .rec-callout p {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   margin: 0;
 }
 </style>

@@ -166,10 +166,11 @@ const presets: { label: string; value: Preset }[] = [
 
 <style scoped>
 .filter-bar {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow);
-  padding: 14px 20px;
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -188,30 +189,30 @@ const presets: { label: string; value: Preset }[] = [
 
 .preset-btn {
   padding: 6px 14px;
-  border: 1px solid var(--app-border, #e2e8f0);
-  background: var(--app-card-bg, #fff);
-  border-radius: 8px;
+  border: 1px solid var(--app-border, #c8d0db);
+  background: #fff;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 12px;
   font-weight: 500;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
 }
 
-.preset-btn:hover { border-color: var(--app-border-medium, #dde3ea); background: #f8f9fa; }
-.preset-btn.active { background: var(--app-navy, #0b2d50); color: #fff; border-color: var(--app-navy, #0b2d50); }
+.preset-btn:hover { border-color: var(--app-border-medium, #b8c2d0); background: #fff; }
+.preset-btn.active { background: var(--app-navy, #1c2430); color: #fff; border-color: var(--app-navy, #1c2430); }
 
 .filter-divider { width: 1px; height: 28px; background: var(--app-border, #e2e8f0); margin: 0 4px; }
 
 .filter-custom-toggle {
   padding: 6px 14px;
-  border: 1px solid var(--app-border, #e2e8f0);
-  background: var(--app-card-bg, #fff);
-  border-radius: 8px;
+  border: 1px solid var(--app-border, #c8d0db);
+  background: #fff;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 12px;
   font-weight: 500;
-  color: var(--app-text-body, #475569);
+  color: var(--app-text-body, #3d4a5c);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
@@ -220,8 +221,8 @@ const presets: { label: string; value: Preset }[] = [
   gap: 5px;
 }
 
-.filter-custom-toggle:hover { border-color: var(--app-border-medium, #dde3ea); background: #f8f9fa; }
-.filter-custom-toggle.open { background: var(--app-bg, #f0f2f5); border-color: var(--app-border-medium, #dde3ea); }
+.filter-custom-toggle:hover { border-color: var(--app-border-medium, #b8c2d0); background: #fff; }
+.filter-custom-toggle.open { background: var(--app-bg, #e4e9ef); border-color: var(--app-border-medium, #b8c2d0); }
 .filter-custom-toggle.open svg { transform: rotate(180deg); }
 .filter-custom-toggle svg { transition: transform 0.18s ease; }
 
@@ -233,23 +234,23 @@ const presets: { label: string; value: Preset }[] = [
 
 .filter-dates label { font-size: 12px; font-weight: 500; color: var(--app-text-muted, #94a3b8); }
 .filter-dates input[type="date"] {
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
   padding: 6px 10px;
   font-size: 12px;
   font-family: inherit;
-  color: var(--app-text, #0c2d50);
-  background: var(--app-card-bg, #fff);
+  color: var(--app-text, #1c2430);
+  background: #fff;
   transition: border-color 0.15s ease;
   outline: none;
 }
-.filter-dates input[type="date"]:focus { border-color: var(--app-teal, #47bfa9); }
+.filter-dates input[type="date"]:focus { border-color: var(--pc-canary, #facf41); }
 
 .filter-apply {
   padding: 6px 16px;
   border: none;
-  border-radius: 8px;
-  background: var(--app-btn-bg, #0b2d50);
+  border-radius: var(--app-card-radius, 2px);
+  background: var(--app-btn-bg, #1c2430);
   color: var(--app-btn-fg, #ffffff);
   font-size: 12px;
   font-weight: 600;
@@ -257,7 +258,7 @@ const presets: { label: string; value: Preset }[] = [
   font-family: inherit;
   transition: background 0.15s ease;
 }
-.filter-apply:hover { background: var(--app-btn-bg-hover, #163b69); }
+.filter-apply:hover { background: var(--app-btn-bg-hover, #2a3544); }
 
 .filter-spacer { flex: 1; }
 
@@ -265,13 +266,13 @@ const presets: { label: string; value: Preset }[] = [
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(71, 191, 169, 0.08);
-  border: 1px solid rgba(71, 191, 169, 0.2);
-  border-radius: 8px;
+  background: rgba(250, 207, 65, 0.12);
+  border: 1px solid rgba(250, 207, 65, 0.35);
+  border-radius: var(--app-card-radius, 2px);
   padding: 6px 12px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--app-teal, #47bfa9);
+  font-weight: 600;
+  color: var(--app-text, #1c2430);
 }
 
 .range-text { white-space: nowrap; }

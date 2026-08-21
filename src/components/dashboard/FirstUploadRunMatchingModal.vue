@@ -121,7 +121,7 @@ function handleRunMatching() {
   max-width: 520px;
   width: 90%;
   margin: 0 16px;
-  border-radius: 16px;
+  border-radius: var(--app-card-radius, 2px);
   background: #ffffff;
   box-shadow: 0 24px 70px rgba(11, 45, 80, 0.25);
   padding: 32px;
@@ -174,7 +174,7 @@ function handleRunMatching() {
   gap: 12px;
   padding: 12px;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   font-size: 14px;
   color: #475569;
 }
@@ -182,7 +182,7 @@ function handleRunMatching() {
 .info-icon {
   width: 20px;
   height: 20px;
-  color: #47bfa9;
+  color: var(--pc-canary, #facf41);
   flex-shrink: 0;
 }
 
@@ -194,7 +194,7 @@ function handleRunMatching() {
 
 .btn-primary {
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: none;
   background: var(--app-btn-bg, #0b2d50);
   color: var(--app-btn-fg, #ffffff);
@@ -215,7 +215,7 @@ function handleRunMatching() {
 
 .btn-secondary {
   padding: 10px 24px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;

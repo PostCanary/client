@@ -38,7 +38,7 @@ function apply() {
 
 <template>
   <div class="max-w-lg mx-auto py-8 px-4">
-    <h2 class="text-xl font-semibold text-[#0b2d50] mb-4">
+    <h2 class="text-xl font-semibold text-[var(--pc-navy,#1c2430)] mb-4">
       Choose Your Goal
     </h2>
     <p class="text-sm text-gray-500 mb-6">
@@ -52,7 +52,7 @@ function apply() {
         class="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
         :class="
           goalType === g.type
-            ? 'border-[#47bfa9] bg-[#47bfa9]/5'
+            ? 'border-[var(--pc-canary,#facf41)] bg-[rgba(250,207,65,0.10)]'
             : 'border-gray-200 hover:border-gray-300'
         "
       >
@@ -60,9 +60,9 @@ function apply() {
           v-model="goalType"
           type="radio"
           :value="g.type"
-          class="accent-[#47bfa9]"
+          class="accent-[var(--pc-canary,#facf41)]"
         />
-        <span class="text-sm font-medium text-[#0b2d50]">{{ g.label }}</span>
+        <span class="text-sm font-medium text-[var(--pc-navy,#1c2430)]">{{ g.label }}</span>
       </label>
     </div>
 
@@ -83,7 +83,7 @@ function apply() {
     </div>
 
     <button
-      class="bg-[#47bfa9] text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-[#3aa893] transition-colors w-full"
+      class="bg-[var(--app-btn-bg,#1c2430)] text-white font-semibold px-6 py-2.5 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors w-full"
       @click="apply"
     >
       Set Goal

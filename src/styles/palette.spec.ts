@@ -80,6 +80,52 @@ describe("interactive palette", () => {
     }
   });
 
+  function tokenHex(css: string, name: string) {
+    return css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+  }
+
+  function contrastRatio(a: string, b: string) {
+    function lum(hex: string) {
+      const n = parseInt(hex.slice(1), 16);
+      const channels = [n >> 16, (n >> 8) & 255, n & 255].map((v) => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+    }
+    const L1 = lum(a);
+    const L2 = lum(b);
+    const hi = Math.max(L1, L2);
+    const lo = Math.min(L1, L2);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  it("keeps secondary text dark enough for AA on paper bg", () => {
+    const css = readFileSync(join(ROOT, "src/styles/index.css"), "utf8");
+    const bg = tokenHex(css, "--app-bg");
+    const secondary = tokenHex(css, "--app-text-secondary");
+    expect(bg).toBeTruthy();
+    expect(secondary).toBeTruthy();
+
+    // .home-tagline uses --app-text-secondary on --app-bg; axe needs ≥4.5:1.
+    expect(contrastRatio(secondary!, bg!)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps sidebar section labels light enough for AA on navy", () => {
+    const css = readFileSync(join(ROOT, "src/styles/index.css"), "utf8");
+    // --sidebar-bg is var(--pc-navy); resolve the literal navy token.
+    const navy = tokenHex(css, "--pc-navy") ?? tokenHex(css, "--app-navy");
+    const section = tokenHex(css, "--sidebar-section-text");
+    const item = tokenHex(css, "--sidebar-item-text");
+    expect(navy).toBeTruthy();
+    expect(section).toBeTruthy();
+    expect(item).toBeTruthy();
+
+    // .nav-label / .section-header use --sidebar-section-text on navy.
+    expect(contrastRatio(section!, navy!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(item!, navy!)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("never rings focus with a teal that fails WCAG 1.4.11", () => {
     const offenders: string[] = [];
     const TEAL_RING =

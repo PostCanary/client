@@ -62,7 +62,7 @@ function renderPoints(pts: Point[]) {
     if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: 6,
-      fillColor: '#47bfa9',
+      fillColor: 'var(--pc-canary, #facf41)',
       fillOpacity: 0.85,
       color: '#fff',
       weight: 1.5,

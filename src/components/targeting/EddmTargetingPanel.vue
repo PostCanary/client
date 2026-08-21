@@ -33,7 +33,7 @@ function submitZip() {
   <div class="w-80 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
     <!-- Header -->
     <div class="px-4 py-4 border-b border-gray-100">
-      <h3 class="text-sm font-semibold text-[#0b2d50]">EDDM Route Selection</h3>
+      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">EDDM Route Selection</h3>
       <p class="text-xs text-gray-500 mt-0.5">
         Send to every address on selected carrier routes — no demographic filters.
       </p>
@@ -51,11 +51,11 @@ function submitZip() {
           inputmode="numeric"
           maxlength="5"
           placeholder="e.g. 22201"
-          class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#47bfa9]"
+          class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--pc-navy,#1c2430)]"
           @keydown.enter="submitZip"
         />
         <button
-          class="bg-[#47bfa9] text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#3aa893] transition-colors"
+          class="bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-medium px-3 py-2 rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
           @click="submitZip"
         >
           Search
@@ -66,8 +66,8 @@ function submitZip() {
 
     <!-- Summary -->
     <div v-if="routes.length > 0" class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between text-xs text-gray-600">
-      <span>Selected: <strong class="text-[#0b2d50]">{{ selectedCrrt.size }} of {{ routes.length }}</strong></span>
-      <span>~<strong class="text-[#0b2d50]">{{ selectedHouseholds.toLocaleString() }}</strong> households</span>
+      <span>Selected: <strong class="text-[var(--pc-navy,#1c2430)]">{{ selectedCrrt.size }} of {{ routes.length }}</strong></span>
+      <span>~<strong class="text-[var(--pc-navy,#1c2430)]">{{ selectedHouseholds.toLocaleString() }}</strong> households</span>
     </div>
     <div
       v-if="recipientCapWarning"
@@ -103,7 +103,7 @@ function submitZip() {
               <path d="M1 4l3 3 5-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <span class="text-sm font-mono text-[#0b2d50] flex-1">{{ route.crrt }}</span>
+          <span class="text-sm font-mono text-[var(--pc-navy,#1c2430)] flex-1">{{ route.crrt }}</span>
           <span class="text-xs text-gray-500">~{{ route.household_count.toLocaleString() }} HH</span>
         </li>
       </ul>

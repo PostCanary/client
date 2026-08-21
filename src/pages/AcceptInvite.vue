@@ -80,7 +80,7 @@ function displayRole(role: string): string {
       <!-- Loading -->
       <div
         v-if="loading"
-        class="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm"
+        class="rounded-[2px] border border-slate-200 bg-white p-8 text-center"
       >
         <p class="text-sm text-slate-500">Loading invitation details...</p>
       </div>
@@ -88,7 +88,7 @@ function displayRole(role: string): string {
       <!-- Error -->
       <div
         v-else-if="error && !invitation"
-        class="rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm"
+        class="rounded-[2px] border border-red-200 bg-white p-8 text-center"
       >
         <h2 class="text-lg font-semibold text-slate-900">
           Invalid invitation
@@ -96,7 +96,7 @@ function displayRole(role: string): string {
         <p class="mt-2 text-sm text-red-600">{{ error }}</p>
         <button
           type="button"
-          class="mt-6 inline-flex items-center rounded-full bg-[#47bfa9] px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer"
+          class="mt-6 inline-flex items-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer"
           @click="router.push('/')"
         >
           Go to {{ BRAND.name }}
@@ -106,7 +106,7 @@ function displayRole(role: string): string {
       <!-- Invitation details -->
       <div
         v-else-if="invitation"
-        class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm"
+        class="rounded-[2px] border border-slate-200 bg-white p-8"
       >
         <div class="text-center">
           <h2 class="text-xl font-semibold text-slate-900">
@@ -125,7 +125,7 @@ function displayRole(role: string): string {
         </div>
 
         <div
-          class="mt-6 rounded-lg border border-slate-100 bg-slate-50 p-4 space-y-2"
+          class="mt-6 rounded-[2px] border border-slate-100 bg-slate-50 p-4 space-y-2"
         >
           <div class="flex justify-between text-sm">
             <span class="text-slate-500">Organization</span>
@@ -155,7 +155,7 @@ function displayRole(role: string): string {
         <template v-if="isAuthenticated">
           <button
             type="button"
-            class="mt-6 w-full inline-flex items-center justify-center rounded-full bg-[#47bfa9] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            class="mt-6 w-full inline-flex items-center justify-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="accepting"
             @click="onAccept"
           >
@@ -171,14 +171,14 @@ function displayRole(role: string): string {
             </p>
             <button
               type="button"
-              class="w-full inline-flex items-center justify-center rounded-full bg-[#47bfa9] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#3aa893] cursor-pointer"
+              class="w-full inline-flex items-center justify-center rounded-[2px] bg-[var(--app-btn-bg,#1c2430)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--app-btn-bg-hover,#2a3544)] cursor-pointer"
               @click="onLogin"
             >
               Sign in
             </button>
             <button
               type="button"
-              class="w-full inline-flex items-center justify-center rounded-full bg-[#e4e7eb] px-5 py-2.5 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
+              class="w-full inline-flex items-center justify-center rounded-[2px] bg-[#e4e7eb] px-5 py-2.5 text-sm font-medium text-[#243b53] hover:bg-[#d8dde4] cursor-pointer"
               @click="onSignup"
             >
               Create an account

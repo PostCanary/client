@@ -121,13 +121,13 @@ watch(
             <circle
               cx="40" cy="40" r="36"
               fill="none"
-              stroke="#e2e8f0"
+              stroke="var(--app-border, #c8d0db)"
               stroke-width="5"
             />
             <circle
               cx="40" cy="40" r="36"
               fill="none"
-              stroke="#47bfa9"
+              stroke="var(--pc-canary, #facf41)"
               stroke-width="5"
               stroke-linecap="round"
               :stroke-dasharray="ringCircumference"
@@ -172,7 +172,7 @@ watch(
   <!-- ===== ADVANCED VARIANT: secondary metrics panel ===== -->
   <section v-else class="adv-panel" :class="{ 'is-loading': loading }">
     <div class="adv-header">
-      <span class="adv-title">Detailed Metrics</span>
+      <span class="adv-title">Volume context</span>
       <span v-if="loading" class="adv-loading">Loading...</span>
     </div>
 
@@ -223,7 +223,7 @@ watch(
 
 .hero-card {
   background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
   overflow: hidden;
   display: flex;
@@ -231,8 +231,8 @@ watch(
 }
 
 .hero-card-accent {
-  height: 4px;
-  background: linear-gradient(90deg, var(--app-navy, #0b2d50), var(--app-navy-light, #163b69));
+  height: 3px;
+  background: var(--pc-canary, #facf41);
 }
 
 .hero-card-body {
@@ -290,10 +290,10 @@ watch(
    ========================================= */
 
 .adv-panel {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
-  border-left: 4px solid var(--app-navy, #0b2d50);
+  background: var(--app-card-bg, #f7f9fb);
+  border: 1px solid var(--app-border, #c8d0db);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
   transition: opacity 0.18s ease;
   height: 100%;
@@ -309,18 +309,20 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 12px;
+  padding: 16px 20px 8px;
 }
 
 .adv-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text, #1c2430);
 }
 
 .adv-loading {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: var(--app-text-muted, #8a97a8);
 }
 
 .adv-grid {
@@ -328,32 +330,35 @@ watch(
   grid-template-columns: 1fr 1fr;
   gap: 0;
   flex: 1;
+  padding: 0 8px 8px;
 }
 
 .adv-stat {
-  padding: 12px 20px;
+  padding: 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  border-top: 1px solid var(--app-border, #e2e8f0);
+  gap: 4px;
+  border-top: 1px solid var(--app-border-soft, var(--app-border, #c8d0db));
 }
 
 .adv-stat:nth-child(odd) {
-  border-right: 1px solid var(--app-border, #e2e8f0);
+  border-right: 1px solid var(--app-border, #c8d0db);
 }
 
 .adv-stat-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--app-text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-text-muted, #8a97a8);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.08em;
 }
 
 .adv-stat-value {
-  font-size: 18px;
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
+  font-size: 22px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  letter-spacing: 0.02em;
+  color: var(--app-text, #1c2430);
   font-variant-numeric: tabular-nums;
 }
 

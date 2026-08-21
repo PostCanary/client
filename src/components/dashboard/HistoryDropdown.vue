@@ -85,7 +85,7 @@ onMounted(() => {
 
     <div
       v-show="open"
-      class="absolute right-0 mt-2 w-72 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50"
+      class="absolute right-0 mt-2 w-72 origin-top-right rounded-[2px] bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50"
       role="menu"
       tabindex="-1"
     >

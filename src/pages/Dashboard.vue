@@ -11,6 +11,7 @@ import FirstUploadRunMatchingModal from "@/components/dashboard/FirstUploadRunMa
 import CampaignPromptModal from "@/components/dashboard/CampaignPromptModal.vue";
 
 import UploadCard from "@/components/dashboard/UploadCard.vue";
+import MatchStrip from "@/components/dashboard/MatchStrip.vue";
 import KpiSummaryCard from "@/components/dashboard/KpiSummaryCard.vue";
 import YoyChart from "@/components/dashboard/YoyChart.vue";
 import TopCitiesTable from "@/components/dashboard/TopCitiesTable.vue";
@@ -180,10 +181,9 @@ async function onDashboardDateRangeApply(payload: { start?: string; end?: string
       />
     </div>
 
-    <!-- Row 1: Hero KPI cards -->
-    <KpiSummaryCard
+    <!-- Row 1: Match Strip — revenue-first pipeline -->
+    <MatchStrip
       id="cmp-kpis"
-      variant="hero"
       :kpis="runResult?.kpis || null"
       :loading="runResultLoading"
     />
@@ -347,14 +347,17 @@ async function onDashboardDateRangeApply(payload: { start?: string; end?: string
 
 .top-ranking-title {
   margin: 0;
-  color: var(--app-text, #0c2d50);
+  color: var(--app-text, #1c2430);
+  font-family: var(--pc-font-display, "Oswald", sans-serif);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .top-ranking-subtitle {
   margin: 0;
-  color: var(--app-text-muted, #64748b);
+  color: var(--app-text-muted, #8a97a8);
   font-size: 14px;
 }
 

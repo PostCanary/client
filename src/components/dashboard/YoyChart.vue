@@ -31,9 +31,9 @@ let chart: Chart<"line", number[], string> | null = null;
 const TOOLTIP_CLASS = "chartjs-html-tooltip";
 
 // colors
-const cMail = "#0b2d50";
-const cCrm = "#47bfa9";
-const cMatch = "#94a3b8";
+const cMail = "#7a8899";
+const cCrm = "#26afa3";
+const cMatch = "#facf41";
 
 // ---------- helpers ----------
 
@@ -335,17 +335,17 @@ function buildChart() {
         ticks: {
           callback: (_v, i) => formatTick(i as number),
           maxRotation: 0,
-          color: "#94a3b8",
-          font: { size: 12 },
+          color: "#8a96a8",
+          font: { size: 12, family: "Instrument Sans, system-ui, sans-serif" },
         },
       },
       y: {
-        grid: { color: "rgba(12,45,80,0.04)" },
+        grid: { color: "rgba(255,255,255,0.06)" },
         border: { display: false },
         ticks: {
           precision: 0,
-          color: "#94a3b8",
-          font: { size: 12 },
+          color: "#8a96a8",
+          font: { size: 12, family: "Instrument Sans, system-ui, sans-serif" },
         },
         suggestedMin: 0,
         suggestedMax: maxNow || undefined,
@@ -407,39 +407,42 @@ watch(
 <template>
   <section class="chart-card">
     <header class="chart-header">
-      <div class="chart-toggle">
-        <span class="toggle-label">Show YoY Overlay</span>
+      <div class="chart-heading">
+        <h3 class="chart-title">Mail · CRM · Match over time</h3>
+        <div class="chart-toggle">
+          <span class="toggle-label">Show YoY Overlay</span>
 
-        <button
-          type="button"
-          class="switch"
-          :class="{
-            'is-on': showYoy && hasPrevData,
-            'is-disabled': !hasPrevData,
-          }"
-          role="switch"
-          :aria-pressed="showYoy && hasPrevData"
-          :aria-disabled="!hasPrevData"
-          :disabled="!hasPrevData"
-          @click="hasPrevData && (showYoy = !showYoy)"
-          aria-label="Toggle YoY overlay"
-        >
-          <span class="switch__track"></span>
-          <span class="switch__thumb"></span>
-        </button>
+          <button
+            type="button"
+            class="switch"
+            :class="{
+              'is-on': showYoy && hasPrevData,
+              'is-disabled': !hasPrevData,
+            }"
+            role="switch"
+            :aria-pressed="showYoy && hasPrevData"
+            :aria-disabled="!hasPrevData"
+            :disabled="!hasPrevData"
+            @click="hasPrevData && (showYoy = !showYoy)"
+            aria-label="Toggle YoY overlay"
+          >
+            <span class="switch__track"></span>
+            <span class="switch__thumb"></span>
+          </button>
+        </div>
       </div>
 
       <ul class="chart-legend">
         <li class="legend-item">
-          <span class="legend-dot" style="background: #0b2d50"></span>
+          <span class="legend-dot" style="background: #7a8899"></span>
           <span>Mail Volume</span>
         </li>
         <li class="legend-item">
-          <span class="legend-dot" style="background: #47bfa9"></span>
+          <span class="legend-dot" style="background: #26afa3"></span>
           <span>CRM Jobs</span>
         </li>
         <li class="legend-item">
-          <span class="legend-dot" style="background: #94a3b8"></span>
+          <span class="legend-dot" style="background: #facf41"></span>
           <span>Matches</span>
         </li>
         <li v-if="hasPrevData" class="legend-item legend-item-note">
@@ -462,19 +465,51 @@ watch(
 
 <style scoped>
 .chart-card {
-  background: var(--app-card-bg, #fff);
-  border-radius: var(--app-card-radius, 12px);
-  box-shadow: var(--app-card-shadow, 0 1px 3px rgba(12,45,80,.06), 0 8px 24px rgba(12,45,80,.04));
+  position: relative;
+  background: var(--pc-navy, #1c2430);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--app-card-radius, 2px);
+  box-shadow: none;
   overflow: hidden;
+  isolation: isolate;
+}
+
+.chart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 50% 80% at 70% 40%,
+    rgba(250, 207, 65, 0.1),
+    transparent 70%
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
 .chart-header {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 18px 20px 8px;
+}
+
+.chart-heading {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px 8px;
   flex-wrap: wrap;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pc-canary, #facf41);
 }
 
 .chart-toggle {
@@ -485,9 +520,9 @@ watch(
 }
 
 .toggle-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--app-text, #0c2d50);
+  color: #aeb8c4;
 }
 
 /* Legend */
@@ -506,18 +541,18 @@ watch(
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--app-text-body, #475569);
+  color: #aeb8c4;
 }
 
 .legend-item-note {
   font-size: 12px;
-  color: var(--app-text-muted, #94a3b8);
+  color: #6d7a8a;
 }
 
 .legend-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 1px;
   flex-shrink: 0;
 }
 
@@ -525,17 +560,21 @@ watch(
   display: inline-block;
   width: 16px;
   height: 0;
-  border-top: 2px dashed var(--app-text-muted, #94a3b8);
+  border-top: 2px dashed #6d7a8a;
 }
 
 /* Chart body */
 .chart-body {
-  padding: 4px 16px 16px;
+  padding: 4px 16px 18px;
 }
 
 .chart-canvas-wrap {
   position: relative;
-  height: 320px;
+  height: 300px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--app-card-radius, 2px);
+  padding: 8px 4px 4px;
 }
 
 :deep(.chartjs-html-tooltip) {
@@ -553,7 +592,7 @@ watch(
   max-width: 260px;
   padding: 12px 14px;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
   color: #0f172a;
@@ -621,7 +660,7 @@ watch(
 .switch__track {
   position: absolute;
   inset: 0;
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.18);
   border-radius: inherit;
   transition: background 160ms ease;
 }
@@ -634,15 +673,16 @@ watch(
   transform: translateY(-50%);
   background: #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(12, 45, 80, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: left 160ms ease;
   pointer-events: none;
 }
 .switch.is-on .switch__track {
-  background: var(--app-teal, #47bfa9);
+  background: var(--pc-canary, #facf41);
 }
 .switch.is-on .switch__thumb {
-  left: calc(100% - 20px);
+  left: 20px;
+  background: var(--pc-navy, #1c2430);
 }
 .switch.is-disabled {
   cursor: not-allowed;

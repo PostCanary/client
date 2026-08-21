@@ -209,7 +209,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 .prompt-modal {
   width: min(480px, 94vw);
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: var(--app-card-radius, 2px);
   box-shadow: 0 1px 3px rgba(12, 45, 80, 0.08),
     0 10px 24px rgba(12, 45, 80, 0.16);
   border: 1px solid #dde3ea;
@@ -230,7 +230,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #5eead4 0%, #47bfa9 55%, #0f766e 100%);
+  background: linear-gradient(180deg, #5eead4 0%, var(--pc-canary, #facf41) 55%, var(--pc-navy, #1c2430) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 0 0 2px rgba(71, 191, 169, 0.25);
 }
@@ -252,7 +252,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
   color: #4b5563;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   padding: 10px 14px;
 }
 
@@ -269,7 +269,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 
 .prompt-hint em {
   font-style: normal;
-  color: #0f766e;
+  color: var(--pc-navy, #1c2430);
   font-weight: 500;
 }
 
@@ -287,7 +287,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 
 .campaign-select {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   font-family: inherit;
@@ -299,19 +299,19 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 }
 
 .campaign-select:hover {
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .campaign-select:focus {
   outline: none;
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
   box-shadow: 0 0 0 2px rgba(71, 191, 169, 0.15);
 }
 
 .campaign-input {
   padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #47bfa9;
+  border-radius: var(--app-card-radius, 2px);
+  border: 1px solid var(--pc-canary, #facf41);
   background: #fff;
   font-family: inherit;
   font-size: 14px;
@@ -346,7 +346,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 }
 
 .btn-link--primary {
-  color: #0f766e;
+  color: var(--pc-navy, #1c2430);
 }
 
 .btn-link--primary:hover {
@@ -368,7 +368,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 
 .btn {
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--app-card-radius, 2px);
   font-weight: 700;
   font-size: 14px;
   border: 1px solid transparent;
@@ -379,7 +379,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onEsc));
 .btn-primary {
   background: var(--app-btn-bg, #0b2d50);
   color: var(--app-btn-fg, #ffffff);
-  border-color: #47bfa9;
+  border-color: var(--pc-canary, #facf41);
 }
 
 .btn-primary:disabled {

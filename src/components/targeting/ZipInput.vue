@@ -36,7 +36,7 @@ function addZips() {
         @keydown.enter.prevent="addZips"
       />
       <button
-        class="px-3 py-2 bg-[#47bfa9] text-white text-sm font-medium rounded-lg hover:bg-[#3aa893] transition-colors"
+        class="px-3 py-2 bg-[var(--app-btn-bg,#1c2430)] text-white text-sm font-medium rounded-[2px] hover:bg-[var(--app-btn-bg-hover,#2a3544)] transition-colors"
         @click="addZips"
       >
         Add
@@ -46,7 +46,7 @@ function addZips() {
       <span
         v-for="zip in zips"
         :key="zip"
-        class="inline-flex items-center gap-1 bg-[#47bfa9]/10 text-[#47bfa9] text-xs font-medium px-2.5 py-1 rounded-full"
+        class="inline-flex items-center gap-1 bg-[rgba(250,207,65,0.16)] text-[var(--pc-navy,#1c2430)] text-xs font-medium px-2.5 py-1 rounded-full"
       >
         {{ zip }}
         <button

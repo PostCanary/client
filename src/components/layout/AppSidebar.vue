@@ -10,8 +10,9 @@ import { BRAND } from '@/config/brand'
 import { captureEvent } from '@/composables/usePostHog'
 import { logoutAndLeave } from '@/utils/sessionLogout'
 
-/* Logo — cropped version for sidebar, bird portion for collapsed */
-import LogoUrl from '@/assets/brand/logo-hz-800.png'
+/* Logo — dark-shell wordmark; bird crop when collapsed */
+import LogoDarkUrl from '@/assets/brand/logo-webheader-dark.png'
+import LogoMarkUrl from '@/assets/brand/mark-512.png'
 
 /* Sidebar icons — all sourced from @vicons/ionicons5 so they share a single
  * CSS color variable (currentColor via inline SVG rendering). Mixing
@@ -141,16 +142,23 @@ async function onSignOut() {
     <div class="sidebar-logo">
       <button class="logo-btn" @click="navigate('/app/home')" type="button" :title="BRAND.name">
         <img
-          :src="LogoUrl"
+          v-if="isCollapsed"
+          :src="LogoMarkUrl"
+          :alt="BRAND.name"
+          class="logo-img logo-img--mark"
+          draggable="false"
+        />
+        <img
+          v-else
+          :src="LogoDarkUrl"
           :alt="BRAND.name"
           class="logo-img"
-          :class="{ 'logo-img--collapsed': isCollapsed }"
           draggable="false"
         />
       </button>
     </div>
 
-    <!-- Home (standalone item, no section header) -->
+    <p v-if="!isCollapsed" class="nav-label">Home</p>
     <ul class="nav-section">
       <li v-for="item in homeItems" :key="item.routeName">
         <button
@@ -168,6 +176,7 @@ async function onSignOut() {
       </li>
     </ul>
 
+    <p v-if="!isCollapsed" class="nav-label">Send</p>
     <!-- "+ Send Postcards" button -->
     <div class="sidebar-cta">
       <button
@@ -219,6 +228,7 @@ async function onSignOut() {
       </li>
     </ul>
 
+    <p v-if="!isCollapsed" class="nav-label">Analytics</p>
     <!-- Analytics is a destination and the parent of the existing result pages.
          Route-derived expansion handles aliases, direct links, and refreshes. -->
     <ul class="nav-section">
@@ -259,8 +269,7 @@ async function onSignOut() {
     <!-- Spacer to push account to bottom -->
     <div class="sidebar-spacer"></div>
 
-    <!-- ACCOUNT section (bottom-pinned) -->
-    <div class="section-divider"></div>
+    <p v-if="!isCollapsed" class="nav-label nav-label--account">Account</p>
     <ul class="nav-section nav-section--bottom">
       <li v-for="item in accountItems" :key="item.routeName">
         <button
@@ -299,24 +308,32 @@ async function onSignOut() {
   top: 0;
   display: flex;
   flex-direction: column;
-  background: var(--app-card-bg, #ffffff);
-  border-right: 1px solid var(--app-border, #e2e8f0);
-  padding: 12px;
+  background: var(--sidebar-bg, var(--pc-navy, #1c2430));
+  border-right: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  padding: 16px 12px;
   overflow-y: auto;
   overflow-x: hidden;
   transition: width var(--sidebar-transition, 0.2s ease-out);
+  color: var(--sidebar-item-text, #aeb8c4);
 }
 
 .sidebar.collapsed {
   width: var(--sidebar-collapsed-width, 64px);
-  padding: 12px 8px;
+  padding: 16px 8px;
 }
 
 /* ── Logo ─────────────────────────────────────────────── */
 .sidebar-logo {
-  padding: 4px 4px 8px;
+  padding: 4px 8px 14px;
   display: flex;
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  margin-bottom: 12px;
+}
+
+.sidebar.collapsed .sidebar-logo {
   justify-content: center;
+  padding: 4px 0 14px;
 }
 
 .logo-btn {
@@ -329,23 +346,34 @@ async function onSignOut() {
 }
 
 .logo-img {
-  height: 44px;
+  height: 36px;
   width: auto;
+  max-width: 168px;
   object-fit: contain;
-  transition: all 0.2s ease-out;
 }
 
-.logo-img--collapsed {
-  height: 44px;
-  width: 36px;
-  object-fit: cover;
-  object-position: 0% center;
-  clip-path: inset(0 0 0 0);
+.logo-img--mark {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+}
+
+.nav-label {
+  margin: 10px 10px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sidebar-section-text, #8a96a4);
+}
+
+.nav-label--account {
+  margin-top: 0;
 }
 
 /* ── CTA Button ("+ Send Postcards") ─────────────────── */
 .sidebar-cta {
-  padding: 4px 0 8px;
+  padding: 4px 0 10px;
 }
 
 .cta-expanded {
@@ -355,27 +383,23 @@ async function onSignOut() {
   justify-content: center;
   gap: 8px;
   height: 40px;
-  /* POS-279: the primary action uses the shared button tokens, so it reads
-   * the same as every other primary button. Teal stays an accent colour. */
-  background: var(--app-btn-bg, #0b2d50);
-  color: var(--app-btn-fg, #ffffff);
-  font-weight: 600;
-  font-size: 14px;
+  background: var(--pc-canary, #facf41);
+  color: var(--pc-navy, #1c2430);
+  font-weight: 700;
+  font-size: 13.5px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: filter 0.15s ease, background 0.15s ease;
 }
 
 .cta-expanded:hover {
-  background: var(--app-btn-bg-hover, #163b69);
+  filter: brightness(0.96);
 }
 
-/* POS-277: without an explicit ring this fell back to the UA default, which
- * measured 2.65:1 and failed WCAG 1.4.11. */
 .cta-expanded:focus-visible,
 .cta-collapsed:focus-visible {
-  outline: 2px solid var(--app-focus-ring, #0b2d50);
+  outline: 2px solid var(--pc-canary, #facf41);
   outline-offset: 2px;
 }
 
@@ -386,16 +410,16 @@ async function onSignOut() {
   width: 40px;
   height: 40px;
   margin: 0 auto;
-  background: var(--app-btn-bg, #0b2d50);
-  color: var(--app-btn-fg, #ffffff);
+  background: var(--pc-canary, #facf41);
+  color: var(--pc-navy, #1c2430);
   border: none;
-  border-radius: 50%;
+  border-radius: var(--app-card-radius, 2px);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: filter 0.15s ease;
 }
 
 .cta-collapsed:hover {
-  background: var(--app-btn-bg-hover, #163b69);
+  filter: brightness(0.96);
 }
 
 .cta-icon {
@@ -414,15 +438,15 @@ async function onSignOut() {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--sidebar-section-text, var(--app-text-muted, #94a3b8));
+  color: var(--sidebar-section-text, #8a96a4);
   padding: 4px 12px 4px;
   white-space: nowrap;
 }
 
 .section-divider {
   height: 1px;
-  background: var(--sidebar-border, var(--app-border, #e2e8f0));
-  margin: 4px 8px;
+  background: var(--sidebar-border, rgba(255, 255, 255, 0.08));
+  margin: 8px 8px 10px;
 }
 
 .sidebar.collapsed .section-divider {
@@ -446,10 +470,12 @@ async function onSignOut() {
 .analytics-submenu {
   list-style: none;
   margin: 2px 0 0;
-  padding: 0 0 0 18px;
+  padding: 0 0 0 14px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  margin-left: 18px;
 }
 
 .analytics-submenu-item {
@@ -465,6 +491,8 @@ async function onSignOut() {
 
 .sidebar.collapsed .analytics-submenu {
   padding-left: 0;
+  margin-left: 0;
+  border-left: none;
 }
 
 /* ── Sidebar items ────────────────────────────────────── */
@@ -475,16 +503,17 @@ async function onSignOut() {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--app-card-radius, 2px);
   background: transparent;
   border: none;
   cursor: pointer;
   text-align: left;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
-  color: var(--app-text, #0c2d50);
-  transition: background 0.12s ease;
+  color: var(--sidebar-item-text, #aeb8c4);
+  transition: background 0.12s ease, color 0.12s ease;
   white-space: nowrap;
+  font-family: inherit;
 }
 
 .sidebar.collapsed .sidebar-item {
@@ -493,19 +522,21 @@ async function onSignOut() {
 }
 
 .sidebar-item:hover {
-  background: var(--sidebar-item-hover, #f4f5f7);
+  background: var(--sidebar-item-hover, rgba(255, 255, 255, 0.06));
+  color: #fff;
 }
 
-/* Active state */
+.sidebar-item:focus-visible {
+  outline: 2px solid var(--pc-canary, #facf41);
+  outline-offset: 1px;
+}
+
 .sidebar-item.active {
-  background: var(--sidebar-item-active-bg, rgba(71, 191, 169, 0.08));
-  /* POS-265: teal label on the tint measured 2.2:1; navy passes AA.
-   * Teal identity stays in the tint and the indicator bar. */
-  color: var(--app-navy, #0b2d50);
+  background: var(--sidebar-item-active-bg, rgba(250, 207, 65, 0.14));
+  color: var(--sidebar-item-active-text, var(--pc-canary, #facf41));
   font-weight: 600;
 }
 
-/* Active indicator bar */
 .sidebar-item.active::before {
   content: '';
   position: absolute;
@@ -513,11 +544,10 @@ async function onSignOut() {
   top: 6px;
   bottom: 6px;
   width: 3px;
-  background: var(--app-teal, #47bfa9);
+  background: var(--pc-canary, #facf41);
   border-radius: 0 2px 2px 0;
 }
 
-/* ── Icons ────────────────────────────────────────────── */
 .item-icon {
   flex-shrink: 0;
 }
@@ -531,14 +561,17 @@ async function onSignOut() {
 .item-icon--component {
   width: 22px;
   height: 22px;
-  color: var(--app-teal, #47bfa9);
+  color: var(--sidebar-icon, #8a96a8);
+}
+
+.sidebar-item:hover .item-icon--component {
+  color: #fff;
 }
 
 .sidebar-item.active .item-icon--component {
-  color: var(--app-teal, #47bfa9);
+  color: var(--sidebar-icon-active, var(--pc-canary, #facf41));
 }
 
-/* ── Labels (hidden when collapsed) ───────────────────── */
 .sidebar-label {
   transition: opacity 0.15s ease-out;
   white-space: nowrap;
@@ -577,8 +610,8 @@ async function onSignOut() {
   font-size: 10px;
 }
 
-/* ── Spacer ───────────────────────────────────────────── */
 .sidebar-spacer {
   flex: 1;
+  min-height: 12px;
 }
 </style>
