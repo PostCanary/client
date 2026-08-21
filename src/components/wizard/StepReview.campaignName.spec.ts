@@ -281,7 +281,7 @@ describe("StepReview campaign name (POS-188)", () => {
     );
     const input = wrapper.get('[data-testid="review-campaign-name"]');
     expect((input.element as HTMLInputElement).value).toBe(edited);
-    expect(input.classes()).toContain("text-[#0b2d50]");
+    expect(input.classes()).toContain("text-[var(--pc-navy,#1c2430)]");
 
     store.draft!.goal = goal("Target an Area", "target_area");
     await flushPromises();

@@ -79,7 +79,8 @@
   --app-bg: #e4e9ef;
   --app-card-bg: #f7f9fb;
   --app-text: var(--pc-navy);
-  --app-text-secondary: #5a6b7d;
+  /* Dark enough for AA on --app-bg paper (#e4e9ef). #5a6b7d failed axe at 4.48:1. */
+  --app-text-secondary: #55657a;
   --app-text-body: #3d4a5c;
   --app-text-muted: #8a97a8;
   --app-border: #c8d0db;
