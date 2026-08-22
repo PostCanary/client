@@ -252,7 +252,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: `Team • ${BRAND.name}`, navbarTitle: "Team" },
       },
 
-      // Campaign pages (stubs until Terminal 3 builds real pages)
       {
         path: "campaigns",
         name: "Campaigns",

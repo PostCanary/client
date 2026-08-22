@@ -26,8 +26,6 @@ const GLOBS = [
   "src/pages/Demographics.vue",
   "src/pages/Heatmap.vue",
   "src/pages/DoNotMail.vue",
-  "src/pages/CampaignsStub.vue",
-  "src/pages/CampaignDetailStub.vue",
 ];
 
 const DIRS = [
