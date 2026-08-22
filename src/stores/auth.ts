@@ -80,6 +80,10 @@ export const useAuthStore = defineStore("auth", {
     userRole: (state) =>
       state.me?.authenticated === true ? state.me.role ?? "" : "",
 
+    isSuperadmin(): boolean {
+      return this.userRole === "superadmin";
+    },
+
     avatarUrl: (state) =>
       state.me?.authenticated === true ? state.me.avatar_url ?? "" : "",
 

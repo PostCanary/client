@@ -278,6 +278,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/pages/Designs.vue"),
         meta: { title: `Designs • ${BRAND.name}`, navbarTitle: "Designs" },
       },
+      {
+        path: "admin/moderation",
+        name: "AdminDesignModeration",
+        component: () => import("@/pages/AdminDesignModeration.vue"),
+        meta: {
+          title: `Design moderation • ${BRAND.name}`,
+          navbarTitle: "Design moderation",
+          requiresSuperadmin: true,
+        },
+      },
       // /app -> /app/home
       { path: "", redirect: { name: "AppHome" } },
     ],
@@ -443,6 +453,10 @@ router.beforeEach(async (to, _from, next) => {
   if (!auth.isAuthenticated) {
     auth.openLoginModal(to.fullPath || "/");
     return next(false);
+  }
+
+  if (to.matched.some((r) => r.meta?.requiresSuperadmin) && !auth.isSuperadmin) {
+    return next({ name: "AppHome" });
   }
 
   // Collect industry + return address once, before any other app surface.

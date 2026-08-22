@@ -22,6 +22,12 @@ import { createSetupSession } from "@/api/billing";
 import { listDesigns, type DesignLibraryEntry } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
+import DesignModerationBadge from "@/components/design/DesignModerationBadge.vue";
+import {
+  isDesignModerationStatus,
+  readDesignModeration,
+  type DesignModerationStatus,
+} from "@/utils/designModeration";
 
 const draftStore = useCampaignDraftStore();
 const auth = useAuthStore();
@@ -66,6 +72,12 @@ function selectLibraryDesign(design: DesignLibraryEntry) {
     previewUrl: mediaSrc(design.front_asset.url),
     serverUrl: design.front_asset.url,
     ownsObjectUrl: false,
+    moderationStatus: isDesignModerationStatus(
+      design.uploaded_asset?.moderationStatus,
+    )
+      ? design.uploaded_asset.moderationStatus
+      : null,
+    rejectionReason: design.uploaded_asset?.rejectionReason ?? null,
   };
   backFile.value = design.back_asset
     ? {
@@ -76,6 +88,8 @@ function selectLibraryDesign(design: DesignLibraryEntry) {
         heightPx: design.back_asset.height_px,
         previewUrl: mediaSrc(design.back_asset.url),
         serverUrl: design.back_asset.url,
+        moderationStatus: null,
+        rejectionReason: null,
         ownsObjectUrl: false,
       }
     : null;
@@ -167,6 +181,9 @@ interface DesignUploadResponse {
   file_size_bytes: number;
   width_px: number | null;
   height_px: number | null;
+  // POS-252: not always serialized yet by every server build.
+  moderation_status?: DesignModerationStatus | null;
+  rejection_reason?: string | null;
 }
 
 function uploadErrorMessage(err: unknown, fileName: string): string {
@@ -204,6 +221,9 @@ interface LocalFileState {
   previewUrl: string | null;
   serverUrl: string | null;
   ownsObjectUrl: boolean;
+  // POS-252: from the upload response, when the server build serializes it.
+  moderationStatus: DesignModerationStatus | null;
+  rejectionReason: string | null;
 }
 
 const frontFile = ref<LocalFileState | null>(null);
@@ -235,6 +255,10 @@ function commitUpload() {
     heightPx: frontFile.value.heightPx,
     frontUrl: frontFile.value.serverUrl,
     backUrl: backFile.value?.serverUrl ?? null,
+    // POS-252: front artwork is what customers submit for review; the back
+    // side isn't separately moderated.
+    moderationStatus: frontFile.value.moderationStatus,
+    rejectionReason: frontFile.value.rejectionReason,
   };
   draftStore.setUploadedDesign(asset);
 }
@@ -321,6 +345,10 @@ async function handleFile(file: File, side: "front" | "back") {
       previewUrl,
       serverUrl: uploaded.url,
       ownsObjectUrl,
+      moderationStatus: isDesignModerationStatus(uploaded.moderation_status)
+        ? uploaded.moderation_status
+        : null,
+      rejectionReason: uploaded.rejection_reason ?? null,
     };
 
     if (side === "front") {
@@ -541,6 +569,10 @@ onMounted(() => {
       previewUrl: mediaSrc(asset.frontUrl),
       serverUrl: asset.frontUrl,
       ownsObjectUrl: false,
+      moderationStatus: isDesignModerationStatus(asset.moderationStatus)
+        ? asset.moderationStatus
+        : null,
+      rejectionReason: asset.rejectionReason ?? null,
     };
     if (asset.backUrl) {
       const backIsPdf = asset.backUrl.toLowerCase().endsWith(".pdf");
@@ -553,6 +585,8 @@ onMounted(() => {
         previewUrl: mediaSrc(asset.backUrl),
         serverUrl: asset.backUrl,
         ownsObjectUrl: false,
+        moderationStatus: null,
+        rejectionReason: null,
       };
     }
   }
@@ -574,6 +608,9 @@ onBeforeUnmount(() => {
 
 const designSource = computed(() => draftStore.draft?.design?.designSource ?? null);
 const designRequestSummary = computed(() => draftStore.draft?.design?.designRequest ?? null);
+const designModeration = computed(() =>
+  readDesignModeration(draftStore.draft?.design ?? null),
+);
 </script>
 
 <template>
@@ -629,6 +666,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             <p class="text-xs text-gray-400">
               {{ frontFile.widthPx && frontFile.heightPx ? `${frontFile.widthPx}x${frontFile.heightPx}px` : 'PDF file' }}
             </p>
+            <DesignModerationBadge
+              class="mt-2"
+              :status="designModeration.status"
+              :reason="designModeration.reason"
+            />
           </div>
           <button
             type="button"

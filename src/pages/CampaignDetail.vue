@@ -12,6 +12,8 @@ import {
   purchaseCampaignRecords,
 } from "@/api/mailCampaigns";
 import { extractOverRecipientCapError, formatOverRecipientCapPurchaseError } from "@/utils/recipientCap";
+import { extractDesignModerationMessage } from "@/utils/designModeration";
+import DesignModerationBadge from "@/components/design/DesignModerationBadge.vue";
 import { usePermissions } from "@/composables/usePermissions";
 import {
   campaignDesignPreviewUrl,
@@ -135,6 +137,11 @@ async function retryPrintSubmission() {
         "Fulfillment was updated, but the latest campaign details could not be refreshed.";
     }
   } catch (e: any) {
+    const moderationMessage = extractDesignModerationMessage(e);
+    if (moderationMessage) {
+      retryPrintError.value = moderationMessage;
+      return;
+    }
     const overCapError = extractOverRecipientCapError(e);
     if (overCapError) {
       retryPrintError.value = formatOverRecipientCapPurchaseError(overCapError);
@@ -314,7 +321,13 @@ onMounted(() => {
       class="bg-white rounded-[2px] border border-gray-200 p-5 mb-8"
       data-testid="campaign-detail-design"
     >
-      <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)] mb-3">Design</h3>
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <h3 class="text-sm font-semibold text-[var(--pc-navy,#1c2430)]">Design</h3>
+        <DesignModerationBadge
+          :status="campaign.moderationStatus ?? campaign.uploadedAsset?.moderationStatus"
+          :reason="campaign.rejectionReason ?? campaign.uploadedAsset?.rejectionReason"
+        />
+      </div>
       <div
         class="w-full max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
         style="aspect-ratio: 3 / 2;"

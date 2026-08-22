@@ -10,6 +10,7 @@ import type {
   MailCampaignRecoveryAction,
   MailScheduleAvailability,
 } from "@/types/campaign";
+import { readDesignModeration } from "@/utils/designModeration";
 
 interface MailCampaignResponse {
   ok: boolean;
@@ -37,6 +38,9 @@ interface MailCampaignResponse {
   // it as optional rather than required.
   audience_id?: string | null;
   order?: unknown;
+  // POS-252: not currently serialized; accepted if a later server build adds it.
+  moderation_status?: string | null;
+  rejection_reason?: string | null;
 }
 
 interface ListResponse {
@@ -288,6 +292,22 @@ export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
   const design = r.design_data && typeof r.design_data === "object"
     ? r.design_data
     : null;
+  const rawUploadedAsset = design?.uploadedAsset ?? null;
+  const fromDesign = readDesignModeration(design);
+  const fromCampaign = readDesignModeration(r);
+  const fromAsset = readDesignModeration(rawUploadedAsset);
+  // POS-252: the raw asset off the wire is snake_case (moderation_status /
+  // rejection_reason per POST /api/design-uploads); normalize onto the
+  // camelCase fields the UploadedDesignAsset type promises so any caller
+  // reading uploadedAsset.moderationStatus directly (not just through the
+  // campaign-level fallback below) sees real data.
+  const uploadedAsset = rawUploadedAsset
+    ? ({
+        ...(rawUploadedAsset as object),
+        moderationStatus: fromAsset.status ?? undefined,
+        rejectionReason: fromAsset.reason,
+      } as MailCampaign["uploadedAsset"])
+    : null;
 
   return {
     id: r.id,
@@ -312,7 +332,15 @@ export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     // POS-162: surface design snapshot so detail can render uploaded
     // front artwork when cards_data is empty.
     designSource: design?.designSource as MailCampaign["designSource"],
-    uploadedAsset: (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null,
+    uploadedAsset,
+    // POS-252: fromCampaign is the live value resolved server-side from
+    // design_upload_id — it must win. fromDesign is a snapshot frozen into
+    // design_data at upload time (e.g. still "pending" after a later
+    // approve/reject) and would otherwise shadow the current status forever.
+    moderationStatus:
+      fromCampaign.status ?? fromDesign.status ?? fromAsset.status ?? undefined,
+    rejectionReason:
+      fromCampaign.reason ?? fromDesign.reason ?? fromAsset.reason ?? null,
     order: normalizeOrderProjection(r.order),
     orderContractPresent: r.order !== null && r.order !== undefined,
   };
