@@ -21,13 +21,7 @@ import type {
   CardDesign,
 } from "@/types/campaign";
 import { getPhotosForIndustry } from "@/data/stockPhotos";
-import { API_BASE } from "@/api/http";
-
-// Brand-kit photos store relative /media/... URLs; resolve cross-origin (mirrors
-// EditPanel's Change Photo gallery so thumbnails load on Vercel previews).
-function mediaSrc(url: string): string {
-  return url && url.startsWith("/") ? `${API_BASE}${url}` : url;
-}
+import { mediaSrc } from "@/utils/mediaSrc";
 
 // The editable slice of card 1's backContent.
 type BackPatch = Partial<CardDesign["backContent"]>;

@@ -48,8 +48,6 @@ const roots = [
   "src/pages/FirstRunSetup.vue",
   "src/pages/Campaigns.vue",
   "src/pages/CampaignDetail.vue",
-  "src/pages/CampaignsStub.vue",
-  "src/pages/CampaignDetailStub.vue",
   "src/pages/Designs.vue",
   "src/pages/PrintJobStatus.vue",
   "src/pages/AcceptInvite.vue",
