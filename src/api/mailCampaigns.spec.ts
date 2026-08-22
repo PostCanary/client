@@ -504,4 +504,46 @@ describe("mail campaign approval artifacts", () => {
       "Includes a competitor logo",
     );
   });
+
+  it("prefers the live campaign-level moderation status over the stale design_data snapshot frozen at upload time", async () => {
+    vi.mocked(get).mockResolvedValue({
+      ok: true,
+      id: "campaign-moderation-precedence",
+      org_id: "org-1",
+      created_by: "user-1",
+      name: "Approved after review",
+      status: "approved",
+      goal_type: "send_to_list",
+      service_type: null,
+      sequence_length: 1,
+      household_count: 10,
+      total_cost: 10,
+      total_spent: 0,
+      targeting_data: null,
+      design_data: {
+        designSource: "uploaded",
+        // Frozen at upload time — an admin later approved the design, but
+        // this snapshot inside design_data never gets rewritten.
+        uploadedAsset: {
+          frontUrl: "/media/design-uploads/y.png",
+          moderation_status: "pending",
+        },
+      },
+      // Live value, resolved server-side from design_upload_id — must win
+      // over the stale snapshot above.
+      moderation_status: "approved",
+      rejection_reason: null,
+      schedule_data: null,
+      cards_data: [],
+      approved_at: "2026-08-22T00:00:00Z",
+      draft_id: null,
+      created_at: "2026-08-22T00:00:00Z",
+      updated_at: "2026-08-22T00:00:00Z",
+    });
+
+    const campaign = await getMailCampaign("campaign-moderation-precedence");
+
+    expect(campaign.moderationStatus).toBe("approved");
+    expect(campaign.rejectionReason).toBeNull();
+  });
 });

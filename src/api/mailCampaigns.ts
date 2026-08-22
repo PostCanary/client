@@ -333,10 +333,14 @@ export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
     // front artwork when cards_data is empty.
     designSource: design?.designSource as MailCampaign["designSource"],
     uploadedAsset,
+    // POS-252: fromCampaign is the live value resolved server-side from
+    // design_upload_id — it must win. fromDesign is a snapshot frozen into
+    // design_data at upload time (e.g. still "pending" after a later
+    // approve/reject) and would otherwise shadow the current status forever.
     moderationStatus:
-      fromDesign.status ?? fromCampaign.status ?? fromAsset.status ?? undefined,
+      fromCampaign.status ?? fromDesign.status ?? fromAsset.status ?? undefined,
     rejectionReason:
-      fromDesign.reason ?? fromCampaign.reason ?? fromAsset.reason ?? null,
+      fromCampaign.reason ?? fromDesign.reason ?? fromAsset.reason ?? null,
     order: normalizeOrderProjection(r.order),
     orderContractPresent: r.order !== null && r.order !== undefined,
   };
