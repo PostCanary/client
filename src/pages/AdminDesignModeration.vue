@@ -36,7 +36,16 @@ async function load(nextPage = 1) {
     });
     uploads.value = res.uploads;
     page.value = res.page;
-    hasNextPage.value = res.uploads.length >= res.per_page;
+    // POS-252 P2-8: prefer the server's has_next/total once it serializes
+    // them — an exactly-full last page otherwise looks like it has more.
+    // Fall back to the full-page heuristic until that lands.
+    if (typeof res.has_next === "boolean") {
+      hasNextPage.value = res.has_next;
+    } else if (typeof res.total === "number") {
+      hasNextPage.value = res.page * res.per_page < res.total;
+    } else {
+      hasNextPage.value = res.uploads.length >= res.per_page;
+    }
     previewFailedIds.value = new Set();
     rejectingId.value = null;
     rejectReason.value = "";

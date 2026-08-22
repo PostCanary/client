@@ -292,11 +292,22 @@ export function toMailCampaign(r: MailCampaignResponse): MailCampaign {
   const design = r.design_data && typeof r.design_data === "object"
     ? r.design_data
     : null;
-  const uploadedAsset =
-    (design?.uploadedAsset as MailCampaign["uploadedAsset"]) ?? null;
+  const rawUploadedAsset = design?.uploadedAsset ?? null;
   const fromDesign = readDesignModeration(design);
   const fromCampaign = readDesignModeration(r);
-  const fromAsset = readDesignModeration(uploadedAsset);
+  const fromAsset = readDesignModeration(rawUploadedAsset);
+  // POS-252: the raw asset off the wire is snake_case (moderation_status /
+  // rejection_reason per POST /api/design-uploads); normalize onto the
+  // camelCase fields the UploadedDesignAsset type promises so any caller
+  // reading uploadedAsset.moderationStatus directly (not just through the
+  // campaign-level fallback below) sees real data.
+  const uploadedAsset = rawUploadedAsset
+    ? ({
+        ...(rawUploadedAsset as object),
+        moderationStatus: fromAsset.status ?? undefined,
+        rejectionReason: fromAsset.reason,
+      } as MailCampaign["uploadedAsset"])
+    : null;
 
   return {
     id: r.id,

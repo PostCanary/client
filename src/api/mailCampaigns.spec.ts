@@ -458,4 +458,50 @@ describe("mail campaign approval artifacts", () => {
     expect(campaign.moderationStatus).toBe("pending");
     expect(campaign.designSource).toBe("uploaded");
   });
+
+  it("reads the real server shape: snake_case moderation_status/rejection_reason resolved onto the campaign by MailCampaign._serialize", async () => {
+    vi.mocked(get).mockResolvedValue({
+      ok: true,
+      id: "campaign-moderation-real-shape",
+      org_id: "org-1",
+      created_by: "user-1",
+      name: "Rejected design",
+      status: "pending_approval",
+      goal_type: "send_to_list",
+      service_type: null,
+      sequence_length: 1,
+      household_count: 10,
+      total_cost: 10,
+      total_spent: 0,
+      targeting_data: null,
+      design_data: {
+        designSource: "uploaded",
+        // POST /api/design-uploads response, snake_case per server contract.
+        uploadedAsset: {
+          frontUrl: "/media/design-uploads/x.png",
+          moderation_status: "rejected",
+          rejection_reason: "Includes a competitor logo",
+        },
+      },
+      // Campaign-level fields resolved by MailCampaign._serialize from
+      // design_upload_id.
+      moderation_status: "rejected",
+      rejection_reason: "Includes a competitor logo",
+      schedule_data: null,
+      cards_data: [],
+      approved_at: null,
+      draft_id: null,
+      created_at: "2026-08-22T00:00:00Z",
+      updated_at: "2026-08-22T00:00:00Z",
+    });
+
+    const campaign = await getMailCampaign("campaign-moderation-real-shape");
+
+    expect(campaign.moderationStatus).toBe("rejected");
+    expect(campaign.rejectionReason).toBe("Includes a competitor logo");
+    expect(campaign.uploadedAsset?.moderationStatus).toBe("rejected");
+    expect(campaign.uploadedAsset?.rejectionReason).toBe(
+      "Includes a competitor logo",
+    );
+  });
 });
