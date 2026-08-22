@@ -482,6 +482,9 @@ export interface UploadedDesignAsset {
   // beaconSave 60KB keepalive cap.
   frontUrl: string | null
   backUrl: string | null
+  // POS-252: optional until a customer GET exposes upload review state.
+  moderationStatus?: 'pending' | 'approved' | 'rejected' | null
+  rejectionReason?: string | null
 }
 
 export interface DesignRequestBrief {
@@ -517,6 +520,9 @@ export interface DesignSelection {
   // POS-161: per-campaign override of the org default return address.
   // Server print path reads design_snapshot.returnAddress with these keys.
   returnAddress?: DesignReturnAddress
+  // POS-252: optional until a customer GET exposes upload review state.
+  moderationStatus?: 'pending' | 'approved' | 'rejected' | null
+  rejectionReason?: string | null
 }
 
 // ============================================================
@@ -848,6 +854,9 @@ export interface MailCampaign {
   // can show uploaded artwork when cards_data is empty.
   designSource?: DesignSource
   uploadedAsset?: UploadedDesignAsset | null
+  // POS-252: optional until a customer GET exposes upload review state.
+  moderationStatus?: 'pending' | 'approved' | 'rejected' | null
+  rejectionReason?: string | null
   // POS-197: authoritative recipient, money, artwork, payment, fulfillment,
   // and reconciliation state. Null for campaigns created before the durable
   // order contract; callers may then render legacy values as explicitly

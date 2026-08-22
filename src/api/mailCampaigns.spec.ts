@@ -424,4 +424,38 @@ describe("mail campaign approval artifacts", () => {
     expect(campaign.order).toBeNull();
     expect(campaign.orderContractPresent).toBe(true);
   });
+
+  it("passes through design moderation fields when a later server build exposes them", async () => {
+    vi.mocked(get).mockResolvedValue({
+      ok: true,
+      id: "campaign-moderation",
+      org_id: "org-1",
+      created_by: "user-1",
+      name: "Pending design",
+      status: "approved",
+      goal_type: "send_to_list",
+      service_type: null,
+      sequence_length: 1,
+      household_count: 10,
+      total_cost: 10,
+      total_spent: 0,
+      targeting_data: null,
+      design_data: {
+        designSource: "uploaded",
+        uploadedAsset: { frontUrl: "/media/x.png" },
+        moderationStatus: "pending",
+      },
+      schedule_data: null,
+      cards_data: [],
+      approved_at: null,
+      draft_id: null,
+      created_at: "2026-08-22T00:00:00Z",
+      updated_at: "2026-08-22T00:00:00Z",
+    });
+
+    const campaign = await getMailCampaign("campaign-moderation");
+
+    expect(campaign.moderationStatus).toBe("pending");
+    expect(campaign.designSource).toBe("uploaded");
+  });
 });

@@ -14,6 +14,7 @@ import {
 } from "@/utils/campaignDisplay";
 import CampaignStatusBadge from "./CampaignStatusBadge.vue";
 import CampaignAreaMapPreview from "./CampaignAreaMapPreview.vue";
+import DesignModerationBadge from "@/components/design/DesignModerationBadge.vue";
 
 const props = defineProps<{
   open: boolean;
@@ -184,7 +185,13 @@ async function downloadAudience() {
 
         <div class="flex items-center justify-between mt-4 mb-2">
           <h4 class="campaign-name">{{ campaign.name }}</h4>
-          <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
+          <div class="flex flex-wrap items-center justify-end gap-2">
+            <DesignModerationBadge
+              :status="campaign.moderationStatus ?? campaign.uploadedAsset?.moderationStatus"
+              :reason="campaign.rejectionReason ?? campaign.uploadedAsset?.rejectionReason"
+            />
+            <CampaignStatusBadge :status="campaign.status" :order="campaign.order" :order-contract-present="campaign.orderContractPresent" />
+          </div>
         </div>
 
         <dl class="detail-grid">

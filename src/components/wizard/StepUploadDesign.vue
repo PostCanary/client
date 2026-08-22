@@ -22,6 +22,8 @@ import { createSetupSession } from "@/api/billing";
 import { listDesigns, type DesignLibraryEntry } from "@/api/designs";
 import { mediaSrc } from "@/utils/mediaSrc";
 import type { UploadedDesignAsset, DesignRequestBrief } from "@/types/campaign";
+import DesignModerationBadge from "@/components/design/DesignModerationBadge.vue";
+import { readDesignModeration } from "@/utils/designModeration";
 
 const draftStore = useCampaignDraftStore();
 const auth = useAuthStore();
@@ -574,6 +576,9 @@ onBeforeUnmount(() => {
 
 const designSource = computed(() => draftStore.draft?.design?.designSource ?? null);
 const designRequestSummary = computed(() => draftStore.draft?.design?.designRequest ?? null);
+const designModeration = computed(() =>
+  readDesignModeration(draftStore.draft?.design ?? null),
+);
 </script>
 
 <template>
@@ -629,6 +634,11 @@ const designRequestSummary = computed(() => draftStore.draft?.design?.designRequ
             <p class="text-xs text-gray-400">
               {{ frontFile.widthPx && frontFile.heightPx ? `${frontFile.widthPx}x${frontFile.heightPx}px` : 'PDF file' }}
             </p>
+            <DesignModerationBadge
+              class="mt-2"
+              :status="designModeration.status"
+              :reason="designModeration.reason"
+            />
           </div>
           <button
             type="button"

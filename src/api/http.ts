@@ -8,6 +8,7 @@ import type {
 } from "axios";
 import { AUTH_BASE } from "@/config/auth";
 import { log, getReq } from "@/utils/logger";
+import { extractDesignModerationConflict } from "@/utils/designModeration";
 
 // ---- Base URL
 // Production backend - using subdomain for cookie sharing
@@ -49,6 +50,7 @@ export function getInflight() {
 // ---- Events
 export const HTTP_EVENT_AUTH_REQUIRED = "mt:http:auth-required";
 export const HTTP_EVENT_SUBSCRIPTION_REQUIRED = "mt:http:subscription-required";
+export const HTTP_EVENT_DESIGN_MODERATION = "mt:http:design-moderation";
 
 export type HttpGateEventDetail = {
   status: number;
@@ -192,6 +194,16 @@ http.interceptors.response.use(
       emitGateEvent(HTTP_EVENT_AUTH_REQUIRED, { status, url, method, data });
     } else if (status === 402) {
       emitGateEvent(HTTP_EVENT_SUBSCRIPTION_REQUIRED, {
+        status,
+        url,
+        method,
+        data,
+      });
+    } else if (
+      status === 409 &&
+      extractDesignModerationConflict({ status, data })
+    ) {
+      emitGateEvent(HTTP_EVENT_DESIGN_MODERATION, {
         status,
         url,
         method,
